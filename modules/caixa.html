@@ -33,48 +33,48 @@
     </header>
 
     <main>
-        <section class="form-section">
-            <h2>Registrar Transação</h2>
-            <form id="caixa-form">
-                <div class="form-group buttons">
-                    <button type="button" id="btn-entrada" class="btn-entrada">Entrada</button>
-                    <button type="button" id="btn-saida" class="btn-saida">Saída</button>
-                    <input type="hidden" id="tipo" value="">
-                </div>
+<form id="caixa-form">
+  <div class="form-group buttons">
+    <button type="button" id="btn-entrada" class="btn-entrada">Entrada</button>
+    <button type="button" id="btn-saida" class="btn-saida">Saída</button>
+    <input type="hidden" id="tipo" value="">
+  </div>
 
-                <div class="caixa-grid">
-                    <section class="caixa-block">
-                        <h2>Caixa Banco</h2>
-                        <div id="caixa-banco"></div>
-                        <div id="total-banco"></div>
-                    </section>
+  <!-- Campo valor logo a seguir -->
+  <div class="form-group">
+    <label for="valor">Valor (€):</label>
+    <input type="number" id="valor" step="0.01" required>
+  </div>
 
-                    <section class="caixa-block">
-                        <h2>Caixa Esquerda</h2>
-                        <div id="caixa-esquerda"></div>
-                        <div id="total-esquerda"></div>
-                    </section>
+  <button type="submit">Registrar Transação</button>
+</form>
 
-                    <section class="caixa-block">
-                        <h2>Total Banco + Esquerda</h2>
-                        <p id="total-banco-esquerda"></p>
-                    </section>
+<!-- A grelha de blocos deve estar fora do form -->
+<div class="caixa-grid">
+  <section class="caixa-block">
+    <h2>Caixa Banco</h2>
+    <div id="caixa-banco"></div>
+    <div id="total-banco"></div>
+  </section>
 
-                    <section class="caixa-block">
-                        <h2>Caixa Direita (Pai)</h2>
-                        <div id="caixa-direita"></div>
-                        <div id="total-direita"></div>
-                    </section>
-                </div>
+  <section class="caixa-block">
+    <h2>Caixa Esquerda</h2>
+    <div id="caixa-esquerda"></div>
+    <div id="total-esquerda"></div>
+  </section>
 
-                <div class="form-group">
-                    <label for="valor">Valor (€):</label>
-                    <input type="number" id="valor" step="0.01" required>
-                </div>
+  <section class="caixa-block">
+    <h2>Total Banco + Esquerda</h2>
+    <p id="total-banco-esquerda"></p>
+  </section>
 
-                <button type="submit">Registrar Transação</button>
-            </form>
-        </section>
+  <section class="caixa-block">
+    <h2>Caixa Direita (Pai)</h2>
+    <div id="caixa-direita"></div>
+    <div id="total-direita"></div>
+  </section>
+</div>
+
     </main>
 
     <footer>
