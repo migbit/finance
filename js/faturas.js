@@ -809,11 +809,12 @@ meses.forEach(m => {
     }
 
 if (pct === null) {
-  html += `<td class="heatmap-cell">—</td>`;
+  html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
 } else {
+  const bg = pctToColor(pct);
+  const fg = idealTextOn(bg);   // ✅ ensure contrast
   const label = `${(pct * 100).toFixed(0)}%`;
-  const color = pct < 0 ? '#d9534f' : pct > 0 ? '#28a745' : '#111';
-  html += `<td class="heatmap-cell" style="color:${color};font-weight:600">${label}</td>`;
+  html += `<td class="heatmap-cell" style="background:${bg};color:${fg};font-weight:600">${label}</td>`;
 }
 
   });
