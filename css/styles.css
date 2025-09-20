@@ -140,6 +140,7 @@ tr:hover{background:#f1f1f1;}
 .chart-card h3{margin:0 0 6px 4px;font-weight:600;}
 #dca-section .chart-card canvas{width:100% !important;height:var(--dca-canvas-h) !important;}
 
+
 /* Heatmap Receita vs. Ano Anterior */
 .heatmap-wrap {
   overflow-x: auto;
@@ -151,7 +152,7 @@ tr:hover{background:#f1f1f1;}
   gap: 8px;
   margin: 8px 0 16px;
   font-size: 0.9rem;
-  color: #555;
+  color: #333; /* darker for readability */
 }
 
 .heatmap-gradient {
@@ -174,30 +175,33 @@ tr:hover{background:#f1f1f1;}
   padding: 8px 10px;
   text-align: center;
   font-size: 0.95rem;
+  color: #111;              /* force dark text */
+  background: #fff;         /* clean white background */
 }
 
 .heatmap-table thead th {
-  background: #f7f7f7;
+  font-weight: 700;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 2;
 }
 
 .heatmap-table tbody th {
-  background: #fafafa;
   text-align: left;
+  font-weight: 700;
   position: sticky;
   left: 0;
+  z-index: 1;
 }
 
 .heatmap-cell {
   font-weight: 600;
-  text-shadow: 0 0 3px rgba(0,0,0,0.25); /* subtle outline improves readability */
 }
 
 .heatmap-muted {
-  color: #888;
+  color: #666;
 }
+
 
 
 
