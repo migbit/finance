@@ -357,23 +357,31 @@ window.apagarFatura = async function(btn) {
 };
 
 function toggleDetalhes(button, htmlContent) {
-    let detalhesDiv = button.parentElement.querySelector('.detalhes');
-    if (detalhesDiv) {
-        if (detalhesDiv.style.display === 'none') {
-            detalhesDiv.style.display = 'block';
-            button.textContent = 'Ocultar Detalhes';
-        } else {
-            detalhesDiv.style.display = 'none';
-            button.textContent = 'Ver Detalhes';
-        }
-    } else {
-        detalhesDiv = document.createElement('div');
-        detalhesDiv.className = 'detalhes';
-        detalhesDiv.innerHTML = htmlContent;
-        button.parentElement.appendChild(detalhesDiv);
-        button.textContent = 'Ocultar Detalhes';
-    }
+  const tr = button.closest('tr');
+  const tbody = tr.parentElement;
+  const colSpan = tr.children.length; // usa o nº real de colunas do cabeçalho
+
+  // se já existe a linha de detalhes logo a seguir, só faz toggle
+  let next = tr.nextElementSibling;
+  if (next && next.classList.contains('detalhes-grupo')) {
+    const isHidden = next.style.display === 'none';
+    next.style.display = isHidden ? 'table-row' : 'none';
+    button.textContent = isHidden ? 'Ocultar Detalhes' : 'Ver Detalhes';
+    return;
+  }
+
+  // criar a linha de detalhes
+  const detTr = document.createElement('tr');
+  detTr.className = 'detalhes-grupo';
+  const detTd = document.createElement('td');
+  detTd.colSpan = colSpan;
+  detTd.innerHTML = htmlContent;
+  detTr.appendChild(detTd);
+
+  tbody.insertBefore(detTr, tr.nextSibling);
+  button.textContent = 'Ocultar Detalhes';
 }
+
 
 function gerarHTMLDetalhesFaturacao(detalhes) {
   const TOTAL_COLS = 13; // atualiza se mudares o nº de colunas no <thead>
