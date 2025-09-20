@@ -319,9 +319,6 @@ input[type="number"] {
   background-origin: content-box;
 }
 
-/* Alinhar os campos pelo fundo dentro de cada linha */
-.form-row { align-items: end; }
-
 /* Opcional: largura mínima para números curtos
    evita que o browser coloque um “botão” separado */
 #noites-extra, #noites-criancas, #valor-tmt {

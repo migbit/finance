@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     formBtn.addEventListener('click', () => {
       formWrap.classList.toggle('hidden');
       formBtn.textContent = formWrap.classList.contains('hidden')
-        ? 'Registar Nova Fatura'
+        ? 'Mostrar'
         : 'Fechar formulário';
     });
   }
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       form.reset(); // limpa todos os inputs
       document.getElementById('fatura-id-edicao').value = ''; // limpa id de edição
       formWrap.classList.add('hidden');
-      formBtn.textContent = 'Registar Nova Fatura';
+      formBtn.textContent = 'Mostrar';
       cancelarBtn.style.display = 'none'; // esconde o botão de cancelar
     });
   }
