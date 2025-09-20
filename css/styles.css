@@ -140,6 +140,32 @@ tr:hover{background:#f1f1f1;}
 .chart-card h3{margin:0 0 6px 4px;font-weight:600;}
 #dca-section .chart-card canvas{width:100% !important;height:var(--dca-canvas-h) !important;}
 
+/* Página Caixa */
+.caixa-grid {
+  display: grid;
+  gap: 24px;           /* Espaço entre blocos */
+}
+
+.caixa-block {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+  padding: 24px;
+}
+
+.caixa-block h2 {
+  margin: 0 0 12px 0;
+  font-size: 1.4rem;
+}
+
+/* Se quiseres 2 colunas em desktop, ativa isto: */
+/*
+@media (min-width: 992px) {
+  .caixa-grid { grid-template-columns: 1fr 1fr; }
+}
+*/
+
+
 /* ---- Responsive tweaks for small screens ---- */
 @media (max-width:768px){
   #fatura-form #taxa-airbnb,
