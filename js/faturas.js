@@ -677,32 +677,45 @@ document.getElementById('progresso-anos').innerHTML = htmlProg;
 }
 
   // Função: gerar média mensal por ano e apartamento
-function gerarMediaFaturacao(faturas) {
-  const anos = Array.from(new Set(faturas.map(f => f.ano))).sort();
-  const apartamentos = Array.from(new Set(faturas.map(f => f.apartamento))).sort();
+  function gerarMediaFaturacao(faturas) {
+  const anos = [...new Set(faturas.map(f => Number(f.ano)))].sort((a, b) => a - b);
+  const apartamentos = [...new Set(faturas.map(f => String(f.apartamento)))].sort();
 
-  let html = '<h4>Média Mensal de Receita (÷12 meses)</h4>';
-  html += '<table class="media-faturacao"><thead><tr><th>Ano</th>';
-  apartamentos.forEach(apt => { html += `<th class="apt-${apt}">Apt ${apt}</th>`; });
-  html += '<th>Total</th></tr></thead><tbody>';
+  // Somar receita por ano/apartamento
+  const totais = {};
+  faturas.forEach(f => {
+    const ano = Number(f.ano);
+    const apt = String(f.apartamento);
+    const valor = Number(f.valorTransferencia || 0);
+    if (!totais[ano]) totais[ano] = {};
+    totais[ano][apt] = (totais[ano][apt] || 0) + valor;
+  });
+
+  const fmt = n => n.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
+
+  // Só a tabela (sem <h3>/<h4>)
+  let html = '<table class="media-faturacao"><thead><tr><th>ANO</th>';
+  apartamentos.forEach(apt => { html += `<th class="apt-${apt}">APT ${apt}</th>`; });
+  html += '<th>TOTAL</th></tr></thead><tbody>';
 
   anos.forEach(ano => {
-    const faturasAno = faturas.filter(f => f.ano === ano);
-    const numMeses = 12;
-
-    let somaTotal = 0;
     html += `<tr><td>${ano}</td>`;
+    let somaAno = 0;
     apartamentos.forEach(apt => {
-      const somaApt = faturasAno
-        .filter(f => f.apartamento === apt)
-        .reduce((sum, f) => sum + f.valorTransferencia, 0);
-      const mediaApt = somaApt / numMeses;
-      somaTotal += somaApt;
-      html += `<td class="apt-${apt}">€${mediaApt.toFixed(2)}</td>`;
+      const totalAnoApt = (totais[ano]?.[apt] || 0);
+      somaAno += totalAnoApt;
+      const mediaMensal = totalAnoApt / 12;
+      html += `<td>${fmt(mediaMensal)}</td>`;
     });
-    const mediaTotal = somaTotal / numMeses;
-    html += `<td>€${mediaTotal.toFixed(2)}</td></tr>`;
+    html += `<td>${fmt(somaAno / 12)}</td></tr>`;
   });
+
+  html += '</tbody></table>';
+
+  const el = document.getElementById('media-faturacao');
+  if (el) el.innerHTML = html;
+}
+
 
   html += '</tbody></table>';
 
