@@ -141,29 +141,156 @@ tr:hover{background:#f1f1f1;}
 #dca-section .chart-card canvas{width:100% !important;height:var(--dca-canvas-h) !important;}
 
 /* Página Caixa */
-.caixa-grid {
-  display: grid;
-  gap: 24px;           /* Espaço entre blocos */
+/*   ----------------------------------------------------------->  Caixa Page Styles */
+#relatorio-caixa h3 {
+    margin: 1.5rem 0 1rem 0;
+    font-size: 1.25rem;
+    color: #333;
+    border-bottom: 2px solid #333;
+    padding-bottom: 0.5rem;
 }
 
-.caixa-block {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.08);
-  padding: 24px;
+#relatorio-caixa > div {
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
-.caixa-block h2 {
-  margin: 0 0 12px 0;
-  font-size: 1.4rem;
+.btn-entrada,
+.btn-saida {
+    padding: 0.5rem 1rem;
+    margin: 0.25rem;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: var(--border-radius-sm);
+    transition: var(--transition-default);
 }
 
-/* Se quiseres 2 colunas em desktop, ativa isto: */
-/*
-@media (min-width: 992px) {
-  .caixa-grid { grid-template-columns: 1fr 1fr; }
+.btn-entrada {
+    background-color: #ecf0f1;
+    color: #333;
 }
-*/
+
+.btn-saida {
+    background-color: #ecf0f1;
+    color: #333;
+}
+
+.btn-entrada.btn-active {
+    background-color: #2ecc71;
+    color: var(--color-white);
+}
+
+.btn-saida.btn-active {
+    background-color: #e74c3c;
+    color: var(--color-white);
+}
+
+.valor-positivo {
+    color: #2ecc71;
+}
+
+.valor-negativo {
+    color: #e74c3c;
+}
+
+.total-caixa {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-top: 1rem;
+    padding: var(--spacing-sm);
+    background-color: #fafafa;
+    border-radius: var(--border-radius-sm);
+    text-align: center;
+}
+
+/* Boxes layout for Caixa section */
+.report-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.report-box {
+    background: #fff;
+    padding: 16px;
+    border-radius: var(--border-radius-sm);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* Optional: tidy h2 spacing inside each box */
+.report-box > h2 {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+}
+
+#caixa {
+    padding: 0.4rem;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid #ccc;
+    font-size: 1rem;
+}
+
+#marcar-p {
+    margin-right: 0.5rem;
+}
+
+/* Center the Entrada / Saída buttons */
+.form-group.buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Make the Valor input full width */
+#valor {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid #ccc;
+    font-size: 1rem;
+}
+
+/* Align checkbox with label text */
+.form-group.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Center Entrada / Saída buttons */
+.form-group.buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+/* Make buttons consistent width */
+.btn-entrada,
+.btn-saida {
+    min-width: 110px;
+}
+
+/* Ensure active colors: Entrada = green, Saída = red */
+.btn-entrada.btn-active {
+    background-color: #2ecc71;
+    color: #fff;
+}
+.btn-saida.btn-active {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+/* Wider/taller Valor input */
+#valor {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+    border-radius: var(--border-radius-sm);
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
 
 
 /* ---- Responsive tweaks for small screens ---- */
