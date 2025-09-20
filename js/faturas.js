@@ -384,8 +384,6 @@ function toggleDetalhes(button, htmlContent) {
 
 
 function gerarHTMLDetalhesFaturacao(detalhes) {
-  const TOTAL_COLS = 13; // atualiza se mudares o nº de colunas no <thead>
-
   const rows = detalhes.map(d => {
     const dataStr = (d.timestamp && d.timestamp.seconds)
       ? new Date(d.timestamp.seconds * 1000).toLocaleDateString()
@@ -405,6 +403,7 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
       noitesCriancas: d.noitesCriancas || 0,
       valorDireto: d.valorDireto || 0,
       valorTmt: d.valorTmt,
+      // novos campos (para o botão Editar):
       checkIn: d.checkIn || null,
       checkOut: d.checkOut || null,
       noites: (typeof d.noites === 'number' ? d.noites : null),
@@ -413,9 +412,14 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
       hospedesCriancas: (d.hospedesCriancas ?? null),
       hospedesBebes: (d.hospedesBebes ?? null)
     };
-    const jsonAttr = d.id ? JSON.stringify(payload).replace(/"/g, '&quot;') : '';
 
-    const rowMain = `
+    const jsonAttr = d.id ? JSON.stringify(payload).replace(/"/g, '&quot;') : '';
+    const acoes = d.id
+      ? `<button onclick="editarFatura(this)" data-fatura="${jsonAttr}">Editar</button>
+         <button onclick="apagarFatura(this)" data-id="${d.id}" data-num="${d.numeroFatura}">Apagar</button>`
+      : '—';
+
+    return `
       <tr>
         <td>${dataStr}</td>
         <td>${d.numeroFatura}</td>
@@ -429,35 +433,8 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
         <td>${d.hospedesAdultos ?? '—'}</td>
         <td>${d.hospedesCriancas ?? '—'}</td>
         <td>${d.hospedesBebes ?? '—'}</td>
-        <td>
-          ${d.id ? `
-            <button onclick="editarFatura(this)" data-fatura="${jsonAttr}">Editar</button>
-            <button onclick="apagarFatura(this)" data-id="${d.id}" data-num="${d.numeroFatura}">Apagar</button>
-            <button class="btn-sec" onclick="toggleDetalhes(this)" data-target="det-${d.id}">Mostrar Detalhes</button>
-          ` : '—'}
-        </td>
+        <td>${acoes}</td>
       </tr>`;
-
-    // linha de detalhes (abaixo, full-width)
-    const rowDetalhe = `
-      <tr class="detalhes-row" id="det-${d.id}" style="display:none;">
-        <td colspan="${TOTAL_COLS}">
-          <div class="detalhes-extra">
-            <h4>Estadia & Hóspedes</h4>
-            <ul>
-              <li><strong>Check-in:</strong> ${d.checkIn || '—'}</li>
-              <li><strong>Check-out:</strong> ${d.checkOut || '—'}</li>
-              <li><strong>Noites:</strong> ${(typeof d.noites === 'number') ? d.noites : '—'}</li>
-              <li><strong>Preço Médio/Noite:</strong> ${(d.precoMedioNoite != null) ? d.precoMedioNoite.toFixed(2) + ' €' : '—'}</li>
-              <li><strong>Adultos:</strong> ${d.hospedesAdultos ?? '—'}</li>
-              <li><strong>Crianças:</strong> ${d.hospedesCriancas ?? '—'}</li>
-              <li><strong>Bebés:</strong> ${d.hospedesBebes ?? '—'}</li>
-            </ul>
-          </div>
-        </td>
-      </tr>`;
-
-    return rowMain + rowDetalhe;
   }).join('');
 
   return `
@@ -483,6 +460,7 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
     </table>
   `;
 }
+
 
 
 
