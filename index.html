@@ -1,82 +1,43 @@
 <!DOCTYPE html>
 <html lang="pt-pt">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apartments.Oporto</title>
-    
-    <!-- Link to CSS -->
-    <link rel="stylesheet" href="/finance/css/styles.css">
-    
-    <!-- Favicon -->
-    <link rel="icon" href="/finance/favicon.ico" type="image/x-icon">
-    
-    <!-- Link to PWA Manifest -->
-    <link rel="manifest" href="/finance/manifest.json">
-    
-    <!-- Theme color for mobile browsers -->
-    <meta name="theme-color" content="#000000">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Migbit – Finance</title>
+
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#000000" />
+
+  <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
-    <header>
-        <h1>Ferramenta de Gestão dos Apartamentos</h1>
-        <!-- Ícone de menu "hambúrguer" para mobile -->
-        <div class="menu-icon" id="menu-icon">
-            &#9776; <!-- Ícone de três linhas -->
-        </div>
-    
-        <nav id="nav-menu">
-            <ul>
-                <li><a href="/finance/modules/faturas.html">Faturas / Relatórios</a></li>
-                <!-- Login/User section, controlled by server-side or CSS visibility -->
-                <li id="login-section">
-                    <a href="#" id="login-btn" class="login-visible">Login</a>
-                    <span id="user-info" class="user-visible" style="display:none;">
-                        <a href="#" id="user-name">Username</a> <!-- Visible if logged in -->
-                    </span>
-                </li>
-            </ul>
-        </nav>
-    </header>
+  <header>
+    <div class="container">
+      <h1>Ferramenta Financeira</h1>
+      <div class="menu-icon" id="menu-icon" aria-label="Abrir menu" role="button" tabindex="0">&#9776;</div>
+      <nav id="nav-menu" aria-label="Menu principal">
+        <ul>
+          <li><a href="./modules/faturas.html">Faturas / Relatórios</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
 
-    <main>
-        <section>
-            <h2>Migbit - Finanças</h2>
-            <p>Selecione uma funcionalidade no menu para começar.</p>
-        </section>
-    </main>
-    
-    <footer>
-        <div class="footer-container">
-            <p>&copy; 2025 OM&MT.</p>
-        </div>
-    </footer>
+  <main>
+    <section class="card">
+      <h2>Migbit – Finanças</h2>
+      <p class="muted">Selecione uma funcionalidade no menu para começar.</p>
+    </section>
+  </main>
 
-    <!-- Scripts com type="module" -->
-    <script type="module" src="/finance/js/script.js"></script>
+  <footer>
+    <div class="footer-container">
+      <p>&copy; 2025 OM&MT.</p>
+    </div>
+  </footer>
 
-    <!-- Script para alternar o menu no mobile -->
-    <script>
-        const menuIcon = document.getElementById('menu-icon');
-        const navMenu = document.getElementById('nav-menu');
-
-        menuIcon.addEventListener('click', function() {
-            navMenu.classList.toggle('active');
-        });
-    </script>
-
-    <!-- Service Worker Registration -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/finance/sw.js').then(function(registration) {
-                    console.log('Service Worker registered with scope:', registration.scope);
-                }, function(err) {
-                    console.log('Service Worker registration failed:', err);
-                });
-            });
-        }
-    </script>
+  <script type="module" src="./js/script.js"></script>
 </body>
 </html>
