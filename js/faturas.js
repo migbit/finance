@@ -940,4 +940,4 @@ window.exportarPDFFaturacao = function(key, grupoJson) {
       doc.save(`relatorio-faturacao-${ano}-${meses[mes-1]}.pdf`);
     })
     .catch(err => console.error('Erro ao exportar PDF:', err));
-};
+}

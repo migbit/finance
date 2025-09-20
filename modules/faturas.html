@@ -131,56 +131,54 @@
 </section>
 
 
+ <section class="report-section">
+  <h2>Relatórios</h2>
 
+  <div class="relatorio-container">
+    <h3>Relatório de Faturação</h3>
+    <button id="toggle-prev-faturas" type="button">Mostrar anos anteriores</button>
+    <div id="relatorio-faturacao"></div>
+  </div>
 
-        <section class="report-section">
-            <h2>Relatórios</h2>
-            
-            <div class="relatorio-container">
-                <h3>Relatório de Faturação</h3>
-                <button id="toggle-prev-faturas" type="button">Mostrar anos anteriores</button>
-                <div id="relatorio-faturacao"></div>
-            </div>
-                       
-            <section class="relatorio-container" id="analise-faturacao-container">
-                <h3>Análise Faturação</h3>
-              
-                <!-- Gráficos -->
-                <div class="chart-wrap">
-                  <canvas id="chart-total"></canvas>
-                </div>
-               <hr class="divider">
+  <section class="relatorio-container" id="analise-faturacao-container">
+    <h3>Análise Faturação</h3>
 
-                <div class="chart-wrap">
-                    <canvas id="chart-comparacao-apt"></canvas>
-                  </div>
-                  <hr class="divider">
+    <div class="chart-wrap">
+      <canvas id="chart-total"></canvas>
+    </div>
+    <hr class="divider">
 
-                <!-- Barras de progresso anuais -->
-                <div id="progresso-anos" class="mt-4"></div>
-                <hr class="divider">
+    <div class="chart-wrap">
+      <canvas id="chart-comparacao-apt"></canvas>
+    </div>
+    <hr class="divider">
 
-                <h3>Heatmap: Variação % vs. Ano Anterior</h3>
-                    <div id="heatmap-variacao"></div>
-                <hr class="divider">
+    <div id="progresso-anos" class="mt-4"></div>
+    <hr class="divider">
 
-            </section>
-    </main>
+    <h3>Heatmap: Variação % vs. Ano Anterior</h3>
+    <div id="heatmap-variacao"></div>
+    <hr class="divider">
+  </section>
+</section> <!-- ✅ close report-section -->
 
-    <footer>
-        <div class="footer-container">
-            <p>&copy; 2025 OM&MT.</p>
-        </div>
-    </footer>
+</main>
 
-    <script type="module" src="../js/script.js"></script>
-    <script type="module" src="../js/faturas.js"></script>
+<footer>
+  <div class="footer-container">
+    <p>&copy; 2025 OM&MT.</p>
+  </div>
+</footer>
 
-    <script>
+<!-- Load Chart.js BEFORE your module -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script type="module" src="../js/script.js"></script>
+<script type="module" src="../js/faturas.js"></script>
+
+<script>
   document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("toggle-fatura-form");
+    const btn  = document.getElementById("toggle-fatura-form");
     const wrap = document.getElementById("fatura-form-wrap");
-
     if (btn && wrap) {
       btn.addEventListener("click", () => {
         wrap.classList.toggle("hidden");
@@ -190,18 +188,11 @@
       });
     }
   });
+
+  // Mobile menu
+  const menuIcon = document.getElementById('menu-icon');
+  const navMenu  = document.getElementById('nav-menu');
+  menuIcon.addEventListener('click', () => navMenu.classList.toggle('active'));
 </script>
-
-        <!-- Script para alternar o menu no mobile -->
-<script>
-    const menuIcon = document.getElementById('menu-icon');
-    const navMenu = document.getElementById('nav-menu');
-
-    menuIcon.addEventListener('click', function() {
-        navMenu.classList.toggle('active');
-    });
-</script>
-
 </body>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </html>
