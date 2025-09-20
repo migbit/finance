@@ -177,29 +177,30 @@ const hospedesAdultos  = parseIntSafe('adultos',  0);
 const hospedesCriancas = parseIntSafe('criancas', 0);
 const hospedesBebes    = parseIntSafe('bebes',    0);
 
+const formData = {
+  apartamento: document.getElementById('apartamento').value,
+  ano: parseInt(document.getElementById('ano').value),
+  mes: parseInt(document.getElementById('mes').value),
+  numeroFatura: document.getElementById('numero-fatura').value,
+  taxaAirbnb: parseFloat(document.getElementById('taxa-airbnb').value),
+  valorTransferencia: parseFloat(document.getElementById('valor-transferencia').value),
+  valorOperador: parseFloat(document.getElementById('valor-operador').value),
+  noitesExtra: parseInt(document.getElementById('noites-extra').value) || 0,
+  noitesCriancas: parseInt(document.getElementById('noites-criancas').value) || 0,
+  valorDireto: parseFloat(document.getElementById('valor-direto').value) || 0,
+  valorTmt: parseFloat(document.getElementById('valor-tmt').value),
+  timestamp: new Date(), // só usado na criação  ✅ vírgula aqui
 
-  const formData = {
-    apartamento: document.getElementById('apartamento').value,
-    ano: parseInt(document.getElementById('ano').value),
-    mes: parseInt(document.getElementById('mes').value),
-    numeroFatura: document.getElementById('numero-fatura').value,
-    taxaAirbnb: parseFloat(document.getElementById('taxa-airbnb').value),
-    valorTransferencia: parseFloat(document.getElementById('valor-transferencia').value),
-    valorOperador: parseFloat(document.getElementById('valor-operador').value),
-    noitesExtra: parseInt(document.getElementById('noites-extra').value) || 0,
-    noitesCriancas: parseInt(document.getElementById('noites-criancas').value) || 0,
-    valorDireto: parseFloat(document.getElementById('valor-direto').value) || 0,
-    valorTmt: parseFloat(document.getElementById('valor-tmt').value),
-    timestamp: new Date() // só usado na criação
-    // 🔽 NOVOS CAMPOS (seguros p/ docs antigos)
-checkIn,
-checkOut,
-noites: (typeof noitesInp === 'number' ? noitesInp : null),
-precoMedioNoite,
-hospedesAdultos,
-hospedesCriancas,
-hospedesBebes,
-  };
+  // 🔽 NOVOS CAMPOS (seguros p/ docs antigos)
+  checkIn,
+  checkOut,
+  noites: (typeof noitesInp === 'number' ? noitesInp : null),
+  precoMedioNoite,
+  hospedesAdultos,
+  hospedesCriancas,
+  hospedesBebes
+};
+
 
   const editId = editarIdInput ? editarIdInput.value : '';
 
@@ -382,29 +383,29 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
     const total   = Number(d.valorTransferencia || 0) + Number(d.taxaAirbnb || 0);
 
     // dados mínimos para preencher o formulário em modo edição
-const payload = {
-  id: d.id,
-  apartamento: d.apartamento,
-  ano: d.ano,
-  mes: d.mes,
-  numeroFatura: d.numeroFatura,
-  taxaAirbnb: d.taxaAirbnb,
-  valorTransferencia: d.valorTransferencia,
-  valorOperador: d.valorOperador,
-  noitesExtra: d.noitesExtra || 0,
-  noitesCriancas: d.noitesCriancas || 0,
-  valorDireto: d.valorDireto || 0,
-  valorTmt: d.valorTmt,
+    const payload = {
+      id: d.id,
+      apartamento: d.apartamento,
+      ano: d.ano,
+      mes: d.mes,
+      numeroFatura: d.numeroFatura,
+      taxaAirbnb: d.taxaAirbnb,
+      valorTransferencia: d.valorTransferencia,
+      valorOperador: d.valorOperador,
+      noitesExtra: d.noitesExtra || 0,
+      noitesCriancas: d.noitesCriancas || 0,
+      valorDireto: d.valorDireto || 0,
+      valorTmt: d.valorTmt,
 
-  // --- NOVO: estes campos seguem para entrarEmModoEdicao ---
-  checkIn: d.checkIn || null,
-  checkOut: d.checkOut || null,
-  noites: (typeof d.noites === 'number' ? d.noites : null),
-  precoMedioNoite: (d.precoMedioNoite ?? null),
-  hospedesAdultos: (d.hospedesAdultos ?? null),
-  hospedesCriancas: (d.hospedesCriancas ?? null),
-  hospedesBebes: (d.hospedesBebes ?? null)
-};
+      // --- NOVO: estes campos seguem para entrarEmModoEdicao ---
+      checkIn: d.checkIn || null,
+      checkOut: d.checkOut || null,
+      noites: (typeof d.noites === 'number' ? d.noites : null),
+      precoMedioNoite: (d.precoMedioNoite ?? null),
+      hospedesAdultos: (d.hospedesAdultos ?? null),
+      hospedesCriancas: (d.hospedesCriancas ?? null),
+      hospedesBebes: (d.hospedesBebes ?? null)
+    };
 
     const jsonAttr = d.id ? JSON.stringify(payload).replace(/"/g, '&quot;') : '';
 
@@ -413,7 +414,8 @@ const payload = {
          <button onclick="apagarFatura(this)" data-id="${d.id}" data-num="${d.numeroFatura}">Apagar</button>`
       : '—';
 
-    return `
+    // tabela principal (igual ao que já tinhas)
+    let html = `
       <tr>
         <td>${dataStr}</td>
         <td>${d.numeroFatura}</td>
@@ -422,6 +424,28 @@ const payload = {
         <td>€${total.toFixed(2)}</td>
         <td>${acoes}</td>
       </tr>`;
+
+    // --- NOVO BLOCO: detalhes extra (só no ecrã, escondido no PDF) ---
+    html += `
+      <tr class="no-pdf">
+        <td colspan="6">
+          <div class="detalhes-extra">
+            <h4>Estadia & Hóspedes</h4>
+            <ul>
+              <li><strong>Check-in:</strong> ${d.checkIn || '—'}</li>
+              <li><strong>Check-out:</strong> ${d.checkOut || '—'}</li>
+              <li><strong>Noites:</strong> ${(typeof d.noites === 'number') ? d.noites : '—'}</li>
+              <li><strong>Preço Médio/Noite:</strong> ${(d.precoMedioNoite != null) ? d.precoMedioNoite.toFixed(2) + ' €' : '—'}</li>
+              <li><strong>Adultos:</strong> ${d.hospedesAdultos ?? '—'}</li>
+              <li><strong>Crianças:</strong> ${d.hospedesCriancas ?? '—'}</li>
+              <li><strong>Bebés:</strong> ${d.hospedesBebes ?? '—'}</li>
+            </ul>
+          </div>
+        </td>
+      </tr>
+    `;
+
+    return html;
   }).join('');
 
   return `
@@ -440,6 +464,7 @@ const payload = {
     </table>
   `;
 }
+
 
 
 function gerarAnaliseFaturacao(faturas) {
