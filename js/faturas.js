@@ -79,14 +79,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         await definirValoresPadrao();
         carregarTodosRelatorios();
     });
-    document
-    .getElementById('toggle-prev-faturas')
-    .addEventListener('click', () => {
-      showPrevFaturaYears = !showPrevFaturaYears;
-      document.getElementById('toggle-prev-faturas').textContent =
-        showPrevFaturaYears ? 'Ocultar anos anteriores' : 'Mostrar anos anteriores';
-      carregarTodosRelatorios();
-    });
+    const togglePrevBtn = document.getElementById('toggle-prev-faturas');
+if (togglePrevBtn) {
+  togglePrevBtn.addEventListener('click', () => {
+    showPrevFaturaYears = !showPrevFaturaYears;
+    togglePrevBtn.textContent = showPrevFaturaYears
+      ? 'Ocultar anos anteriores'
+      : 'Mostrar anos anteriores';
+    carregarTodosRelatorios();
+  });
+}
     
 async function definirValoresPadrao() {
          const hoje = new Date();
@@ -826,7 +828,7 @@ html += `
   </div>
 `;
 wrap.innerHTML = html;
-
+}
 
 
 window.exportarPDFFaturacao = function(key, grupoJson) {
@@ -940,4 +942,4 @@ window.exportarPDFFaturacao = function(key, grupoJson) {
       doc.save(`relatorio-faturacao-${ano}-${meses[mes-1]}.pdf`);
     })
     .catch(err => console.error('Erro ao exportar PDF:', err));
-}
+};
