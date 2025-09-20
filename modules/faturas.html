@@ -235,17 +235,22 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    const btn  = document.getElementById("toggle-fatura-form");
-    const wrap = document.getElementById("fatura-form-wrap");
-    if (btn && wrap) {
-      btn.addEventListener("click", () => {
-        wrap.classList.toggle("hidden");
-        btn.textContent = wrap.classList.contains("hidden")
-          ? "Registar Nova Fatura"
-          : "Fechar formulário";
-      });
-    }
-  });
+  const btn  = document.getElementById("toggle-fatura-form");
+  const wrap = document.getElementById("fatura-form-wrap");
+
+  if (btn && wrap) {
+    btn.addEventListener("click", () => {
+      wrap.classList.toggle("hidden");
+
+      if (wrap.classList.contains("hidden")) {
+        btn.textContent = "Registar Nova Fatura";
+      } else {
+        btn.textContent = "Fechar formulário";
+      }
+    });
+  }
+});
+
 
   // Mobile menu
   const menuIcon = document.getElementById('menu-icon');
