@@ -120,6 +120,43 @@
         <input type="number" id="valor-tmt" step="0.01" value="3.00" required>
       </div>
 
+      <!-- Período da estadia -->
+<div class="form-row">
+  <div class="form-group">
+    <label for="checkin">Check-in</label>
+    <input type="date" id="checkin">
+  </div>
+  <div class="form-group">
+    <label for="checkout">Check-out</label>
+    <input type="date" id="checkout">
+  </div>
+  <div class="form-group">
+    <label for="noites">Número de Noites</label>
+    <input type="number" id="noites" min="0" step="1" placeholder="(auto)">
+  </div>
+</div>
+
+<!-- Preço médio e hóspedes -->
+<div class="form-row">
+  <div class="form-group">
+    <label for="preco-medio-noite">Preço Médio/Noite (€)</label>
+    <input type="number" id="preco-medio-noite" step="0.01" min="0">
+  </div>
+
+  <div class="form-group">
+    <label for="adultos">Adultos</label>
+    <input type="number" id="adultos" min="0" step="1">
+  </div>
+  <div class="form-group">
+    <label for="criancas">Crianças</label>
+    <input type="number" id="criancas" min="0" step="1">
+  </div>
+  <div class="form-group">
+    <label for="bebes">Bebés</label>
+    <input type="number" id="bebes" min="0" step="1">
+  </div>
+</div>
+
       <input type="hidden" id="fatura-id-edicao">
 
       <div class="form-actions">

@@ -60,6 +60,21 @@ function entrarEmModoEdicao(f) {
   // Foco e scroll para o form
   document.getElementById('numero-fatura').focus();
   window.scrollTo({ top: faturaForm.offsetTop - 20, behavior: 'smooth' });
+
+  // --- NOVO: preencher campos de estadia e hóspedes (se existirem no HTML) ---
+const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v ?? '') };
+setVal('checkin',  f.checkIn);
+setVal('checkout', f.checkOut);
+// se f.noites for number, preenche, senão deixa vazio (para calcular automático)
+const elNoites = document.getElementById('noites');
+if (elNoites) elNoites.value = (typeof f.noites === 'number' ? f.noites : '');
+
+setVal('preco-medio-noite', f.precoMedioNoite);
+
+setVal('adultos',  f.hospedesAdultos);
+setVal('criancas', f.hospedesCriancas);
+setVal('bebes',    f.hospedesBebes);
+
 }
 
 function sairDoModoEdicao() {
@@ -76,19 +91,42 @@ if (cancelarEdicaoBtn) {
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
-        await definirValoresPadrao();
-        carregarTodosRelatorios();
+  await definirValoresPadrao();
+  carregarTodosRelatorios();
+
+  // Auto-preencher Nº de Noites quando alteras check-in/out
+  ['checkin','checkout'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', () => {
+      const ci = document.getElementById('checkin')?.value;
+      const co = document.getElementById('checkout')?.value;
+      const out = document.getElementById('noites');
+      if (!out) return;
+      if (ci && co) {
+        const d1 = new Date(ci);
+        const d2 = new Date(co);
+        const n = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+        out.value = (Number.isFinite(n) && n >= 0) ? n : '';
+      } else {
+        out.value = '';
+      }
     });
-    const togglePrevBtn = document.getElementById('toggle-prev-faturas');
-if (togglePrevBtn) {
-  togglePrevBtn.addEventListener('click', () => {
-    showPrevFaturaYears = !showPrevFaturaYears;
-    togglePrevBtn.textContent = showPrevFaturaYears
-      ? 'Ocultar anos anteriores'
-      : 'Mostrar anos anteriores';
-    carregarTodosRelatorios();
   });
-}
+
+  // Toggle anos anteriores no relatório
+  const togglePrevBtn = document.getElementById('toggle-prev-faturas');
+  if (togglePrevBtn) {
+    togglePrevBtn.addEventListener('click', () => {
+      showPrevFaturaYears = !showPrevFaturaYears;
+      togglePrevBtn.textContent = showPrevFaturaYears
+        ? 'Ocultar anos anteriores'
+        : 'Mostrar anos anteriores';
+      carregarTodosRelatorios();
+    });
+  }
+});
+
     
 async function definirValoresPadrao() {
          const hoje = new Date();
@@ -111,6 +149,35 @@ async function definirValoresPadrao() {
 faturaForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
+// --- NOVO: ler datas / noites / preço / hóspedes ---
+const getVal = (id) => (document.getElementById(id)?.value ?? '');
+const parseIntSafe = (id, def = null) => {
+  const v = getVal(id).trim(); if (v === '') return def; const n = parseInt(v, 10); return Number.isNaN(n) ? def : n;
+};
+const parseFloatSafe = (id, def = null) => {
+  const v = getVal(id).trim(); if (v === '') return def; const n = parseFloat(v);  return Number.isNaN(n) ? def : n;
+};
+
+const checkIn  = getVal('checkin')  || null;  // "YYYY-MM-DD" ou null
+const checkOut = getVal('checkout') || null;
+
+// calcular nº de noites se input estiver vazio
+function diffNoites(ci, co) {
+  if (!ci || !co) return null;
+  const d1 = new Date(ci); const d2 = new Date(co);
+  const ms = d2 - d1; if (Number.isNaN(ms) || ms < 0) return null;
+  return Math.round(ms / (1000*60*60*24));
+}
+let noitesInp = parseIntSafe('noites', null);
+if (noitesInp === null) noitesInp = diffNoites(checkIn, checkOut);
+
+const precoMedioNoite = parseFloatSafe('preco-medio-noite', null);
+
+const hospedesAdultos  = parseIntSafe('adultos',  0);
+const hospedesCriancas = parseIntSafe('criancas', 0);
+const hospedesBebes    = parseIntSafe('bebes',    0);
+
+
   const formData = {
     apartamento: document.getElementById('apartamento').value,
     ano: parseInt(document.getElementById('ano').value),
@@ -124,6 +191,14 @@ faturaForm.addEventListener('submit', async (e) => {
     valorDireto: parseFloat(document.getElementById('valor-direto').value) || 0,
     valorTmt: parseFloat(document.getElementById('valor-tmt').value),
     timestamp: new Date() // só usado na criação
+    // 🔽 NOVOS CAMPOS (seguros p/ docs antigos)
+checkIn,
+checkOut,
+noites: (typeof noitesInp === 'number' ? noitesInp : null),
+precoMedioNoite,
+hospedesAdultos,
+hospedesCriancas,
+hospedesBebes,
   };
 
   const editId = editarIdInput ? editarIdInput.value : '';
@@ -307,20 +382,30 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
     const total   = Number(d.valorTransferencia || 0) + Number(d.taxaAirbnb || 0);
 
     // dados mínimos para preencher o formulário em modo edição
-    const payload = {
-      id: d.id,
-      apartamento: d.apartamento,
-      ano: d.ano,
-      mes: d.mes,
-      numeroFatura: d.numeroFatura,
-      taxaAirbnb: d.taxaAirbnb,
-      valorTransferencia: d.valorTransferencia,
-      valorOperador: d.valorOperador,
-      noitesExtra: d.noitesExtra || 0,
-      noitesCriancas: d.noitesCriancas || 0,
-      valorDireto: d.valorDireto || 0,
-      valorTmt: d.valorTmt
-    };
+const payload = {
+  id: d.id,
+  apartamento: d.apartamento,
+  ano: d.ano,
+  mes: d.mes,
+  numeroFatura: d.numeroFatura,
+  taxaAirbnb: d.taxaAirbnb,
+  valorTransferencia: d.valorTransferencia,
+  valorOperador: d.valorOperador,
+  noitesExtra: d.noitesExtra || 0,
+  noitesCriancas: d.noitesCriancas || 0,
+  valorDireto: d.valorDireto || 0,
+  valorTmt: d.valorTmt,
+
+  // --- NOVO: estes campos seguem para entrarEmModoEdicao ---
+  checkIn: d.checkIn || null,
+  checkOut: d.checkOut || null,
+  noites: (typeof d.noites === 'number' ? d.noites : null),
+  precoMedioNoite: (d.precoMedioNoite ?? null),
+  hospedesAdultos: (d.hospedesAdultos ?? null),
+  hospedesCriancas: (d.hospedesCriancas ?? null),
+  hospedesBebes: (d.hospedesBebes ?? null)
+};
+
     const jsonAttr = d.id ? JSON.stringify(payload).replace(/"/g, '&quot;') : '';
 
     const acoes = d.id
