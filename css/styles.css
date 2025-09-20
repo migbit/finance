@@ -293,6 +293,35 @@ tr:hover{background:#f1f1f1;}
 }
 
 
+
+
+/* DIVERSOS */
+/* Estilo do formulário Carlos – Faturas Pendentes */
+#carlos-invoice-form {
+  display: flex;
+  flex-wrap: wrap;      /* permite quebrar em mobile */
+  gap: 10px;            /* espaço entre os elementos */
+  align-items: center;  /* alinha verticalmente com o botão */
+  margin-bottom: 15px;
+}
+
+#carlos-invoice-form input {
+  flex: 1 1 150px;      /* inputs crescem mas têm min 150px */
+  padding: 6px 8px;
+}
+
+#carlos-invoice-form button {
+  flex: 0 0 auto;       /* botão mantém tamanho natural */
+  padding: 6px 12px;
+}
+
+
+
+
+
+
+
+
 /* ---- Responsive tweaks for small screens ---- */
 @media (max-width:768px){
   #fatura-form #taxa-airbnb,
