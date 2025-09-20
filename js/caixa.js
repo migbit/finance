@@ -121,9 +121,23 @@ async function carregarRelatorio() {
     };
 
     const renderCaixa = (cont, dados, label = 'Total') => {
-      const rows = dados.transacoes.map(t => trRow(t)).join('');
-      cont.innerHTML = tableWrap(rows) + totalDiv(label, dados.total);
-    };
+  const maxRows = 5; // quantas mostrar por defeito
+  const allRows = dados.transacoes.map(t => trRow(t));
+  const hiddenRows = allRows.slice(maxRows).join('');
+  const visibleRows = allRows.slice(0, maxRows).join('');
+
+  const tableHtml = `
+    <table>
+      <tr><th>Data</th><th>Tipo</th><th>Valor (€)</th><th>Ações</th></tr>
+      ${visibleRows || '<tr><td colspan="4" style="text-align:center;">Sem registos</td></tr>'}
+      ${hiddenRows ? `<tbody class="hidden-rows" style="display:none;">${hiddenRows}</tbody>` : ''}
+    </table>
+    ${hiddenRows ? `<button type="button" class="mostrar-mais">Mostra Mais</button>` : ''}
+  `;
+
+  cont.innerHTML = tableHtml + totalDiv(label, dados.total);
+};
+
 
     if (elBanco)    renderCaixa(elBanco,    caixas.banco);
     if (elDireita)  renderCaixa(elDireita,  caixas.direita);
@@ -230,4 +244,15 @@ document.addEventListener('click', async (e) => {
 // Init
 document.addEventListener('DOMContentLoaded', () => {
   carregarRelatorio();
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('mostrar-mais')) {
+    const btn = e.target;
+    const tbody = btn.previousElementSibling.querySelector('.hidden-rows');
+    if (tbody) {
+      tbody.style.display = tbody.style.display === 'none' ? 'table-row-group' : 'none';
+      btn.textContent = tbody.style.display === 'none' ? 'Mostra Mais' : 'Mostrar Menos';
+    }
+  }
 });
