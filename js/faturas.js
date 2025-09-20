@@ -125,7 +125,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       carregarTodosRelatorios();
     });
   }
+
+  // Toggle abrir/fechar formulário de fatura
+  const formBtn  = document.getElementById('toggle-fatura-form');
+  const formWrap = document.getElementById('fatura-form-wrap');
+  const form     = document.getElementById('fatura-form');
+  if (formBtn && formWrap) {
+    formBtn.addEventListener('click', () => {
+      formWrap.classList.toggle('hidden');
+      formBtn.textContent = formWrap.classList.contains('hidden')
+        ? 'Registar Nova Fatura'
+        : 'Fechar formulário';
+    });
+  }
+
+  // Fechar formulário ao cancelar edição (limpa e repõe texto do botão)
+  const cancelarBtn = document.getElementById('cancelar-edicao');
+  if (cancelarBtn && formBtn && formWrap && form) {
+    cancelarBtn.addEventListener('click', () => {
+      form.reset(); // limpa todos os inputs
+      document.getElementById('fatura-id-edicao').value = ''; // limpa id de edição
+      formWrap.classList.add('hidden');
+      formBtn.textContent = 'Registar Nova Fatura';
+      cancelarBtn.style.display = 'none'; // esconde o botão de cancelar
+    });
+  }
 });
+
 
     
 async function definirValoresPadrao() {
