@@ -722,87 +722,111 @@ function gerarHeatmapVariacao(faturas) {
   });
 
   // 2) Eixo X (anos) e Y (meses)
-  const anos = Object.keys(totais).map(n => Number(n)).sort((a,b)=>a-b);
+  const anosAll = Object.keys(totais).map(n => Number(n)).sort((a,b)=>a-b);
+  // Only keep years that have a previous year present in data
+  const anos = anosAll.filter(a => totais[a - 1]);
   const meses = Array.from({ length: 12 }, (_, i) => i + 1);
   const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   // 3) Função cor: mapeia -50% (vermelho) a +50% (verde), 0% = branco
   // clamp para [-0.5, +0.5] para a escala visual
-  function pctToColor(p) {
-    if (p === null) return '#f5f5f5'; // sem comparação
-    const clamped = Math.max(-0.5, Math.min(0.5, p));
-    // -0.5→0, 0→0.5, +0.5→1
-    const t = (clamped + 0.5) / 1.0;
-    // Interpolar entre vermelho (#d9534f) -> branco (#ffffff) -> verde (#28a745)
-    // Para simplicidade, fazemos 2 segmentos
-    function lerp(a, b, t) { return a + (b - a) * t; }
-    function hex(r,g,b){ return `#${[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('')}`; }
+  // color scale: -50% red → 0% light grey → +50% green
+function pctToColor(p) {
+  if (p === null) return '#f5f5f5'; // N/A
+  const clamped = Math.max(-0.5, Math.min(0.5, p));
+  // Map -0.5..0..+0.5 to 0..0.5..1
+  const t = (clamped + 0.5) / 1.0;
 
-    const red   = [217, 83, 79];
-    const white = [255,255,255];
-    const green = [40,167,69];
+  // endpoints
+  const red   = [217, 83, 79];
+  const mid   = [236, 236, 236];   // light grey for 0%
+  const green = [40, 167, 69];
 
-    let c;
-    if (t < 0.5) {
-      const k = t/0.5;
-      c = [ lerp(red[0], white[0], k), lerp(red[1], white[1], k), lerp(red[2], white[2], k) ];
-    } else {
-      const k = (t-0.5)/0.5;
-      c = [ lerp(white[0], green[0], k), lerp(white[1], green[1], k), lerp(white[2], green[2], k) ];
-    }
-    return hex(Math.round(c[0]), Math.round(c[1]), Math.round(c[2]));
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function hex(r,g,b){ return `#${[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('')}`; }
+
+  let c;
+  if (t < 0.5) {
+    const k = t/0.5;
+    c = [ lerp(red[0], mid[0], k), lerp(red[1], mid[1], k), lerp(red[2], mid[2], k) ];
+  } else {
+    const k = (t-0.5)/0.5;
+    c = [ lerp(mid[0], green[0], k), lerp(mid[1], green[1], k), lerp(mid[2], green[2], k) ];
   }
+  return hex(Math.round(c[0]), Math.round(c[1]), Math.round(c[2]));
+}
 
-  // 4) Construir tabela
-  const wrap = document.getElementById('heatmap-variacao');
-  if (!wrap) return;
+// text color for contrast on dark backgrounds
+function idealTextOn(bgHex) {
+  const r = parseInt(bgHex.slice(1,3),16);
+  const g = parseInt(bgHex.slice(3,5),16);
+  const b = parseInt(bgHex.slice(5,7),16);
+  // perceived luminance
+  const L = (0.299*r + 0.587*g + 0.114*b);
+  return L < 140 ? '#fff' : '#111';
+}
 
-  let html = `
-    <div class="heatmap-wrap">
-      <div class="heatmap-legend">
-        <span>-50%</span>
-        <div class="heatmap-gradient"></div>
-        <span>+50%</span>
-        <span class="heatmap-muted" style="margin-left:12px;">(0% = branco, N/A = cinza)</span>
-      </div>
-      <table class="heatmap-table">
-        <thead>
-          <tr>
-            <th>Mês \\ Ano</th>
-            ${anos.map(a=>`<th>${a}</th>`).join('')}
-          </tr>
-        </thead>
-        <tbody>
-  `;
 
-  meses.forEach(m => {
-    html += `<tr><th>${nomesMes[m-1]}</th>`;
-    anos.forEach(a => {
-      const prev = totais[a-1]?.[m] ?? null;
-      const cur  = totais[a]?.[m]   ?? null;
+// 4) Construir tabela
+const wrap = document.getElementById('heatmap-variacao');
+if (!wrap) return;
 
-      let pct = null;
-      if (prev === null || prev === undefined) {
-        pct = null; // sem ano anterior
-      } else if (prev === 0 && cur === 0) {
-        pct = 0; // iguais a zero → 0%
-      } else if (prev === 0 && cur !== 0) {
-        // sem base → marcar como N/A visual (poderias usar +∞, mas fica confuso)
-        pct = null;
-      } else {
-        pct = (cur - prev) / prev; // variação %
-      }
+let html = `
+  <div class="heatmap-wrap">
+    <div class="heatmap-legend">
+      <span>-50%</span>
+      <div class="heatmap-gradient"></div>
+      <span>+50%</span>
+      <span class="heatmap-muted" style="margin-left:12px;">(0% = cinza claro, N/A = vazio)</span>
+    </div>
+    <table class="heatmap-table">
+      <thead>
+        <tr>
+          <th>Mês \\ Ano</th>
+          ${anos.map(a => `<th>${a}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+`;
 
+meses.forEach(m => {
+  html += `<tr><th>${nomesMes[m - 1]}</th>`;
+
+  anos.forEach(a => {
+    const prev = totais[a - 1]?.[m] ?? null;
+    const cur  = totais[a]?.[m] ?? null;
+
+    let pct = null;
+    if (prev === null) {
+      pct = null;                 // sem ano anterior → N/A (vazio)
+    } else if (prev === 0 && cur === 0) {
+      pct = 0;                    // 0 → 0% (cinza claro)
+    } else if (prev === 0 && cur !== 0) {
+      pct = null;                 // sem base → N/A (vazio)
+    } else {
+      pct = (cur - prev) / prev;  // variação %
+    }
+
+    if (pct === null) {
+      html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
+    } else {
       const bg = pctToColor(pct);
-      const label = (pct === null) ? '—' : `${(pct*100).toFixed(0)}%`;
-      html += `<td class="heatmap-cell" style="background:${bg}">${label}</td>`;
-    });
-    html += `</tr>`;
+      const fg = idealTextOn(bg);
+      const label = `${(pct * 100).toFixed(0)}%`;
+      html += `<td class="heatmap-cell" style="background:${bg};color:${fg}">${label}</td>`;
+    }
   });
 
-  html += `</tbody></table></div>`;
-  wrap.innerHTML = html;
-}
+  html += `</tr>`;
+});
+
+html += `
+      </tbody>
+    </table>
+  </div>
+`;
+wrap.innerHTML = html;
+
 
 
 window.exportarPDFFaturacao = function(key, grupoJson) {

@@ -157,7 +157,7 @@ tr:hover{background:#f1f1f1;}
 .heatmap-gradient {
   height: 10px;
   width: 180px;
-  background: linear-gradient(to right, #d9534f, #ffffff 50%, #28a745);
+  background: linear-gradient(to right, #d9534f, #ececec 50%, #28a745);
   border-radius: 6px;
   border: 1px solid #ddd;
 }
