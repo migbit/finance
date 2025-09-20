@@ -252,6 +252,11 @@ tr:hover{background:#f1f1f1;}
 }
 .detalhes-extra { margin: .5rem 0; }
 
+.detalhes-grupo td {
+  background: #fafafa;
+  padding: 12px;
+  border-top: 0;
+}
 
 /* Esconder blocos marcados como no-pdf quando exportas/imprimes */
 @media print {
