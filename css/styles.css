@@ -279,7 +279,46 @@ tr:hover{background:#f1f1f1;}
 }
 .form-actions { margin-top: 8px; }
 
+/* --- Normalização de inputs para todos os browsers --- */
+/* Remover spinners no Chrome/Safari/Edge */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+/* Remover spinners no Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
 
+/* Altura consistente em inputs, selects e dates */
+:root { --control-h: 40px; }
+
+#fatura-form input[type="text"],
+#fatura-form input[type="number"],
+#fatura-form input[type="date"],
+#fatura-form select {
+  height: var(--control-h);
+  line-height: var(--control-h);
+  padding: 0 .6rem;        /* iguala “visual” com select */
+}
+
+/* Select sem discrepâncias visuais de altura */
+#fatura-form select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-origin: content-box;
+}
+
+/* Alinhar os campos pelo fundo dentro de cada linha */
+.form-row { align-items: end; }
+
+/* Opcional: largura mínima para números curtos
+   evita que o browser coloque um “botão” separado */
+#noites-extra, #noites-criancas, #valor-tmt {
+  min-width: 110px;
+}
 
 /* Esconder blocos marcados como no-pdf quando exportas/imprimes */
 @media print {
