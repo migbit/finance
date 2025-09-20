@@ -37,44 +37,57 @@ const editarIdInput      = document.getElementById('fatura-id-edicao');
 const cancelarEdicaoBtn  = document.getElementById('cancelar-edicao');
 const submitBtn          = document.getElementById('submit-fatura') || faturaForm.querySelector('button[type="submit"]');
 
+// Ativa modo edição e preenche todos os campos
 function entrarEmModoEdicao(f) {
-  if (!f || !f.id) return;
-  editarIdInput.value = f.id;
+  // Mostrar o form e ajustar botões
+  const wrap = document.getElementById('fatura-form-wrap');
+  const toggleBtn = document.getElementById('toggle-fatura-form');
+  const cancelarBtn = document.getElementById('cancelar-edicao');
+  if (wrap) wrap.classList.remove('hidden');
+  if (toggleBtn) toggleBtn.textContent = 'Fechar formulário';
+  if (cancelarBtn) cancelarBtn.style.display = 'inline-block';
 
-  // Preencher formulário
-  document.getElementById('apartamento').value        = f.apartamento;
-  document.getElementById('ano').value                = f.ano;
-  document.getElementById('mes').value                = f.mes;
-  document.getElementById('numero-fatura').value      = f.numeroFatura;
-  document.getElementById('taxa-airbnb').value        = Number(f.taxaAirbnb || 0);
-  document.getElementById('valor-transferencia').value= Number(f.valorTransferencia || 0);
-  document.getElementById('valor-operador').value     = Number(f.valorOperador || 0);
-  document.getElementById('noites-extra').value       = Number(f.noitesExtra || 0);
-  document.getElementById('noites-criancas').value    = Number(f.noitesCriancas || 0);
-  document.getElementById('valor-direto').value       = Number(f.valorDireto || 0);
-  document.getElementById('valor-tmt').value          = Number(f.valorTmt || 0);
+  // Guardar o id em edição
+  const idEdit = document.getElementById('fatura-id-edicao');
+  if (idEdit) idEdit.value = f.id || '';
 
-  if (submitBtn) submitBtn.textContent = 'Guardar alterações';
-  if (cancelarEdicaoBtn) cancelarEdicaoBtn.style.display = 'inline-block';
+  // Helpers
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v ?? ''); };
+  const setNum = (id, v) => { const el = document.getElementById(id); if (el) el.value = (typeof v === 'number' ? v : (v ?? '')); };
 
-  // Foco e scroll para o form
-  document.getElementById('numero-fatura').focus();
-  window.scrollTo({ top: faturaForm.offsetTop - 20, behavior: 'smooth' });
+  // 1ª linha
+  setVal('apartamento', f.apartamento);
+  setNum('ano', Number(f.ano));
+  setVal('mes', String(f.mes));
+  setVal('numero-fatura', f.numeroFatura);
 
-  // --- NOVO: preencher campos de estadia e hóspedes (se existirem no HTML) ---
-const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v ?? '') };
-setVal('checkin',  f.checkIn);
-setVal('checkout', f.checkOut);
-// se f.noites for number, preenche, senão deixa vazio (para calcular automático)
-const elNoites = document.getElementById('noites');
-if (elNoites) elNoites.value = (typeof f.noites === 'number' ? f.noites : '');
+  // 2ª linha (inclui Taxa Limpeza — NOVO)
+  setNum('taxa-airbnb', Number(f.taxaAirbnb));
+  setNum('valor-transferencia', Number(f.valorTransferencia));
+  setNum('taxa-limpeza', Number(f.taxaLimpeza)); // NOVO
 
-setVal('preco-medio-noite', f.precoMedioNoite);
+  // 3ª linha
+  setNum('valor-operador', Number(f.valorOperador));
+  setNum('noites-extra', Number(f.noitesExtra));
+  setNum('noites-criancas', Number(f.noitesCriancas));
+  setNum('valor-direto', Number(f.valorDireto));
+  setNum('valor-tmt', Number(f.valorTmt));
 
-setVal('adultos',  f.hospedesAdultos);
-setVal('criancas', f.hospedesCriancas);
-setVal('bebes',    f.hospedesBebes);
+  // 4ª/5ª linhas (estadia & hóspedes)
+  setVal('checkin', f.checkIn || '');
+  setVal('checkout', f.checkOut || '');
+  setNum('noites', (typeof f.noites === 'number' ? f.noites : ''));
+  setNum('preco-medio-noite', (typeof f.precoMedioNoite === 'number' ? f.precoMedioNoite : ''));
+  setNum('adultos', (typeof f.hospedesAdultos === 'number' ? f.hospedesAdultos : ''));
+  setNum('criancas', (typeof f.hospedesCriancas === 'number' ? f.hospedesCriancas : ''));
+  setNum('bebes', (typeof f.hospedesBebes === 'number' ? f.hospedesBebes : ''));
 
+  // Foco inicial
+  const first = document.getElementById('apartamento');
+  if (first) first.focus();
+
+  // Scroll suave até ao formulário
+  if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function sairDoModoEdicao() {
@@ -216,7 +229,7 @@ const formData = {
   valorDireto: parseFloat(document.getElementById('valor-direto').value) || 0,
   valorTmt: parseFloat(document.getElementById('valor-tmt').value),
   timestamp: new Date(), // só usado na criação  ✅ vírgula aqui
-
+  taxaLimpeza: parseFloat(document.getElementById('taxa-limpeza').value) || 0,
   // 🔽 NOVOS CAMPOS (seguros p/ docs antigos)
   checkIn,
   checkOut,
@@ -357,9 +370,15 @@ window.mostrarDetalhesFaturacao = function(key, button) {
 }
 
 // Editar: preenche o formulário e ativa modo edição
-window.editarFatura = function(btn) {
-  const f = JSON.parse(btn.dataset.fatura.replace(/&quot;/g, '"'));
-  entrarEmModoEdicao(f);
+window.editarFatura = function (btn) {
+  try {
+    const raw = btn.dataset.fatura || '{}';
+    const f = JSON.parse(raw.replace(/&quot;/g, '"'));
+    entrarEmModoEdicao(f);
+  } catch (e) {
+    console.error('Falha a ler dados da fatura para edição:', e);
+    alert('Não foi possível abrir esta fatura para edição.');
+  }
 };
 
 // Apagar: remove doc do Firestore e recarrega relatórios
