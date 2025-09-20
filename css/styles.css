@@ -220,6 +220,33 @@ tr:hover{background:#f1f1f1;}
   text-align: left;
 }
 
+.detalhes-extra {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #fafafa;
+  border: 1px solid #e6e6e6;
+  border-radius: var(--border-radius-sm);
+}
+
+.detalhes-extra ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0 0;
+}
+
+.detalhes-extra li {
+  margin: 0.25rem 0;
+  font-size: 0.9rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.detalhes-extra li strong {
+  color: var(--color-primary);
+  margin-right: 8px;
+}
+
+
 /* Esconder blocos marcados como no-pdf quando exportas/imprimes */
 @media print {
   .no-pdf { display: none !important; }
