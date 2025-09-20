@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Caixa</title>
     <link rel="stylesheet" href="../css/styles.css">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" href="../favicon.ico" type="image/x-icon">
 </head>
 <body>
     <header>
@@ -14,7 +14,7 @@
     
         <!-- Ícone de menu "hambúrguer" para mobile -->
         <div class="menu-icon" id="menu-icon">
-            &#9776; <!-- Ícone de três linhas -->
+            &#9776;
         </div>
     
         <nav id="nav-menu">
@@ -22,11 +22,10 @@
                 <li><a href="faturas.html">Faturas | Relatórios</a></li>
                 <li><a href="caixa.html" class="active">Caixa</a></li>
                 <li class="separator">|</li>
-                <!-- Login/User section, controlled by server-side or CSS visibility -->
                 <li id="login-section">
                     <a href="#" id="login-btn" class="login-visible">Login</a>
                     <span id="user-info" class="user-visible" style="display:none;">
-                        <a href="#" id="user-name">Username</a> <!-- Visible if logged in -->
+                        <a href="#" id="user-name">Username</a>
                     </span>
                 </li>
             </ul>
@@ -36,60 +35,46 @@
     <main>
         <section class="form-section">
             <h2>Registrar Transação</h2>
-<form id="caixa-form">
-  <div class="form-group buttons">
-    <button type="button" id="btn-entrada" class="btn-entrada">Entrada</button>
-    <button type="button" id="btn-saida" class="btn-saida">Saída</button>
-    <input type="hidden" id="tipo" value="">
-  </div>
+            <form id="caixa-form">
+                <div class="form-group buttons">
+                    <button type="button" id="btn-entrada" class="btn-entrada">Entrada</button>
+                    <button type="button" id="btn-saida" class="btn-saida">Saída</button>
+                    <input type="hidden" id="tipo" value="">
+                </div>
 
-  <div class="form-group">
-    <label for="caixa">Selecionar Caixa:</label>
-    <select id="caixa" required>
-      <option value="banco">Caixa Banco</option>
-      <option value="direita">Caixa Direita</option>
-      <option value="esquerda">Caixa Esquerda</option>
-    </select>
-  </div>
+                <div class="caixa-grid">
+                    <section class="caixa-block">
+                        <h2>Caixa Banco</h2>
+                        <div id="caixa-banco"></div>
+                        <div id="total-banco"></div>
+                    </section>
 
-  <div class="form-group">
-    <label for="valor">Valor (€):</label>
-    <input type="number" id="valor" step="0.01" required>
-  </div>
+                    <section class="caixa-block">
+                        <h2>Caixa Esquerda</h2>
+                        <div id="caixa-esquerda"></div>
+                        <div id="total-esquerda"></div>
+                    </section>
 
-  <button type="submit">Registrar Transação</button>
-</form>
+                    <section class="caixa-block">
+                        <h2>Total Banco + Esquerda</h2>
+                        <p id="total-banco-esquerda"></p>
+                    </section>
 
+                    <section class="caixa-block">
+                        <h2>Caixa Direita (Pai)</h2>
+                        <div id="caixa-direita"></div>
+                        <div id="total-direita"></div>
+                    </section>
+                </div>
+
+                <div class="form-group">
+                    <label for="valor">Valor (€):</label>
+                    <input type="number" id="valor" step="0.01" required>
+                </div>
+
+                <button type="submit">Registrar Transação</button>
+            </form>
         </section>
-
-<section class="report-section">
-  <div class="report-container">
-    <div class="report-box">
-      <h2 class="centered">Caixa Banco</h2>
-      <div id="caixa-banco"></div>
-    </div>
-
-    <div class="report-box">
-      <h2 class="centered">Caixa Esquerda</h2>
-      <div id="caixa-esquerda"></div>
-    </div>
-
-    <!-- NOVO: total combinado -->
-    <div class="report-box">
-      <h2 class="centered">Total Banco + Esquerda</h2>
-      <div id="total-banco-esquerda"></div>
-    </div>
-
-    <div class="report-box">
-      <h2 class="centered">Caixa Direita (Pai)</h2>
-      <div id="caixa-direita"></div>
-    </div>
-  </div>
-</section>
-
-
-
-
     </main>
 
     <footer>
@@ -98,19 +83,18 @@
         </div>
     </footer>
 
-    <!-- Importar o script.js e caixa.js como módulos -->
+    <!-- Importar os scripts -->
     <script type="module" src="../js/script.js"></script>
     <script type="module" src="../js/caixa.js"></script>
 
     <!-- Script para alternar o menu no mobile -->
-<script>
-    const menuIcon = document.getElementById('menu-icon');
-    const navMenu = document.getElementById('nav-menu');
+    <script>
+        const menuIcon = document.getElementById('menu-icon');
+        const navMenu = document.getElementById('nav-menu');
 
-    menuIcon.addEventListener('click', function() {
-        navMenu.classList.toggle('active');
-    });
-</script>
-
+        menuIcon.addEventListener('click', function() {
+            navMenu.classList.toggle('active');
+        });
+    </script>
 </body>
 </html>
