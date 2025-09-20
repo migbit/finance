@@ -40,7 +40,7 @@ main{flex:1;padding:var(--spacing-md);max-width:1200px;margin:0 auto;}
 
 /* ---- Header + Nav (minimal) ---- */
 header{background:var(--color-primary);color:var(--color-white);padding:var(--spacing-sm);box-shadow:var(--shadow-light);}
-header h1{color:var(--color-white);font-size:1.25rem;}
+header h1{color:var(--color-white);font-size:1.25rem; margin: 0; text-align: center;}
 nav{background:var(--color-primary);}
 #menu-icon,.menu-icon{display:none;font-size:1.6rem;color:#fff;cursor:pointer;text-align:center;padding:var(--spacing-sm);}
 #nav-menu ul{list-style:none;display:flex;justify-content:center;flex-wrap:wrap;margin-top:var(--spacing-sm);}
