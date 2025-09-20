@@ -161,6 +161,22 @@
     <script type="module" src="../js/script.js"></script>
     <script type="module" src="../js/faturas.js"></script>
 
+    <script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("toggle-fatura-form");
+    const wrap = document.getElementById("fatura-form-wrap");
+
+    if (btn && wrap) {
+      btn.addEventListener("click", () => {
+        wrap.classList.toggle("hidden");
+        btn.textContent = wrap.classList.contains("hidden")
+          ? "➕ Registrar Nova Fatura"
+          : "➖ Fechar formulário";
+      });
+    }
+  });
+</script>
+
         <!-- Script para alternar o menu no mobile -->
 <script>
     const menuIcon = document.getElementById('menu-icon');
