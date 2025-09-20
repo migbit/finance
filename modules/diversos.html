@@ -1,14 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt-pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Carlos – Faturas Pendentes</title>
-  <link rel="stylesheet" href="../css/styles.css">
-  <link rel="icon" href="../favicon.ico" type="image/x-icon">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cenas</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
-  <header>
+    <header>
         <h1>Caixa</h1>
     
         <!-- Ícone de menu "hambúrguer" para mobile -->
@@ -35,45 +36,58 @@
             </ul>
         </nav>
     </header>
-
-  <main>
-    <section id="carlos-section" class="card mt-4">
-      <h2 class="card-header">Carlos – Faturas Pendentes</h2>
-      <div class="card-body">
-        <!-- Formulário -->
-        <form id="carlos-invoice-form" class="form-inline mb-3">
-          <input type="text" id="invoice-number" placeholder="Nº Fatura (ex: 2023/15)" required>
-          <input type="date" id="invoice-date" required>
-          <input type="number" id="invoice-total" placeholder="Total (€)" step="0.01" required>
-          <button type="submit" class="btn btn-success ml-2">Adicionar Fatura</button>
-        </form>
-
-        <!-- Tabela -->
-        <table id="carlos-invoices-table" class="table table-striped">
-          <thead>
-            <tr>
-              <th>Nº Fatura</th>
-              <th>Data</th>
-              <th>Total (€)</th>
-              <th>Pago (€)</th>
-              <th>Saldo (€)</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="carlos-invoices-body"></tbody>
-        </table>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div class="footer-container">
-      <p>&copy; 2025 OM&MT.</p>
+    
+    <main>
+       
+       <!-- Carlos – Faturas Pendentes -->
+<section id="carlos-section" class="card mt-4">
+    <h2 class="card-header">Carlos – Faturas Pendentes</h2>
+    <div class="card-body">
+      <!-- 1. Formulário de Fatura -->
+      <form id="carlos-invoice-form" class="form-inline mb-3">
+        <input type="text"    id="invoice-number" placeholder="Nº Fatura (ex: 2023/15)" required>
+        <input type="date"    id="invoice-date"   required>
+        <input type="number"  id="invoice-total"  placeholder="Total (€)" step="0.01" required>
+        <button type="submit" class="btn btn-success ml-2">Adicionar Fatura</button>
+      </form>
+  
+      <!-- 2. Tabela de Faturas + Pagamentos -->
+      <table id="carlos-invoices-table" class="table table-striped">
+        <thead>
+          <tr>
+            <th>Nº Fatura</th>
+            <th>Data</th>
+            <th>Total (€)</th>
+            <th>Pago (€)</th>
+            <th>Saldo (€)</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="carlos-invoices-body">
+          <!-- preenchido via JS -->
+        </tbody>
+      </table>
     </div>
-  </footer>
+  </section>
+               
+        <footer>
+            <div class="footer-container">
+                <p>&copy; 2025 OM&MT.</p>
+            </div>
+        </footer>
 
-  <!-- Scripts -->
-  <script type="module" src="../js/script.js"></script>
-  <script type="module" src="../js/diversos.js"></script>
+    <!-- Required Scripts -->
+    <script src="../js/ical.min.js"></script>
+    <script type="module" src="../js/diversos.js"></script>
+
+    <!-- Mobile Menu Toggle Script -->
+    <script>
+        const menuIcon = document.getElementById('menu-icon');
+        const navMenu = document.getElementById('nav-menu');
+
+        menuIcon.addEventListener('click', function() {
+            navMenu.classList.toggle('active');
+        });
+    </script>
 </body>
 </html>
