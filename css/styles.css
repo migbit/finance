@@ -140,6 +140,68 @@ tr:hover{background:#f1f1f1;}
 .chart-card h3{margin:0 0 6px 4px;font-weight:600;}
 #dca-section .chart-card canvas{width:100% !important;height:var(--dca-canvas-h) !important;}
 
+/* Heatmap Receita vs. Ano Anterior */
+.heatmap-wrap {
+  overflow-x: auto;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 16px;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.heatmap-gradient {
+  height: 10px;
+  width: 180px;
+  background: linear-gradient(to right, #d9534f, #ffffff 50%, #28a745);
+  border-radius: 6px;
+  border: 1px solid #ddd;
+}
+
+.heatmap-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 640px;
+}
+
+.heatmap-table th,
+.heatmap-table td {
+  border: 1px solid #e6e6e6;
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.heatmap-table thead th {
+  background: #f7f7f7;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.heatmap-table tbody th {
+  background: #fafafa;
+  text-align: left;
+  position: sticky;
+  left: 0;
+}
+
+.heatmap-cell {
+  color: #111;
+  font-variant-numeric: tabular-nums;
+  min-width: 72px;
+}
+
+.heatmap-muted {
+  color: #888;
+}
+
+
+
 /* Página Caixa */
 /*   ----------------------------------------------------------->  Caixa Page Styles */
 #relatorio-caixa h3 {
