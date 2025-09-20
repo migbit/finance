@@ -84,6 +84,17 @@ tr:hover{background:#f1f1f1;}
    Specific: Faturas / Relatórios
    =========================== */
 
+   .hidden { display: none; }
+
+#fatura-form-wrap {
+  margin-top: 1rem;
+  background: #fff;
+  padding: 1rem;
+  border: 1px solid var(--color-gray);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-light);
+}
+
 .chart-wrap{width:100%;max-width:700px;margin:1.25rem auto;}
 .report-filters{margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
 .comparacao-item{margin-bottom:1rem;}
