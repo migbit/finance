@@ -758,16 +758,15 @@ function pctToColor(p) {
   return hex(Math.round(c[0]), Math.round(c[1]), Math.round(c[2]));
 }
 
-// text color for contrast on dark backgrounds
+// Decide white vs black text depending on background brightness
 function idealTextOn(bgHex) {
   const r = parseInt(bgHex.slice(1,3),16);
   const g = parseInt(bgHex.slice(3,5),16);
   const b = parseInt(bgHex.slice(5,7),16);
-  // perceived luminance
+  // relative luminance
   const L = (0.299*r + 0.587*g + 0.114*b);
-  return L < 140 ? '#fff' : '#111';
+  return L < 160 ? '#fff' : '#111'; // threshold bumped to 160 for better contrast
 }
-
 
 // 4) Construir tabela
 const wrap = document.getElementById('heatmap-variacao');
@@ -809,14 +808,14 @@ meses.forEach(m => {
       pct = (cur - prev) / prev;  // variação %
     }
 
-    if (pct === null) {
-      html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
-    } else {
-      const bg = pctToColor(pct);
-      const fg = idealTextOn(bg);
-      const label = `${(pct * 100).toFixed(0)}%`;
-      html += `<td class="heatmap-cell" style="background:${bg};color:${fg}">${label}</td>`;
-    }
+if (pct === null) {
+  html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
+} else {
+  const bg = pctToColor(pct);
+  const fg = idealTextOn(bg);   // ✅ ensure contrast
+  const label = `${(pct * 100).toFixed(0)}%`;
+  html += `<td class="heatmap-cell" style="background:${bg};color:${fg};font-weight:600">${label}</td>`;
+}
   });
 
   html += `</tr>`;
