@@ -29,7 +29,6 @@ const manualFaturasEstatica = [
 // DOM Elements
 const faturaForm = document.getElementById('fatura-form');
 const relatorioFaturacaoDiv = document.getElementById('relatorio-faturacao');
-const relatorioTmtDiv = document.getElementById('relatorio-tmt');
 
 let chartComparacaoApt = null;
 let chartTotal = null;
@@ -154,7 +153,6 @@ async function carregarTodosRelatorios() {
    const faturas = firebaseFaturas.concat(manualFaturasEstatica);
     
     gerarRelatorioFaturacao(faturas);
-    gerarRelatorioTMT(faturas);
     gerarAnaliseFaturacao(faturas);
     gerarMediaFaturacao(faturas);
 }
@@ -206,53 +204,6 @@ function gerarRelatorioFaturacao(faturas) {
     relatorioFaturacaoDiv.innerHTML = html;
 }
 
-function gerarRelatorioTMT(faturas) {
-    const currentYear = new Date().getFullYear();
-    const arr = showPrevFaturaYears
-      ? faturas
-      : faturas.filter(f => f.ano === currentYear);
-
-    // agrupa por apartamento e trimestre, usando só o arr filtrado
-    const faturasAgrupadasPorTrimestre = agruparPorAnoTrimestreApartamento(arr);
-
-    let html = '';
-
-    Object.entries(faturasAgrupadasPorTrimestre).forEach(([apartamento, trimestres]) => {
-        html += `<h4>Apartamento ${apartamento}</h4>`;
-        html += '<table><thead><tr>'
-             +  '<th>Ano</th><th>Trimestre</th><th>Estadias</th>'
-             +  '<th>Extra 7 Noites</th><th>Crianças</th><th>Total</th><th>Ações</th>'
-             +  '</tr></thead><tbody>';
-
-        Object.entries(trimestres).forEach(([keyTrimestre, dados]) => {
-            const [ano, trimestre] = keyTrimestre.split('-');
-            const estadias = Math.round((dados.valorOperador + dados.valorDireto) / dados.valorTmt);
-            const totalEst = estadias + dados.noitesExtra + dados.noitesCriancas;
-            const detalhesJSON = JSON.stringify(dados.detalhes).replace(/"/g, '&quot;');
-
-            html += `
-                <tr>
-                    <td>${ano}</td>
-                    <td>${trimestre}º</td>
-                    <td>${estadias}</td>
-                    <td>${dados.noitesExtra}</td>
-                    <td>${dados.noitesCriancas}</td>
-                    <td>${totalEst}</td>
-                    <td>
-                        <button onclick="mostrarDetalhesTMT('${apartamento}-${keyTrimestre}', this)"
-                                data-detalhes="${detalhesJSON}">
-                          Ver Detalhes
-                        </button>
-                    </td>
-                </tr>`;
-        });
-
-        html += '</tbody></table>';
-    });
-
-    relatorioTmtDiv.innerHTML = html;
-}
-
 // Funções Auxiliares
 function agruparPorAnoMes(faturas) {
     return faturas.reduce((grupos, fatura) => {
@@ -299,16 +250,6 @@ function obterNomeMes(numeroMes) {
 window.mostrarDetalhesFaturacao = function(key, button) {
     const detalhes = JSON.parse(button.dataset.detalhes.replace(/&quot;/g, '"'));
     toggleDetalhes(button, gerarHTMLDetalhesFaturacao(detalhes));
-}
-
-window.mostrarDetalhesModelo30 = function(key, button) {
-    const detalhes = JSON.parse(button.dataset.detalhes.replace(/&quot;/g, '"'));
-    toggleDetalhes(button, gerarHTMLDetalhesModelo30(detalhes));
-}
-
-window.mostrarDetalhesTMT = function(key, button) {
-    const detalhes = JSON.parse(button.dataset.detalhes.replace(/&quot;/g, '"'));
-    toggleDetalhes(button, gerarHTMLDetalhesTMT(detalhes));
 }
 
 // Editar: preenche o formulário e ativa modo edição
@@ -770,35 +711,6 @@ function gerarMediaFaturacao(faturas) {
     document.getElementById('analise-faturacao-container').appendChild(container);
   }
   container.innerHTML = html;
-}
-
-function gerarHTMLDetalhesTMT(detalhes) {
-    return `
-        <table class="detalhes-table">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Valor Operador</th>
-                    <th>Valor Direto</th>
-                    <th>Noites Extra</th>
-                    <th>Noites Crianças</th>
-                    <th>Valor TMT</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${detalhes.map(d => `
-                    <tr>
-                        <td>${new Date(d.timestamp.seconds * 1000).toLocaleDateString()}</td>
-                        <td>€${d.valorOperador.toFixed(2)}</td>
-                        <td>€${d.valorDireto.toFixed(2)}</td>
-                        <td>${d.noitesExtra}</td>
-                        <td>${d.noitesCriancas}</td>
-                        <td>€${d.valorTmt.toFixed(2)}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
 }
 
 window.exportarPDFFaturacao = function(key, grupoJson) {
