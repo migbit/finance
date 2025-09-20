@@ -152,7 +152,7 @@ tr:hover{background:#f1f1f1;}
   gap: 8px;
   margin: 8px 0 16px;
   font-size: 0.9rem;
-  color: #333; /* darker for readability */
+  color: #333;
 }
 
 .heatmap-gradient {
@@ -173,10 +173,10 @@ tr:hover{background:#f1f1f1;}
 .heatmap-table td {
   border: 1px solid #e6e6e6;
   padding: 8px 10px;
-  text-align: center;
+  text-align: center;    /* centraliza todo o texto */
   font-size: 0.95rem;
-  color: #111;              /* force dark text */
-  background: #fff;         /* clean white background */
+  color: #111;
+  background: #fff;
 }
 
 .heatmap-table thead th {
@@ -187,7 +187,6 @@ tr:hover{background:#f1f1f1;}
 }
 
 .heatmap-table tbody th {
-  text-align: left;
   font-weight: 700;
   position: sticky;
   left: 0;
@@ -201,6 +200,7 @@ tr:hover{background:#f1f1f1;}
 .heatmap-muted {
   color: #666;
 }
+
 
 
 
