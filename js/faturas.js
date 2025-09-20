@@ -148,13 +148,13 @@ faturaForm.addEventListener('submit', async (e) => {
 });
 
 async function carregarTodosRelatorios() {
-   const firebaseFaturas = await carregarFaturas();
-   // junta Firebase + estático
-   const faturas = firebaseFaturas.concat(manualFaturasEstatica);
-    
-    gerarRelatorioFaturacao(faturas);
-    gerarAnaliseFaturacao(faturas);
-    gerarMediaFaturacao(faturas);
+  const firebaseFaturas = await carregarFaturas();
+  const faturas = firebaseFaturas.concat(manualFaturasEstatica);
+
+  gerarRelatorioFaturacao(faturas);
+  gerarAnaliseFaturacao(faturas);
+  gerarMediaFaturacao(faturas);
+  gerarHeatmapVariacao(faturas); // ⬅️ NOVO
 }
 
 async function carregarFaturas() {
@@ -712,6 +712,98 @@ function gerarMediaFaturacao(faturas) {
   }
   container.innerHTML = html;
 }
+
+function gerarHeatmapVariacao(faturas) {
+  // 1) Totais por ano/mês (somando os apartamentos)
+  const totais = {}; // ex: totais[ano][mes] = soma
+  faturas.forEach(f => {
+    if (!totais[f.ano]) totais[f.ano] = {};
+    totais[f.ano][f.mes] = (totais[f.ano][f.mes] || 0) + Number(f.valorTransferencia || 0);
+  });
+
+  // 2) Eixo X (anos) e Y (meses)
+  const anos = Object.keys(totais).map(n => Number(n)).sort((a,b)=>a-b);
+  const meses = Array.from({ length: 12 }, (_, i) => i + 1);
+  const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // 3) Função cor: mapeia -50% (vermelho) a +50% (verde), 0% = branco
+  // clamp para [-0.5, +0.5] para a escala visual
+  function pctToColor(p) {
+    if (p === null) return '#f5f5f5'; // sem comparação
+    const clamped = Math.max(-0.5, Math.min(0.5, p));
+    // -0.5→0, 0→0.5, +0.5→1
+    const t = (clamped + 0.5) / 1.0;
+    // Interpolar entre vermelho (#d9534f) -> branco (#ffffff) -> verde (#28a745)
+    // Para simplicidade, fazemos 2 segmentos
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function hex(r,g,b){ return `#${[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('')}`; }
+
+    const red   = [217, 83, 79];
+    const white = [255,255,255];
+    const green = [40,167,69];
+
+    let c;
+    if (t < 0.5) {
+      const k = t/0.5;
+      c = [ lerp(red[0], white[0], k), lerp(red[1], white[1], k), lerp(red[2], white[2], k) ];
+    } else {
+      const k = (t-0.5)/0.5;
+      c = [ lerp(white[0], green[0], k), lerp(white[1], green[1], k), lerp(white[2], green[2], k) ];
+    }
+    return hex(Math.round(c[0]), Math.round(c[1]), Math.round(c[2]));
+  }
+
+  // 4) Construir tabela
+  const wrap = document.getElementById('heatmap-variacao');
+  if (!wrap) return;
+
+  let html = `
+    <div class="heatmap-wrap">
+      <div class="heatmap-legend">
+        <span>-50%</span>
+        <div class="heatmap-gradient"></div>
+        <span>+50%</span>
+        <span class="heatmap-muted" style="margin-left:12px;">(0% = branco, N/A = cinza)</span>
+      </div>
+      <table class="heatmap-table">
+        <thead>
+          <tr>
+            <th>Mês \\ Ano</th>
+            ${anos.map(a=>`<th>${a}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  meses.forEach(m => {
+    html += `<tr><th>${nomesMes[m-1]}</th>`;
+    anos.forEach(a => {
+      const prev = totais[a-1]?.[m] ?? null;
+      const cur  = totais[a]?.[m]   ?? null;
+
+      let pct = null;
+      if (prev === null || prev === undefined) {
+        pct = null; // sem ano anterior
+      } else if (prev === 0 && cur === 0) {
+        pct = 0; // iguais a zero → 0%
+      } else if (prev === 0 && cur !== 0) {
+        // sem base → marcar como N/A visual (poderias usar +∞, mas fica confuso)
+        pct = null;
+      } else {
+        pct = (cur - prev) / prev; // variação %
+      }
+
+      const bg = pctToColor(pct);
+      const label = (pct === null) ? '—' : `${(pct*100).toFixed(0)}%`;
+      html += `<td class="heatmap-cell" style="background:${bg}">${label}</td>`;
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+  wrap.innerHTML = html;
+}
+
 
 window.exportarPDFFaturacao = function(key, grupoJson) {
   import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js')
