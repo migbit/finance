@@ -1,150 +1,161 @@
-// Importar as funções necessárias do Firebase e EmailJS
+// Finance repo – script.js (adapted from main app)
+/*
+  Key changes vs main app:
+  - Keeps Firebase v9 modular imports from gstatic CDN
+  - Works even if login/logout elements are absent (no-op)
+  - Exposes db globally (window.db) and exports { db, copiarMensagem }
+  - EmailJS calls are optional (skips if emailjs is not present)
+  - Adds mobile menu toggle + current link highlighting
+*/
+
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
-// Configuração do Firebase
+// Firebase config (same project as main app)
 const firebaseConfig = {
-    apiKey: "AIzaSyBRx2EYDi3FpfmJjttO2wd9zeFVV3uH6Q0",
-    authDomain: "apartments-a4b17.firebaseapp.com",
-    projectId: "apartments-a4b17",
-    storageBucket: "apartments-a4b17.appspot.com",
-    messagingSenderId: "465612199373",
-    appId: "1:465612199373:web:2b8e1eb14f453caa532084"
+  apiKey: "AIzaSyBRx2EYDi3FpfmJjttO2wd9zeFVV3uH6Q0",
+  authDomain: "apartments-a4b17.firebaseapp.com",
+  projectId: "apartments-a4b17",
+  storageBucket: "apartments-a4b17.appspot.com",
+  messagingSenderId: "465612199373",
+  appId: "1:465612199373:web:2b8e1eb14f453caa532084"
 };
 
-// Inicializar Firebase apenas se não estiver já inicializado
+// Initialize (singleton-friendly)
 let app;
 if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-    console.log("Firebase initialized.");
+  app = initializeApp(firebaseConfig);
+  console.log("Firebase initialized.");
 } else {
-    app = getApps()[0]; // Usa a instância já existente
-    console.log("Firebase app already initialized.");
+  app = getApps()[0];
+  console.log("Firebase app already initialized.");
 }
 
-// Inicializar Firestore
+// Firestore
 const db = getFirestore(app);
-window.db = db;  // <-- make db globally available
+window.db = db;
 
-// Inicializar o Firebase Authentication e o provedor do Google
+// Auth
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// Função de login com Google
 function loginComGoogle() {
-    console.log("Botão de login clicado. Tentando login com Google...");
-    signInWithPopup(auth, provider)
+  console.log("Login with Google...");
+  signInWithPopup(auth, provider)
     .then((result) => {
-        // O utilizador autenticou-se com sucesso
-        const user = result.user;
-        console.log("Utilizador autenticado:", user.displayName, user.email);
-        atualizarInterface(user);
+      const user = result.user;
+      console.log("User authenticated:", user.displayName, user.email);
+      atualizarInterface(user);
     })
     .catch((error) => {
-        // Tratar erros
-        console.error("Erro na autenticação com o Google:", error.message);
+      console.error("Erro na autenticação com o Google:", error.message);
     });
 }
 
-// Função de logout
 function logout() {
-    console.log("Tentando fazer logout...");
-    signOut(auth)
+  console.log("Logout...");
+  signOut(auth)
     .then(() => {
-        console.log("Utilizador saiu com sucesso.");
-        atualizarInterface(null);
+      console.log("Saiu com sucesso.");
+      atualizarInterface(null);
     })
     .catch((error) => {
-        console.error("Erro ao sair:", error.message);
+      console.error("Erro ao sair:", error.message);
     });
 }
 
-// Garantir que o código só seja executado quando o DOM estiver carregado
-document.addEventListener('DOMContentLoaded', function() {
-    // Verificar a existência dos elementos antes de acessá-los
-    const loginBtn = document.getElementById('login-btn');
-    const logoutBtn = document.getElementById('logout-btn');
+// DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  // Mobile menu + active link
+  const menuIcon = document.getElementById('menu-icon');
+  const navMenu  = document.getElementById('nav-menu');
+  if (menuIcon && navMenu) {
+    menuIcon.addEventListener('click', () => navMenu.classList.toggle('active'));
+  }
+  const here = location.pathname.replace(/\/+/g,'/');
+  document.querySelectorAll('nav a[href]').forEach(a => {
+    try {
+      const href = new URL(a.getAttribute('href'), location.origin).pathname;
+      if (href === here) a.classList.add('active');
+    } catch(e){ /* ignore */ }
+  });
 
-    // Verificar se o botão de login existe antes de tentar adicionar o event listener
-    if (loginBtn) {
-        console.log("Login button found, adding event listener");
-        loginBtn.addEventListener('click', loginComGoogle);
+  // Auth UI bindings if present
+  const loginBtn = document.getElementById('login-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  if (loginBtn) {
+    console.log("Login button found, adding event listener");
+    loginBtn.addEventListener('click', loginComGoogle);
+  } else {
+    console.log("Login button not found on this page.");
+  }
+  if (logoutBtn) {
+    console.log("Logout button found, adding event listener");
+    logoutBtn.addEventListener('click', logout);
+  } else {
+    console.log("Logout button not found on this page.");
+  }
+
+  // Auth state
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      console.log("User is authenticated:", user.displayName);
+      atualizarInterface(user);
     } else {
-        console.log("Login button not found on this page.");
+      console.log("No user is authenticated.");
+      atualizarInterface(null);
     }
-
-    // Verificar se o botão de logout existe antes de tentar adicionar o event listener
-    if (logoutBtn) {
-        console.log("Logout button found, adding event listener");
-        logoutBtn.addEventListener('click', logout);
-    } else {
-        console.log("Logout button not found on this page.");
-    }
-
-    // Estado de autenticação - Verificar se o utilizador está autenticado
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            console.log("User is authenticated:", user.displayName);
-            atualizarInterface(user);  // Atualizar a interface com as informações do utilizador
-        } else {
-            console.log("No user is authenticated.");
-            atualizarInterface(null);  // Limpar a interface
-        }
-    });
+  });
 });
 
-// Atualizar a interface de acordo com o estado de autenticação
 function atualizarInterface(user) {
-    const loginBtn = document.getElementById('login-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const userInfo = document.getElementById('user-info');
-    const userName = document.getElementById('user-name');
+  const loginBtn = document.getElementById('login-btn');
+  const logoutBtn = document.getElementById('logout-btn');
+  const userInfo = document.getElementById('user-info');
+  const userName = document.getElementById('user-name');
 
-    if (user) {
-        // Utilizador autenticado
-        console.log("Updating interface to show user information");
-        if (loginBtn) loginBtn.style.display = 'none';
-        if (logoutBtn) logoutBtn.style.display = 'block';
-        if (userInfo) {
-            userInfo.style.display = 'block';
-            userName.textContent = user.displayName;
-        }
-    } else {
-        // Nenhum utilizador autenticado
-        console.log("Updating interface to show login button");
-        if (loginBtn) loginBtn.style.display = 'block';
-        if (logoutBtn) logoutBtn.style.display = 'none';
-        if (userInfo) userInfo.style.display = 'none';
+  if (user) {
+    if (loginBtn) loginBtn.style.display = 'none';
+    if (logoutBtn) logoutBtn.style.display = 'block';
+    if (userInfo) {
+      userInfo.style.display = 'block';
+      if (userName) userName.textContent = user.displayName || user.email || 'Utilizador';
     }
+  } else {
+    if (loginBtn) loginBtn.style.display = 'block';
+    if (logoutBtn) logoutBtn.style.display = 'none';
+    if (userInfo) userInfo.style.display = 'none';
+  }
 }
 
-// Função para copiar texto (mantida do código anterior)
+// Utilities
 function copiarMensagem(texto) {
-    navigator.clipboard.writeText(texto).then(() => {
-        alert('Mensagem copiada para a área de transferência!');
-    }).catch(err => {
-        console.error('Erro ao copiar a mensagem: ', err);
-    });
+  navigator.clipboard.writeText(texto).then(() => {
+    alert('Mensagem copiada para a área de transferência!');
+  }).catch(err => {
+    console.error('Erro ao copiar a mensagem: ', err);
+  });
 }
 
-// Exportar funções necessárias
-export { db, copiarMensagem };
-
-// Função para enviar um e-mail de urgência usando EmailJS (mantida do código anterior)
-export function enviarEmailUrgencia(apartamento, descricao) {
-    emailjs.send('service_tuglp9h', 'template_l516egr', {
-        to_name: "apartments.oporto@gmail.com",
-        from_name: "Apartments Oporto",
-        subject: "Reparação Urgente Necessária",
-        message: `Uma nova reparação urgente foi registrada no apartamento ${apartamento}: ${descricao}`
-    })
-    .then(function(response) {
-        console.log('E-mail enviado com sucesso!', response.status, response.text);
-    }, function(error) {
-        console.error('Erro ao enviar e-mail:', error);
-    });
+// Optional EmailJS (only if global emailjs exists)
+function enviarEmailUrgencia(apartamento, descricao) {
+  if (typeof emailjs === 'undefined') {
+    console.warn('EmailJS não encontrado. Ignorando envio de email.');
+    return;
+  }
+  emailjs.send('service_tuglp9h', 'template_l516egr', {
+    to_name: "apartments.oporto@gmail.com",
+    from_name: "Apartments Oporto",
+    subject: "Reparação Urgente Necessária",
+    message: `Uma nova reparação urgente foi registrada no apartamento ${apartamento}: ${descricao}`
+  }).then((response) => {
+    console.log('E-mail enviado com sucesso!', response.status, response.text);
+  }).catch((error) => {
+    console.error('Erro ao enviar e-mail:', error);
+  });
 }
 
-// Attach the function to the window object if needed (for testing)
+// Exports for other modules
+export { db, copiarMensagem, enviarEmailUrgencia };
 window.enviarEmailUrgencia = enviarEmailUrgencia;
