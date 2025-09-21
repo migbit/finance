@@ -141,14 +141,25 @@ tr:hover{background:#f1f1f1;}
 #dca-section .chart-card canvas{width:100% !important;height:var(--dca-canvas-h) !important;}
 
 
-/* Altura mais generosa para leitura */
-#analise-faturacao-container canvas {
-  height: 190px !important;   /* experimenta 380–460 */
+/* Altura padrão no desktop 1920×1080 */
+:root {
+  --chart-h: 190px;
 }
 
-/* Opcional: em ecrãs pequenos, um pouco menos alto */
+/* Portáteis/monitores médios: um pouco mais alto */
+@media (max-width: 1280px) {
+  :root { --chart-h: 220px; }
+}
+
+/* Tablets e telemóveis: ainda mais alto para leitura */
 @media (max-width: 768px) {
-  #analise-faturacao-container canvas { height: 340px !important; }
+  :root { --chart-h: 260px; }
+}
+
+#analise-faturacao-container canvas {
+  height: var(--chart-h) !important;
+  width: 100% !important;
+  display: block;
 }
 
 /* Heatmap Receita vs. Ano Anterior */
