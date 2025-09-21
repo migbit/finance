@@ -549,10 +549,6 @@ input[type="number"] {
 
 
 /* Corrige alinhamentos */
-/* ============================
-   Faturas – Overrides finais
-   (colar no FIM do styles.css)
-   ============================ */
 
 /* 1) Grid da página: colunas não se esticam e tudo encostado à esquerda */
 .form-row{
@@ -621,3 +617,144 @@ input[type="number"] {
 
 /* Opcional: se tiveres grupos de label+campo */
 .form-group{ display:flex; flex-direction:column; }
+
+
+/* =========================================================
+   DCA PAGE (escopado) + Fixes de contraste e variável ausente
+   ========================================================= */
+
+/* Variáveis (fallbacks) usadas nesta página */
+.dca-page{
+  --gap: 12px;
+  --radius: 12px;
+  --muted: #7a7a7a;
+  --ok: #1f8f3a;
+  --bad: #c53030;
+  --bg-soft: rgba(0,0,0,0.03);
+  --card: #fff;
+  --grid-border: rgba(0,0,0,0.08);
+}
+
+/* Em algumas instalações o body global é branco; garantimos contraste suave */
+.dca-page{ background: var(--color-bg, #f6f7fb); }
+
+/* Content wrapper (mantém consistência com outras páginas) */
+.dca-page .wrap{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--spacing-md, 24px);
+}
+
+/* Controles do topo */
+.dca-page .controls{
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: repeat(12, 1fr);
+  background: var(--card);
+  padding: 16px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-light, 0 2px 10px rgba(0,0,0,.06));
+  margin: 16px 0 12px;
+}
+.dca-page .controls .field{ display:flex; flex-direction:column; gap:6px; }
+.dca-page .controls label{ font-size:.85rem; color: var(--muted); }
+.dca-page .controls input[type="number"],
+.dca-page .controls input[type="date"]{
+  padding:8px 10px;
+  border:1px solid var(--grid-border);
+  border-radius:8px;
+  background:#fff;
+  outline:none;
+}
+.dca-page .controls .row{ grid-column: span 12; display:flex; gap:8px; flex-wrap:wrap; }
+.dca-page .controls .field.sm{ width:180px; }
+.dca-page .controls .btns{ margin-left:auto; display:flex; gap:8px; align-items:flex-end; }
+.dca-page button.btn{
+  padding:9px 12px;
+  border-radius:10px;
+  border:1px solid var(--grid-border);
+  background:#fff;
+  cursor:pointer;
+  transition: var(--transition-default, .2s ease);
+}
+.dca-page button.btn:hover{ filter: brightness(0.98); }
+.dca-page button.primary{
+  background: var(--color-primary, #2b5fd9);
+  border-color: transparent;
+  color:#fff;
+}
+.dca-page button:disabled{ opacity:.6; cursor:not-allowed; }
+.dca-page .legend{ font-size:.85rem; color: var(--muted); margin:8px 0 14px; }
+
+/* Agrupamento por ano */
+.dca-page .year-group{
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-light, 0 2px 10px rgba(0,0,0,.06));
+  margin-bottom:10px;
+  overflow:hidden;
+}
+.dca-page .year-head{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; background: var(--bg-soft);
+  border-bottom:1px solid var(--grid-border);
+}
+.dca-page .year-head h3{ margin:0; font-size:1rem; }
+.dca-page .year-head .meta{ font-size:.85rem; color: var(--muted); }
+.dca-page .year-toggle{ cursor:pointer; }
+.dca-page .pill{
+  display:inline-block; padding:2px 8px; border-radius:999px;
+  background:#eef2ff; color:#3949ab; font-size:.78rem;
+}
+
+/* Tabela */
+.dca-page table.grid{
+  width:100%; border-collapse:collapse; font-size:.92rem;
+}
+.dca-page table.grid th,
+.dca-page table.grid td{
+  border-bottom:1px solid var(--grid-border);
+  padding:10px 8px; vertical-align:middle; background:#fff;
+}
+
+/* FIX 1: sobrepor regra global que pintava todos os <th> de branco */
+.dca-page table.grid th{
+  position: sticky; top: 0;
+  background: #fafafa !important;
+  color: var(--color-secondary, #222) !important;
+  z-index: 1; font-weight:600; text-align:left;
+}
+
+.dca-page table.grid td.num{
+  text-align:right; font-variant-numeric: tabular-nums;
+}
+.dca-page table.grid td.editable{ background:#fffcf2; }
+.dca-page .pos{ color: var(--ok); font-weight:600; }
+.dca-page .neg{ color: var(--bad); font-weight:600; }
+.dca-page .muted{ color: var(--muted); }
+
+/* Rodapé de cada ano */
+.dca-page .foot{
+  display:flex; gap:8px; align-items:center; justify-content:flex-end;
+  padding:10px 14px; background:#fafafa; border-top:1px solid var(--grid-border);
+}
+
+/* Responsivo */
+@media (max-width: 920px){
+  .dca-page .controls{ grid-template-columns: repeat(6,1fr); }
+  .dca-page .controls .field.sm{ width:100%; }
+}
+@media (max-width: 620px){
+  .dca-page table.grid{ font-size:.85rem; }
+}
+
+/* FIX 2: variável usada em botões de outras páginas e não definida globalmente */
+:root{
+  --transition-default: .2s ease;
+}
+
+/* Opcional: manter cabeçalhos brancos só em tabelas "não grid" */
+table:not(.grid) th{
+  background: var(--color-primary);
+  color: #fff;
+}
