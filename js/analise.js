@@ -254,13 +254,15 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
                    Number(f.mes) < Number(currentMonth))
       .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
 
-    const diffA    = antA - curA;
-    const pctA     = Math.round(Math.abs(diffA) / antA * 100);
-    const labelPctA= diffA > 0 ? `-${pctA}%` : `+${pctA}%`;
-    const barColA  = diffA > 0 ? '#dc3545' : '#28a745';
-    const labelA   = diffA > 0
-                       ? `Faltam €${diffA.toFixed(2)}`
-                       : `Excedeu €${(-diffA).toFixed(2)}`;
+    const baseA     = antA === 0 ? (curA === 0 ? 1 : curA) : antA;
+    const diffA     = antA - curA;
+    const pctARaw   = Math.round(Math.abs(diffA) / baseA * 100);
+    const pctA      = Math.min(100, pctARaw);
+    const labelPctA = diffA > 0 ? `-${pctA}%` : `+${pctA}%`;
+    const barColA   = diffA > 0 ? '#dc3545' : '#28a745';
+    const labelA    = diffA > 0
+                    ? `Faltam €${diffA.toFixed(2)}`
+                    : `Excedeu €${(-diffA).toFixed(2)}`;
 
     htmlProg += `
       <div class="comparacao-item">
@@ -285,13 +287,16 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
                    Number(f.mes) < Number(currentMonth))
       .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
 
-    const diffT2    = antT2 - curT2;
-    const pctT2     = Math.round(Math.abs(diffT2) / antT2 * 100);
-    const labelPctT2= diffT2 > 0 ? `-${pctT2}%` : `+${pctT2}%`;
-    const barColT2  = diffT2 > 0 ? '#dc3545' : '#28a745';
-    const labelT2   = diffT2 > 0
-                       ? `Faltam €${diffT2.toFixed(2)}`
-                       : `Excedeu €${(-diffT2).toFixed(2)}`;
+    const baseT2     = antT2 === 0 ? (curT2 === 0 ? 1 : curT2) : antT2;
+    const diffT2     = antT2 - curT2;
+    const pctT2Raw   = Math.round(Math.abs(diffT2) / baseT2 * 100);
+    const pctT2      = Math.min(100, pctT2Raw);
+    const labelPctT2 = diffT2 > 0 ? `-${pctT2}%` : `+${pctT2}%`;
+    const barColT2   = diffT2 > 0 ? '#dc3545' : '#28a745';
+    const labelT2    = diffT2 > 0
+                     ? `Faltam €${diffT2.toFixed(2)}`
+                     : `Excedeu €${(-diffT2).toFixed(2)}`;
+
 
     htmlProg += `
       <hr class="divider">
