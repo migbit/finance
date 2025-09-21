@@ -1,30 +1,30 @@
 <!DOCTYPE html>
 <html lang="pt-pt">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Caixa</title>
-    <link rel="stylesheet" href="../css/styles.css">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DCA</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <link rel="icon" href="../favicon.ico" type="image/x-icon">
 </head>
-<body>
-    <header>
-        <h1>Caixa</h1>
-    
-        <!-- Ícone de menu "hambúrguer" para mobile -->
-        <div class="menu-icon" id="menu-icon">
-            &#9776; <!-- Ícone de três linhas -->
-        </div>
-    
-        <nav id="nav-menu">
+<body class="dca-page">
+  <header>
+    <h1>DCA</h1>
+
+    <!-- Ícone de menu "hambúrguer" para mobile -->
+    <div class="menu-icon" id="menu-icon">
+      &#9776; <!-- Ícone de três linhas -->
+    </div>
+
+    <nav id="nav-menu">
             <ul>
                 <li><a href="faturas.html">Faturas e Relatórios</a></li>
                 <li><a href="analise.html">Análise Apartamentos</a></li>
                 <li><a href="caixa.html" class="active">Caixa</a></li>
                 <li><a href="diversos.html">Diversos</a></li>
                 <li class="separator">|</li>
-                <li><a href="dca.html" class="active">DCA</a></li>
+                <li><a href="dca.html">DCA</a></li>
                 <li class="separator">|</li>
                 <!-- Login/User section, controlled by server-side or CSS visibility -->
                 <li id="login-section">
@@ -37,84 +37,55 @@
         </nav>
     </header>
 
-    <main>
-        <section class="form-section">
-            <h2>Registrar Transação</h2>
-<form id="caixa-form">
-  <div class="form-group buttons">
-    <button type="button" id="btn-entrada" class="btn-entrada">Entrada</button>
-    <button type="button" id="btn-saida" class="btn-saida">Saída</button>
-    <input type="hidden" id="tipo" value="">
-  </div>
+  <main>
+    <div class="wrap">
+      <!-- Controlo global -->
+      <section class="controls" id="controls">
+        <div class="row">
+          <div class="field sm"><label>Data de início</label><input id="startDate" type="date"></div>
+          <div class="field sm"><label>Data de fim</label><input id="endDate" type="date"></div>
+          <div class="field sm"><label>Alocação SWDA (%)</label><input id="allocSWDA" type="number" min="0" max="100" step="1" value="55"></div>
+          <div class="field sm"><label>Alocação AGGH (%)</label><input id="allocAGGH" type="number" min="0" max="100" step="1" value="45"></div>
+          <div class="field sm"><label>Juro anual dinheiro não investido (%)</label><input id="cashAPR" type="number" min="0" max="20" step="0.1" value="2"></div>
+          <div class="field sm"><label>Cenário Pessimista (%/ano)</label><input id="rateBear" type="number" step="0.1" value="0"></div>
+          <div class="field sm"><label>Cenário Realista (%/ano)</label><input id="rateBase" type="number" step="0.1" value="4"></div>
+          <div class="field sm"><label>Cenário Otimista (%/ano)</label><input id="rateBull" type="number" step="0.1" value="7"></div>
 
-  <div class="form-group">
-    <label for="caixa">Selecionar Caixa:</label>
-    <select id="caixa" required>
-      <option value="banco">Caixa Banco</option>
-      <option value="direita">Caixa Direita</option>
-      <option value="esquerda">Caixa Esquerda</option>
-    </select>
-  </div>
-
-  <div class="form-group">
-    <label for="valor">Valor (€):</label>
-    <input type="number" id="valor" step="0.01" required>
-  </div>
-
-  <button type="submit">Registrar Transação</button>
-</form>
-
-        </section>
-
-<section class="report-section">
-  <div class="report-container">
-    <div class="report-box">
-      <h2 class="centered">Caixa Banco</h2>
-      <div id="caixa-banco"></div>
-    </div>
-
-    <div class="report-box">
-      <h2 class="centered">Caixa Esquerda</h2>
-      <div id="caixa-esquerda"></div>
-    </div>
-
-    <!-- NOVO: total combinado -->
-    <div class="report-box">
-      <h2 class="centered">Total Banco + Esquerda</h2>
-      <div id="total-banco-esquerda"></div>
-    </div>
-
-    <div class="report-box">
-      <h2 class="centered">Caixa Direita (Pai)</h2>
-      <div id="caixa-direita"></div>
-    </div>
-  </div>
-</section>
-
-
-
-
-    </main>
-
-    <footer>
-        <div class="footer-container">
-            <p>&copy; 2025 OM&MT.</p>
+          <div class="btns">
+            <button class="btn" id="btnToggleYears">Mostrar/Ocultar anos</button>
+            <button class="btn" id="btnRecalc">Recalcular</button>
+            <button class="btn primary" id="btnSave">Guardar</button>
+          </div>
         </div>
-    </footer>
+        <div class="legend">
+          Investimento mensal fixo de 100€. Percentagens que não somem 100% vão para “Caixa” a render à taxa indicada.
+        </div>
+      </section>
 
-    <!-- Importar o script.js e caixa.js como módulos -->
-    <script type="module" src="../js/script.js"></script>
-    <script type="module" src="../js/caixa.js"></script>
+      <!-- Tabelas por ano -->
+      <div id="years"></div>
+    </div>
+  </main>
 
-    <!-- Script para alternar o menu no mobile -->
-<script>
+  <footer>
+    <div class="footer-container">
+      <p>&copy; 2025 OM&MT.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts necessários -->
+  <script src="../js/script.js"></script>
+  <script type="module" src="../js/dca.js"></script>
+
+  <!-- Mobile Menu Toggle (igual ao Diversos) -->
+  <script>
     const menuIcon = document.getElementById('menu-icon');
     const navMenu = document.getElementById('nav-menu');
-
-    menuIcon.addEventListener('click', function() {
+    if (menuIcon && navMenu) {
+      menuIcon.addEventListener('click', () => {
         navMenu.classList.toggle('active');
-    });
-</script>
-
+      });
+    }
+  </script>
 </body>
 </html>
