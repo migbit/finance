@@ -32,7 +32,7 @@ const relatorioFaturacaoDiv = document.getElementById('relatorio-faturacao');
 
 const editarIdInput      = document.getElementById('fatura-id-edicao');
 const cancelarEdicaoBtn  = document.getElementById('cancelar-edicao');
-const submitBtn          = document.getElementById('submit-fatura') || faturaForm.querySelector('button[type="submit"]');
+const submitBtn = document.getElementById('submit-fatura') || (faturaForm && faturaForm.querySelector('button[type="submit"]'));
 
 // Ativa modo edição e preenche todos os campos
 function entrarEmModoEdicao(f) {
@@ -162,110 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Guardar / Atualizar fatura
-document.getElementById('fatura-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
 
-  // helpers de leitura
-  const getVal = (id) => (document.getElementById(id)?.value ?? '');
-  const parseIntSafe = (id, def = 0) => {
-    const v = getVal(id).trim(); if (v === '') return def;
-    const n = parseInt(v, 10); return Number.isNaN(n) ? def : n;
-  };
-  const parseFloatSafe = (id, def = 0) => {
-    const v = getVal(id).trim(); if (v === '') return def;
-    const n = parseFloat(v); return Number.isNaN(n) ? def : n;
-  };
-
-  // base
-  const apartamento        = getVal('apartamento');
-  const ano                = parseIntSafe('ano', null);
-  const mes                = parseIntSafe('mes', null);
-  const numeroFatura       = getVal('numero-fatura');
-  const taxaAirbnb         = parseFloatSafe('taxa-airbnb', 0);
-  const valorTransferencia = parseFloatSafe('valor-transferencia', 0);
-  const valorOperador      = parseFloatSafe('valor-operador', 0);
-  const noitesExtra        = parseIntSafe('noites-extra', 0);
-  const noitesCriancas     = parseIntSafe('noites-criancas', 0);
-  const valorDireto        = parseFloatSafe('valor-direto', 0);
-  const valorTmt           = parseFloatSafe('valor-tmt', 0);
-  const taxaLimpeza        = parseFloatSafe('taxa-limpeza', 0); // ⬅️ novo campo
-
-  // estadia & hóspedes
-  const checkIn            = getVal('checkin')  || null;
-  const checkOut           = getVal('checkout') || null;
-
-  // nº noites: usa o input se existir; caso contrário calcula de check-in/out
-  const noitesInput = getVal('noites');
-  let noites = noitesInput !== '' ? parseInt(noitesInput, 10) : null;
-  if (noitesInput === '' && checkIn && checkOut) {
-    const d1 = new Date(checkIn), d2 = new Date(checkOut);
-    const n = Math.round((d2 - d1) / 86400000);
-    noites = Number.isFinite(n) && n >= 0 ? n : null;
-  }
-
-  const precoMedioNoite    = parseFloatSafe('preco-medio-noite', null);
-  const hospedesAdultos    = parseIntSafe('adultos',  0);
-  const hospedesCriancas   = parseIntSafe('criancas', 0);
-  const hospedesBebes      = parseIntSafe('bebes',    0);
-
-  // construir payload (sem timestamp por agora)
-  const formData = {
-    apartamento,
-    ano,
-    mes,
-    numeroFatura,
-    taxaAirbnb,
-    valorTransferencia,
-    valorOperador,
-    noitesExtra,
-    noitesCriancas,
-    valorDireto,
-    valorTmt,
-    taxaLimpeza,
-    checkIn,
-    checkOut,
-    noites: noites ?? null,
-    precoMedioNoite: precoMedioNoite ?? null,
-    hospedesAdultos,
-    hospedesCriancas,
-    hospedesBebes
-  };
-
-  const idEdicao = getVal('fatura-id-edicao');
-
-  try {
-    if (idEdicao) {
-      // edição → NÃO mexe no timestamp
-      await updateDoc(doc(db, 'faturas', idEdicao), formData);
-    } else {
-      // criação → adiciona timestamp de criação
-      formData.timestamp = new Date();
-      await addDoc(collection(db, 'faturas'), formData);
-    }
-
-    // pós-submit: limpar/fechar formulário e recarregar relatórios
-    const form      = document.getElementById('fatura-form');
-    const wrap      = document.getElementById('fatura-form-wrap');
-    const btnMain   = document.getElementById('toggle-fatura-form');
-    const btnCancel = document.getElementById('cancelar-edicao');
-
-    if (form) form.reset();
-    const idEditEl = document.getElementById('fatura-id-edicao');
-    if (idEditEl) idEditEl.value = '';
-
-    if (wrap) wrap.classList.add('hidden');
-    if (btnMain) btnMain.textContent = 'Registar Nova Fatura';
-    if (btnCancel) btnCancel.style.display = 'none';
-
-    carregarTodosRelatorios();
-  } catch (err) {
-    console.error('Erro ao gravar fatura:', err);
-    alert('Ocorreu um erro ao gravar a fatura.');
-  }
-});
-
-    
 async function definirValoresPadrao() {
          const hoje = new Date();
          document.getElementById('ano').value = hoje.getFullYear();
@@ -602,15 +499,6 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
   `;
 }
 
-
-window.toggleDetalhes = function(btn) {
-  const id = btn.getAttribute('data-target');
-  const row = document.getElementById(id);
-  if (!row) return;
-  const isHidden = row.style.display === 'none' || row.style.display === '';
-  row.style.display = isHidden ? 'table-row' : 'none';
-  btn.textContent = isHidden ? 'Ocultar Detalhes' : 'Mostrar Detalhes';
-};
 
 
 window.exportarPDFFaturacao = function(key, grupoJson) {
