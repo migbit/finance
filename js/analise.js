@@ -34,7 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function carregarTodosRelatorios() {
   const firebaseFaturas = await carregarFaturas();
-  const faturas = firebaseFaturas.concat(manualFaturasEstatica);
+  const currentYear = new Date().getFullYear();
+  const faturas = firebaseFaturas
+  .concat(manualFaturasEstatica)
+  .filter(f => Number(f.ano) === 2024 || Number(f.ano) === currentYear);
 
   gerarAnaliseFaturacao(faturas);
   gerarMediaFaturacao(faturas);
@@ -54,9 +57,10 @@ async function carregarFaturas() {
 
 function obterNomeMes(numeroMes) {
   const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  // espera 1..12
-  return nomes[Math.max(1, Math.min(12, numeroMes)) - 1];
+  const n = Math.max(1, Math.min(12, Number(numeroMes)));
+  return nomes[n - 1];
 }
+
 
 
 function gerarAnaliseFaturacao(faturas) {
@@ -72,9 +76,12 @@ function gerarAnaliseFaturacao(faturas) {
   }
 
     // 1) Prepara dados: meses 1–12, anos disponíveis (até ano atual)
-    const anos = Array.from(new Set(faturas.map(f => f.ano))).sort();
+    const currentYear = new Date().getFullYear();
+    const anos = Array.from(new Set([2024, currentYear])).sort((a,b)=>a-b);
     const ultimoAno = anos[anos.length - 1];
-    const penultimoAno = anos[anos.length - 2] || ultimoAno - 1;
+    const temAnterior = anos.length > 1;
+    const penultimoAno = temAnterior ? anos[0] : 2024; // nunca 2023
+
   
     // função auxiliar para somar valores por (ano, mes, apt)
     function somaPor(ano, mes, apt) {
@@ -93,57 +100,38 @@ function gerarAnaliseFaturacao(faturas) {
     const data1248Prev = labels.map((_, i) => somaPor(penultimoAno, i+1, '1248'));
 
    // comparativo Apt 123 e 1248: ano anterior (transparente) vs ano atual (sólido)
- chartComparacaoApt = new Chart(document.getElementById('chart-comparacao-apt'), {
+ const datasetsBar = [];
+if (temAnterior) {
+  datasetsBar.push(
+    { label: `Apt 123 ${anos[0]}`,  data: data123Prev,  backgroundColor: 'rgba(54,162,235,0.4)' },
+    { label: `Apt 1248 ${anos[0]}`, data: data1248Prev, backgroundColor: 'rgba(245, 133, 20, 0.4)' }
+  );
+}
+datasetsBar.push(
+  { label: `Apt 123 ${ultimoAno}`,  data: data123,  backgroundColor: 'rgba(54,162,235,1)' },
+  { label: `Apt 1248 ${ultimoAno}`, data: data1248, backgroundColor: 'rgba(245, 133, 20,1)' }
+);
+
+chartComparacaoApt = new Chart(document.getElementById('chart-comparacao-apt'), {
   type: 'bar',
-  data: {
-    labels,
-    datasets: [
-      {
-        label: `Apt 123 ${penultimoAno}`,
-        data: data123Prev,
-        backgroundColor: 'rgba(54,162,235,0.4)'
-      },
-      {
-        label: `Apt 123 ${ultimoAno}`,
-        data: data123,
-        backgroundColor: 'rgba(54,162,235,1)'
-      },
-      {
-        label: `Apt 1248 ${penultimoAno}`,
-        data: data1248Prev,
-        backgroundColor: 'rgba(245, 133, 20, 0.4)'
-      },
-      {
-        label: `Apt 1248 ${ultimoAno}`,
-        data: data1248,
-        backgroundColor: 'rgba(245, 133, 20,1)'
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    scales: { y: { beginAtZero: true } }
-  }
+  data: { labels, datasets: datasetsBar },
+  options: { responsive: true, scales: { y: { beginAtZero: true } } }
 });
+
+
+const datasetsLine = [];
+if (temAnterior) {
+  datasetsLine.push({
+    label: `Total ${anos[0]}`,
+    data: labels.map((_, i) => somaPor(anos[0], i + 1, '123') + somaPor(anos[0], i + 1, '1248')),
+    borderDash: [5, 5]
+  });
+}
+datasetsLine.push({ label: `Total ${ultimoAno}`, data: dataTotal });
 
 chartTotal = new Chart(document.getElementById('chart-total'), {
   type: 'line',
-  data: {
-    labels,
-    datasets: [
-      {
-        label: `Total ${penultimoAno}`,
-        data: labels.map((_, i) =>
-          somaPor(penultimoAno, i + 1, '123') + somaPor(penultimoAno, i + 1, '1248')
-        ),
-        borderDash: [5, 5]
-      },
-      {
-        label: `Total ${ultimoAno}`,
-        data: dataTotal
-      }
-    ]
-  },
+  data: { labels, datasets: datasetsLine },
   options: { responsive: true }
 });
 
@@ -381,7 +369,11 @@ document.getElementById('progresso-anos').innerHTML = htmlProg;
 
   // Função: gerar média mensal por ano e apartamento
   function gerarMediaFaturacao(faturas) {
-  const anos = Array.from(new Set(faturas.map(f => f.ano))).sort();
+  const currentYear = new Date().getFullYear();
+  const anos = [2024, currentYear].sort((a,b)=>a-b);
+  const meses = Array.from({ length: 12 }, (_, i) => i + 1);
+
+
   const apartamentos = Array.from(new Set(faturas.map(f => f.apartamento))).sort();
 
   let html = '<table class="media-faturacao"><thead><tr><th>ANO</th>';
