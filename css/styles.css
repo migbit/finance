@@ -623,6 +623,21 @@ input[type="number"] {
    DCA PAGE (escopado) + Fixes de contraste e variável ausente
    ========================================================= */
 
+/* DCA – layout dos botões, sem mexer nas cores globais */
+.dca-page .btns button{
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--color-gray);
+}
+
+/* Opcional: botão neutro (branquinho) quando a secção estiver aberta */
+.dca-page .btn-soft{
+  background:#fff;
+  color: var(--color-secondary);
+  border: 1px solid var(--color-gray);
+}
+
+
 /* Variáveis (fallbacks) usadas nesta página */
 .dca-page{
   --gap: 12px;
@@ -663,7 +678,6 @@ input[type="number"] {
   padding:8px 10px;
   border:1px solid var(--grid-border);
   border-radius:8px;
-  background:#fff;
   outline:none;
 }
 .dca-page .controls .row{ grid-column: span 12; display:flex; gap:8px; flex-wrap:wrap; }
