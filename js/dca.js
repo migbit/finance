@@ -276,11 +276,20 @@ group.appendChild(head);
       group.appendChild(tbl);
       group.appendChild(foot);
 
-      const defaultCollapsed = (y !== startYear && y !== endYear);
-      if(defaultCollapsed){ tbl.style.display='none'; foot.style.display='none'; }
-
+      if (defaultCollapsed) {
+        tbl.style.display = 'none';
+        foot.style.display = 'none';
+      }
       yearsEl.appendChild(group);
     }
+
+// ligar edição inline às células data-edit
+  yearsEl.querySelectorAll('[contenteditable][data-edit]').forEach(cell=>{
+    cell.addEventListener('blur', onCellEdit);
+    cell.addEventListener('keydown', e=>{
+      if(e.key === 'Enter'){ e.preventDefault(); cell.blur(); }
+    });
+  });
 
 yearsEl.querySelectorAll('.year-toggle').forEach(btn=>{
   btn.addEventListener('click', ()=>{
