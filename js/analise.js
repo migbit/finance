@@ -445,7 +445,7 @@ function gerarHeatmapVariacao(faturas) {
 function pctToColor(p) {
   if (p === null) return '#f5f5f5'; // N/A
   const NEG_MIN = -1.0; // -100%
-  const POS_MAX = 0.5;  // +50%
+  const POS_MAX = 1.0;  // +100%
 
   function lerp(a,b,t){ return a + (b-a)*t; }
   function hex(r,g,b){ return `#${[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('')}`; }
@@ -493,7 +493,7 @@ let html = `
      style="background: linear-gradient(90deg, #8b0000 0%, #ececec 50%, #28a745 100%);"></div>
       <span>-100%</span>
       <div class="heatmap-gradient"></div>
-      <span>+50%</span>
+      <span>+100%</span>
       <span class="heatmap-muted" style="margin-left:12px;">(0% = cinza claro, N/A = vazio)</span>
     </div>
     <table class="heatmap-table">
