@@ -13,29 +13,27 @@
     <h1>DCA</h1>
 
     <!-- Ícone de menu "hambúrguer" para mobile -->
-    <div class="menu-icon" id="menu-icon">
-      &#9776; <!-- Ícone de três linhas -->
-    </div>
+    <div class="menu-icon" id="menu-icon">&#9776;</div>
 
     <nav id="nav-menu">
-            <ul>
-                <li><a href="faturas.html">Faturas e Relatórios</a></li>
-                <li><a href="analise.html">Análise Apartamentos</a></li>
-                <li><a href="caixa.html">Caixa</a></li>
-                <li><a href="diversos.html">Diversos</a></li>
-                <li class="separator">|</li>
-                <li><a href="dca.html" class="active">DCA</a></li>
-                <li class="separator">|</li>
-                <!-- Login/User section, controlled by server-side or CSS visibility -->
-                <li id="login-section">
-                    <a href="#" id="login-btn" class="login-visible">Login</a>
-                    <span id="user-info" class="user-visible" style="display:none;">
-                        <a href="#" id="user-name">Username</a> <!-- Visible if logged in -->
-                    </span>
-                </li>
-            </ul>
-        </nav>
-    </header>
+      <ul>
+        <li><a href="faturas.html">Faturas e Relatórios</a></li>
+        <li><a href="analise.html">Análise Apartamentos</a></li>
+        <li><a href="caixa.html">Caixa</a></li>
+        <li><a href="diversos.html">Diversos</a></li>
+        <li class="separator">|</li>
+        <li><a href="dca.html" class="active">DCA</a></li>
+        <li class="separator">|</li>
+        <!-- Login/User section -->
+        <li id="login-section">
+          <a href="#" id="login-btn" class="login-visible">Login</a>
+          <span id="user-info" class="user-visible" style="display:none;">
+            <a href="#" id="user-name">Username</a>
+          </span>
+        </li>
+      </ul>
+    </nav>
+  </header>
 
   <main>
     <div class="wrap">
@@ -52,14 +50,12 @@
           <div class="field sm"><label>Cenário Otimista (%/ano)</label><input id="rateBull" type="number" step="0.1" value="7"></div>
 
           <div class="btns">
-            <button class="btn" id="btnToggleYears">Mostrar/Ocultar anos</button>
-            <button class="btn" id="btnRecalc">Recalcular</button>
-            <button class="btn primary" id="btnSave">Guardar</button>
+            <button id="btnToggleYears">Mostrar/Ocultar anos</button>
+            <button id="btnRecalc">Recalcular</button>
+            <button class="primary" id="btnSave">Guardar</button>
           </div>
         </div>
-        <div class="legend">
-          Investimento mensal fixo de 100€. Percentagens que não somem 100% vão para “Caixa” a render à taxa indicada.
-        </div>
+        <div class="legend">Investimento mensal fixo de 100€. Percentagens que não somem 100% vão para “Caixa” a render à taxa indicada.</div>
       </section>
 
       <!-- Tabelas por ano -->
@@ -73,18 +69,16 @@
     </div>
   </footer>
 
-  <!-- Scripts necessários -->
+  <!-- Scripts (login + lógica) -->
   <script src="../js/script.js"></script>
   <script type="module" src="../js/dca.js"></script>
 
-  <!-- Mobile Menu Toggle (igual ao Diversos) -->
+  <!-- Toggle mobile menu (mesmo padrão do Diversos) -->
   <script>
     const menuIcon = document.getElementById('menu-icon');
     const navMenu = document.getElementById('nav-menu');
     if (menuIcon && navMenu) {
-      menuIcon.addEventListener('click', () => {
-        navMenu.classList.toggle('active');
-      });
+      menuIcon.addEventListener('click', () => navMenu.classList.toggle('active'));
     }
   </script>
 </body>
