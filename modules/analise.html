@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faturas / Relatórios</title>
+    <title>Análise Apartamentos</title>
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="icon" href="../favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
@@ -14,7 +14,7 @@
 </head>
 <body>
     <header>
-        <h1>Faturas e Relatórios</h1>
+        <h1>Análise Apartamentos</h1>
         
          <!-- Ícone de menu "hambúrguer" para mobile -->
          <div class="menu-icon" id="menu-icon">
@@ -23,7 +23,8 @@
     
         <nav id="nav-menu">
             <ul>
-                <li><a href="faturas.html" class="active">Faturas e Relatórios</a></li>
+                <li><a href="faturas.html">Faturas</a></li>
+                <li><a href="analise.html" class="active">Análise Apartamentos</a></li>
                 <li><a href="caixa.html">Caixa</a></li>
                 <li><a href="diversos.html">Diversos</a></li>
                 <li class="separator">|</li>
@@ -38,161 +39,10 @@
         </nav>
     </header>
 
-
-
     <main>
-<section class="form-section">
-  <div class="form-header">
-    <h2>Registar / Editar Fatura</h2>
-    <button id="toggle-fatura-form" class="btn">Mostrar</button>
-  </div>
-
-  <div id="fatura-form-wrap" class="hidden">
-    <form id="fatura-form">
-
-      <!-- 1ª linha: Apartamento, Ano, Mês, Nº Fatura -->
-      <div class="form-row row-4">
-        <div class="form-group">
-          <label for="apartamento">Apartamento:</label>
-          <select id="apartamento" required>
-            <option value="">Selecionar Apartamento</option>
-            <option value="123">Apartamento 123</option>
-            <option value="1248">Apartamento 1248</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="ano">Ano:</label>
-          <input type="number" id="ano" required>
-        </div>
-
-        <div class="form-group">
-          <label for="mes">Mês:</label>
-          <select id="mes" required>
-            <option value="">Selecionar Mês</option>
-            <option value="1">Janeiro</option>
-            <option value="2">Fevereiro</option>
-            <option value="3">Março</option>
-            <option value="4">Abril</option>
-            <option value="5">Maio</option>
-            <option value="6">Junho</option>
-            <option value="7">Julho</option>
-            <option value="8">Agosto</option>
-            <option value="9">Setembro</option>
-            <option value="10">Outubro</option>
-            <option value="11">Novembro</option>
-            <option value="12">Dezembro</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="numero-fatura">Número Fatura:</label>
-          <input type="text" id="numero-fatura" placeholder="Ex: M576" required>
-        </div>
-      </div>
-
-      <!-- 2ª linha: Taxa AirBnB, Valor Transferência, Taxa Limpeza -->
-      <div class="form-row row-3">
-        <div class="form-group">
-          <label for="taxa-airbnb">Taxa AirBnB (€):</label>
-          <input type="number" id="taxa-airbnb" step="0.01" required>
-        </div>
-
-        <div class="form-group">
-          <label for="valor-transferencia">Valor da Transferência (€):</label>
-          <input type="number" id="valor-transferencia" step="0.01" required>
-        </div>
-
-        <div class="form-group">
-          <label for="taxa-limpeza">Taxa Limpeza (€):</label>
-          <input type="number" id="taxa-limpeza" step="0.01">
-        </div>
-      </div>
-
-      <!-- 3ª linha: Operador, Noites Extra, Noites Crianças, Valor Direto, TMT/noite -->
-      <div class="form-row row-5">
-        <div class="form-group">
-          <label for="valor-operador">Valor Pago Operador Turístico (€):</label>
-          <input type="number" id="valor-operador" step="0.01" required>
-        </div>
-
-        <div class="form-group">
-          <label for="noites-extra">Noites Extra 7 dias:</label>
-          <input type="number" id="noites-extra" value="0" min="0">
-        </div>
-
-        <div class="form-group">
-          <label for="noites-criancas">Noites Crianças:</label>
-          <input type="number" id="noites-criancas" value="0" min="0">
-        </div>
-
-        <div class="form-group">
-          <label for="valor-direto">Valor Pago Diretamente (€):</label>
-          <input type="number" id="valor-direto" step="0.01" value="0" min="0">
-        </div>
-
-        <div class="form-group">
-          <label for="valor-tmt">Valor T.M.T por noite (€):</label>
-          <input type="number" id="valor-tmt" step="0.01" value="3.00" required>
-        </div>
-      </div>
-
-      <!-- 4ª linha: Estadia & Hóspedes -->
-      <div class="form-row row-4">
-        <div class="form-group">
-          <label for="checkin">Check-in</label>
-          <input type="date" id="checkin">
-        </div>
-        <div class="form-group">
-          <label for="checkout">Check-out</label>
-          <input type="date" id="checkout">
-        </div>
-        <div class="form-group">
-          <label for="noites">Número de Noites</label>
-          <input type="number" id="noites" min="0" step="1" placeholder="(auto)">
-        </div>
-        <div class="form-group">
-          <label for="preco-medio-noite">Preço Médio/Noite (€)</label>
-          <input type="number" id="preco-medio-noite" step="0.01" min="0">
-        </div>
-      </div>
-
-      <!-- 5ª linha: Adultos, Crianças, Bebés -->
-      <div class="form-row row-3">
-        <div class="form-group">
-          <label for="adultos">Adultos</label>
-          <input type="number" id="adultos" min="0" step="1">
-        </div>
-        <div class="form-group">
-          <label for="criancas">Crianças</label>
-          <input type="number" id="criancas" min="0" step="1">
-        </div>
-        <div class="form-group">
-          <label for="bebes">Bebés</label>
-          <input type="number" id="bebes" min="0" step="1">
-        </div>
-      </div>
-
-      <input type="hidden" id="fatura-id-edicao">
-
-      <div class="form-actions">
-        <button type="submit" id="submit-fatura">Guardar</button>
-        <button type="button" id="cancelar-edicao" style="display:none;">Cancelar edição</button>
-      </div>
-    </form>
-  </div>
-</section>
-
-
 
  <section class="report-section">
   <h2>Relatórios</h2>
-
-  <div class="relatorio-container">
-    <h3>Relatório de Faturação</h3>
-    <button id="toggle-prev-faturas" type="button">Mostrar anos anteriores</button>
-    <div id="relatorio-faturacao"></div>
-  </div>
 
   <section class="relatorio-container" id="analise-faturacao-container">
     <h3>Análise Faturação</h3>
