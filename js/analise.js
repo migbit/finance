@@ -440,6 +440,21 @@ function gerarHeatmapVariacao(faturas) {
   const currentYear = new Date().getFullYear();
   const anos = [2024, currentYear].sort((a,b)=>a-b);
   // Only keep years that have a previous year present in data
+  if (anos.length === 0) {
+  const wrap = document.getElementById('heatmap-variacao');
+  if (wrap) {
+    wrap.innerHTML = `
+      <div class="heatmap-wrap">
+        <div class="heatmap-legend">
+          <span>-100%</span>
+          <div class="heatmap-gradient" style="background:linear-gradient(90deg,#8b0000 0%, #ececec 50%, #28a745 100%);"></div>
+          <span>+100%</span>
+          <span class="heatmap-muted" style="margin-left:12px;">Sem base do ano anterior (o heatmap começa quando existir 2025 vs 2024).</span>
+        </div>
+      </div>`;
+  }
+  return;
+}
 
   const meses = Array.from({ length: 12 }, (_, i) => i + 1);
   const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
