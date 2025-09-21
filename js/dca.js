@@ -1,3 +1,9 @@
+/* js/dca.js  (ESM) */
+import { db } from './script.js';
+import { doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
+
+
+
 (function(){
   // ---------- Util ----------
   const fmtEUR = new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR',maximumFractionDigits:2});
