@@ -141,6 +141,16 @@ tr:hover{background:#f1f1f1;}
 #dca-section .chart-card canvas{width:100% !important;height:var(--dca-canvas-h) !important;}
 
 
+/* Altura mais generosa para leitura */
+#analise-faturacao-container canvas {
+  height: 420px !important;   /* experimenta 380–460 */
+}
+
+/* Opcional: em ecrãs pequenos, um pouco menos alto */
+@media (max-width: 768px) {
+  #analise-faturacao-container canvas { height: 340px !important; }
+}
+
 /* Heatmap Receita vs. Ano Anterior */
 .heatmap-wrap {
   overflow-x: auto;
