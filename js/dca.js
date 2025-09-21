@@ -200,14 +200,19 @@
       const rows = byYear.get(y);
 
       const group = el('section','year-group');
-      const head = el('div','year-head');
-      const lastRowView = rows[rows.length-1]._view;
-      head.innerHTML = `
-        <h3>${y} <span class="pill">${rows.length} meses</span></h3>
-        <div class="meta">Investido até ${y}: <strong>${euro(lastRowView.investCum)}</strong></div>
-        <button class="btn year-toggle" data-y="${y}">Alternar</button>
-      `;
-      group.appendChild(head);
+const defaultCollapsed = (y !== startYear && y !== endYear);
+const btnText  = defaultCollapsed ? 'Mostrar' : 'Ocultar';
+const btnClass = defaultCollapsed ? '' : 'btn-soft';
+
+const head = el('div','year-head');
+const lastRowView = rows[rows.length-1]._view;
+head.innerHTML = `
+  <h3>${y} <span class="pill">${rows.length} meses</span></h3>
+  <div class="meta">Investido até ${y}: <strong>${euro(lastRowView.investCum)}</strong></div>
+  <button class="year-toggle ${btnClass}" data-y="${y}">${btnText}</button>
+`;
+group.appendChild(head);
+
 
       const tbl = el('table','grid'); tbl.dataset.year = y;
       const thead = el('thead'); thead.innerHTML = `
@@ -277,20 +282,27 @@
       yearsEl.appendChild(group);
     }
 
-    yearsEl.querySelectorAll('[contenteditable][data-edit]').forEach(cell=>{
-      cell.addEventListener('blur', onCellEdit);
-      cell.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); cell.blur(); } });
-    });
-    yearsEl.querySelectorAll('.year-toggle').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const y = btn.dataset.y;
-        const tbl = yearsEl.querySelector(`table.grid[data-year="${y}"]`);
-        const foot = tbl.nextElementSibling;
-        const show = tbl.style.display==='none';
-        tbl.style.display = show?'':'none';
-        foot.style.display = show?'':'none';
-      });
-    });
+yearsEl.querySelectorAll('.year-toggle').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const y = btn.dataset.y;
+    const tbl  = yearsEl.querySelector(`table.grid[data-year="${y}"]`);
+    const foot = tbl.nextElementSibling;
+    const willShow = tbl.style.display === 'none';
+
+    tbl.style.display  = willShow ? '' : 'none';
+    foot.style.display = willShow ? '' : 'none';
+
+    // atualiza texto e classe
+    if (willShow){
+      btn.textContent = 'Ocultar';
+      btn.classList.add('btn-soft');    // neutro quando aberto
+    }else{
+      btn.textContent = 'Mostrar';
+      btn.classList.remove('btn-soft'); // verde quando fechado
+    }
+  });
+});
+
   }
 
   // helpers de render
