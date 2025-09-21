@@ -185,134 +185,142 @@
     return isFinite(v)?v:fallback;
   }
 
-  // ---------- Render ----------
-  function render(){
-    const yearsEl = document.getElementById('years');
-    yearsEl.innerHTML = '';
+// ---------- Render ----------
+function render(){
+  const yearsEl = document.getElementById('years');
+  yearsEl.innerHTML = '';
 
-    const byYear = new Map();
-    for(const r of state.rows){ if(!byYear.has(r.y)) byYear.set(r.y, []); byYear.get(r.y).push(r); }
+  const byYear = new Map();
+  for (const r of state.rows) {
+    if (!byYear.has(r.y)) byYear.set(r.y, []);
+    byYear.get(r.y).push(r);
+  }
 
-    const startYear = new Date(state.start).getFullYear();
-    const endYear   = new Date(state.end).getFullYear();
+  const startYear = new Date(state.start).getFullYear();
+  const endYear   = new Date(state.end).getFullYear();
 
-    for(const y of Array.from(byYear.keys()).sort((a,b)=>a-b)){
-      const rows = byYear.get(y);
+  for (const y of Array.from(byYear.keys()).sort((a,b)=>a-b)) {
+    const rows = byYear.get(y);
 
-      const group = el('section','year-group');
-const defaultCollapsed = (y !== startYear && y !== endYear);
-const btnText  = defaultCollapsed ? 'Mostrar' : 'Ocultar';
-const btnClass = defaultCollapsed ? '' : 'btn-soft';
+    const group = el('section','year-group');
 
-const head = el('div','year-head');
-const lastRowView = rows[rows.length-1]._view;
-head.innerHTML = `
-  <h3>${y} <span class="pill">${rows.length} meses</span></h3>
-  <div class="meta">Investido até ${y}: <strong>${euro(lastRowView.investCum)}</strong></div>
-  <button class="year-toggle ${btnClass}" data-y="${y}">${btnText}</button>
-`;
-group.appendChild(head);
+    // estado inicial do ano (colapsado se for ano “intermédio”)
+    const defaultCollapsed = (y !== startYear && y !== endYear);
+    const btnText  = defaultCollapsed ? 'Mostrar' : 'Ocultar';
+    const btnClass = defaultCollapsed ? '' : 'btn-soft';
 
+    const head = el('div','year-head');
+    const lastRowView = rows[rows.length-1]._view;
+    head.innerHTML = `
+      <h3>${y} <span class="pill">${rows.length} meses</span></h3>
+      <div class="meta">Investido até ${y}: <strong>${euro(lastRowView.investCum)}</strong></div>
+      <button class="year-toggle ${btnClass}" data-y="${y}">${btnText}</button>
+    `;
+    group.appendChild(head);
 
-      const tbl = el('table','grid'); tbl.dataset.year = y;
-      const thead = el('thead'); thead.innerHTML = `
-        <tr>
-          <th>Mês</th>
-          <th>Investido (sempre +100€/mês)</th>
-          <th>Valor Total <span class="muted">(editável)</span></th>
-          <th>Realizado</th>
-          <th>Investido SWDA</th>
-          <th>SWDA <span class="muted">(edit.)</span></th>
-          <th>Realizado SWDA</th>
-          <th>AGGH <span class="muted">(edit.)</span></th>
-          <th>Investido AGGH</th>
-          <th>Realizado AGGH</th>
-          <th>Cenário Pess.</th>
-          <th>Cenário Real.</th>
-          <th>Cenário Otim.</th>
-          <th>Juro do mês</th>
-          <th>Taxa Caixa (%) <span class="muted">(edit.)</span></th>
-          <th>Aloc. SWDA (%) <span class="muted">(edit.)</span></th>
-          <th>Aloc. AGGH (%) <span class="muted">(edit.)</span></th>
-        </tr>`;
-      tbl.appendChild(thead);
+    const tbl = el('table','grid'); 
+    tbl.dataset.year = y;
 
-      const tbody = el('tbody');
-      for(const r of rows){
-        const v = r._view;
-        const mm = new Date(r.y, r.m, 1).toLocaleDateString('pt-PT',{month:'short'});
-        const tr = el('tr'); tr.dataset.key = r.key;
+    const thead = el('thead');
+    thead.innerHTML = `
+      <tr>
+        <th>Mês</th>
+        <th>Investido (sempre +100€/mês)</th>
+        <th>Valor Total <span class="muted">(editável)</span></th>
+        <th>Realizado</th>
+        <th>Investido SWDA</th>
+        <th>SWDA <span class="muted">(edit.)</span></th>
+        <th>Realizado SWDA</th>
+        <th>AGGH <span class="muted">(edit.)</span></th>
+        <th>Investido AGGH</th>
+        <th>Realizado AGGH</th>
+        <th>Cenário Pess.</th>
+        <th>Cenário Real.</th>
+        <th>Cenário Otim.</th>
+        <th>Juro do mês</th>
+        <th>Taxa Caixa (%) <span class="muted">(edit.)</span></th>
+        <th>Aloc. SWDA (%) <span class="muted">(edit.)</span></th>
+        <th>Aloc. AGGH (%) <span class="muted">(edit.)</span></th>
+      </tr>`;
+    tbl.appendChild(thead);
 
-        tr.innerHTML = `
-          <td>${mm}</td>
-          ${tdNum(euro(v.investCum))}
-          ${tdEdit('totalVal', isFinite(r.totalVal)? r.totalVal : '')}
-          ${tdNum(`${euro(v.realTot)} (${pct(v.realTotPct)})`, posneg(v.realTot))}
-          ${tdNum(euro(v.swdaInvestCum))}
-          ${tdEdit('swdaVal', isFinite(r.swdaVal)? r.swdaVal : '')}
-          ${tdNum(`${euro(v.realSWDA)} (${pct(v.realSWDAPct)})`, posneg(v.realSWDA))}
-          ${tdEdit('agghVal', isFinite(r.agghVal)? r.agghVal : '')}
-          ${tdNum(euro(v.agghInvestCum))}
-          ${tdNum(`${euro(v.realAGGH)} (${pct(v.realAGGHPct)})`, posneg(v.realAGGH))}
-          ${tdNum(euro(v.scenBear))}
-          ${tdNum(euro(v.scenBase))}
-          ${tdNum(euro(v.scenBull))}
-          ${tdNum(euro(v.interestThis))}
-          ${tdEdit('cashAPR', isFinite(r.cashAPR)? r.cashAPR : '')}
-          ${tdEdit('allocSWDA', isFinite(r.allocSWDA)? r.allocSWDA : '')}
-          ${tdEdit('allocAGGH', isFinite(r.allocAGGH)? r.allocAGGH : '')}
-        `;
-        tbody.appendChild(tr);
-      }
-      tbl.appendChild(tbody);
+    const tbody = el('tbody');
+    for (const r of rows) {
+      const v = r._view;
+      const mm = new Date(r.y, r.m, 1).toLocaleDateString('pt-PT',{month:'short'});
+      const tr = el('tr'); 
+      tr.dataset.key = r.key;
 
-      const foot = el('div','foot');
-      const last = rows[rows.length-1]._view;
-      foot.innerHTML = `
-        <span class="muted">Caixa acumulada:</span> <strong>${euro(last.cash)}</strong>
-        <span class="muted" style="margin-left:12px">Juro acumulado:</span> <strong>${euro(last.cumInterest)}</strong>
+      tr.innerHTML = `
+        <td>${mm}</td>
+        ${tdNum(euro(v.investCum))}
+        ${tdEdit('totalVal', isFinite(r.totalVal) ? r.totalVal : '')}
+        ${tdNum(`${euro(v.realTot)} (${pct(v.realTotPct)})`, posneg(v.realTot))}
+        ${tdNum(euro(v.swdaInvestCum))}
+        ${tdEdit('swdaVal', isFinite(r.swdaVal) ? r.swdaVal : '')}
+        ${tdNum(`${euro(v.realSWDA)} (${pct(v.realSWDAPct)})`, posneg(v.realSWDA))}
+        ${tdEdit('agghVal', isFinite(r.agghVal) ? r.agghVal : '')}
+        ${tdNum(euro(v.agghInvestCum))}
+        ${tdNum(`${euro(v.realAGGH)} (${pct(v.realAGGHPct)})`, posneg(v.realAGGH))}
+        ${tdNum(euro(v.scenBear))}
+        ${tdNum(euro(v.scenBase))}
+        ${tdNum(euro(v.scenBull))}
+        ${tdNum(euro(v.interestThis))}
+        ${tdEdit('cashAPR', isFinite(r.cashAPR) ? r.cashAPR : '')}
+        ${tdEdit('allocSWDA', isFinite(r.allocSWDA) ? r.allocSWDA : '')}
+        ${tdEdit('allocAGGH', isFinite(r.allocAGGH) ? r.allocAGGH : '')}
       `;
+      tbody.appendChild(tr);
+    }
+    tbl.appendChild(tbody);
 
-      group.appendChild(tbl);
-      group.appendChild(foot);
+    const foot = el('div','foot');
+    const last = rows[rows.length-1]._view;
+    foot.innerHTML = `
+      <span class="muted">Caixa acumulada:</span> <strong>${euro(last.cash)}</strong>
+      <span class="muted" style="margin-left:12px">Juro acumulado:</span> <strong>${euro(last.cumInterest)}</strong>
+    `;
 
-      if (defaultCollapsed) {
-        tbl.style.display = 'none';
-        foot.style.display = 'none';
-      }
-      yearsEl.appendChild(group);
+    group.appendChild(tbl);
+    group.appendChild(foot);
+
+    if (defaultCollapsed) {
+      tbl.style.display = 'none';
+      foot.style.display = 'none';
     }
 
-// ligar edição inline às células data-edit
+    yearsEl.appendChild(group);
+  }
+
+  // ligar edição inline às células data-edit
   yearsEl.querySelectorAll('[contenteditable][data-edit]').forEach(cell=>{
     cell.addEventListener('blur', onCellEdit);
     cell.addEventListener('keydown', e=>{
-      if(e.key === 'Enter'){ e.preventDefault(); cell.blur(); }
+      if (e.key === 'Enter') { e.preventDefault(); cell.blur(); }
     });
   });
 
-yearsEl.querySelectorAll('.year-toggle').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    const y = btn.dataset.y;
-    const tbl  = yearsEl.querySelector(`table.grid[data-year="${y}"]`);
-    const foot = tbl.nextElementSibling;
-    const willShow = tbl.style.display === 'none';
+  // toggle por ano (atualiza texto e classe do botão)
+  yearsEl.querySelectorAll('.year-toggle').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const y = btn.dataset.y;
+      const tbl  = yearsEl.querySelector(`table.grid[data-year="${y}"]`);
+      const foot = tbl.nextElementSibling;
+      const willShow = tbl.style.display === 'none';
 
-    tbl.style.display  = willShow ? '' : 'none';
-    foot.style.display = willShow ? '' : 'none';
+      tbl.style.display  = willShow ? '' : 'none';
+      foot.style.display = willShow ? '' : 'none';
 
-    // atualiza texto e classe
-    if (willShow){
-      btn.textContent = 'Ocultar';
-      btn.classList.add('btn-soft');    // neutro quando aberto
-    }else{
-      btn.textContent = 'Mostrar';
-      btn.classList.remove('btn-soft'); // verde quando fechado
-    }
+      if (willShow){
+        btn.textContent = 'Ocultar';
+        btn.classList.add('btn-soft');     // neutro quando aberto
+      }else{
+        btn.textContent = 'Mostrar';
+        btn.classList.remove('btn-soft');  // volta a herdar o verde global
+      }
+    });
   });
-});
-
-  }
+}
 
   // helpers de render
   const el = (tag, cls)=>{ const n=document.createElement(tag); if(cls) n.className=cls; return n; };
