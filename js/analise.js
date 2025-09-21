@@ -189,7 +189,7 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
     const atual = somaAno(ultimoAno, apt);
     const antes = faturas
       .filter(f => String(f.apartamento) === String(apt) && Number(f.ano) < Number(ultimoAno))
-      .reduce((s,f) => s + f.valorTransferencia, 0) || 1;
+      .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
 
     const diff    = antes - atual;
     const pct     = Math.round(Math.abs(diff) / antes * 100);
@@ -247,12 +247,12 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
       .filter(f => Number(f.ano) === Number(ultimoAno) &&
                    String(f.apartamento) === String(apt) &&
                    Number(f.mes) < Number(currentMonth))
-      .reduce((s,f) => s + f.valorTransferencia, 0);
+      .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
     const antA = faturas
       .filter(f => String(f.apartamento) === String(apt) &&
                    Number(f.ano) < Number(ultimoAno) &&
                    Number(f.mes) < Number(currentMonth))
-      .reduce((s,f) => s + f.valorTransferencia, 0) || 1;
+      .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
 
     const diffA    = antA - curA;
     const pctA     = Math.round(Math.abs(diffA) / antA * 100);
@@ -279,11 +279,11 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
     const curT2 = faturas
       .filter(f => Number(f.ano) === Number(ultimoAno) &&
                    Number(f.mes) < Number(currentMonth))
-      .reduce((s,f) => s + f.valorTransferencia, 0);
+      .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
     const antT2 = faturas
       .filter(f => Number(f.ano) < Number(ultimoAno) &&
                    Number(f.mes) < Number(currentMonth))
-      .reduce((s,f) => s + f.valorTransferencia, 0) || 1;
+      .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
 
     const diffT2    = antT2 - curT2;
     const pctT2     = Math.round(Math.abs(diffT2) / antT2 * 100);
@@ -321,12 +321,12 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
       .filter(f => Number(f.ano) === Number(ultimoAno) &&
                    String(f.apartamento) === String(apt) &&
                    Number(f.mes) === Number(mesAtual))
-      .reduce((s,f) => s + f.valorTransferencia, 0);
+      .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
     const ant = faturas
       .filter(f => String(f.apartamento) === String(apt) &&
                    Number(f.ano) < Number(ultimoAno) &&
                    Number(f.mes) === Number(mesAtual))
-      .reduce((s,f) => s + f.valorTransferencia, 0);
+      .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
 
     const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
     const diff = ant - cur;
@@ -351,10 +351,10 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
   // total
   const curT = faturas
     .filter(f => Number(f.ano) === Number(ultimoAno) && Number(f.mes) === Number(mesAtual))
-    .reduce((s,f) => s + f.valorTransferencia, 0);
+    .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
   const antT = faturas
     .filter(f => Number(f.ano) < Number(ultimoAno) && Number(f.mes) === Number(mesAtual))
-    .reduce((s,f) => s + f.valorTransferencia, 0);
+    .reduce((s, f) => s + Number(f.valorTransferencia || 0), 0);
 
   const baseT = antT === 0 ? (curT === 0 ? 1 : curT) : antT;
   const diffT = antT - curT;
@@ -432,9 +432,10 @@ function gerarHeatmapVariacao(faturas) {
   });
 
   // 2) Eixo X (anos) e Y (meses)
-  const anosAll = Object.keys(totais).map(n => Number(n)).sort((a,b)=>a-b);
+  const currentYear = new Date().getFullYear();
+  const anos = [2024, currentYear].sort((a,b)=>a-b);
   // Only keep years that have a previous year present in data
-  const anos = anosAll.filter(a => totais[a - 1]);
+
   const meses = Array.from({ length: 12 }, (_, i) => i + 1);
   const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -489,10 +490,10 @@ if (!wrap) return;
 
 let html = `
   <div class="heatmap-wrap">
-    <div class="heatmap-gradient"
-     style="background: linear-gradient(90deg, #8b0000 0%, #ececec 50%, #28a745 100%);"></div>
+    <div class="heatmap-legend">
       <span>-100%</span>
-      <div class="heatmap-gradient"></div>
+      <div class="heatmap-gradient"
+           style="background: linear-gradient(90deg, #8b0000 0%, #ececec 50%, #28a745 100%);"></div>
       <span>+100%</span>
       <span class="heatmap-muted" style="margin-left:12px;">(0% = cinza claro, N/A = vazio)</span>
     </div>
