@@ -441,30 +441,37 @@ function gerarHeatmapVariacao(faturas) {
   // 3) Função cor: mapeia -50% (vermelho) a +50% (verde), 0% = branco
   // clamp para [-0.5, +0.5] para a escala visual
   // color scale: -50% red → 0% light grey → +50% green
+// color scale: -100% deep red → 0% light grey → +50% green
 function pctToColor(p) {
   if (p === null) return '#f5f5f5'; // N/A
-  const clamped = Math.max(-0.5, Math.min(0.5, p));
-  // Map -0.5..0..+0.5 to 0..0.5..1
-  const t = (clamped + 0.5) / 1.0;
-
-  // endpoints
-  const red   = [217, 83, 79];
-  const mid   = [236, 236, 236];   // light grey for 0%
-  const green = [40, 167, 69];
+  const NEG_MIN = -1.0; // -100%
+  const POS_MAX = 0.5;  // +50%
 
   function lerp(a,b,t){ return a + (b-a)*t; }
   function hex(r,g,b){ return `#${[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('')}`; }
 
+  const deepRed = [139, 0, 0];     // #8b0000 (mais escuro para -100%)
+  const mid     = [236, 236, 236]; // cinza claro para 0%
+  const green   = [40, 167, 69];   // #28a745
+
   let c;
-  if (t < 0.5) {
-    const k = t/0.5;
-    c = [ lerp(red[0], mid[0], k), lerp(red[1], mid[1], k), lerp(red[2], mid[2], k) ];
+
+  if (p <= 0) {
+    // mapear NEG_MIN..0 → 0..1 e dar mais contraste perto de -100%
+    const clamped = Math.max(NEG_MIN, Math.min(0, Number(p)));
+    let k = (clamped - NEG_MIN) / (0 - NEG_MIN); // 0..1
+    k = Math.pow(k, 0.65); // separa melhor -48% de -100%
+    c = [ lerp(deepRed[0], mid[0], k), lerp(deepRed[1], mid[1], k), lerp(deepRed[2], mid[2], k) ];
   } else {
-    const k = (t-0.5)/0.5;
+    const clamped = Math.max(0, Math.min(POS_MAX, Number(p)));
+    let k = clamped / POS_MAX;     // 0..1
+    k = Math.pow(k, 0.9);          // curva suave no lado positivo
     c = [ lerp(mid[0], green[0], k), lerp(mid[1], green[1], k), lerp(mid[2], green[2], k) ];
   }
+
   return hex(Math.round(c[0]), Math.round(c[1]), Math.round(c[2]));
 }
+
 
 // Decide white vs black text depending on background brightness
 function idealTextOn(bgHex) {
@@ -482,8 +489,9 @@ if (!wrap) return;
 
 let html = `
   <div class="heatmap-wrap">
-    <div class="heatmap-legend">
-      <span>-50%</span>
+    <div class="heatmap-gradient"
+     style="background: linear-gradient(90deg, #8b0000 0%, #ececec 50%, #28a745 100%);"></div>
+      <span>-100%</span>
       <div class="heatmap-gradient"></div>
       <span>+50%</span>
       <span class="heatmap-muted" style="margin-left:12px;">(0% = cinza claro, N/A = vazio)</span>
