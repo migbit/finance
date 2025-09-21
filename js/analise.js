@@ -86,8 +86,10 @@ function gerarAnaliseFaturacao(faturas) {
     // função auxiliar para somar valores por (ano, mes, apt)
     function somaPor(ano, mes, apt) {
       return faturas
-        .filter(f => f.ano === ano && f.mes === mes && f.apartamento === apt)
-        .reduce((s,f) => s + f.valorTransferencia, 0);
+        .filter(f => Number(f.ano) === Number(ano) &&
+                      Number(f.mes) === Number(mes) &&
+                      String(f.apartamento) === String(apt))
+        .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
     }
   
     // 2) construir arrays mensais
@@ -139,8 +141,8 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
     
   // 4) Barras de progresso: acumulado ano vs ano anterior
   const somaAno = (ano, apt = null) => faturas
-  .filter(f => f.ano === ano && (!apt || f.apartamento === apt))
-  .reduce((s,f) => s + f.valorTransferencia, 0);
+    .filter(f => Number(f.ano) === Number(ano) && (!apt || String(f.apartamento) === String(apt)))
+    .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
 
   // 4) Barras de progresso: totais gerais e por apartamento
   const apartamentos = Array.from(new Set(faturas.map(f => f.apartamento))).sort();
@@ -186,7 +188,7 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
   apartamentos.forEach(apt => {
     const atual = somaAno(ultimoAno, apt);
     const antes = faturas
-      .filter(f => f.apartamento === apt && f.ano < ultimoAno)
+      .filter(f => String(f.apartamento) === String(apt) && Number(f.ano) < Number(ultimoAno))
       .reduce((s,f) => s + f.valorTransferencia, 0) || 1;
 
     const diff    = antes - atual;
@@ -242,10 +244,14 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
 
   apartamentos.forEach(apt => {
     const curA = faturas
-      .filter(f => f.ano === ultimoAno && f.apartamento === apt && f.mes < currentMonth)
+      .filter(f => Number(f.ano) === Number(ultimoAno) &&
+                   String(f.apartamento) === String(apt) &&
+                   Number(f.mes) < Number(currentMonth))
       .reduce((s,f) => s + f.valorTransferencia, 0);
     const antA = faturas
-      .filter(f => f.apartamento === apt && f.ano < ultimoAno && f.mes < currentMonth)
+      .filter(f => String(f.apartamento) === String(apt) &&
+                   Number(f.ano) < Number(ultimoAno) &&
+                   Number(f.mes) < Number(currentMonth))
       .reduce((s,f) => s + f.valorTransferencia, 0) || 1;
 
     const diffA    = antA - curA;
@@ -271,10 +277,12 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
 
   (() => {
     const curT2 = faturas
-      .filter(f => f.ano === ultimoAno && f.mes < currentMonth)
+      .filter(f => Number(f.ano) === Number(ultimoAno) &&
+                   Number(f.mes) < Number(currentMonth))
       .reduce((s,f) => s + f.valorTransferencia, 0);
     const antT2 = faturas
-      .filter(f => f.ano < ultimoAno && f.mes < currentMonth)
+      .filter(f => Number(f.ano) < Number(ultimoAno) &&
+                   Number(f.mes) < Number(currentMonth))
       .reduce((s,f) => s + f.valorTransferencia, 0) || 1;
 
     const diffT2    = antT2 - curT2;
@@ -301,7 +309,7 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
 
 (() => {
   const mesAtual = new Date().getMonth() + 1;
-  const temDados = faturas.some(f => f.ano === ultimoAno && f.mes === mesAtual);
+  const temDados = faturas.some(f => Number(f.ano) === Number(ultimoAno) && Number(f.mes) === Number(mesAtual));
   if (!temDados) return;
 
   const nomeMesAtual = obterNomeMes(mesAtual);
@@ -310,10 +318,14 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
   // por apartamento
   apartamentos.forEach(apt => {
     const cur = faturas
-      .filter(f => f.ano === ultimoAno && f.apartamento === apt && f.mes === mesAtual)
+      .filter(f => Number(f.ano) === Number(ultimoAno) &&
+                   String(f.apartamento) === String(apt) &&
+                   Number(f.mes) === Number(mesAtual))
       .reduce((s,f) => s + f.valorTransferencia, 0);
     const ant = faturas
-      .filter(f => f.apartamento === apt && f.ano < ultimoAno && f.mes === mesAtual)
+      .filter(f => String(f.apartamento) === String(apt) &&
+                   Number(f.ano) < Number(ultimoAno) &&
+                   Number(f.mes) === Number(mesAtual))
       .reduce((s,f) => s + f.valorTransferencia, 0);
 
     const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
@@ -338,10 +350,10 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
 
   // total
   const curT = faturas
-    .filter(f => f.ano === ultimoAno && f.mes === mesAtual)
+    .filter(f => Number(f.ano) === Number(ultimoAno) && Number(f.mes) === Number(mesAtual))
     .reduce((s,f) => s + f.valorTransferencia, 0);
   const antT = faturas
-    .filter(f => f.ano < ultimoAno && f.mes === mesAtual)
+    .filter(f => Number(f.ano) < Number(ultimoAno) && Number(f.mes) === Number(mesAtual))
     .reduce((s,f) => s + f.valorTransferencia, 0);
 
   const baseT = antT === 0 ? (curT === 0 ? 1 : curT) : antT;
@@ -383,15 +395,15 @@ document.getElementById('progresso-anos').innerHTML = htmlProg;
   html += '<th>TOTAL</th></tr></thead><tbody>';
 
   anos.forEach(ano => {
-    const faturasAno = faturas.filter(f => f.ano === ano);
+    const faturasAno = faturas.filter(f => Number(f.ano) === Number(ano));
     const numMeses = 12;
 
     let somaTotal = 0;
     html += `<tr><td>${ano}</td>`;
     apartamentos.forEach(apt => {
       const somaApt = faturasAno
-        .filter(f => f.apartamento === apt)
-        .reduce((sum, f) => sum + f.valorTransferencia, 0);
+        .filter(f => String(f.apartamento) === String(apt))
+        .reduce((sum, f) => sum + Number(f.valorTransferencia || 0), 0);
       const mediaApt = somaApt / numMeses;
       somaTotal += somaApt;
       html += `<td class="apt-${apt}">€${mediaApt.toFixed(2)}</td>`;
