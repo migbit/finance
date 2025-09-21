@@ -143,7 +143,7 @@ tr:hover{background:#f1f1f1;}
 
 /* Altura mais generosa para leitura */
 #analise-faturacao-container canvas {
-  height: 420px !important;   /* experimenta 380–460 */
+  height: 380px !important;   /* experimenta 380–460 */
 }
 
 /* Opcional: em ecrãs pequenos, um pouco menos alto */
