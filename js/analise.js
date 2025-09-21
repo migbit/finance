@@ -430,17 +430,19 @@ document.getElementById('progresso-anos').innerHTML = htmlProg;
 
 function gerarHeatmapVariacao(faturas) {
   // 1) Totais por ano/mês (somando os apartamentos)
-  const totais = {}; // ex: totais[ano][mes] = soma
-  faturas.forEach(f => {
-    if (!totais[f.ano]) totais[f.ano] = {};
-    totais[f.ano][f.mes] = (totais[f.ano][f.mes] || 0) + Number(f.valorTransferencia || 0);
-  });
+    const totais = {}; // ex: totais[ano][mes] = soma
+    faturas.forEach(f => {
+    const ano = Number(f.ano), mes = Number(f.mes);
+    if (!totais[ano]) totais[ano] = {};
+    totais[ano][mes] = (totais[ano][mes] || 0) + Number(f.valorTransferencia || 0);
+    });
 
-  // 2) Eixo X (anos) e Y (meses)
-  const currentYear = new Date().getFullYear();
-  const anos = [2024, currentYear].sort((a,b)=>a-b);
-  // Only keep years that have a previous year present in data
-  if (anos.length === 0) {
+
+// 2) Eixo X (anos) e Y (meses) — só anos com base (a-1) disponível
+const anosAll = Object.keys(totais).map(n => Number(n)).sort((a,b)=>a-b);
+const anos    = anosAll.filter(a => totais[a - 1]); // ex.: em 2025 mostra 2025 (porque há 2024)
+
+if (anos.length === 0) {
   const wrap = document.getElementById('heatmap-variacao');
   if (wrap) {
     wrap.innerHTML = `
@@ -449,15 +451,19 @@ function gerarHeatmapVariacao(faturas) {
           <span>-100%</span>
           <div class="heatmap-gradient" style="background:linear-gradient(90deg,#8b0000 0%, #ececec 50%, #28a745 100%);"></div>
           <span>+100%</span>
-          <span class="heatmap-muted" style="margin-left:12px;">Sem base do ano anterior (o heatmap começa quando existir 2025 vs 2024).</span>
+          <span class="heatmap-muted" style="margin-left:12px;">
+            Sem base do ano anterior (o heatmap começa quando existir 2025 vs 2024).
+          </span>
         </div>
       </div>`;
   }
   return;
 }
 
-  const meses = Array.from({ length: 12 }, (_, i) => i + 1);
-  const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const meses = Array.from({ length: 12 }, (_, i) => i + 1);
+const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+
 
   // 3) Função cor: mapeia -50% (vermelho) a +50% (verde), 0% = branco
   // clamp para [-0.5, +0.5] para a escala visual
