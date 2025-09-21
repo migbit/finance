@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DCA – Trade Republic</title>
+
+  <!-- O teu CSS global -->
+  <link rel="stylesheet" href="css/styles.css">
+
+  <style>
+    :root{
+      --gap: 12px; --radius: 12px; --muted: #7a7a7a;
+      --ok:#1f8f3a; --bad:#c53030; --bg-soft: rgba(0,0,0,0.03);
+      --card:#fff; --grid-border: rgba(0,0,0,0.08);
+    }
+    body{background:var(--color-bg,#f6f7fb);}
+    .wrap{max-width:1200px;margin:0 auto;padding:var(--spacing-md,24px);}
+
+    /* Controles + tabela (mantém o look & feel existente) */
+    .controls{display:grid;gap:var(--gap);grid-template-columns:repeat(12,1fr);background:var(--card);padding:16px;border-radius:var(--radius);box-shadow:var(--shadow-light,0 2px 10px rgba(0,0,0,.06));margin:16px 0 12px;}
+    .controls .field{display:flex;flex-direction:column;gap:6px}
+    .controls label{font-size:.85rem;color:var(--muted)}
+    .controls input[type="number"],.controls input[type="date"]{padding:8px 10px;border:1px solid var(--grid-border);border-radius:8px;background:#fff;outline:none}
+    .controls .row{grid-column:span 12;display:flex;gap:8px;flex-wrap:wrap}
+    .controls .field.sm{width:180px}
+    .controls .btns{margin-left:auto;display:flex;gap:8px;align-items:flex-end}
+    button.btn{padding:9px 12px;border-radius:10px;border:1px solid var(--grid-border);background:#fff;cursor:pointer}
+    button.primary{background:var(--color-primary,#2b5fd9);border-color:transparent;color:#fff}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .legend{font-size:.85rem;color:var(--muted);margin:8px 0 14px}
+
+    .year-group{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-light,0 2px 10px rgba(0,0,0,.06));margin-bottom:10px;overflow:hidden}
+    .year-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-soft);border-bottom:1px solid var(--grid-border)}
+    .year-head h3{margin:0;font-size:1rem}
+    .year-head .meta{font-size:.85rem;color:var(--muted)}
+    .year-toggle{cursor:pointer}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#3949ab;font-size:.78rem}
+
+    table.grid{width:100%;border-collapse:collapse;font-size:.92rem}
+    table.grid th,table.grid td{border-bottom:1px solid var(--grid-border);padding:10px 8px;vertical-align:middle;background:#fff}
+    table.grid th{position:sticky;top:0;background:#fafafa;z-index:1;font-weight:600;text-align:left}
+    table.grid td.num{text-align:right;font-variant-numeric:tabular-nums}
+    table.grid td.editable{background:#fffcf2}
+    .pos{color:var(--ok);font-weight:600}
+    .neg{color:var(--bad);font-weight:600}
+    .muted{color:var(--muted)}
+    .foot{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:10px 14px;background:#fafafa;border-top:1px solid var(--grid-border)}
+
+    @media (max-width:920px){.controls{grid-template-columns:repeat(6,1fr)} .controls .field.sm{width:100%}}
+    @media (max-width:620px){.controls{grid-template-columns:repeat(4,1fr)} table.grid{font-size:.85rem}}
+  </style>
+</head>
+<body>
+  <!-- O teu bootstrap Firebase/global helpers -->
+  <script src="js/script.js"></script>
+
+  <!-- Header padrão do teu site -->
+  <header>
+    <h1>Análise Apartamentos</h1>
+
+    <!-- Ícone de menu "hambúrguer" para mobile -->
+    <div class="menu-icon" id="menu-icon">
+      &#9776; <!-- Ícone de três linhas -->
+    </div>
+
+    <nav id="nav-menu">
+      <ul>
+        <li><a href="faturas.html">Faturas</a></li>
+        <li><a href="analise.html">Análise Apartamentos</a></li>
+        <li><a href="caixa.html">Caixa</a></li>
+        <li><a href="diversos.html">Diversos</a></li>
+        <li class="separator">|</li>
+        <li><a href="dca.html" class="active">DCA</a></li>
+        <!-- Login/User section -->
+        <li id="login-section">
+          <a href="#" id="login-btn" class="login-visible">Login</a>
+          <span id="user-info" class="user-visible" style="display:none;">
+            <a href="#" id="user-name">Username</a>
+          </span>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <!-- Controlo global -->
+    <section class="controls" id="controls">
+      <div class="row">
+        <div class="field sm"><label>Data de início</label><input id="startDate" type="date"></div>
+        <div class="field sm"><label>Data de fim</label><input id="endDate" type="date"></div>
+        <div class="field sm"><label>Alocação SWDA (%)</label><input id="allocSWDA" type="number" min="0" max="100" step="1" value="55"></div>
+        <div class="field sm"><label>Alocação AGGH (%)</label><input id="allocAGGH" type="number" min="0" max="100" step="1" value="45"></div>
+        <div class="field sm"><label>Juro anual dinheiro não investido (%)</label><input id="cashAPR" type="number" min="0" max="20" step="0.1" value="2"></div>
+        <div class="field sm"><label>Cenário Pessimista (%/ano)</label><input id="rateBear" type="number" step="0.1" value="0"></div>
+        <div class="field sm"><label>Cenário Realista (%/ano)</label><input id="rateBase" type="number" step="0.1" value="4"></div>
+        <div class="field sm"><label>Cenário Otimista (%/ano)</label><input id="rateBull" type="number" step="0.1" value="7"></div>
+
+        <div class="btns">
+          <button class="btn" id="btnToggleYears">Mostrar/Ocultar anos</button>
+          <button class="btn" id="btnRecalc">Recalcular</button>
+          <button class="btn primary" id="btnSave">Guardar</button>
+        </div>
+      </div>
+      <div class="legend">Investimento mensal fixo de 100€. Percentagens que não somem 100% vão para “Caixa” a render à taxa indicada.</div>
+    </section>
+
+    <!-- Grupos por ano -->
+    <div id="years"></div>
+  </div>
+
+  <!-- Lógica da página -->
+  <script src="js/dca.js"></script>
+</body>
+</html>
