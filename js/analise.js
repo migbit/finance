@@ -117,7 +117,11 @@ datasetsBar.push(
 chartComparacaoApt = new Chart(document.getElementById('chart-comparacao-apt'), {
   type: 'bar',
   data: { labels, datasets: datasetsBar },
-  options: { responsive: true, scales: { y: { beginAtZero: true } } }
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: { y: { beginAtZero: true } }
+  }
 });
 
 
@@ -134,9 +138,11 @@ datasetsLine.push({ label: `Total ${ultimoAno}`, data: dataTotal });
 chartTotal = new Chart(document.getElementById('chart-total'), {
   type: 'line',
   data: { labels, datasets: datasetsLine },
-  options: { responsive: true }
+  options: {
+    responsive: true,
+    maintainAspectRatio: false
+  }
 });
-
   
     
   // 4) Barras de progresso: acumulado ano vs ano anterior
