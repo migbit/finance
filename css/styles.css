@@ -810,3 +810,7 @@ table:not(.grid) th{
 .table-dca input.cell{
   text-align: center;   /* antes estava right */
 }
+
+#params-table td.num {
+  text-align: center; /* centra a célula */
+}
