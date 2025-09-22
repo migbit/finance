@@ -285,7 +285,7 @@ function readParamsFromUI(){
   const fix  = (n)=> Math.max(0, Math.min(100, n));
   const pctSumOk = Math.abs((pctS + pctA) - 100) < 0.01;
   return { endYM:{y:ey,m:em}, pctSWDA:fix(pctS), pctAGGH:fix(pctA),
-           ratePes:pes, rateReal:real, rateOtim:ot, cashRate:cash, pctSumOk };
+           ratePes:pes, rateReal:real, rateOtim:ot, pctSumOk };
 }
 
 function writeParamsToUI(p){
