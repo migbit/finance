@@ -1,10 +1,10 @@
-<script type="module">
-// js/dca.js
+// js/dca.js  — CORRIGIDO (sem <script> no ficheiro)
+
 // Integração com Firebase conforme restante webapp
 import { db } from '../js/script.js';
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc,
-  query, where, orderBy
+  query, orderBy
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
 // ---------- Helpers ----------
@@ -35,7 +35,6 @@ const COL = collection(db, 'dca'); // docs com id 'YYYY-MM'
 
 async function ensureMonthsExist(endYM){
   const ids = monthsBetween(START_YM, endYM).map(({y,m})=> `${y}-${pad(m)}`);
-  // Cria docs vazios se não existirem
   await Promise.all(ids.map(async id => {
     const ref = doc(COL, id);
     const snap = await getDoc(ref);
@@ -94,9 +93,7 @@ function buildModel(docs, params){
 
     const swdaNow = asNum(d.swda_value);
     const agghNow = asNum(d.aggh_value);
-    const totalNow = asNum(d.value_total) ?? (
-      (swdaNow ?? 0) + (agghNow ?? 0)
-    );
+    const totalNow = asNum(d.value_total) ?? ((swdaNow ?? 0) + (agghNow ?? 0));
 
     // Resultados (€ e %)
     const resTotal = (totalNow!=null) ? (totalNow - investedCum) : null;
@@ -108,7 +105,7 @@ function buildModel(docs, params){
     const resAGGH = (agghNow!=null) ? (agghNow - investedCumAGGH) : null;
     const resAGGHPct = (resAGGH!=null && investedCumAGGH>0) ? (resAGGH/investedCumAGGH*100) : null;
 
-    // Cenários (acumulado até 2040+) – aplica TIR anual ao INVESTIDO acumulado
+    // Cenários sobre acumulado, capitalizado a TIR anual
     const monthsFromStart = ((d.y - START_YM.y) * 12) + (d.m - START_YM.m);
     const yearsFromStart  = monthsFromStart / 12;
     const scen = (rate)=> investedCum * Math.pow(1 + rate/100, yearsFromStart);
@@ -140,15 +137,12 @@ function yearGroups(rows){
 
 function renderTable(rows){
   const wrap = $('#dca-table-wrap');
-  if (!wrap){ return; }
+  if (!wrap) return;
 
   const groups = yearGroups(rows);
   wrap.innerHTML = '';
 
   for (const [y, arr] of groups){
-    const sec = document.createElement('section');
-    sec.className = 'report-section';
-
     const h = document.createElement('h3');
     h.textContent = y;
 
@@ -183,12 +177,10 @@ function renderTable(rows){
 
     const tbody = table.querySelector('tbody');
 
-    for (let i=0;i<arr.length;i++){
-      const r = arr[i];
+    for (const r of arr){
       const tr = document.createElement('tr');
       tr.dataset.id = r.id;
 
-      // Classes de positivo/negativo
       const clsTotal = r.resTotal!=null ? (r.resTotal>=0?'pos':'neg') : '';
       const clsSWDA  = r.resSWDA !=null ? (r.resSWDA >=0?'pos':'neg')  : '';
       const clsAGGH  = r.resAGGH !=null ? (r.resAGGH >=0?'pos':'neg')  : '';
@@ -210,13 +202,13 @@ function renderTable(rows){
         <td class="num"><input class="cell cash" type="number" step="0.01" value="${r.cash_interest??''}" /></td>
         <td><button class="btn-save" type="button">Editar/Gravar</button></td>
       `;
-
       tbody.appendChild(tr);
     }
 
     const groupWrap = document.createElement('div');
     groupWrap.className = 'year-group';
     groupWrap.appendChild(h);
+
     const tools = document.createElement('div');
     tools.className = 'form-actions';
     tools.appendChild(btn);
@@ -225,17 +217,17 @@ function renderTable(rows){
     groupWrap.appendChild(table);
     wrap.appendChild(groupWrap);
 
-    // Botão colapsar por ano (mantém Dezembro)
     btn.addEventListener('click', () => toggleYear(table));
   }
 
-  // Ações de guardar por linha
+  // Guardar por linha
   wrap.addEventListener('click', async (ev)=>{
     const b = ev.target.closest('.btn-save');
     if (!b) return;
     const tr = b.closest('tr');
     const id = tr?.dataset?.id;
     if (!id) return;
+
     const total = asNum(tr.querySelector('.val-total')?.value);
     const swda  = asNum(tr.querySelector('.swda')?.value);
     const aggh  = asNum(tr.querySelector('.aggh')?.value);
@@ -248,64 +240,46 @@ function renderTable(rows){
       cash_interest: cash
     });
 
-    // Após guardar, recarrega modelo para refletir cálculos
-    await boot(true);
+    await boot(true); // refaz cálculos/render
   });
 }
 
 function toggleYear(table){
   const rows = Array.from(table.tBodies[0].rows);
-  // manter a última linha (assumimos dezembro)
-  rows.slice(0,-1).forEach(r => r.classList.toggle('hidden'));
+  rows.slice(0,-1).forEach(r => r.classList.toggle('hidden')); // mantém dezembro visível
 }
 
 // ---------- Estado / Boot ----------
-const state = {
-  params: { ...DEFAULTS }
-};
+const state = { params: { ...DEFAULTS } };
 
 function readParamsFromUI(){
-  const [ey, em] = ($('#end-date').value || `${DEFAULTS.endYM.y}-${pad(DEFAULTS.endYM.m)}`).split('-').map(Number);
-  const pctS = asNum($('#pct-swda').value) ?? DEFAULTS.pctSWDA;
-  const pctA = asNum($('#pct-aggh').value) ?? DEFAULTS.pctAGGH;
-  const pes  = asNum($('#rate-pes').value)  ?? DEFAULTS.ratePes;
-  const real = asNum($('#rate-real').value) ?? DEFAULTS.rateReal;
-  const ot   = asNum($('#rate-otim').value) ?? DEFAULTS.rateOtim;
-  const cash = asNum($('#cash-rate').value) ?? DEFAULTS.cashRate;
+  const [ey, em] = ($('#end-date')?.value || `${DEFAULTS.endYM.y}-${pad(DEFAULTS.endYM.m)}`).split('-').map(Number);
+  const pctS = asNum($('#pct-swda')?.value) ?? DEFAULTS.pctSWDA;
+  const pctA = asNum($('#pct-aggh')?.value) ?? DEFAULTS.pctAGGH;
+  const pes  = asNum($('#rate-pes')?.value)  ?? DEFAULTS.ratePes;
+  const real = asNum($('#rate-real')?.value) ?? DEFAULTS.rateReal;
+  const ot   = asNum($('#rate-otim')?.value) ?? DEFAULTS.rateOtim;
+  const cash = asNum($('#cash-rate')?.value) ?? DEFAULTS.cashRate;
   const fix  = (n)=> Math.max(0, Math.min(100, n));
   const pctSumOk = Math.abs((pctS + pctA) - 100) < 0.01;
-  return {
-    endYM: { y: ey, m: em },
-    pctSWDA: fix(pctS),
-    pctAGGH: fix(pctA),
-    ratePes: pes,
-    rateReal: real,
-    rateOtim: ot,
-    cashRate: cash,
-    pctSumOk
-  };
+  return { endYM:{y:ey,m:em}, pctSWDA:fix(pctS), pctAGGH:fix(pctA),
+           ratePes:pes, rateReal:real, rateOtim:ot, cashRate:cash, pctSumOk };
 }
 
 function writeParamsToUI(p){
-  $('#end-date').value = `${p.endYM.y}-${pad(p.endYM.m)}`;
-  $('#pct-swda').value = p.pctSWDA;
-  $('#pct-aggh').value = p.pctAGGH;
-  $('#rate-pes').value = p.ratePes;
-  $('#rate-real').value= p.rateReal;
-  $('#rate-otim').value= p.rateOtim;
-  $('#cash-rate').value= p.cashRate;
+  const ed = $('#end-date'); if (ed) ed.value = `${p.endYM.y}-${pad(p.endYM.m)}`;
+  const sw = $('#pct-swda'); if (sw) sw.value = p.pctSWDA;
+  const ag = $('#pct-aggh'); if (ag) ag.value = p.pctAGGH;
+  const rp = $('#rate-pes'); if (rp) rp.value = p.ratePes;
+  const rr = $('#rate-real'); if (rr) rr.value= p.rateReal;
+  const ro = $('#rate-otim'); if (ro) ro.value= p.rateOtim;
+  const cr = $('#cash-rate'); if (cr) cr.value= p.cashRate;
 }
 
 async function boot(skipParamUI){
-  if (!skipParamUI){
-    // Inicializa UI com defaults
-    writeParamsToUI(state.params);
-  }
-  // Garante meses
+  if (!skipParamUI) writeParamsToUI(state.params);
   await ensureMonthsExist(state.params.endYM);
-  // Carrega
   const docs = await loadAllDocs();
-  // Filtra apenas até endYM
   const limId = `${state.params.endYM.y}-${pad(state.params.endYM.m)}`;
   const subset = docs.filter(d => d.id <= limId);
   const rows = buildModel(subset, state.params);
@@ -322,26 +296,27 @@ $('#btn-aplicar')?.addEventListener('click', async ()=>{
   state.params = p;
   await boot(true);
 });
-
-$('#btn-colapsar')?.addEventListener('click', ()=>{
+$('#btn-colapsar')?.addEventListener('click', ()=> {
   $$('#dca-table-wrap table').forEach(t => toggleYear(t));
 });
-$('#btn-expandir')?.addEventListener('click', ()=>{
+$('#btn-expandir')?.addEventListener('click', ()=> {
   $$('#dca-table-wrap table').forEach(t => {
-    // garantir todas as linhas visíveis exceto nenhuma
     Array.from(t.tBodies[0].rows).forEach(r => r.classList.remove('hidden'));
   });
 });
 
-// ---------- Estilos mínimos específicos (reutiliza variáveis globais) ----------
+// ---------- Estilos mínimos específicos ----------
 const style = document.createElement('style');
 style.textContent = `
 .table-dca th{ white-space:pre-line; }
 .table-dca .num{ text-align:right; }
-.table-dca .pos{ color: #0a7f2e; font-weight:600; }
-.table-dca .neg{ color: #b00020; font-weight:600; }
-.table-dca input.cell{ width: 9ch; text-align:right; }
+.table-dca .pos{ color:#0a7f2e; font-weight:600; }
+.table-dca .neg{ color:#b00020; font-weight:600; }
+.table-dca input.cell{ width:9ch; text-align:right; }
 .year-group{ margin-bottom: var(--spacing-lg); }
-.btn-minor{ padding: .4rem .6rem; border-radius: var(--border-radius-sm); }
+.btn-minor{ padding:.4rem .6rem; border-radius: var(--border-radius-sm); }
 `;
 document.head.appendChild(style);
+
+// Arranque
+boot();
