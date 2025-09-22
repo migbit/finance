@@ -34,45 +34,62 @@
 
   <main>
     <!-- Parâmetros / Controlo -->
-    <section class="form-section">
+    <section class="report-section">
   <h2>Parâmetros</h2>
-  <div class="form-row row-3"><!-- mudou row-4 -> row-3 -->
-    <div class="form-group">
-      <label for="end-date">Data final</label>
-      <input id="end-date" type="month" />
-    </div>
-    <div class="form-group">
-      <label>Alocação (%)</label>
-      <div class="form-row row-2">
-        <div class="form-group">
-          <label for="pct-swda">SWDA</label>
+
+  <table class="table-dca" id="params-table">
+    <thead>
+      <tr>
+        <th style="width:140px">Ações</th>
+        <th class="num">Data final</th>
+        <th class="num">SWDA %</th>
+        <th class="num">AGGH %</th>
+        <th class="num">Cen. Pes. (% a.a.)</th>
+        <th class="num">Cen. Real. (% a.a.)</th>
+        <th class="num">Cen. Ot. (% a.a.)</th>
+        <th class="num"> </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <button id="btn-save-params" type="button">Editar/Gravar</button>
+        </td>
+        <td class="num">
+          <input id="end-date" type="month" />
+        </td>
+        <td class="num">
           <input id="pct-swda" type="number" min="0" max="100" step="0.01" />
-        </div>
-        <div class="form-group">
-          <label for="pct-aggh">AGGH</label>
+        </td>
+        <td class="num">
           <input id="pct-aggh" type="number" min="0" max="100" step="0.01" />
-        </div>
-      </div>
-      <small class="text-muted">Soma deve dar 100%.</small>
-    </div>
-    <div class="form-group">
-      <label>Taxas dos Cenários (TIR anual)</label>
-      <div class="form-row row-3">
-        <div class="form-group">
-          <label for="rate-pes">Pessimista</label>
+        </td>
+        <td class="num">
           <input id="rate-pes" type="number" step="0.01" />
-        </div>
-        <div class="form-group">
-          <label for="rate-real">Realista</label>
+        </td>
+        <td class="num">
           <input id="rate-real" type="number" step="0.01" />
-        </div>
-        <div class="form-group">
-          <label for="rate-otim">Otimista</label>
+        </td>
+        <td class="num">
           <input id="rate-otim" type="number" step="0.01" />
-        </div>
-      </div>
-    </div><!-- FECHO que estava a faltar -->
-  </div>
+        </td>
+        <td class="num">
+          <div class="form-actions" style="margin:0;gap:.4rem;justify-content:flex-end">
+            <button id="btn-colapsar" type="button">Colapsar anos (mostrar Dez)</button>
+            <button id="btn-expandir" type="button">Expandir anos</button>
+          </div>
+        </td>
+      </tr>
+      <tr class="text-muted">
+        <td></td>
+        <td></td>
+        <td colspan="2">Soma SWDA+AGGH deve dar 100%.</td>
+        <td colspan="4"></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
 
   <div class="form-actions">
     <button id="btn-aplicar" type="button">Aplicar</button>
