@@ -27,7 +27,6 @@ const DEFAULTS  = {
   ratePes: 3.84,   // % a.a.
   rateReal: 4.64,  // % a.a.
   rateOtim: 7.00,  // % a.a.
-  cashRate: 2.00   // % a.a.
 };
 
 // ---------- Firestore ----------
@@ -77,7 +76,7 @@ function monthsBetween(a, b){
 }
 
 function buildModel(docs, params){
-  const { pctSWDA, pctAGGH, ratePes, rateReal, rateOtim, cashRate } = params;
+  const { pctSWDA, pctAGGH, ratePes, rateReal, rateOtim } = params;
   const rows = [];
 
   let investedCum = 0;
@@ -118,7 +117,6 @@ function buildModel(docs, params){
       resSWDA,  resSWDAPct,
       resAGGH,  resAGGHPct,
       pes: scen(ratePes), real: scen(rateReal), otim: scen(rateOtim),
-      cashRate, cash_interest: asNum(d.cash_interest)
     });
   }
   return rows;
@@ -259,7 +257,6 @@ function readParamsFromUI(){
   const pes  = asNum($('#rate-pes')?.value)  ?? DEFAULTS.ratePes;
   const real = asNum($('#rate-real')?.value) ?? DEFAULTS.rateReal;
   const ot   = asNum($('#rate-otim')?.value) ?? DEFAULTS.rateOtim;
-  const cash = asNum($('#cash-rate')?.value) ?? DEFAULTS.cashRate;
   const fix  = (n)=> Math.max(0, Math.min(100, n));
   const pctSumOk = Math.abs((pctS + pctA) - 100) < 0.01;
   return { endYM:{y:ey,m:em}, pctSWDA:fix(pctS), pctAGGH:fix(pctA),
@@ -273,7 +270,6 @@ function writeParamsToUI(p){
   const rp = $('#rate-pes'); if (rp) rp.value = p.ratePes;
   const rr = $('#rate-real'); if (rr) rr.value= p.rateReal;
   const ro = $('#rate-otim'); if (ro) ro.value= p.rateOtim;
-  const cr = $('#cash-rate'); if (cr) cr.value= p.cashRate;
 }
 
 async function boot(skipParamUI){
