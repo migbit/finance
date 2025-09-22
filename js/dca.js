@@ -169,10 +169,6 @@ function renderTable(rows){
     const h = document.createElement('h3');
     h.textContent = y;
 
-    const btn = document.createElement('button');
-    btn.textContent = 'Ocultar ano';
-    btn.className = 'btn-minor';
-
     const table = document.createElement('table');
     table.className = 'table-dca';
     table.innerHTML = `
@@ -231,20 +227,19 @@ function renderTable(rows){
     const groupWrap = document.createElement('div');
     groupWrap.className = 'year-group';
     groupWrap.appendChild(h);
-
-    const tools = document.createElement('div');
-    tools.className = 'form-actions';
-    tools.appendChild(btn);
-
-    groupWrap.appendChild(tools);
     groupWrap.appendChild(table);
     wrap.appendChild(groupWrap);
-
-    btn.addEventListener('click', () => toggleYear(table));
   }
+}
 
-  // Guardar por linha
-  wrap.addEventListener('click', async (ev)=>{
+// Listener único para guardar linhas (event delegation)
+(() => {
+  const wrap = document.getElementById('dca-table-wrap');
+  if (!wrap) return;
+  if (wrap.__boundSave) return; // evita duplicação se renderTable for chamado várias vezes
+  wrap.__boundSave = true;
+
+  wrap.addEventListener('click', async (ev) => {
     const b = ev.target.closest('.btn-save');
     if (!b) return;
     const tr = b.closest('tr');
@@ -263,20 +258,15 @@ function renderTable(rows){
       cash_interest: cash
     });
 
-    await boot(true); // refaz cálculos/render
+    await boot(true); // recalcular e re-render após gravar
   });
-}
+})();
 
-function toggleYear(table){
-  const rows = Array.from(table.tBodies[0].rows);
-  rows.slice(0,-1).forEach(r => r.classList.toggle('hidden')); // mantém dezembro visível
-}
 
 // ---------- Estado / Boot ----------
 const state = {
   params: { ...DEFAULTS },
-  showPrev: false,   // anos < ano atual
-  showNext: false    // anos > ano atual
+  showOthers: false   // anos != ano atual visíveis?
 };
 
 
@@ -302,6 +292,35 @@ function writeParamsToUI(p){
   const ro = $('#rate-otim'); if (ro) ro.value= p.rateOtim;
 }
 
+function applyYearVisibility(){
+  const currentYear = new Date().getFullYear();
+  const groups = Array.from(document.querySelectorAll('#dca-table-wrap .year-group'));
+
+  for (const g of groups){
+    const y = Number(g.querySelector('h3')?.textContent || 0);
+    const table = g.querySelector('table');
+    if (!table) continue;
+    const rows = Array.from(table.tBodies[0].rows);
+
+    if (y === currentYear){
+      rows.forEach(r => r.classList.remove('hidden'));
+    } else {
+      const hide = !state.showOthers;
+      rows.forEach(r => r.classList.toggle('hidden', hide));
+    }
+  }
+
+  const btn = document.getElementById('toggle-others');
+  if (btn) btn.textContent = state.showOthers ? 'Ocultar anos' : 'Expandir anos';
+}
+
+
+document.getElementById('toggle-others')?.addEventListener('click', () => {
+  state.showOthers = !state.showOthers;
+  applyYearVisibility();
+});
+
+
 // ---------- Eventos UI ----------
 $('#btn-save-params')?.addEventListener('click', async ()=>{
   const p = readParamsFromUI();
@@ -314,21 +333,6 @@ $('#btn-save-params')?.addEventListener('click', async ()=>{
   await boot(true);      // refaz meses/tabela com novos parâmetros
 });
 
-$('#toggle-prev')?.addEventListener('click', () => {
-  state.showPrev = !state.showPrev;
-  // atualizar label
-  $('#toggle-prev').textContent = state.showPrev ? 'Ocultar anos anteriores' : 'Mostrar anos anteriores';
-  // reaplicar visibilidade sem refazer dados
-  renderTable(buildModel(window.__lastDocs || [], state.params));
-});
-
-$('#toggle-next')?.addEventListener('click', () => {
-  state.showNext = !state.showNext;
-  $('#toggle-next').textContent = state.showNext ? 'Ocultar anos seguintes' : 'Mostrar anos seguintes';
-  renderTable(buildModel(window.__lastDocs || [], state.params));
-});
-
-
 // ---------- Estilos mínimos específicos ----------
 const style = document.createElement('style');
 style.textContent = `
@@ -336,7 +340,7 @@ style.textContent = `
 .table-dca .num{ text-align:right; }
 .table-dca .pos{ color:#0a7f2e; font-weight:600; }
 .table-dca .neg{ color:#b00020; font-weight:600; }
-.table-dca input.cell{ width:9ch; text-align:right; }
+.table-dca input.cell{ width:9ch; text-align:center; }
 .year-group{ margin-bottom: var(--spacing-lg); }
 .btn-minor{ padding:.4rem .6rem; border-radius: var(--border-radius-sm); }
 `;
@@ -345,37 +349,19 @@ document.head.appendChild(style);
 // Arranque
 async function boot(skipParamUI){
   if (!skipParamUI){
-    // carrega params do Firebase na 1ª vez
     state.params = await loadParams();
     writeParamsToUI(state.params);
   }
   await ensureMonthsExist(state.params.endYM);
-
   const docs = await loadAllDocs();
-  window.__lastDocs = docs; // cache leve para re-render
+  window.__lastDocs = docs;
+
   const limId = `${state.params.endYM.y}-${pad(state.params.endYM.m)}`;
   const subset = docs.filter(d => d.id <= limId);
   const rows = buildModel(subset, state.params);
-  renderTable(rows);
-    // --- aplicar colapso por omissão / conforme botões globais ---
-  const currentYear = new Date().getFullYear();
-  $$('#dca-table-wrap table').forEach(t => {
-    const y = Number(t.closest('.year-group')?.querySelector('h3')?.textContent || 0);
-    const rows = Array.from(t.tBodies[0].rows);
-    if (y < currentYear) {
-      // se não quiser mostrar anos anteriores, deixa só Dezembro
-      if (!state.showPrev) rows.slice(0, -1).forEach(r => r.classList.add('hidden'));
-      else rows.forEach(r => r.classList.remove('hidden'));
-    } else if (y > currentYear) {
-      // se não quiser mostrar anos seguintes, esconde todas
-      if (!state.showNext) rows.forEach(r => r.classList.add('hidden'));
-      else rows.forEach(r => r.classList.remove('hidden'));
-    } else {
-      // ano atual sempre expandido
-      rows.forEach(r => r.classList.remove('hidden'));
-    }
-  });
 
+  renderTable(rows);
+  applyYearVisibility(); // aplica regra ao arranque
 }
 
 boot();
