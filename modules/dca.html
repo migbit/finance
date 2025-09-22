@@ -35,55 +35,51 @@
   <main>
     <!-- Parâmetros / Controlo -->
     <section class="form-section">
-      <h2>Parâmetros</h2>
-      <div class="form-row row-4">
+  <h2>Parâmetros</h2>
+  <div class="form-row row-3"><!-- mudou row-4 -> row-3 -->
+    <div class="form-group">
+      <label for="end-date">Data final</label>
+      <input id="end-date" type="month" />
+    </div>
+    <div class="form-group">
+      <label>Alocação (%)</label>
+      <div class="form-row row-2">
         <div class="form-group">
-          <label for="end-date">Data final</label>
-          <input id="end-date" type="month" />
+          <label for="pct-swda">SWDA</label>
+          <input id="pct-swda" type="number" min="0" max="100" step="0.01" />
         </div>
         <div class="form-group">
-          <label>Alocação (%)</label>
-          <div class="form-row row-2">
-            <div class="form-group">
-              <label for="pct-swda">SWDA</label>
-              <input id="pct-swda" type="number" min="0" max="100" step="0.01" />
-            </div>
-            <div class="form-group">
-              <label for="pct-aggh">AGGH</label>
-              <input id="pct-aggh" type="number" min="0" max="100" step="0.01" />
-            </div>
-          </div>
-          <small class="text-muted">Soma deve dar 100%.</small>
-        </div>
-        <div class="form-group">
-          <label>Taxas dos Cenários (TIR anual)</label>
-          <div class="form-row row-3">
-            <div class="form-group">
-              <label for="rate-pes">Pessimista</label>
-              <input id="rate-pes" type="number" step="0.01" />
-            </div>
-            <div class="form-group">
-              <label for="rate-real">Realista</label>
-              <input id="rate-real" type="number" step="0.01" />
-            </div>
-            <div class="form-group">
-              <label for="rate-otim">Otimista</label>
-              <input id="rate-otim" type="number" step="0.01" />
-            </div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="cash-rate">Juro Cash (anual)</label>
-          <input id="cash-rate" type="number" step="0.01" />
-          <small class="text-muted">Aplicado a dinheiro não investido.</small>
+          <label for="pct-aggh">AGGH</label>
+          <input id="pct-aggh" type="number" min="0" max="100" step="0.01" />
         </div>
       </div>
-      <div class="form-actions">
-        <button id="btn-aplicar" type="button">Aplicar</button>
-        <button id="btn-colapsar" type="button">Colapsar anos (mostrar Dezembro)</button>
-        <button id="btn-expandir" type="button">Expandir anos</button>
+      <small class="text-muted">Soma deve dar 100%.</small>
+    </div>
+    <div class="form-group">
+      <label>Taxas dos Cenários (TIR anual)</label>
+      <div class="form-row row-3">
+        <div class="form-group">
+          <label for="rate-pes">Pessimista</label>
+          <input id="rate-pes" type="number" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label for="rate-real">Realista</label>
+          <input id="rate-real" type="number" step="0.01" />
+        </div>
+        <div class="form-group">
+          <label for="rate-otim">Otimista</label>
+          <input id="rate-otim" type="number" step="0.01" />
+        </div>
       </div>
-    </section>
+    </div><!-- FECHO que estava a faltar -->
+  </div>
+
+  <div class="form-actions">
+    <button id="btn-aplicar" type="button">Aplicar</button>
+    <button id="btn-colapsar" type="button">Colapsar anos (mostrar Dezembro)</button>
+    <button id="btn-expandir" type="button">Expandir anos</button>
+  </div>
+</section>
 
     <!-- Tabela principal -->
     <section class="report-section">
