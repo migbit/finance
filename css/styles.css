@@ -785,9 +785,6 @@ table:not(.grid) th{
   text-align: center;
 }
 
-#params-table input[type=number],
-#params-table input[type=month] { width: 10ch; text-align: right; }
-
 #params-table th.cenarios {
   position: relative;
   border-bottom: none;       /* retira o traço que aparece de fora a fora */
@@ -801,3 +798,14 @@ table:not(.grid) th{
   bottom: 0;
   border-bottom: 2px solid #fff; /* mesma cor do traço de cabeçalho */
   }
+
+  /* Parâmetros */
+#params-table input[type=number],
+#params-table input[type=month]{
+  text-align: center;
+}
+
+/* (Opcional) também centrar inputs do registo mensal */
+.table-dca input.cell{
+  text-align: center;   /* antes estava right */
+}
