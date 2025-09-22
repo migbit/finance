@@ -796,8 +796,8 @@ table:not(.grid) th{
 #params-table th.cenarios::after {
   content: "";
   position: absolute;
-  left: 0.6em;               /* ajuste: começa ~1 espaço antes do “P” */
-  right: 0.6em;              /* ajuste: termina simétrico ao lado direito */
+  left: 1em;               /* ajuste: começa ~1 espaço antes do “P” */
+  right: 1em;              /* ajuste: termina simétrico ao lado direito */
   bottom: 0;
   border-bottom: 2px solid #fff; /* mesma cor do traço de cabeçalho */
   }
