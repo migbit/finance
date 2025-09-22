@@ -188,9 +188,9 @@ function renderTable(rows){
           <th class="num">Inv.\nAGGH</th>
           <th class="num">AGGH\nAtual</th>
           <th class="num">Res.\nAGGH (€ / %)</th>
-          <th class="num">Cen.\nPes.</th>
-          <th class="num">Cen.\nReal.</th>
-          <th class="num">Cen.\nOt.</th>
+          <th class="num">| Cenário |\nPessimista (%)</th>
+          <th class="num">| Cenário |\nRealista (%)</th>
+          <th class="num">| Cenário |\nOtimista (%)</th>
           <th class="num">Juro\nCash</th>
           <th>Ações</th>
         </tr>
@@ -273,7 +273,12 @@ function toggleYear(table){
 }
 
 // ---------- Estado / Boot ----------
-const state = { params: { ...DEFAULTS } };
+const state = {
+  params: { ...DEFAULTS },
+  showPrev: false,   // anos < ano atual
+  showNext: false    // anos > ano atual
+};
+
 
 function readParamsFromUI(){
   const [ey, em] = ($('#end-date')?.value || `${DEFAULTS.endYM.y}-${pad(DEFAULTS.endYM.m)}`).split('-').map(Number);
@@ -309,14 +314,20 @@ $('#btn-save-params')?.addEventListener('click', async ()=>{
   await boot(true);      // refaz meses/tabela com novos parâmetros
 });
 
-$('#btn-colapsar')?.addEventListener('click', ()=> {
-  $$('#dca-table-wrap table').forEach(t => toggleYear(t));
+$('#toggle-prev')?.addEventListener('click', () => {
+  state.showPrev = !state.showPrev;
+  // atualizar label
+  $('#toggle-prev').textContent = state.showPrev ? 'Ocultar anos anteriores' : 'Mostrar anos anteriores';
+  // reaplicar visibilidade sem refazer dados
+  renderTable(buildModel(window.__lastDocs || [], state.params));
 });
-$('#btn-expandir')?.addEventListener('click', ()=> {
-  $$('#dca-table-wrap table').forEach(t => {
-    Array.from(t.tBodies[0].rows).forEach(r => r.classList.remove('hidden'));
-  });
+
+$('#toggle-next')?.addEventListener('click', () => {
+  state.showNext = !state.showNext;
+  $('#toggle-next').textContent = state.showNext ? 'Ocultar anos seguintes' : 'Mostrar anos seguintes';
+  renderTable(buildModel(window.__lastDocs || [], state.params));
 });
+
 
 // ---------- Estilos mínimos específicos ----------
 const style = document.createElement('style');
@@ -341,10 +352,30 @@ async function boot(skipParamUI){
   await ensureMonthsExist(state.params.endYM);
 
   const docs = await loadAllDocs();
+  window.__lastDocs = docs; // cache leve para re-render
   const limId = `${state.params.endYM.y}-${pad(state.params.endYM.m)}`;
   const subset = docs.filter(d => d.id <= limId);
   const rows = buildModel(subset, state.params);
   renderTable(rows);
+    // --- aplicar colapso por omissão / conforme botões globais ---
+  const currentYear = new Date().getFullYear();
+  $$('#dca-table-wrap table').forEach(t => {
+    const y = Number(t.closest('.year-group')?.querySelector('h3')?.textContent || 0);
+    const rows = Array.from(t.tBodies[0].rows);
+    if (y < currentYear) {
+      // se não quiser mostrar anos anteriores, deixa só Dezembro
+      if (!state.showPrev) rows.slice(0, -1).forEach(r => r.classList.add('hidden'));
+      else rows.forEach(r => r.classList.remove('hidden'));
+    } else if (y > currentYear) {
+      // se não quiser mostrar anos seguintes, esconde todas
+      if (!state.showNext) rows.forEach(r => r.classList.add('hidden'));
+      else rows.forEach(r => r.classList.remove('hidden'));
+    } else {
+      // ano atual sempre expandido
+      rows.forEach(r => r.classList.remove('hidden'));
+    }
+  });
+
 }
 
 boot();
