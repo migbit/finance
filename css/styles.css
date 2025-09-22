@@ -798,19 +798,29 @@ table:not(.grid) th{
 #params-table input[type=month] {
   width: 14ch;   /* espaço suficiente para AAAA-MM */
   text-align: center;
+  height: 36px;
+  line-height: 36px;
 }
 
 #params-table input[type=number] {
   width: 8ch;    /* mais compacto e proporcional ao conteúdo */
   text-align: center;
+  height: 36px;
+  line-height: 36px;
 }
 
-
-/* (Opcional) também centrar inputs do registo mensal */
-.table-dca input.cell{
-  text-align: center;   /* antes estava right */
-}
-
+/* Centrar inputs dentro das células (evita "fugirem" para a direita) */
 #params-table td.num {
-  text-align: center; /* centra a célula */
+  text-align: center; /* centra o conteúdo da célula */
+}
+#params-table td.num input {
+  display: block;
+  margin: 0 auto;
+}
+
+/* (Opcional) se quiseres também centrar no registo mensal */
+.table-dca input.cell {
+  text-align: center;   /* antes estava right */
+  height: 32px;
+  line-height: 32px;
 }
