@@ -778,4 +778,7 @@ table:not(.grid) th{
   width: 10ch; /* compacto para caber numa linha */
   text-align: right;
 }
-#params-table th, #params-table td{ vertical-align: middle; }
+
+#params-table th { white-space: pre-line; }
+#params-table input[type=number],
+#params-table input[type=month] { width: 10ch; text-align: right; }
