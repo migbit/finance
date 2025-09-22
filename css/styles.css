@@ -773,12 +773,6 @@ table:not(.grid) th{
   color: #fff;
 }
 
-#params-table input[type=number],
-#params-table input[type=month]{
-  width: 10ch; /* compacto para caber numa linha */
-  text-align: right;
-}
-
 #params-table th {
   white-space: pre-line;
   vertical-align: middle;
@@ -800,10 +794,17 @@ table:not(.grid) th{
   }
 
   /* Parâmetros */
-#params-table input[type=number],
-#params-table input[type=month]{
+/* Inputs dos parâmetros - larguras ajustadas */
+#params-table input[type=month] {
+  width: 14ch;   /* espaço suficiente para AAAA-MM */
   text-align: center;
 }
+
+#params-table input[type=number] {
+  width: 8ch;    /* mais compacto e proporcional ao conteúdo */
+  text-align: center;
+}
+
 
 /* (Opcional) também centrar inputs do registo mensal */
 .table-dca input.cell{
