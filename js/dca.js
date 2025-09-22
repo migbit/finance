@@ -170,7 +170,7 @@ function renderTable(rows){
     h.textContent = y;
 
     const btn = document.createElement('button');
-    btn.textContent = 'Ocultar ano (manter Dez)';
+    btn.textContent = 'Ocultar ano';
     btn.className = 'btn-minor';
 
     const table = document.createElement('table');
@@ -347,3 +347,4 @@ async function boot(skipParamUI){
   renderTable(rows);
 }
 
+boot();
