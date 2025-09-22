@@ -30,12 +30,6 @@ import { doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/9.22.1/f
   const FB_COLLECTION = 'dca_v1';
   const FB_DOCID = 'default';
 
-  function haveFirebase(){
-    try{ return !!(window.firebase && window.firebase.firestore); }
-    catch(e){ return false; }
-  }
-  function fb(){ return window.firebase.firestore(); }
-
   async function savePersistent(){
     // Remover campos derivados antes de guardar
     const rows = state.rows.map(r => {
@@ -44,13 +38,8 @@ import { doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/9.22.1/f
     });
     const payload = { ...state, rows };
     try{
-      if(haveFirebase()){
-        await fb().collection(FB_COLLECTION).doc(FB_DOCID).set(payload,{merge:true});
-        console.log('[DCA] Guardado em Firestore.');
-      }else{
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-        console.log('[DCA] Guardado em localStorage.');
-      }
+      await setDoc(doc(db, FB_COLLECTION, FB_DOCID), payload, { merge: true });
+      console.log('[DCA] Guardado em Firestore.');
     }catch(err){
       console.warn('Falha ao guardar, fallback localStorage.', err);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -59,9 +48,11 @@ import { doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/9.22.1/f
 
   async function loadPersistent(){
     try{
-      if(haveFirebase()){
-        const snap = await fb().collection(FB_COLLECTION).doc(FB_DOCID).get();
-        if(snap.exists){ Object.assign(state, snap.data()); console.log('[DCA] Carregado de Firestore.'); return; }
+      try{
+        const snap = await getDoc(doc(db, FB_COLLECTION, FB_DOCID));
+        if(snap.exists()){ Object.assign(state, snap.data()); console.log('[DCA] Carregado de Firestore.'); return; }
+      }catch(err){
+        console.warn('Falha ao carregar de Firestore, fallback localStorage.', err);
       }
       const raw = localStorage.getItem(STORAGE_KEY);
       if(raw){ Object.assign(state, JSON.parse(raw)); console.log('[DCA] Carregado de localStorage.'); }
