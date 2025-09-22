@@ -787,3 +787,17 @@ table:not(.grid) th{
 
 #params-table input[type=number],
 #params-table input[type=month] { width: 10ch; text-align: right; }
+
+#params-table th.cenarios {
+  position: relative;
+  border-bottom: none;       /* retira o traço que aparece de fora a fora */
+}
+
+#params-table th.cenarios::after {
+  content: "";
+  position: absolute;
+  left: 0.6em;               /* ajuste: começa ~1 espaço antes do “P” */
+  right: 0.6em;              /* ajuste: termina simétrico ao lado direito */
+  bottom: 0;
+  border-bottom: 2px solid #fff; /* mesma cor do traço de cabeçalho */
+  }
