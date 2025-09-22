@@ -297,16 +297,6 @@ function writeParamsToUI(p){
   const ro = $('#rate-otim'); if (ro) ro.value= p.rateOtim;
 }
 
-async function boot(skipParamUI){
-  if (!skipParamUI) writeParamsToUI(state.params);
-  await ensureMonthsExist(state.params.endYM);
-  const docs = await loadAllDocs();
-  const limId = `${state.params.endYM.y}-${pad(state.params.endYM.m)}`;
-  const subset = docs.filter(d => d.id <= limId);
-  const rows = buildModel(subset, state.params);
-  renderTable(rows);
-}
-
 // ---------- Eventos UI ----------
 $('#btn-save-params')?.addEventListener('click', async ()=>{
   const p = readParamsFromUI();
