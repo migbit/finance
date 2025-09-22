@@ -779,6 +779,11 @@ table:not(.grid) th{
   text-align: right;
 }
 
-#params-table th { white-space: pre-line; }
+#params-table th {
+  white-space: pre-line;
+  vertical-align: middle;
+  text-align: center;
+}
+
 #params-table input[type=number],
 #params-table input[type=month] { width: 10ch; text-align: right; }
