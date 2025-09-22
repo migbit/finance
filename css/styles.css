@@ -772,3 +772,10 @@ table:not(.grid) th{
   background: var(--color-primary);
   color: #fff;
 }
+
+#params-table input[type=number],
+#params-table input[type=month]{
+  width: 10ch; /* compacto para caber numa linha */
+  text-align: right;
+}
+#params-table th, #params-table td{ vertical-align: middle; }
