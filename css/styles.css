@@ -824,3 +824,16 @@ table:not(.grid) th{
   height: 32px;
   line-height: 32px;
 }
+
+/* Evitar que a tabela "salte" para fora do container */
+.report-section { overflow-x: auto; }
+
+/* Garante que a tabela ocupa a largura e calcula melhor as colunas */
+.table-dca {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto; /* se precisares de colunas mais equilibradas, usa fixed */
+}
+
+/* Se o cabeçalho for muito largo, permite quebra */
+.table-dca th { white-space: pre-line; }

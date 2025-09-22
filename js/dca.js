@@ -297,22 +297,23 @@ function applyYearVisibility(){
   const groups = Array.from(document.querySelectorAll('#dca-table-wrap .year-group'));
 
   for (const g of groups){
-    const y = Number(g.querySelector('h3')?.textContent || 0);
-    const table = g.querySelector('table');
-    if (!table) continue;
-    const rows = Array.from(table.tBodies[0].rows);
+    const yTxt = g.querySelector('h3')?.textContent || '';
+    const y = Number(yTxt.trim());
+    if (!Number.isFinite(y)) continue;
 
-    if (y === currentYear){
-      rows.forEach(r => r.classList.remove('hidden'));
+    if (y === currentYear) {
+      // Ano atual sempre visível
+      g.style.display = '';
     } else {
-      const hide = !state.showOthers;
-      rows.forEach(r => r.classList.toggle('hidden', hide));
+      // Outros anos: mostram-se só quando showOthers = true
+      g.style.display = state.showOthers ? '' : 'none';
     }
   }
 
   const btn = document.getElementById('toggle-others');
   if (btn) btn.textContent = state.showOthers ? 'Ocultar anos' : 'Expandir anos';
 }
+
 
 
 document.getElementById('toggle-others')?.addEventListener('click', () => {
