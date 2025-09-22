@@ -30,7 +30,8 @@ const DEFAULTS  = {
 };
 
 // ---------- Firestore ----------
-const COL = collection(db, 'dca'); // docs com id 'YYYY-MM'
+const COL        = collection(db, 'dca');                // linhas mensais
+const SETTINGS_D = doc(collection(db, 'dca_settings'), 'params'); // único doc
 
 async function ensureMonthsExist(endYM){
   const ids = monthsBetween(START_YM, endYM).map(({y,m})=> `${y}-${pad(m)}`);
@@ -53,6 +54,30 @@ async function ensureMonthsExist(endYM){
     }
   }));
 }
+
+async function loadParams(){
+  const snap = await getDoc(SETTINGS_D);
+  if (snap.exists()){
+    const p = snap.data();
+    // validações básicas
+    return {
+      endYM: p.endYM ?? DEFAULTS.endYM,
+      pctSWDA: Number(p.pctSWDA ?? DEFAULTS.pctSWDA),
+      pctAGGH: Number(p.pctAGGH ?? DEFAULTS.pctAGGH),
+      ratePes: Number(p.ratePes ?? DEFAULTS.ratePes),
+      rateReal: Number(p.rateReal ?? DEFAULTS.rateReal),
+      rateOtim: Number(p.rateOtim ?? DEFAULTS.rateOtim)
+    };
+  }
+  // se não existir, cria com defaults
+  await setDoc(SETTINGS_D, DEFAULTS);
+  return { ...DEFAULTS };
+}
+
+async function saveParams(p){
+  await setDoc(SETTINGS_D, p, { merge: true });
+}
+
 
 async function loadAllDocs(){
   const q = query(COL, orderBy('id','asc'));
@@ -283,15 +308,17 @@ async function boot(skipParamUI){
 }
 
 // ---------- Eventos UI ----------
-$('#btn-aplicar')?.addEventListener('click', async ()=>{
+$('#btn-save-params')?.addEventListener('click', async ()=>{
   const p = readParamsFromUI();
   if (!p.pctSumOk){
     alert('As percentagens SWDA+AGGH devem somar 100%.');
     return;
   }
   state.params = p;
-  await boot(true);
+  await saveParams(p);   // persiste no Firebase
+  await boot(true);      // refaz meses/tabela com novos parâmetros
 });
+
 $('#btn-colapsar')?.addEventListener('click', ()=> {
   $$('#dca-table-wrap table').forEach(t => toggleYear(t));
 });
@@ -315,4 +342,18 @@ style.textContent = `
 document.head.appendChild(style);
 
 // Arranque
-boot();
+async function boot(skipParamUI){
+  if (!skipParamUI){
+    // carrega params do Firebase na 1ª vez
+    state.params = await loadParams();
+    writeParamsToUI(state.params);
+  }
+  await ensureMonthsExist(state.params.endYM);
+
+  const docs = await loadAllDocs();
+  const limId = `${state.params.endYM.y}-${pad(state.params.endYM.m)}`;
+  const subset = docs.filter(d => d.id <= limId);
+  const rows = buildModel(subset, state.params);
+  renderTable(rows);
+}
+
