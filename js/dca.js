@@ -134,15 +134,16 @@ function buildModel(docs, params){
     const yearsFromStart  = monthsFromStart / 12;
     const scen = (rate)=> investedCum * Math.pow(1 + rate/100, yearsFromStart);
 
-    rows.push({
-      id: d.id, y:d.y, m:d.m,
-      investedCum, investedCumSWDA, investedCumAGGH,
-      totalNow, swdaNow, agghNow,
-      resTotal, resTotalPct,
-      resSWDA,  resSWDAPct,
-      resAGGH,  resAGGHPct,
-      pes: scen(ratePes), real: scen(rateReal), otim: scen(rateOtim),
-    });
+rows.push({
+  id: d.id, y:d.y, m:d.m,
+  investedCum, investedCumSWDA, investedCumAGGH,
+  totalNow, swdaNow, agghNow,
+  resTotal, resTotalPct,
+  resSWDA,  resSWDAPct,
+  resAGGH,  resAGGHPct,
+  pes: scen(ratePes), real: scen(rateReal), otim: scen(rateOtim),
+  cash_interest: asNum(d.cash_interest),
+});
   }
   return rows;
 }
@@ -314,13 +315,22 @@ function applyYearVisibility(){
   if (btn) btn.textContent = state.showOthers ? 'Ocultar anos' : 'Expandir anos';
 }
 
+// Liga o botão global (só uma vez), mesmo que o render corra antes/depois
+function bindGlobalButtons(){
+  const btn = document.getElementById('toggle-others');
+  if (!btn || btn.__bound) return;
+  btn.__bound = true;
+  btn.addEventListener('click', () => {
+    state.showOthers = !state.showOthers;
+    applyYearVisibility();
+  });
+}
 
-
-document.getElementById('toggle-others')?.addEventListener('click', () => {
-  state.showOthers = !state.showOthers;
-  applyYearVisibility();
-});
-
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bindGlobalButtons, { once: true });
+} else {
+  bindGlobalButtons();
+}
 
 // ---------- Eventos UI ----------
 $('#btn-save-params')?.addEventListener('click', async ()=>{
@@ -362,6 +372,7 @@ async function boot(skipParamUI){
   const rows = buildModel(subset, state.params);
 
   renderTable(rows);
+  bindGlobalButtons();
   applyYearVisibility(); // aplica regra ao arranque
 }
 
