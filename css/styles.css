@@ -837,3 +837,19 @@ table:not(.grid) th{
 
 /* Se o cabeçalho for muito largo, permite quebra */
 .table-dca th { white-space: pre-line; }
+
+/* Registo Mensal – linhas de grupo no cabeçalho */
+.table-dca th.cenarios {
+  position: relative;
+  border-bottom: none;   /* remove a linha horizontal completa */
+}
+
+.table-dca th.cenarios::after {
+  content: "";
+  position: absolute;
+  left: 0.8em;          /* controla onde começa a linha */
+  right: 0.8em;         /* controla onde termina */
+  bottom: 0;
+  border-bottom: 2px solid #fff; /* usa a mesma cor do cabeçalho */
+  opacity: .6;          /* ligeiro para não pesar tanto */
+}
