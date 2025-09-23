@@ -163,6 +163,8 @@ function renderTable(rows){
   const wrap = $('#dca-table-wrap');
   if (!wrap) return;
 
+  const fmtPct = v => (v == null ? '' : ` <small>(${v.toFixed(2)}%)</small>`);
+
   const groups = yearGroups(rows);
   wrap.innerHTML = '';
 
@@ -172,54 +174,69 @@ function renderTable(rows){
 
     const table = document.createElement('table');
     table.className = 'table-dca';
-    table.innerHTML = `
+
+    // Cabeçalho agrupado (2 linhas)
+    const theadHTML = `
       <thead>
         <tr>
-          <th>Mês</th>
-          <th class="num">Investido</th>
-          <th class="num">Valor\nTotal</th>
-          <th class="num">Resultado\nTotal (€ / %)</th>
-          <th class="num">Inv.\nSWDA</th>
-          <th class="num">SWDA\nAtual</th>
-          <th class="num">Res.\nSWDA (€ / %)</th>
-          <th class="num">Inv.\nAGGH</th>
-          <th class="num">AGGH\nAtual</th>
-          <th class="num">Res.\nAGGH (€ / %)</th>
-          <th class="num">| Cenário |\nPessimista (%)</th>
-          <th class="num">| Cenário |\nRealista (%)</th>
-          <th class="num">| Cenário |\nOtimista (%)</th>
-          <th class="num">Juro\nCash</th>
-          <th>Ações</th>
+          <th rowspan="2">Mês</th>
+          <th rowspan="2" class="num">Inv.</th>
+          <th rowspan="2" class="num">Valor</th>
+          <th rowspan="2" class="num">Res. Total (€/%)</th>
+
+          <th colspan="3" class="cenarios">SWDA</th>
+          <th colspan="3" class="cenarios">AGGH</th>
+          <th colspan="3" class="cenarios">Cenários (€)</th>
+
+          <th rowspan="2" class="num">Juro</th>
+          <th rowspan="2">Ações</th>
+        </tr>
+        <tr>
+          <th class="num">Inv.</th>
+          <th class="num">Atual</th>
+          <th class="num">Res.</th>
+
+          <th class="num">Inv.</th>
+          <th class="num">Atual</th>
+          <th class="num">Res.</th>
+
+          <th class="num">Pes.</th>
+          <th class="num">Real.</th>
+          <th class="num">Ot.</th>
         </tr>
       </thead>
-      <tbody></tbody>
     `;
 
+    table.innerHTML = theadHTML + '<tbody></tbody>';
     const tbody = table.querySelector('tbody');
 
     for (const r of arr){
       const tr = document.createElement('tr');
       tr.dataset.id = r.id;
 
-      const clsTotal = r.resTotal!=null ? (r.resTotal>=0?'pos':'neg') : '';
-      const clsSWDA  = r.resSWDA !=null ? (r.resSWDA >=0?'pos':'neg')  : '';
-      const clsAGGH  = r.resAGGH !=null ? (r.resAGGH >=0?'pos':'neg')  : '';
+      const clsTotal = r.resTotal != null ? (r.resTotal >= 0 ? 'pos' : 'neg') : '';
+      const clsSWDA  = r.resSWDA  != null ? (r.resSWDA  >= 0 ? 'pos' : 'neg') : '';
+      const clsAGGH  = r.resAGGH  != null ? (r.resAGGH  >= 0 ? 'pos' : 'neg') : '';
 
       tr.innerHTML = `
         <td>${pad(r.m)}/${String(r.y).slice(-2)}</td>
         <td class="num">${toEUR(r.investedCum)}</td>
-        <td class="num"><input class="cell val-total" type="number" step="0.01" value="${r.totalNow??''}" /></td>
-        <td class="num ${clsTotal}">${r.resTotal==null?'-':toEUR(r.resTotal)}${r.resTotalPct==null?'':` <small>(${r.resTotalPct.toFixed(2)}%)</small>`}</td>
+        <td class="num"><input class="cell val-total" type="number" step="0.01" value="${r.totalNow ?? ''}" /></td>
+        <td class="num ${clsTotal}">${r.resTotal == null ? '-' : toEUR(r.resTotal)}${fmtPct(r.resTotalPct)}</td>
+
         <td class="num">${toEUR(r.investedCumSWDA)}</td>
-        <td class="num"><input class="cell swda" type="number" step="0.01" value="${r.swdaNow??''}" /></td>
-        <td class="num ${clsSWDA}">${r.resSWDA==null?'-':toEUR(r.resSWDA)}${r.resSWDAPct==null?'':` <small>(${r.resSWDAPct.toFixed(2)}%)</small>`}</td>
+        <td class="num"><input class="cell swda" type="number" step="0.01" value="${r.swdaNow ?? ''}" /></td>
+        <td class="num ${clsSWDA}">${r.resSWDA == null ? '-' : toEUR(r.resSWDA)}${fmtPct(r.resSWDAPct)}</td>
+
         <td class="num">${toEUR(r.investedCumAGGH)}</td>
-        <td class="num"><input class="cell aggh" type="number" step="0.01" value="${r.agghNow??''}" /></td>
-        <td class="num ${clsAGGH}">${r.resAGGH==null?'-':toEUR(r.resAGGH)}${r.resAGGHPct==null?'':` <small>(${r.resAGGHPct.toFixed(2)}%)</small>`}</td>
+        <td class="num"><input class="cell aggh" type="number" step="0.01" value="${r.agghNow ?? ''}" /></td>
+        <td class="num ${clsAGGH}">${r.resAGGH == null ? '-' : toEUR(r.resAGGH)}${fmtPct(r.resAGGHPct)}</td>
+
         <td class="num">${toEUR(r.pes)}</td>
         <td class="num">${toEUR(r.real)}</td>
         <td class="num">${toEUR(r.otim)}</td>
-        <td class="num"><input class="cell cash" type="number" step="0.01" value="${r.cash_interest??''}" /></td>
+
+        <td class="num"><input class="cell cash" type="number" step="0.01" value="${r.cash_interest ?? ''}" /></td>
         <td><button class="btn-save" type="button">Editar/Gravar</button></td>
       `;
       tbody.appendChild(tr);
@@ -232,6 +249,7 @@ function renderTable(rows){
     wrap.appendChild(groupWrap);
   }
 }
+
 
 // Listener único para guardar linhas (event delegation)
 (() => {
