@@ -10,7 +10,7 @@
 
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 
 // Firebase config (same project as main app)
 const firebaseConfig = {
@@ -39,6 +39,15 @@ window.db = db;
 // Auth
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+
+// Garantir que a sessão se mantém entre reloads
+setPersistence(auth, browserLocalPersistence)
+  .then(() => {
+    console.log("Persistência definida para browserLocalPersistence");
+  })
+  .catch((err) => {
+    console.error("Erro a definir persistência:", err);
+  });
 
 function loginComGoogle() {
   console.log("Login with Google...");
