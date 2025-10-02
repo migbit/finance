@@ -117,7 +117,8 @@ function buildModel(docs, params){
 
     const swdaNow = asNum(d.swda_value);
     const agghNow = asNum(d.aggh_value);
-    const totalNow = asNum(d.value_total) ?? ((swdaNow ?? 0) + (agghNow ?? 0));
+    const cashNow = asNum(d.cash_interest) ?? 0;
+    const totalNow = (swdaNow ?? 0) + (agghNow ?? 0) + cashNow;
 
     // Resultados (€ e %)
     const resTotal = (totalNow!=null) ? (totalNow - investedCum) : null;
@@ -221,7 +222,7 @@ function renderTable(rows){
       tr.innerHTML = `
         <td>${pad(r.m)}/${String(r.y).slice(-2)}</td>
         <td class="num">${toEUR(r.investedCum)}</td>
-        <td class="num"><input class="cell val-total" type="number" step="0.01" value="${r.totalNow ?? ''}" /></td>
+        <td class="num">${toEUR(r.totalNow)}</td>
         <td class="num ${clsTotal}">${r.resTotal == null ? '-' : toEUR(r.resTotal)}${fmtPct(r.resTotalPct)}</td>
 
         <td class="num">${toEUR(r.investedCumSWDA)}</td>
@@ -265,13 +266,11 @@ function renderTable(rows){
     const id = tr?.dataset?.id;
     if (!id) return;
 
-    const total = asNum(tr.querySelector('.val-total')?.value);
     const swda  = asNum(tr.querySelector('.swda')?.value);
     const aggh  = asNum(tr.querySelector('.aggh')?.value);
     const cash  = asNum(tr.querySelector('.cash')?.value);
 
     await saveRow(id, {
-      value_total: total,
       swda_value:  swda,
       aggh_value:  aggh,
       cash_interest: cash
