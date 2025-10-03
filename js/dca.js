@@ -117,37 +117,42 @@ function buildModel(docs, params){
 
     const swdaNow = asNum(d.swda_value);
     const agghNow = asNum(d.aggh_value);
-    const cashNow = asNum(d.cash_interest) ?? 0;
-    const totalNow = (swdaNow ?? 0) + (agghNow ?? 0) + cashNow;
+    const cashNow = asNum(d.cash_interest);
 
-    // Resultados (€ e %)
-    const resTotal = (totalNow!=null) ? (totalNow - investedCum) : null;
-    const resTotalPct = (resTotal!=null && investedCum>0) ? (resTotal/investedCum*100) : null;
+    const hasAny  = (swdaNow != null) || (agghNow != null) || (cashNow != null);
 
-    const resSWDA = (swdaNow!=null) ? (swdaNow - investedCumSWDA) : null;
-    const resSWDAPct = (resSWDA!=null && investedCumSWDA>0) ? (resSWDA/investedCumSWDA*100) : null;
+    // Valor atual total = SWDA + AGGH + Juro (quando houver algum input)
+    const totalNow = (swdaNow ?? 0) + (agghNow ?? 0) + (cashNow ?? 0);
 
-    const resAGGH = (agghNow!=null) ? (agghNow - investedCumAGGH) : null;
-    const resAGGHPct = (resAGGH!=null && investedCumAGGH>0) ? (resAGGH/investedCumAGGH*100) : null;
+    // Resultados (€ e %) só quando houver valores
+    const resTotal    = hasAny ? (totalNow - investedCum) : null;
+    const resTotalPct = hasAny ? (resTotal / investedCum * 100) : null;
+
+    const resSWDA    = swdaNow != null ? (swdaNow - investedCumSWDA) : null;
+    const resSWDAPct = swdaNow != null && investedCumSWDA > 0 ? (resSWDA / investedCumSWDA * 100) : null;
+
+    const resAGGH    = agghNow != null ? (agghNow - investedCumAGGH) : null;
+    const resAGGHPct = agghNow != null && investedCumAGGH > 0 ? (resAGGH / investedCumAGGH * 100) : null;
 
     // Cenários sobre acumulado, capitalizado a TIR anual
     const monthsFromStart = ((d.y - START_YM.y) * 12) + (d.m - START_YM.m);
     const yearsFromStart  = monthsFromStart / 12;
     const scen = (rate)=> investedCum * Math.pow(1 + rate/100, yearsFromStart);
 
-rows.push({
-  id: d.id, y:d.y, m:d.m,
-  investedCum, investedCumSWDA, investedCumAGGH,
-  totalNow, swdaNow, agghNow,
-  resTotal, resTotalPct,
-  resSWDA,  resSWDAPct,
-  resAGGH,  resAGGHPct,
-  pes: scen(ratePes), real: scen(rateReal), otim: scen(rateOtim),
-  cash_interest: asNum(d.cash_interest),
-});
+    rows.push({
+      id: d.id, y:d.y, m:d.m,
+      investedCum, investedCumSWDA, investedCumAGGH,
+      totalNow, swdaNow, agghNow,
+      resTotal, resTotalPct,
+      resSWDA,  resSWDAPct,
+      resAGGH,  resAGGHPct,
+      pes: scen(ratePes), real: scen(rateReal), otim: scen(rateOtim),
+      cash_interest: asNum(d.cash_interest),
+    });
   }
   return rows;
 }
+
 
 // ---------- Render ----------
 function yearGroups(rows){
@@ -176,31 +181,31 @@ function renderTable(rows){
     const table = document.createElement('table');
     table.className = 'table-dca';
 
-    // Cabeçalho agrupado (2 linhas)
+    // Cabeçalho agrupado — Cenários (€) começa por "Atual" (valor total = SWDA+AGGH+Juro)
     const theadHTML = `
       <thead>
         <tr>
           <th rowspan="2">Mês</th>
           <th rowspan="2" class="num">Inv.</th>
-          <th rowspan="2" class="num">Valor</th>
           <th rowspan="2" class="num">Res. Total (€/%)</th>
 
-          <th colspan="3" class="cenarios">SWDA</th>
-          <th colspan="3" class="cenarios">AGGH</th>
-          <th colspan="3" class="cenarios">Cenários (€)</th>
+          <th colspan="3" class="swda-block cenarios">SWDA</th>
+          <th colspan="3" class="aggh-block cenarios">AGGH</th>
+          <th colspan="4" class="cenarios">Cenários (€)</th>
 
           <th rowspan="2" class="num">Juro</th>
           <th rowspan="2">Ações</th>
         </tr>
         <tr>
-          <th class="num">Inv.</th>
-          <th class="num">Atual</th>
-          <th class="num">Res.</th>
+          <th class="num swda-block">Inv.</th>
+          <th class="num swda-block">Atual</th>
+          <th class="num swda-block">Res.</th>
 
-          <th class="num">Inv.</th>
-          <th class="num">Atual</th>
-          <th class="num">Res.</th>
+          <th class="num aggh-block">Inv.</th>
+          <th class="num aggh-block">Atual</th>
+          <th class="num aggh-block">Res.</th>
 
+          <th class="num">Atual</th>
           <th class="num">Pes.</th>
           <th class="num">Real.</th>
           <th class="num">Ot.</th>
@@ -222,17 +227,18 @@ function renderTable(rows){
       tr.innerHTML = `
         <td>${pad(r.m)}/${String(r.y).slice(-2)}</td>
         <td class="num">${toEUR(r.investedCum)}</td>
-        <td class="num">${toEUR(r.totalNow)}</td>
         <td class="num ${clsTotal}">${r.resTotal == null ? '-' : toEUR(r.resTotal)}${fmtPct(r.resTotalPct)}</td>
 
-        <td class="num">${toEUR(r.investedCumSWDA)}</td>
-        <td class="num"><input class="cell swda" type="number" step="0.01" value="${r.swdaNow ?? ''}" /></td>
-        <td class="num ${clsSWDA}">${r.resSWDA == null ? '-' : toEUR(r.resSWDA)}${fmtPct(r.resSWDAPct)}</td>
+        <td class="num swda-block">${toEUR(r.investedCumSWDA)}</td>
+        <td class="num swda-block"><input class="cell swda" type="number" step="0.01" value="${r.swdaNow ?? ''}" /></td>
+        <td class="num swda-block ${clsSWDA}">${r.resSWDA == null ? '-' : toEUR(r.resSWDA)}${fmtPct(r.resSWDAPct)}</td>
 
-        <td class="num">${toEUR(r.investedCumAGGH)}</td>
-        <td class="num"><input class="cell aggh" type="number" step="0.01" value="${r.agghNow ?? ''}" /></td>
-        <td class="num ${clsAGGH}">${r.resAGGH == null ? '-' : toEUR(r.resAGGH)}${fmtPct(r.resAGGHPct)}</td>
+        <td class="num aggh-block">${toEUR(r.investedCumAGGH)}</td>
+        <td class="num aggh-block"><input class="cell aggh" type="number" step="0.01" value="${r.agghNow ?? ''}" /></td>
+        <td class="num aggh-block ${clsAGGH}">${r.resAGGH == null ? '-' : toEUR(r.resAGGH)}${fmtPct(r.resAGGHPct)}</td>
 
+        <!-- Cenários (€) -->
+        <td class="num">${toEUR(r.totalNow)}</td>   <!-- Atual = SWDA + AGGH + Juro -->
         <td class="num">${toEUR(r.pes)}</td>
         <td class="num">${toEUR(r.real)}</td>
         <td class="num">${toEUR(r.otim)}</td>
@@ -250,6 +256,7 @@ function renderTable(rows){
     wrap.appendChild(groupWrap);
   }
 }
+
 
 
 // Listener único para guardar linhas (event delegation)

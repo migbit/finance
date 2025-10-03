@@ -853,3 +853,107 @@ table:not(.grid) th{
   border-bottom: 2px solid #fff; /* usa a mesma cor do cabeçalho */
   opacity: .6;          /* ligeiro para não pesar tanto */
 }
+
+/* --- Registo Mensal: layout limpo por faixas --- */
+
+/* Cabeçalho fixo e legível (mantém a tua cor atual) */
+.table-dca thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  white-space: pre-line;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Cores MUITO leves por grupo (apenas no corpo da tabela) */
+:root{
+  --g1:#f7f9fc;  /* Mês/Inv./Res. Total */
+  --g2:#eef6ff;  /* SWDA */
+  --g3:#fff4e6;  /* AGGH */
+  --g4:#f6f5ff;  /* Cenários (€) */
+  --g5:#f5fbf5;  /* Juro */
+}
+
+/* 1) Mês | Inv. | Res. Total (€/%) */
+.table-dca tbody td:nth-child(1),
+.table-dca tbody td:nth-child(2),
+.table-dca tbody td:nth-child(3){
+  background: var(--g1);
+}
+
+/* 2) SWDA: Inv. | Atual | Res. */
+.table-dca tbody td:nth-child(4),
+.table-dca tbody td:nth-child(5),
+.table-dca tbody td:nth-child(6){
+  background: var(--g2);
+}
+
+/* 3) AGGH: Inv. | Atual | Res. */
+.table-dca tbody td:nth-child(7),
+.table-dca tbody td:nth-child(8),
+.table-dca tbody td:nth-child(9){
+  background: var(--g3);
+}
+
+/* 4) Cenários (€): Atual | Pes. | Real. | Ot.  (Atual a bold) */
+.table-dca tbody td:nth-child(10),
+.table-dca tbody td:nth-child(11),
+.table-dca tbody td:nth-child(12),
+.table-dca tbody td:nth-child(13){
+  background: var(--g4);
+}
+.table-dca tbody td:nth-child(10){ font-weight: 600; } /* Atual */
+
+/* 5) Juro */
+.table-dca tbody td:nth-child(14){ background: var(--g5); }
+
+/* Inputs alinhados e consistentes (mantém leve) */
+.table-dca input.cell{
+  width: 8ch;
+  text-align: center;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Realça ganhos/perdas (já tinhas) */
+.table-dca .pos { color:#0a7f2e; font-weight:600; }
+.table-dca .neg { color:#b00020; font-weight:600; }
+
+/* Scroll horizontal se necessário (sem “sair” do container) */
+.report-section { overflow-x: auto; }
+
+.page-title { margin: 0 0 1rem; font-size: 1.6rem; }
+
+.table-dca tbody td:nth-child(2),
+.table-dca tbody td:nth-child(14) {
+  text-align: left;
+}
+/* INV. (coluna 2) e JURO (coluna 14) centrados — header + body */
+.table-dca thead th:nth-child(2),
+.table-dca tbody td:nth-child(2),
+.table-dca thead th:nth-child(14),
+.table-dca tbody td:nth-child(14){
+  text-align: center !important;
+}
+
+/* JURO: garantir que o input fica mesmo centrado */
+.table-dca tbody td:nth-child(14) input.cell,
+.table-dca .cash {
+  display: inline-block !important;
+  width: 8ch;
+  text-align: center !important;
+
+}
+
+/* Parâmetros – manter uma única cor no header */
+#params-table th.cenarios::after { 
+  content: none !important; 
+}
+
+/* (opcional) neutralizar qualquer fundo diferente no params */
+#params-table th.swda-block,
+#params-table th.aggh-block,
+#params-table td { 
+  background: transparent !important; 
+}
