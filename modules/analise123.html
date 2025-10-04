@@ -45,35 +45,42 @@
   <main>
 
  <section class="report-section">
-  <h2>Análise 123</h2>
+  <h2 class="center">Análise 123</h2>
+  <h3 class="center">Faturação</h3>
 
   <section class="relatorio-container" id="analise-faturacao-container">
 
+    <div class="chart-and-table">
     <div class="chart-wrap">
       <canvas id="chart-total"></canvas>
     </div>
-    <hr class="divider">
 
-    <div class="chart-wrap">
-      <canvas id="chart-comparacao-apt"></canvas>
+    <div id="tabela-comparativa-anos-123"></div>
     </div>
-    <hr class="divider">
 
+    <h3 class="center">Barras de Progresso</h3>
     <div id="progresso-anos" class="mt-4"></div>
     <hr class="divider">
 
-    <h3>Heatmap: Variação % vs. Ano Anterior</h3>
+    <h3 class="center">Heatmap: Variação % vs. Ano Anterior</h3>
     <div id="heatmap-variacao"></div>
     <hr class="divider">
 
+    <h3 class="center">Taxa de Limpeza</h3>
     <div id="tabela-limpeza-123"></div>
-
-    <section class="report-section">
-    <h3>Noites por reserva (Apt 123)</h3>
-      <div class="chart-box"><canvas id="noites-stacked-123"></canvas></div>
     <hr class="divider">
-     <div class="chart-box narrow"><canvas id="noites-percent-123"></canvas></div>
-    </section>
+
+    <div id="tabela-noites-123"></div>
+
+    <div id="tabela-hospedes-123"></div>
+
+    <section>
+  <h3 class="center">Dias da Semana - Check-ins</h3>
+  <div style="height:280px">
+    <canvas id="chart-checkins-dia-semana"></canvas>
+  </div>
+</section>
+
 
   </section>
 </section> <!-- ✅ close report-section -->

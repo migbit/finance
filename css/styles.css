@@ -31,7 +31,7 @@
 
 /* ---- Base ---- */
 body{
-  font-family:var(--font-family);
+  font-family: 'Nunito Sans', sans-serif;
   background:var(--color-background);
   color:var(--color-secondary);
   display:flex;flex-direction:column;min-height:100vh;line-height:1.55;
@@ -156,18 +156,11 @@ tr:hover{background:#f1f1f1;}
   :root { --chart-h: 260px; }
 }
 
-/* Só os gráficos antigos usam a altura fixa */
-#analise-faturacao-container .chart-wrap canvas {
+#analise-faturacao-container canvas {
   height: var(--chart-h) !important;
   width: 100% !important;
   display: block;
 }
-
-/* Os novos usam o tamanho do .chart-box */
-.chart-box { max-width: 960px; margin: 0 auto; height: 360px; }
-.chart-box.narrow { max-width: 560px; height: 320px; }
-.chart-box canvas { height: 100% !important; width: 100% !important; display: block; }
-
 
 /* Heatmap Receita vs. Ano Anterior */
 .heatmap-wrap {
@@ -965,5 +958,38 @@ table:not(.grid) th{
   background: transparent !important; 
 }
 
-.chart-box { max-width: 960px; margin: 0 auto; height: 360px; }
-.chart-box.narrow { max-width: 560px; height: 320px; }
+.center { text-align: center; }
+.muted-sub { color: #666; font-weight: 600; margin-top: .25rem; }
+
+.report-section h2.center { margin-bottom: .25rem; }
+.report-section h3.center { margin: .75rem 0 .5rem; }
+
+#chart-comparacao-apt {
+  margin-top: 40px;  /* ajusta o valor (px) até ficares satisfeito */
+}
+
+h2, h3 {
+  font-weight: 700; /* títulos bem destacados */
+}
+
+.muted-sub {
+  font-weight: 600;
+}
+
+.chart-and-table {
+  max-width: 900px;   /* ajusta o valor para o que fica mais equilibrado */
+  margin: 0 auto;     /* centraliza na página */
+}
+
+.chart-and-table .chart-wrap,
+.chart-and-table .media-faturacao {
+  width: 100%;
+}
+
+.comparacao-item {
+  margin-bottom: 1.2rem; /* ajusta o valor como quiseres */
+}
+
+/* lista das barras */
+.progress-list { display: grid; row-gap: 14px; } /* espaço entre barras */
+#progresso-anos + .divider { margin-top: 12px; } /* única linha de separação a seguir */
