@@ -156,11 +156,18 @@ tr:hover{background:#f1f1f1;}
   :root { --chart-h: 260px; }
 }
 
-#analise-faturacao-container canvas {
+/* Só os gráficos antigos usam a altura fixa */
+#analise-faturacao-container .chart-wrap canvas {
   height: var(--chart-h) !important;
   width: 100% !important;
   display: block;
 }
+
+/* Os novos usam o tamanho do .chart-box */
+.chart-box { max-width: 960px; margin: 0 auto; height: 360px; }
+.chart-box.narrow { max-width: 560px; height: 320px; }
+.chart-box canvas { height: 100% !important; width: 100% !important; display: block; }
+
 
 /* Heatmap Receita vs. Ano Anterior */
 .heatmap-wrap {
@@ -958,3 +965,5 @@ table:not(.grid) th{
   background: transparent !important; 
 }
 
+.chart-box { max-width: 960px; margin: 0 auto; height: 360px; }
+.chart-box.narrow { max-width: 560px; height: 320px; }

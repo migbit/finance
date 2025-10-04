@@ -41,7 +41,9 @@ async function carregarTodosRelatorios() {
 
   gerarAnaliseFaturacao(faturas);
   gerarHeatmapVariacao(faturas);
-    renderTabelaLimpeza123(faturas, 'tabela-limpeza-123');
+  renderTabelaLimpeza123(faturas, 'tabela-limpeza-123');
+  renderNoitesPorMes123(faturas);
+  renderNoitesPercent123(faturas);
 }
 
 async function carregarFaturas() {
@@ -498,4 +500,151 @@ function renderTabelaLimpeza123(faturas, targetId) {
     </table>
     <hr class="divider">
   `;
+}
+
+
+//              -------------------->>>     Número de noites por Reserva
+
+let chartNoitesMes123 = null;
+let chartNoitesPct123 = null;
+
+// Ordem e cores fixas por categoria
+const CAT_ORDER = ['2','3','4','5','6','7','≥8'];
+const CAT_COLORS = {
+  '2':  '#3b82f6', // azul
+  '3':  '#ef476f', // rosa
+  '4':  '#f59e0b', // laranja
+  '5':  '#fde047', // amarelo
+  '6':  '#10b981', // verde
+  '7':  '#8b5cf6', // roxo
+  '≥8': '#9ca3af', // cinza
+};
+
+// Agrupa noites nas categorias 2..7 e ≥8
+function bucketNoites(n){
+  if (typeof n !== 'number' || !isFinite(n)) return null;
+  if (n < 2) return null;     // ignora stays <2 (muda para 1 se quiseres)
+  return (n >= 8) ? '≥8' : String(n); // "2".."7" ou "≥8"
+}
+
+// Conta reservas por mês e categoria (Apt 123, ano alvo)
+function contagensNoitesPorMes(faturas, anoAlvo){
+  const meses = Array.from({length:12}, (_,i)=> i+1);
+  const mapa = meses.map(()=> Object.fromEntries(CAT_ORDER.map(c=>[c,0])));
+
+  faturas.forEach(f=>{
+    if (String(f.apartamento) !== '123') return;
+    if (Number(f.ano) !== Number(anoAlvo)) return;
+    const m = Number(f.mes);
+    const cat = bucketNoites(Number(f.noites));
+    if (!m || m<1 || m>12 || !cat) return;
+    mapa[m-1][cat] += 1;
+  });
+
+  return { mapa };
+}
+
+function renderNoitesPorMes123(faturas){
+  const ano = new Date().getFullYear();
+  const labelsMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const { mapa } = contagensNoitesPorMes(faturas, ano);
+
+  // datasets empilhados com ordem e cor fixas
+  const datasets = CAT_ORDER.map((cat, idx)=> ({
+    label: `${cat} noites`,
+    data: mapa.map(obj => obj[cat]),
+    backgroundColor: CAT_COLORS[cat],
+    borderColor: CAT_COLORS[cat],
+    borderWidth: 1,
+    stack: 'noites',
+    order: idx
+  }));
+
+  const ctx = document.getElementById('noites-stacked-123');
+  if (!ctx) return;
+  if (chartNoitesMes123) { chartNoitesMes123.destroy(); chartNoitesMes123 = null; }
+
+  chartNoitesMes123 = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labelsMes, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2.2,
+      events: [],                 // 👈 evita bind de eventos (resolve o SES)
+      animation: false,           // opcional, menos trabalho no canvas
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        x: { stacked: true },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+      }
+    }
+  });
+}
+
+function renderNoitesPercent123(faturas){
+  const ano = new Date().getFullYear();
+
+  const totais = Object.fromEntries(CAT_ORDER.map(c=>[c,0]));
+  let totalReservas = 0;
+
+  faturas.forEach(f=>{
+    if (String(f.apartamento) !== '123') return;
+    if (Number(f.ano) !== Number(ano)) return;
+    const n = Number(f.noites);
+    if (!Number.isFinite(n) || n < 2) return;
+    const cat = (n >= 8) ? '≥8' : String(n);
+    totais[cat] += 1;
+    totalReservas += 1;
+  });
+
+  const labels  = CAT_ORDER.map(c => `${c} noites`);
+  const valores = CAT_ORDER.map(c => totais[c]);
+  const cores   = CAT_ORDER.map(c => CAT_COLORS[c]);
+
+  const ctx = document.getElementById('noites-percent-123');
+  if (!ctx) return;
+  if (chartNoitesPct123) { chartNoitesPct123.destroy(); chartNoitesPct123 = null; }
+
+  // regista datalabels se existir (sem rebentar em SES)
+  let hasDL = false;
+  if (typeof window.ChartDataLabels !== 'undefined') {
+    try { Chart.register(window.ChartDataLabels); hasDL = true; } catch (_) {}
+  }
+
+  chartNoitesPct123 = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: valores, backgroundColor: cores }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1.6,
+      cutout: '55%',
+      events: [],                 // 👈 idem
+      animation: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        ...(hasDL ? {
+          datalabels: {
+            color: '#111',
+            font: { weight: 700 },
+            formatter: (v) => {
+              if (!v) return '';
+              const pct = totalReservas ? (v/totalReservas*100) : 0;
+              return `${v} • ${pct.toFixed(0)}%`;
+            }
+          }
+        } : {}),
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const v = c.parsed;
+              const pct = totalReservas ? (v/totalReservas*100) : 0;
+              return `${c.label}: ${v} reservas (${pct.toFixed(1)}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
 }

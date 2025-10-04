@@ -68,6 +68,13 @@
 
     <div id="tabela-limpeza-123"></div>
 
+    <section class="report-section">
+    <h3>Noites por reserva (Apt 123)</h3>
+      <div class="chart-box"><canvas id="noites-stacked-123"></canvas></div>
+    <hr class="divider">
+     <div class="chart-box narrow"><canvas id="noites-percent-123"></canvas></div>
+    </section>
+
   </section>
 </section> <!-- ✅ close report-section -->
 
@@ -81,8 +88,10 @@
 
 <!-- Load Chart.js BEFORE your module -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script type="module" src="../js/script.js"></script>
 <script type="module" src="../js/analise123.js"></script>
+
 
 
 </body>
