@@ -61,7 +61,10 @@ function entrarEmModoEdicao(f) {
   // 2ª linha (inclui Taxa Limpeza — NOVO)
   setNum('taxa-airbnb', Number(f.taxaAirbnb));
   setNum('valor-transferencia', Number(f.valorTransferencia));
-  setNum('taxa-limpeza', Number(f.taxaLimpeza)); // NOVO
+  const apt = String(f.apartamento || '');
+  const defaultTaxa = apt.includes('1248') ? 65 : apt.includes('123') ? 60 : '';
+  setNum('taxa-limpeza', (f.taxaLimpeza != null && f.taxaLimpeza !== '') ? Number(f.taxaLimpeza) : defaultTaxa);
+
 
   // 3ª linha
   setNum('valor-operador', Number(f.valorOperador));
@@ -178,7 +181,12 @@ async function definirValoresPadrao() {
              proximo = `M${num}`;
          }
          document.getElementById('numero-fatura').value = proximo;
-     }
+         // Taxa de limpeza por defeito (KISS)
+          const aptSel = document.getElementById('apartamento')?.value || '';
+          const taxaDef = aptSel === '1248' ? 65 : aptSel === '123' ? 60 : '';
+          const taxaInp = document.getElementById('taxa-limpeza');
+          if (taxaInp && (taxaInp.value === '' || taxaInp.value == null)) taxaInp.value = taxaDef;
+        }
 
 // Event Listeners
 faturaForm.addEventListener('submit', async (e) => {
@@ -422,12 +430,28 @@ function toggleDetalhes(button, htmlContent) {
 
 
 function gerarHTMLDetalhesFaturacao(detalhes) {
-  const rows = detalhes.map(d => {
+  const rows = (detalhes || []).map(d => {
+    // Data curta DD-MM
     const dataStr = (d.timestamp && d.timestamp.seconds)
-      ? new Date(d.timestamp.seconds * 1000).toLocaleDateString()
+      ? new Date(d.timestamp.seconds * 1000)
+          .toLocaleDateString('pt-PT', { day:'2-digit', month:'2-digit' })
+          .replace(/\//g,'-')
       : '—';
+
+    // Converter checkIn/checkOut YYYY-MM-DD -> DD-MM
+    const toDDMM = s => (typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s))
+      ? `${s.slice(8,10)}-${s.slice(5,7)}`
+      : (s || '—');
+
+    // Total = transferência + taxa Airbnb (mantemos)
     const total = Number(d.valorTransferencia || 0) + Number(d.taxaAirbnb || 0);
 
+    // Taxa Limpeza: usa o valor gravado; se faltar, default por apartamento
+    const taxaLimpeza = (d.taxaLimpeza != null && d.taxaLimpeza !== '')
+    ? Number(d.taxaLimpeza)
+    : null;
+
+    // Payload para o botão Editar
     const payload = {
       id: d.id,
       apartamento: d.apartamento,
@@ -441,6 +465,7 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
       noitesCriancas: d.noitesCriancas || 0,
       valorDireto: d.valorDireto || 0,
       valorTmt: d.valorTmt,
+      taxaLimpeza: taxaLimpeza, // incluímos para pré-preencher no Editar
       // novos campos (para o botão Editar):
       checkIn: d.checkIn || null,
       checkOut: d.checkOut || null,
@@ -460,17 +485,22 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
     return `
       <tr>
         <td>${dataStr}</td>
-        <td>${d.numeroFatura}</td>
-        <td>€${Number(d.valorTransferencia).toFixed(2)}</td>
-        <td>€${Number(d.taxaAirbnb).toFixed(2)}</td>
+        <td>${d.numeroFatura || '—'}</td>
+        <td>€${Number(d.valorTransferencia || 0).toFixed(2)}</td>
+        <td>€${Number(d.taxaAirbnb || 0).toFixed(2)}</td>
         <td>€${total.toFixed(2)}</td>
-        <td>${d.checkIn || '—'}</td>
-        <td>${d.checkOut || '—'}</td>
+        <td>${toDDMM(d.checkIn)}</td>
+        <td>${toDDMM(d.checkOut)}</td>
         <td>${(typeof d.noites === 'number') ? d.noites : '—'}</td>
-        <td>${(d.precoMedioNoite != null) ? d.precoMedioNoite.toFixed(2) + ' €' : '—'}</td>
-        <td>${d.hospedesAdultos ?? '—'}</td>
-        <td>${d.hospedesCriancas ?? '—'}</td>
-        <td>${d.hospedesBebes ?? '—'}</td>
+        <td>${
+          (typeof d.noites === 'number' && d.noites > 0)
+            ? ((Number(d.valorTransferencia || 0) + Number(d.taxaAirbnb || 0)) / d.noites).toFixed(2) + ' €'
+            : '—'
+        }</td>
+        <td>${taxaLimpeza != null ? '€' + taxaLimpeza.toFixed(2) : '—'}</td>     <!-- Limp. -->
+        <td>${d.hospedesAdultos ?? '—'}</td>   <!-- A -->
+        <td>${d.hospedesCriancas ?? '—'}</td>  <!-- C -->
+        <td>${d.hospedesBebes ?? '—'}</td>     <!-- B -->
         <td>${acoes}</td>
       </tr>`;
   }).join('');
@@ -488,9 +518,10 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
           <th>Check-out</th>
           <th>Noites</th>
           <th>Preço Médio/Noite</th>
-          <th>Adultos</th>
-          <th>Crianças</th>
-          <th>Bebés</th>
+          <th>Limp.</th>
+          <th>A</th>
+          <th>C</th>
+          <th>B</th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -498,6 +529,8 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
     </table>
   `;
 }
+
+
 
 
 
