@@ -1001,3 +1001,18 @@ h2, h3 {
 }
 
 main.report-wide { max-width: 1400px; }
+
+.chart-wrap-480, .chart-wrap, .chart-wrapper { overflow-x: auto; overflow-y: hidden; }
+
+.chart-wrap, .chart-wrap-480, .chart-wrapper {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.chart-wrap {
+  margin-bottom: 2.5rem !important;
+}
+
+#chart-ocupacao {
+  height: 320px; /* antes 260px */
+}

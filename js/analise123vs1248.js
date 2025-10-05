@@ -114,17 +114,28 @@ function renderGraficoFaturacaoMensal(faturas, ano /* compat */){
   if(!canvas) return;
   if(gFatMensal){ gFatMensal.destroy(); gFatMensal = null; }
 
-  // largura mínima por mês (ativa scroll horizontal no wrapper)
-  const minPxPerMonth = 48;
-  canvas.style.minWidth = (labels.length * minPxPerMonth) + 'px';
+  // largura mínima por mês, mas só ativa scroll quando ultrapassar o contentor
+  const pxPerLabel = 48; // podes afinar (40–56)
+  const wrapper =
+  canvas.closest('.chart-wrap') ||
+  canvas.closest('.chart-wrap-480') ||
+  canvas.closest('.chart-wrapper') ||
+  canvas.parentElement;
+
+  const available = (wrapper && wrapper.clientWidth) ? wrapper.clientWidth : 0;
+  const needed    = (labels.length * pxPerLabel);
+
+  // não encolhe abaixo da largura do contentor; só cresce quando precisar
+  canvas.style.width    = '100%';
+  canvas.style.minWidth = Math.max(available, needed) + 'px';
 
   gFatMensal = new Chart(canvas, {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        { label: '123',  data: data123,  backgroundColor: COLORS['123'] },
-        { label: '1248', data: data1248, backgroundColor: COLORS['1248'] },
+        { label: '123',  data: data123,  backgroundColor: COLORS['123'],  barPercentage: 0.7, categoryPercentage: 0.6 },
+        { label: '1248', data: data1248, backgroundColor: COLORS['1248'],  barPercentage: 0.7, categoryPercentage: 0.6 },
       ]
     },
     options: {
@@ -271,7 +282,6 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
   });
   html += `</tr>`;
 
-  html += `</tbody></table><hr class="divider">`;
   el.innerHTML = html;
 }
 
@@ -322,108 +332,217 @@ function renderGraficoMediaNoite(faturas, ano){
 }
 
 // ------------------------ Ocupação (%) (linhas: 123 vs 1248) ---------------------------
-function renderGraficoOcupacao(faturas){
+
+function renderGraficoOcupacao(faturas) {
   const Y = new Date().getFullYear();
   const hoje = new Date();
   const clampCO = (d) => {
-    const tomorrow = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()+1);
-    return d>tomorrow ? tomorrow : d;
+    const tomorrow = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
+    return d > tomorrow ? tomorrow : d;
   };
 
-  // noites ocupadas por mês e apt (ano corrente)
   const noitesMap = { '123': Array(12).fill(0), '1248': Array(12).fill(0) };
 
   faturas.forEach(f => {
     const apt = String(f.apartamento);
-    if(apt!=='123' && apt!=='1248') return;
-    if(!isISO(f.checkIn)) return;
+    if (apt !== '123' && apt !== '1248') return;
+    if (!isISO(f.checkIn)) return;
 
     const ci = isoToDate(f.checkIn);
-    if(ci.getFullYear()!==Y) return;
+    if (ci.getFullYear() !== Y) return;
 
-    const n  = Number(f.noites||0);
-    if(!Number.isFinite(n) || n<=0) return;
+    const n = Number(f.noites || 0);
+    if (!Number.isFinite(n) || n <= 0) return;
 
-    let co = isISO(f.checkOut) ? isoToDate(f.checkOut) : new Date(ci.getFullYear(), ci.getMonth(), ci.getDate()+n);
+    let co = isISO(f.checkOut)
+      ? isoToDate(f.checkOut)
+      : new Date(ci.getFullYear(), ci.getMonth(), ci.getDate() + n);
     co = clampCO(co);
 
-    for(let d=new Date(ci); d<co; d.setDate(d.getDate()+1)){
-      if(d.getFullYear()!==Y) continue;
+    for (let d = new Date(ci); d < co; d.setDate(d.getDate() + 1)) {
+      if (d.getFullYear() !== Y) continue;
       const m = d.getMonth();
       noitesMap[apt][m] += 1;
     }
   });
 
-  const diasDen = (m) => diasNoMes(Y, m+1);
+  const diasDen = (m) => diasNoMes(Y, m + 1);
   const pct = (apt) => noitesMap[apt].map((noites, m) => {
     const den = diasDen(m);
-    return den ? Math.round((noites/den)*100) : 0;
+    return den ? Math.round((noites / den) * 100) : 0;
   });
 
+  // Plugin para % dentro das barras
+  const inBarLabels = {
+    id: 'inbar-labels',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      ctx.save();
+      ctx.font = '600 11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      chart.data.datasets.forEach((ds, dsIndex) => {
+        const meta = chart.getDatasetMeta(dsIndex);
+        meta.data.forEach((bar, i) => {
+          const val = ds.data[i];
+          if (!val) return;
+          const x = bar.x;
+          const y = bar.y + (bar.base - bar.y) / 2;
+          let fill = '#333';
+          const m = String(ds.backgroundColor).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+          if (m) {
+            const [r, g, b] = [+m[1], +m[2], +m[3]];
+            const L = 0.299 * r + 0.587 * g + 0.114 * b;
+            fill = L < 140 ? '#fff' : '#333';
+          }
+          ctx.fillStyle = fill;
+          ctx.fillText(`${val}%`, x, y);
+        });
+      });
+      ctx.restore();
+    }
+  };
+
   const ctx = document.getElementById('chart-ocupacao');
-  if(!ctx) return;
-  if(gOcupacao){ gOcupacao.destroy(); gOcupacao = null; }
+  if (!ctx) return;
+  if (gOcupacao) { gOcupacao.destroy(); gOcupacao = null; }
 
   gOcupacao = new Chart(ctx, {
-    type: 'line',
+    type: 'bar',
+    plugins: [inBarLabels],
     data: {
       labels: mesesPT,
       datasets: [
-        { label:'123',  data: pct('123'),  borderColor: COLORS['123'],  backgroundColor:'rgba(54,162,235,0.12)',  tension:.25, pointRadius:2 },
-        { label:'1248', data: pct('1248'), borderColor: COLORS['1248'], backgroundColor:'rgba(245,133,20,0.12)', tension:.25, pointRadius:2 }
+        { label: '123', data: pct('123'), backgroundColor: COLORS['123'], barPercentage: 0.85, categoryPercentage: 0.9 },
+        { label: '1248', data: pct('1248'), backgroundColor: COLORS['1248'], barPercentage: 0.85, categoryPercentage: 0.9 },
       ]
     },
     options: {
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom' } },
-      scales:{
-        x:{ grid:{ display:false } },
-        y:{ beginAtZero:true, max:100, ticks:{ precision:0 }, grid:{ color:'rgba(0,0,0,0.06)' }, border:{ display:false } }
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y}%` } }
+      },
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { display: false },
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          border: { display: false }
+        }
       }
     }
   });
 }
 
+
+
 // ------------------------ Check-ins por dia da semana (barras) -------------------------
 function renderGraficoCheckinsDOW(faturas){
-  const Y = new Date().getFullYear();
   const labels = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
   const toSegIdx = (dow0Sun) => (dow0Sun + 6) % 7; // 0=Seg .. 6=Dom
 
-  const cont = { '123': Array(7).fill(0), '1248': Array(7).fill(0) };
+  // anos disponíveis (pelo check-in)
+  const anosDisponiveis = [...new Set(
+    faturas
+      .filter(f => typeof f.checkIn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.checkIn))
+      .map(f => Number(f.checkIn.slice(0,4)))
+  )].sort((a,b)=>a-b);
 
-  faturas.forEach(f => {
-    const apt = String(f.apartamento);
-    if(apt!=='123' && apt!=='1248') return;
-    if(!isISO(f.checkIn)) return;
-    const d = isoToDate(f.checkIn);
-    if(d.getFullYear()!==Y) return;
-    const idx = toSegIdx(d.getDay());
-    cont[apt][idx] += 1;
-  });
+  if (!anosDisponiveis.length) return;
 
-  const ctx = document.getElementById('chart-checkins-dow');
-  if(!ctx) return;
-  if(gCheckins){ gCheckins.destroy(); gCheckins = null; }
+  const anoAtual = new Date().getFullYear();
+  const anoInicial = anosDisponiveis.includes(anoAtual) ? anoAtual : anosDisponiveis[anosDisponiveis.length-1];
 
-  gCheckins = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label:'123',  data: cont['123'],  backgroundColor: COLORS['123'] },
-        { label:'1248', data: cont['1248'], backgroundColor: COLORS['1248'] }
-      ]
-    },
-    options: {
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom' } },
-      scales:{
-        x:{ grid:{ display:false } },
-        y:{ beginAtZero:true, ticks:{ precision:0 }, grid:{ color:'rgba(0,0,0,0.06)' }, border:{ display:false } }
+  const canvas = document.getElementById('chart-checkins-dow');
+  if (!canvas) return;
+
+  // criar barra de navegação (se não existir)
+  let nav = document.getElementById('checkins-dow-nav');
+  if (!nav) {
+    nav = document.createElement('div');
+    nav.id = 'checkins-dow-nav';
+    nav.style.cssText = 'display:flex;gap:.5rem;justify-content:flex-end;align-items:center;margin:.25rem 0 .5rem;';
+    nav.innerHTML = `
+      <button id="btn-checkins-prev" type="button" aria-label="Ano anterior">◀︎</button>
+      <span id="lbl-checkins-ano" style="font-weight:600"></span>
+      <button id="btn-checkins-next" type="button" aria-label="Ano seguinte">▶︎</button>
+    `;
+    // inserir antes do canvas
+    canvas.parentElement.insertBefore(nav, canvas);
+  }
+
+  const btnPrev = document.getElementById('btn-checkins-prev');
+  const btnNext = document.getElementById('btn-checkins-next');
+  const lblAno = document.getElementById('lbl-checkins-ano');
+
+  // estado no próprio nav
+  nav.dataset.min = String(anosDisponiveis[0]);
+  nav.dataset.max = String(anosDisponiveis[anosDisponiveis.length-1]);
+  nav.dataset.ano = String(anoInicial);
+
+  function draw(anoEscolhido){
+    // contagens por DOW e apt
+    const cont = { '123': Array(7).fill(0), '1248': Array(7).fill(0) };
+    faturas.forEach(f => {
+      const apt = String(f.apartamento);
+      if ((apt!=='123' && apt!=='1248') || !isISO(f.checkIn)) return;
+      const d = isoToDate(f.checkIn);
+      if (d.getFullYear() !== anoEscolhido) return;
+      cont[apt][toSegIdx(d.getDay())] += 1;
+    });
+
+    const ctx = canvas;
+    if (gCheckins){ gCheckins.destroy(); gCheckins = null; }
+
+    gCheckins = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label:'123',  data: cont['123'],  backgroundColor: COLORS['123'],  barPercentage: 0.8, categoryPercentage: 0.9 },
+          { label:'1248', data: cont['1248'], backgroundColor: COLORS['1248'], barPercentage: 0.8, categoryPercentage: 0.9 }
+        ]
+      },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{ 
+          legend:{ position:'bottom' },
+          tooltip:{ callbacks:{ title: items => `${items[0].label} ${anoEscolhido}` } }
+        },
+        scales:{
+          x:{ grid:{ display:false } },
+          y:{ beginAtZero:true, ticks:{ precision:0 }, grid:{ color:'rgba(0,0,0,0.06)' }, border:{ display:false } }
+        }
       }
-    }
-  });
+    });
+
+    // UI
+    nav.dataset.ano = String(anoEscolhido);
+    lblAno.textContent = anoEscolhido;
+    const min = Number(nav.dataset.min), max = Number(nav.dataset.max);
+    btnPrev.disabled = (anoEscolhido <= min);
+    btnNext.disabled = (anoEscolhido >= max);
+  }
+
+  btnPrev.onclick = () => {
+    const curr = Number(nav.dataset.ano);
+    const min = Number(nav.dataset.min);
+    const next = Math.max(min, curr - 1);
+    if (next !== curr) draw(next);
+  };
+
+  btnNext.onclick = () => {
+    const curr = Number(nav.dataset.ano);
+    const max = Number(nav.dataset.max);
+    const next = Math.min(max, curr + 1);
+    if (next !== curr) draw(next);
+  };
+
+  // render inicial
+  draw(Number(nav.dataset.ano));
 }
