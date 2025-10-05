@@ -58,9 +58,26 @@ nav{background:var(--color-primary);}
 }
 
 /* ---- Cards / Sections (used on faturas) ---- */
-.form-section,.report-section{background:#fff;padding:var(--spacing-md);margin-bottom:var(--spacing-md);border-radius:var(--border-radius-md);box-shadow:var(--shadow-medium);}
-.form-group{margin-bottom:var(--spacing-sm);}
-label{display:block;margin-bottom:var(--spacing-xs);font-weight:700;font-size:var(--font-size-small);color:var(--color-primary);}
+.form-section,
+.report-section {
+  background: transparent;            /* remove fundo branco */
+  padding: 0;                         /* elimina espaço interno */
+  margin-bottom: var(--spacing-md);
+  border-radius: var(--border-radius-md);
+  box-shadow: none;                   /* sem sombra no container principal */
+}
+
+.form-group {
+  margin-bottom: var(--spacing-sm);
+}
+
+label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 700;
+  font-size: var(--font-size-small);
+  color: var(--color-primary);
+}
 
 /* ---- Inputs & Buttons ---- */
 input[type="text"],input[type="number"],select,textarea{
@@ -963,7 +980,10 @@ table:not(.grid) th{
 .muted-sub { color: #666; font-weight: 600; margin-top: .25rem; }
 
 .report-section h2.center { margin-bottom: .25rem; }
-.report-section h3.center { margin: .75rem 0 .5rem; }
+.report-section h3.center { margin: 2rem 0 0; }
+.report-section h3.center:first-of-type {
+  margin-top: 2rem; /* igual aos outros */
+}
 
 #chart-comparacao-apt {
   margin-top: 40px;  /* ajusta o valor (px) até ficares satisfeito */
@@ -1015,4 +1035,112 @@ main.report-wide { max-width: 1400px; }
 
 #chart-ocupacao {
   height: 320px; /* antes 260px */
+}
+
+/* Nav dos check-ins: botões pequenos e visíveis */
+#checkins-dow-nav {
+  gap: .2rem !important;
+  margin: .1rem 0 .1rem !important;
+  font-size: 11px !important;
+}
+#checkins-dow-nav button {
+  color: #333 !important;              /* <-- força texto visível */
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 4px !important;
+  line-height: 1 !important;
+  font-size: 11px !important;
+  cursor: pointer !important;
+  border-radius: 4px;
+}
+#checkins-dow-nav button:hover {
+  background: rgba(0,0,0,.06) !important;
+}
+#checkins-dow-nav button:disabled {
+  color: #999 !important;
+  cursor: default !important;
+  background: transparent !important;
+  opacity: .7;
+}
+#checkins-dow-nav #lbl-checkins-ano {
+  color: #222 !important;              /* <-- força cor do ano */
+  font-weight: 600;
+  font-size: 12px !important;
+  min-width: 3ch;
+  text-align: center;
+}
+
+/* Corrige visibilidade e espaçamento dos labels dos dias */
+#chart-checkins-dow {
+  height: 300px; /* dá espaço vertical */
+}
+
+canvas#chart-checkins-dow + div,  /* legenda do Chart.js */
+#chart-checkins-dow ~ .chartjs-size-monitor {
+  color: #222 !important;
+  font-size: 12px !important;
+}
+
+.chartjs-axis-x text, 
+.chartjs-axis-y text {
+  fill: #222 !important;
+}
+
+/* opcional: espaço extra abaixo para não cortar texto */
+.chart-wrap, 
+.chart-wrap-480 {
+  padding-bottom: 8px;
+}
+
+/* Cartões para gráficos e tabelas */
+.viz-card{
+  background:#fff;
+  border:1px solid #e6e6e6;
+  border-radius:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  padding:12px 14px;
+  margin:14px 0;
+}
+
+/* Ajustes internos */
+.viz-card canvas{ display:block; width:100% !important; }
+.viz-card table{ box-shadow:none; border-radius:8px; overflow:hidden; }
+
+/* Só nesta página */
+body[data-page="analise123vs1248"] .viz-card,
+body[data-page="analise123vs1248"] .chart-and-table,
+body[data-page="analise123vs1248"] .chart-wrap {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+#chart-fat-mensal {
+  width: 100% !important;
+  min-width: 0 !important;   /* cancela qualquer largura forçada */
+  display: block;
+}
+
+.viz-card h4 {
+  margin: 0 0 12px 2px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #000;
+  text-align: center;   /* 👈 novo */
+}
+
+.subcard + .subcard {
+  margin-top: 24px; /* espaço extra entre uma subcard e a seguinte */
+}
+
+.app-footer {
+  background: var(--color-primary);
+  color: #fff;
+  text-align: center;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 14px 0;
+  margin-top: 40px;
+  border-radius: 0;     /* remove cantos arredondados */
+  box-shadow: none;     /* remove sombra */
+  position: static;     /* garante que não fica fixo */
 }

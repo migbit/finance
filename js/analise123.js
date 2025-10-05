@@ -66,7 +66,16 @@ function obterNomeMes(numeroMes) {
   return nomes[n - 1];
 }
 
-
+// Formata inteiros em € (pt-PT)
+const euroInt = (v) => {
+  const num = Math.round(Number(v) || 0);
+  return num.toLocaleString('pt-PT', {
+    maximumFractionDigits: 0,
+    useGrouping: true
+  })
+  .replace(/\./g, ' ')  // pt-PT uses . for thousands → replace with space
+  + ' €';               // Add space + € at the end (standard in Portugal)
+};
 
 function gerarAnaliseFaturacao(faturas) {
 
@@ -487,7 +496,7 @@ function renderTabelaComparativaAnos123(faturas, targetId) {
     html += `</tr>`;
   });
 
-  // linha final única: Total (e Preço médio/noite na coluna "Média" quando existir)
+    // linha final única: Total (e Preço médio/noite na coluna "Média" quando existir)
   html += `<tr><td><strong>Total</strong></td>`;
   anos.forEach((a, idx) => {
     const totalAno = totals[a].reduce((s, v) => s + v, 0);
@@ -508,9 +517,24 @@ function renderTabelaComparativaAnos123(faturas, targetId) {
   });
   html += `</tr>`;
 
+  // nova linha: Média mensal (Total / 12)
+  html += `<tr><td><strong>Média mensal</strong></td>`;
+  anos.forEach((a, idx) => {
+    const bg = yearBg[idx % yearBg.length];
+    const totalAno = totals[a].reduce((s, v) => s + v, 0);
+    const mediaMensal = totalAno / 12;
+
+    if (mostraMedia[a])
+      html += `<td style="background:${bg}; text-align:center">—</td>`;
+
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(mediaMensal)}</strong></td>`;
+  });
+  html += `</tr>`;
+
   html += `</tbody></table><hr class="divider">`;
   el.innerHTML = html;
 }
+
 
 // ---------------------------------------------------------------> Gráfico valor noite
 
@@ -862,7 +886,6 @@ function renderTabelaNoites123(faturas, targetId) {
   });
 
   let html = `
-    <h3 class="center">Noites por Reserva</h3>
     <table class="media-faturacao">
       <thead>
         <tr>
@@ -980,7 +1003,6 @@ function renderTabelaHospedes123(faturas, targetId) {
   });
 
   let html = `
-    <h3 class="center">Número de Hóspedes</h3>
     <table class="media-faturacao">
       <thead>
         <tr>

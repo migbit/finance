@@ -42,7 +42,16 @@ const mesesPT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','No
 const isISO = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 const isoToDate = (s) => new Date(`${s}T00:00:00`);
 const diasNoMes = (y, m1_12) => new Date(y, m1_12, 0).getDate();
-const euroInt = (v) => '€' + new Intl.NumberFormat('pt-PT').format(Math.round(Number(v)||0));
+
+const euroInt = (v) => {
+  const num = Math.round(Number(v) || 0);
+  return num.toLocaleString('pt-PT', {
+    maximumFractionDigits: 0,
+    useGrouping: true
+  })
+  .replace(/\./g, ' ')  // pt-PT uses . for thousands → replace with space
+  + ' €';               // Add space + € at the end (standard in Portugal)
+};
 
 // Bootstrap
 window.addEventListener('DOMContentLoaded', async () => {
@@ -110,10 +119,13 @@ function renderGraficoFaturacaoMensal(faturas, ano /* compat */){
   const data123  = seq.map(({year,month}) => sumMesApt('123',  year, month));
   const data1248 = seq.map(({year,month}) => sumMesApt('1248', year, month));
 
-  const canvas = document.getElementById('chart-fat-mensal');
-  if(!canvas) return;
-  if(gFatMensal){ gFatMensal.destroy(); gFatMensal = null; }
+    const canvas = document.getElementById('chart-fat-mensal');
+    if (!canvas) return;
+    if (gFatMensal) { gFatMensal.destroy(); gFatMensal = null; }
 
+/* garante que não há largura forçada */
+canvas.style.width = '100%';
+canvas.style.minWidth = '0';
   // largura mínima por mês, mas só ativa scroll quando ultrapassar o contentor
   const pxPerLabel = 48; // podes afinar (40–56)
   const wrapper =
@@ -129,42 +141,43 @@ function renderGraficoFaturacaoMensal(faturas, ano /* compat */){
   canvas.style.width    = '100%';
   canvas.style.minWidth = Math.max(available, needed) + 'px';
 
-  gFatMensal = new Chart(canvas, {
+   gFatMensal = new Chart(canvas, {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        { label: '123',  data: data123,  backgroundColor: COLORS['123'],  barPercentage: 0.7, categoryPercentage: 0.6 },
-        { label: '1248', data: data1248, backgroundColor: COLORS['1248'],  barPercentage: 0.7, categoryPercentage: 0.6 },
+        { label: '123',  data: data123,  backgroundColor: COLORS['123'],  barPercentage: 0.7, categoryPercentage: 0.8 },
+        { label: '1248', data: data1248, backgroundColor: COLORS['1248'],  barPercentage: 0.7, categoryPercentage: 0.8 },
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      resizeDelay: 0,
+      layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
       plugins: {
-        legend: { position: 'bottom' },
-        tooltip: {
-          callbacks: {
-            title: (items) => {
-              if (!items?.length) return '';
-              const i = items[0].dataIndex;
-              const raw = items[0].chart.data.labels[i];
-              if (Array.isArray(raw)) {
-                const mes = raw[0], ano2 = raw[1];
-                const ano4 = (ano2 && ano2.length === 2) ? ('20' + ano2) : ano2;
-                return ano4 ? `${mes} ${ano4}` : mes;
-              }
-              return String(raw).replace(',', ' ');
-            },
-            label: (c) => ` ${c.dataset.label}: ${euroInt(c.parsed.y)}`
-          }
-        }
-      },
+       legend: { position: 'bottom' },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${euroInt(c.parsed.y)}` } }
+     },
       scales: {
-        x: { grid: { display:false }, ticks: { autoSkip: false } },
-        y: { beginAtZero:true, ticks:{ precision:0 }, grid:{ color:'rgba(0,0,0,0.06)' }, border:{ display:false } }
+        x: {
+          grid: { display: false },
+          ticks: {
+            autoSkip: false,
+            maxRotation: 0,
+             minRotation: 0,
+            font: { size: 11 },
+          },
+        },
+          y: {
+          beginAtZero: true,
+          ticks: { precision: 0 },
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          border: { display: false },
+       }
       }
     }
+
   });
 }
 
@@ -244,11 +257,14 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
       const nts1248 = nights[a]['1248'][i];
       const med1248 = (nts1248 > 0) ? Math.round(tot1248 / nts1248) : null;
 
-      if (mostraMedia[a]['123'])  html += `<td style="background:${bg}; text-align:center">${med123 != null ? `€${med123}` : '—'}</td>`;
-      if (mostraMedia[a]['1248']) html += `<td style="background:${bg}; text-align:center">${med1248 != null ? `€${med1248}` : '—'}</td>`;
+      if (mostraMedia[a]['123'])
+      html += `<td style="background:${bg}; text-align:center">${med123 != null ? euroInt(med123) : '—'}</td>`;
+      if (mostraMedia[a]['1248'])
+      html += `<td style="background:${bg}; text-align:center">${med1248 != null ? euroInt(med1248) : '—'}</td>`;
 
       html += `<td style="background:${bg}; text-align:center">${euroInt(tot123)}</td>`;
       html += `<td style="background:${bg}; text-align:center">${euroInt(tot1248)}</td>`;
+
     });
     html += `</tr>`;
   });
@@ -258,7 +274,9 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
   anos.forEach((a, idx) => {
     const bg = yearBg[idx % yearBg.length];
 
-    const totalAno123 = totals[a]['123'].reduce((s, v) => s + v, 0);
+    const totalAno123  = totals[a]['123'].reduce((s, v) => s + v, 0);
+    const totalAno1248 = totals[a]['1248'].reduce((s, v) => s + v, 0);
+
     const mediasMes123 = totals[a]['123']
       .map((t, k) => (nights[a]['123'][k] > 0 ? t / nights[a]['123'][k] : null))
       .filter(v => v != null);
@@ -266,7 +284,6 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
       ? Math.round(mediasMes123.reduce((s, v) => s + v, 0) / mediasMes123.length)
       : null;
 
-    const totalAno1248 = totals[a]['1248'].reduce((s, v) => s + v, 0);
     const mediasMes1248 = totals[a]['1248']
       .map((t, k) => (nights[a]['1248'][k] > 0 ? t / nights[a]['1248'][k] : null))
       .filter(v => v != null);
@@ -274,16 +291,37 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
       ? Math.round(mediasMes1248.reduce((s, v) => s + v, 0) / mediasMes1248.length)
       : null;
 
-    if (mostraMedia[a]['123'])  html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno123 != null ? `€${precoMedioAno123}` : '—'}</strong></td>`;
-    if (mostraMedia[a]['1248']) html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno1248 != null ? `€${precoMedioAno1248}` : '—'}</strong></td>`;
+    if (mostraMedia[a]['123'])
+      html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno123 != null ? euroInt(precoMedioAno123) : '—'}</strong></td>`;
+    if (mostraMedia[a]['1248'])
+      html += `<td style="background:${bg}; text-align:center"><strong>$${precoMedioAno1248 != null ? euroInt(precoMedioAno1248) : '—'}</strong></td>`;
 
     html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno123)}</strong></td>`;
     html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno1248)}</strong></td>`;
   });
   html += `</tr>`;
 
+  // Média mensal (totais / 12)
+  html += `<tr><td><strong>Média mensal</strong></td>`;
+  anos.forEach((a, idx) => {
+    const bg = yearBg[idx % yearBg.length];
+
+    // colunas "Média" ficam vazias para manter alinhamento
+    if (mostraMedia[a]['123'])  html += `<td style="background:${bg}; text-align:center">—</td>`;
+    if (mostraMedia[a]['1248']) html += `<td style="background:${bg}; text-align:center">—</td>`;
+
+    const totalAno123  = totals[a]['123'].reduce((s, v) => s + v, 0);
+    const totalAno1248 = totals[a]['1248'].reduce((s, v) => s + v, 0);
+
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno123/12)}</strong></td>`;
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno1248/12)}</strong></td>`;
+  });
+  html += `</tr>`;
+
+  html += `</tbody></table>`;
   el.innerHTML = html;
 }
+
 
 // ------------------------ Valor médio/noite (linhas: 123 vs 1248) ----------------------
 function renderGraficoMediaNoite(faturas, ano){
@@ -507,18 +545,31 @@ function renderGraficoCheckinsDOW(faturas){
           { label:'1248', data: cont['1248'], backgroundColor: COLORS['1248'], barPercentage: 0.8, categoryPercentage: 0.9 }
         ]
       },
-      options: {
-        responsive:true,
-        maintainAspectRatio:false,
-        plugins:{ 
-          legend:{ position:'bottom' },
-          tooltip:{ callbacks:{ title: items => `${items[0].label} ${anoEscolhido}` } }
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { bottom: 18, left: 4, right: 4, top: 4 } }, // evita cortar labels
+      plugins: {
+        legend: { 
+          position: 'bottom',
+          labels: { color: '#222', boxWidth: 12, font: { size: 12 } }
         },
-        scales:{
-          x:{ grid:{ display:false } },
-          y:{ beginAtZero:true, ticks:{ precision:0 }, grid:{ color:'rgba(0,0,0,0.06)' }, border:{ display:false } }
-        }
-      }
+        tooltip: { callbacks: { title: items => `${items[0].label} ${anoEscolhido}` } }
+      },
+      scales: {
+        x: { 
+          grid: { display: false },
+          ticks: { color: '#222', font: { size: 12 }, padding: 6, maxRotation: 0, autoSkip: false }
+        },
+        y: { 
+         beginAtZero: true,
+          ticks: { color: '#222', precision: 0, font: { size: 11 } },
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          border: { display: false }
+       }
+     }
+    }
+
     });
 
     // UI

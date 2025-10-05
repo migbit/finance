@@ -58,6 +58,9 @@ function obterNomeMes(num) {
   return nomes[n - 1];
 }
 
+// Formata inteiros em € (pt-PT)
+const euroInt = (v) => '€' + new Intl.NumberFormat('pt-PT').format(Math.round(Number(v) || 0));
+
 // total € de uma reserva (transferência + taxa Airbnb)
 const _vm_totalReserva = f =>
   Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0);
@@ -580,6 +583,18 @@ function renderTabelaComparativaAnos1248(faturas, targetId) {
   });
   html += `</tr>`;
 
+  // nova linha: Média mensal (Total / 12)
+  html += `<tr><td><strong>Média mensal</strong></td>`;
+  anos.forEach((a, idx) => {
+    const bg = yearBg[idx % yearBg.length];
+    const totalAno = totals[a].reduce((s, v) => s + v, 0);
+    const mediaMensal = totalAno / 12;
+    if (mostraMedia[a])
+      html += `<td style="background:${bg}; text-align:center">—</td>`;
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(mediaMensal)}</strong></td>`;
+  });
+  html += `</tr>`;
+
   html += `</tbody></table><hr class="divider">`;
   el.innerHTML = html;
 }
@@ -778,8 +793,7 @@ function renderTabelaNoites1248(faturas, targetId) {
   });
 
   let html = `
-    <h3 class="center">Noites por Reserva</h3>
-    <table class="media-faturacao">
+      <table class="media-faturacao">
       <thead>
         <tr>
           <th>Mês</th>
@@ -893,7 +907,6 @@ function renderTabelaHospedes1248(faturas, targetId) {
   });
 
   let html = `
-    <h3 class="center">Número de Hóspedes</h3>
     <table class="media-faturacao">
       <thead>
         <tr>

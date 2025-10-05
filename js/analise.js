@@ -70,6 +70,9 @@ function formatEuro(num) {
   return '€' + Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+// Formata inteiros em € (pt-PT)
+const euroInt = (v) => '€' + new Intl.NumberFormat('pt-PT').format(Math.round(Number(v) || 0));
+
 function gerarAnaliseFaturacao(faturas) {
 
     // destruir gráficos antigos antes de recriar
@@ -462,7 +465,7 @@ function renderTabelaComparativaAnos1231248(faturas, targetId) {
     html += `</tr>`;
   });
 
-  // linha final única (Total e Preço médio/noite anual)
+    // linha final única (Total e Preço médio/noite anual)
   html += `<tr><td><strong>Total</strong></td>`;
   anos.forEach((a, idx) => {
     const totalAno = totals[a].reduce((s, v) => s + v, 0);
@@ -476,16 +479,29 @@ function renderTabelaComparativaAnos1231248(faturas, targetId) {
     const bg = yearBg[idx % yearBg.length];
     if (mostraMedia[a]) {
       html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno != null ? `€${precoMedioAno}` : '—'}</strong></td>`;
-      html += `<td style="background:${bg}; text-align:center"><strong>€${Math.round(totalAno)}</strong></td>`;
+      html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno)}</strong></td>`;
     } else {
-      html += `<td style="background:${bg}; text-align:center"><strong>€${Math.round(totalAno)}</strong></td>`;
+      html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno)}</strong></td>`;
     }
+  });
+  html += `</tr>`;
+
+  // nova linha: Média mensal (Total / 12)
+  html += `<tr><td><strong>Média mensal</strong></td>`;
+  anos.forEach((a, idx) => {
+    const bg = yearBg[idx % yearBg.length];
+    const totalAno = totals[a].reduce((s, v) => s + v, 0);
+
+    // mantém alinhamento das colunas (quando existe "Média")
+    if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">—</td>`;
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno / 12)}</strong></td>`;
   });
   html += `</tr>`;
 
   html += `</tbody></table><hr class="divider">`;
   el.innerHTML = html;
 }
+
 
 
 // ---------------------------------------------------------------> Gráfico valor noite
@@ -874,7 +890,6 @@ function renderTabelaNoites1231248(faturas, targetId) {
   });
 
   let html = `
-    <h3 class="center">Noites por Reserva</h3>
     <table class="media-faturacao">
       <thead>
         <tr>
@@ -996,7 +1011,6 @@ function renderTabelaHospedes1231248(faturas, targetId) {
   });
 
   let html = `
-    <h3 class="center">Número de Hóspedes</h3>
     <table class="media-faturacao">
       <thead>
         <tr>

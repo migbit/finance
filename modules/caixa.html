@@ -10,8 +10,6 @@
 </head>
 <body>
     <header>
-        <h1>Caixa</h1>
-    
         <!-- Ícone de menu "hambúrguer" para mobile -->
         <div class="menu-icon" id="menu-icon">
             &#9776; <!-- Ícone de três linhas -->
@@ -19,7 +17,13 @@
     
         <nav id="nav-menu">
             <ul>
-                <li><a href="faturas.html">Faturas e Relatórios</a></li>
+                <li><a href="faturas.html">Faturas</a></li>  
+                <li class="separator">|</li>
+                <li><a href="analise.html">Análise Apartamentos</a></li>
+                <li><a href="analise123.html">123</a></li>
+                <li><a href="analise1248.html">1248</a></li>
+                <li><a href="analise123vs1248.html">123 vs 1248</a></li>
+                <li class="separator">|</li>
                 <li><a href="caixa.html" class="active">Caixa</a></li>
                 <li><a href="diversos.html">Diversos</a></li>
                 <li class="separator">|</li>
@@ -36,70 +40,72 @@
         </nav>
     </header>
 
-    <main>
-        <section class="form-section">
-            <h2>Registrar Transação</h2>
-<form id="caixa-form">
-  <div class="form-group buttons">
-    <button type="button" id="btn-entrada" class="btn-entrada">Entrada</button>
-    <button type="button" id="btn-saida" class="btn-saida">Saída</button>
-    <input type="hidden" id="tipo" value="">
-  </div>
+<main>
+  <!-- Formulário -->
+  <section class="report-section">
+    <div class="viz-card">
+      <h4>Registar Transação</h4>
 
-  <div class="form-group">
-    <label for="caixa">Selecionar Caixa:</label>
-    <select id="caixa" required>
-      <option value="banco">Caixa Banco</option>
-      <option value="direita">Caixa Direita</option>
-      <option value="esquerda">Caixa Esquerda</option>
-    </select>
-  </div>
+      <form id="caixa-form">
+        <div class="form-group buttons" style="display:flex;gap:.5rem;justify-content:center;margin-bottom:.75rem">
+          <button type="button" id="btn-entrada" class="btn-entrada">Entrada</button>
+          <button type="button" id="btn-saida" class="btn-saida">Saída</button>
+          <input type="hidden" id="tipo" value="">
+        </div>
 
-  <div class="form-group">
-    <label for="valor">Valor (€):</label>
-    <input type="number" id="valor" step="0.01" required>
-  </div>
+        <div class="form-group">
+          <label for="caixa">Selecionar Caixa:</label>
+          <select id="caixa" required>
+            <option value="banco">Caixa Banco</option>
+            <option value="direita">Caixa Direita</option>
+            <option value="esquerda">Caixa Esquerda</option>
+          </select>
+        </div>
 
-  <button type="submit">Registrar Transação</button>
-</form>
+        <div class="form-group">
+          <label for="valor">Valor (€):</label>
+          <input type="number" id="valor" step="0.01" required>
+        </div>
 
-        </section>
+        <div class="form-actions" style="margin-top:.75rem">
+          <button type="submit" id="submit-caixa">Registar</button>
+        </div>
+      </form>
+    </div>
+  </section>
 
-<section class="report-section">
-  <div class="report-container">
-    <div class="report-box">
-      <h2 class="centered">Caixa Banco</h2>
-      <div id="caixa-banco"></div>
+  <!-- Caixas internas -->
+  <section class="report-section">
+    <div class="viz-card">
+      <h4>Caixas</h4>
+
+      <div class="subcard">
+        <h3>Caixa Banco</h3>
+        <div id="caixa-banco"></div>
+      </div>
+
+      <div class="subcard">
+        <h3>Caixa Esquerda</h3>
+        <div id="caixa-esquerda"></div>
+      </div>
+
+      <div class="subcard">
+        <div id="total-banco-esquerda"></div>
+      </div>
     </div>
 
-    <div class="report-box">
-      <h2 class="centered">Caixa Esquerda</h2>
-      <div id="caixa-esquerda"></div>
-    </div>
-
-    <!-- NOVO: total combinado -->
-    <div class="report-box">
-      <h2 class="centered">Total Banco + Esquerda</h2>
-      <div id="total-banco-esquerda"></div>
-    </div>
-
-    <div class="report-box">
-      <h2 class="centered">Caixa Direita (Pai)</h2>
+    <div class="viz-card">
+      <h4>Caixa Direita (Pai)</h4>
       <div id="caixa-direita"></div>
     </div>
-  </div>
-</section>
+  </section>
+</main>
 
 
 
-
-    </main>
-
-    <footer>
-        <div class="footer-container">
-            <p>&copy; 2025 OM&MT.</p>
-        </div>
-    </footer>
+<footer class="app-footer">
+  <p>© 2025 OM&MT</p>
+</footer>
 
     <!-- Importar o script.js e caixa.js como módulos -->
     <script type="module" src="../js/script.js"></script>

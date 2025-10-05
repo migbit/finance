@@ -10,8 +10,6 @@
 </head>
 <body>
     <header>
-        <h1>Diversos</h1>
-    
         <!-- Ícone de menu "hambúrguer" para mobile -->
         <div class="menu-icon" id="menu-icon">
             &#9776; <!-- Ícone de três linhas -->
@@ -19,15 +17,18 @@
     
         <nav id="nav-menu">
             <ul>
-                <li><a href="faturas.html">Faturas e Relatórios</a></li>
+                <li><a href="faturas.html">Faturas</a></li>  
+                <li class="separator">|</li>
                 <li><a href="analise.html">Análise Apartamentos</a></li>
+                <li><a href="analise123.html">123</a></li>
+                <li><a href="analise1248.html">1248</a></li>
+                <li><a href="analise123vs1248.html">123 vs 1248</a></li>
+                <li class="separator">|</li>
                 <li><a href="caixa.html">Caixa</a></li>
                 <li><a href="diversos.html" class="active">Diversos</a></li>
                 <li class="separator">|</li>
                 <li><a href="dca.html">DCA</a></li>
                 <li class="separator">|</li>
-                <!-- Login/User section, controlled by server-side or CSS visibility -->
-                <li id="login-section">
                     <a href="#" id="login-btn" class="login-visible">Login</a>
                     <span id="user-info" class="user-visible" style="display:none;">
                         <a href="#" id="user-name">Username</a> <!-- Visible if logged in -->
@@ -38,43 +39,44 @@
     </header>
     
     <main>
-       
-       <!-- Carlos – Faturas Pendentes -->
-<section id="carlos-section" class="card mt-4">
-    <h2 class="card-header">Carlos – Faturas Pendentes</h2>
-    <div class="card-body">
+  <section class="report-section">
+    <div class="viz-card">
+      <h4>Carlos – Faturas Pendentes</h4>
+
       <!-- 1. Formulário de Fatura -->
-      <form id="carlos-invoice-form" class="form-inline mb-3">
-        <input type="text"    id="invoice-number" placeholder="Nº Fatura (ex: 2023/15)" required>
-        <input type="date"    id="invoice-date"   required>
-        <input type="number"  id="invoice-total"  placeholder="Total (€)" step="0.01" required>
+      <form id="carlos-invoice-form" class="form-inline mb-3" style="margin-bottom: 1rem;">
+        <input type="text" id="invoice-number" placeholder="Nº Fatura (ex: 2023/15)" required>
+        <input type="date" id="invoice-date" required>
+        <input type="number" id="invoice-total" placeholder="Total (€)" step="0.01" required>
         <button type="submit" class="btn btn-success ml-2">Adicionar Fatura</button>
       </form>
-  
+
       <!-- 2. Tabela de Faturas + Pagamentos -->
-      <table id="carlos-invoices-table" class="table table-striped">
-        <thead>
-          <tr>
-            <th>Nº Fatura</th>
-            <th>Data</th>
-            <th>Total (€)</th>
-            <th>Pago (€)</th>
-            <th>Saldo (€)</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="carlos-invoices-body">
-          <!-- preenchido via JS -->
-        </tbody>
-      </table>
+      <div class="table-wrap">
+        <table id="carlos-invoices-table" class="table table-striped">
+          <thead>
+            <tr>
+              <th>Nº Fatura</th>
+              <th>Data</th>
+              <th>Total (€)</th>
+              <th>Pago (€)</th>
+              <th>Saldo (€)</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="carlos-invoices-body">
+            <!-- preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
     </div>
   </section>
+</main>
                
-        <footer>
-            <div class="footer-container">
-                <p>&copy; 2025 OM&MT.</p>
-            </div>
-        </footer>
+<footer class="app-footer">
+  <p>© 2025 OM&MT</p>
+</footer>
+
 
     <!-- Required Scripts -->
     <script type="module" src="../js/diversos.js"></script>
