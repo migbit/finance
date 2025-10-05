@@ -125,6 +125,7 @@ tr:hover{background:#f1f1f1;}
 /* Colors matching apt tags in charts/labels */
 .apt-123{color:rgba(54,162,235,1);}
 .apt-1248{color:rgba(245,133,20,1);}
+.apt-1231248{color:rgb(20, 78, 3);}
 
 /* Divider between sections */
 .divider{border:none;border-top:2px solid #ddd;margin:1.25rem 0;}
@@ -998,3 +999,5 @@ h2, h3 {
   filter: brightness(0.92);   /* escurece ~8% */
   transition: filter 0.1s ease-in-out;
 }
+
+main.report-wide { max-width: 1400px; }
