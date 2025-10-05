@@ -17,6 +17,7 @@ const manualFaturasEstatica = [
 ];
 
 let chartTotal1248 = null;
+let chartOcupacao1248 = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   carregarTodosRelatorios1248();
@@ -31,7 +32,9 @@ async function carregarTodosRelatorios1248() {
 
   gerarAnaliseFaturacao1248(faturas);         // gráfico + barras (só 1248)
   gerarHeatmapVariacao1248(faturas);          // heatmap sem legenda (só 1248)
+  renderGraficoValorMedioReservasAno1248(faturas);
   renderTabelaComparativaAnos1248(faturas, 'tabela-comparativa-anos-1248');
+  renderGraficoOcupacaoMensal1248(faturas);
   renderTabelaLimpeza1248(faturas, 'tabela-limpeza-1248');   // só a tabela, sem <h3> e sem <hr>
   renderTabelaNoites1248(faturas, 'tabela-noites-1248');     // <h3 class="center"> gerado aqui
   renderTabelaHospedes1248(faturas, 'tabela-hospedes-1248'); // <h3 class="center">, sem "(Apt 1248)"
@@ -54,6 +57,10 @@ function obterNomeMes(num) {
   const n = Math.max(1, Math.min(12, Number(num)));
   return nomes[n - 1];
 }
+
+// total € de uma reserva (transferência + taxa Airbnb)
+const _vm_totalReserva = f =>
+  Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0);
 
 // --------------------------- Gráfico + Barras (Apt 1248)
 function gerarAnaliseFaturacao1248(faturas) {
@@ -113,7 +120,7 @@ chartTotal1248 = new Chart(document.getElementById('chart-total'), {
   }
 });
 
-  // --------------- Barras de Progresso (Apt 1248)
+ // --------------- Barras de Progresso (Apt 1248)
   const somaAno = (ano, apt = null) => faturas
     .filter(f => Number(f.ano) === Number(ano) && (!apt || String(f.apartamento) === String(apt)))
     .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
@@ -223,6 +230,154 @@ chartTotal1248 = new Chart(document.getElementById('chart-total'), {
   const alvo = document.getElementById('progresso-anos');
   if (alvo) alvo.innerHTML = `<div class="progress-list">${htmlProg}</div>`;
 }
+
+// ---------------------------------------------------------> Gráfico ocupação
+
+function renderGraficoOcupacaoMensal1248(faturas) {
+  const APT = '1248';
+  const BASE_YEAR = 2025;
+  const hoje = new Date();
+
+  const nomesMes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const diasNoMes = (y, m1_12) => new Date(y, m1_12, 0).getDate();
+  const isoToDate = s => new Date(`${s}T00:00:00`);
+  const clampCheckoutToToday = (d) => {
+    const tomorrow = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + 1);
+    return d > tomorrow ? tomorrow : d;
+  };
+
+  // anos desde 2025 presentes nas reservas
+  const anos = Array.from(new Set(
+    faturas
+      .filter(f => String(f.apartamento) === APT && typeof f.checkIn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.checkIn))
+      .map(f => Number(f.checkIn.slice(0,4)))
+  )).filter(y => y >= BASE_YEAR).sort((a,b)=>a-b);
+
+  if (!anos.length) return;
+
+  // Plugin local p/ escrever "%"" no centro das barras (sem dependências)
+    const inBarLabels = {
+    id: 'inbar-labels',
+    afterDatasetsDraw(chart, args, pluginOptions) {
+    const { ctx, data } = chart;
+    ctx.save();
+    ctx.font = '600 11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    chart.data.datasets.forEach((ds, dsIndex) => {
+      const meta = chart.getDatasetMeta(dsIndex);
+      meta.data.forEach((bar, i) => {
+        const val = ds.data[i];
+        if (val == null || val === 0) return;
+        // centro vertical da barra
+        const y = bar.y + (bar.base - bar.y) / 2;
+        const x = bar.x;
+        // cor do texto — escuro em tons claros, branco em cinzas mais escuros
+        const isDark = ds.backgroundColor && /rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/.test(ds.backgroundColor) ? (()=>{
+          const m = ds.backgroundColor.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)/);
+          const r=+m[1], g=+m[2], b=+m[3];
+          const L = 0.299*r + 0.587*g + 0.114*b;
+          return L < 140;
+        })() : false;
+        ctx.fillStyle = isDark ? '#fff' : '#333';
+        ctx.fillText(`${val}%`, x, y);
+      });
+    });
+
+    ctx.restore();
+    }
+    } ;
+
+
+  // noites ocupadas por ano/mês
+  const ocup = {};
+  anos.forEach(y => ocup[y] = Array.from({length:12}, ()=>0));
+
+  faturas.forEach(f => {
+    if (String(f.apartamento) !== APT) return;
+    const ciStr = f.checkIn, coStr = f.checkOut;
+    if (typeof ciStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(ciStr)) return;
+    const noites = Number(f.noites || 0);
+    if (!Number.isFinite(noites) || noites <= 0) return;
+
+    const ci = isoToDate(ciStr);
+    let co = (typeof coStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(coStr))
+      ? isoToDate(coStr)
+      : new Date(ci.getFullYear(), ci.getMonth(), ci.getDate() + noites);
+
+    // não contar noites futuras
+    co = clampCheckoutToToday(co);
+
+    // distribui as noites por mês (intervalo [ci, co))
+    for (let d = new Date(ci); d < co; d.setDate(d.getDate() + 1)) {
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      if (!ocup[y]) continue; // só anos >= BASE_YEAR
+      ocup[y][m-1] += 1;
+    }
+  });
+
+  // datasets: percentagem por mês = noites / dias do mês * 100
+  const labels = nomesMes;
+  const palette = [
+  'rgba(90,90,90,1)',     // 2025 (cinza escuro principal)
+  'rgba(120,120,120,1)',  // 2026
+  'rgba(150,150,150,1)',  // 2027
+  'rgba(180,180,180,1)',  // 2028
+  'rgba(210,210,210,1)',  // 2029
+  ];
+
+
+  const datasets = anos.map((y, idx) => {
+    const dataPct = ocup[y].map((noitesMes, i) => {
+      const denom = diasNoMes(y, i+1);
+      return Math.round( denom ? (noitesMes / denom) * 100 : 0 );
+    });
+    const cor = palette[idx % palette.length];
+    return {
+      label: String(y),
+      data: dataPct,
+      backgroundColor: cor,
+      borderColor: cor,
+      borderWidth: 1
+    };
+  });
+
+  const ctx = document.getElementById('chart-ocupacao-1248');
+  if (!ctx) return;
+  if (chartOcupacao1248) { chartOcupacao1248.destroy(); chartOcupacao1248 = null; }
+
+chartOcupacao1248 = new Chart(ctx, {
+  type: 'bar',
+  plugins: [inBarLabels],          // 👈 ativa labels dentro das barras
+  data: { labels, datasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y}%` } },
+      // Se TIVERES chartjs-plugin-datalabels carregado, podes usar isto em alternativa:
+      // datalabels: { anchor:'center', align:'center', formatter:(v)=> v?`${v}%`:'', color:'#fff', font:{weight:600, size:11} }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+  beginAtZero: true,
+  max: 100,
+  ticks: {
+    display: false   // 👈 oculta os valores no eixo Y
+  },
+  border: { display: false },
+  grid: { color: 'rgba(0,0,0,0.06)' }
+  }
+
+    }
+  }
+});
+}
+
 
 // --------------------------- Heatmap (Apt 1248) — sem legenda
 function gerarHeatmapVariacao1248(faturas) {
@@ -340,55 +495,197 @@ function renderTabelaComparativaAnos1248(faturas, targetId) {
   for (let y = BASE_YEAR; y <= CURR_YEAR; y++) anos.push(y);
 
   const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const totais = {};
-  anos.forEach(ano => { totais[ano] = Array.from({ length: 12 }, () => 0); });
 
+  const totals = {};
+  const nights = {};
+  anos.forEach(a => {
+    totals[a] = Array.from({ length: 12 }, () => 0);
+    nights[a] = Array.from({ length: 12 }, () => 0);
+  });
+
+  // agrega só Apt 1248
   faturas.forEach(f => {
     if (String(f.apartamento) !== '1248') return;
     const ano = Number(f.ano), mes = Number(f.mes);
-    if (!anos.includes(ano) || !mes) return;
+    if (!anos.includes(ano) || !mes || mes < 1 || mes > 12) return;
+
     const v = Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0);
-    totais[ano][mes-1] += v;
+    const n = Number(f.noites || 0);
+
+    totals[ano][mes - 1] += v;
+    nights[ano][mes - 1] += Number.isFinite(n) ? n : 0;
   });
 
+  // mostra "Média" se houver pelo menos um mês com noites > 0 nesse ano
+  const mostraMedia = {};
+  anos.forEach(a => { mostraMedia[a] = nights[a].some(x => x > 0); });
+
+  // paleta de cores clarinhas por ano
+  const yearBg = ['#fbfbff', '#f9fffb', '#fffaf5', '#f8f9ff', '#f9f7ff'];
+
   let html = `
-    <h3 class="center">Faturação Mensal por Ano</h3>
     <table class="media-faturacao">
       <thead>
         <tr>
-          <th>Mês</th>
-          ${anos.map(a => `<th>${a}</th>`).join('')}
+          <th rowspan="2">Mês</th>
+          ${anos.map(a => `<th colspan="${mostraMedia[a] ? 2 : 1}" style="text-align:center">${a}</th>`).join('')}
+        </tr>
+        <tr>
+          ${anos.map(a => mostraMedia[a]
+            ? `<th style="text-align:center">Média</th><th style="text-align:center">Total</th>`
+            : `<th style="text-align:center">Total</th>`
+          ).join('')}
         </tr>
       </thead>
       <tbody>
   `;
 
+  // linhas por mês
   meses.forEach((nome, i) => {
     html += `<tr><td>${nome}</td>`;
-    anos.forEach(ano => {
-      html += `<td>€${totais[ano][i].toFixed(0)}</td>`;
+    anos.forEach((a, idx) => {
+      const tot = totals[a][i];
+      const nts = nights[a][i];
+      const media = (nts > 0) ? Math.round(tot / nts) : null;
+      const bg = yearBg[idx % yearBg.length];
+
+      if (mostraMedia[a]) {
+        html += `<td style="background:${bg}; text-align:center">${media != null ? `€${media}` : '—'}</td>`;
+        html += `<td style="background:${bg}; text-align:center">€${Math.round(tot)}</td>`;
+      } else {
+        html += `<td style="background:${bg}; text-align:center">€${Math.round(tot)}</td>`;
+      }
     });
     html += `</tr>`;
   });
 
+  // linha final única: Total (e Preço médio/noite na coluna "Média" quando existir)
   html += `<tr><td><strong>Total</strong></td>`;
-  anos.forEach(ano => {
-    const totAno = totais[ano].reduce((s, v) => s + v, 0);
-    html += `<td><strong>€${totAno.toFixed(0)}</strong></td>`;
-  });
-  html += `</tr>`;
+  anos.forEach((a, idx) => {
+    const totalAno = totals[a].reduce((s, v) => s + v, 0);
+    const mediasMes = totals[a]
+      .map((t, k) => (nights[a][k] > 0 ? t / nights[a][k] : null))
+      .filter(v => v != null);
+    const precoMedioAno = mediasMes.length
+      ? Math.round(mediasMes.reduce((s, v) => s + v, 0) / mediasMes.length)
+      : null;
 
-  html += `<tr><td><strong>Média mensal</strong></td>`;
-  anos.forEach(ano => {
-    const totAno = totais[ano].reduce((s, v) => s + v, 0);
-    const media = Math.round(totAno / 12);
-    html += `<td><strong>€${media}</strong></td>`;
+    const bg = yearBg[idx % yearBg.length];
+    if (mostraMedia[a]) {
+      html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno != null ? `€${precoMedioAno}` : '—'}</strong></td>`;
+      html += `<td style="background:${bg}; text-align:center"><strong>€${Math.round(totalAno)}</strong></td>`;
+    } else {
+      html += `<td style="background:${bg}; text-align:center"><strong>€${Math.round(totalAno)}</strong></td>`;
+    }
   });
   html += `</tr>`;
 
   html += `</tbody></table><hr class="divider">`;
   el.innerHTML = html;
 }
+
+// ------------------------------------------------> Gráfico valor médio noite.
+
+let chartVmReservas1248 = null;
+
+function renderGraficoValorMedioReservasAno1248(faturas) {
+  const APT = '1248';
+  const Y = new Date().getFullYear();
+  const todayISO = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+
+  const regs = faturas
+    .filter(f => {
+      if (String(f.apartamento) !== APT) return false;
+      if (typeof f.checkIn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(f.checkIn)) return false;
+
+      const anoIn  = Number(f.checkIn.slice(0,4));
+      const noites = Number(f.noites || 0);
+
+      if (noites <= 0) return false;
+      if (f.checkIn > todayISO) return false; // exclui futuro
+      return anoIn === Y;                      // conta pelo ano do check-in
+    })
+    .sort((a,b) => a.checkIn.localeCompare(b.checkIn));
+
+  if (!regs.length) {
+    if (chartVmReservas1248) { chartVmReservas1248.destroy(); chartVmReservas1248 = null; }
+    return;
+  }
+
+  const labels = regs.map(r => r.checkIn);
+  const data   = regs.map(r => Math.round(_vm_totalReserva(r) / Number(r.noites)));
+
+  const ctx = document.getElementById('chart-vm-reservas-1248');
+  if (!ctx) return;
+  if (chartVmReservas1248) { chartVmReservas1248.destroy(); chartVmReservas1248 = null; }
+
+  chartVmReservas1248 = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: `€ por noite (${Y})`,
+        data,
+        borderColor: 'rgba(245,133,20,1)',   // laranja do 1248
+        backgroundColor: 'rgba(245,133,20,1)',
+        borderWidth: 1.25,
+        tension: 0.25,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+        spanGaps: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false, axis: 'x' },
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              const s = items?.[0]?.label ?? '';
+              const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return '';
+              const d = new Date(`${s}T00:00:00`);
+              return `${String(d.getDate()).padStart(2,'0')} ${meses[d.getMonth()]}`;
+            },
+            label: (ctx) => ` € ${ctx.parsed.y}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          border: { display: true }, // linha só em baixo
+          ticks: {
+            autoSkip: false,
+            callback: (val, idx) => {
+              const s = labels[idx];
+              const m = Number(s.slice(5,7));
+              const prev = labels[idx-1];
+              const pm = idx > 0 ? Number(prev?.slice(5,7)) : null;
+              if (idx === 0 || m !== pm) {
+                return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m-1];
+              }
+              return '';
+            }
+          }
+        },
+        y: {
+          beginAtZero: false,
+          min: 100,
+          ticks: { precision: 0, stepSize: 10 },
+          grace: '10%',
+          border: { display: false },
+          grid: { color: 'rgba(0,0,0,0.06)' }
+        }
+      }
+    }
+  });
+}
+
+
 
 // --------------------------- Taxa de Limpeza (Apt 1248) — só tabela
 function renderTabelaLimpeza1248(faturas, targetId) {

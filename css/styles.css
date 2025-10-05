@@ -993,3 +993,8 @@ h2, h3 {
 /* lista das barras */
 .progress-list { display: grid; row-gap: 14px; } /* espaço entre barras */
 #progresso-anos + .divider { margin-top: 12px; } /* única linha de separação a seguir */
+
+.media-faturacao tbody tr:hover td {
+  filter: brightness(0.92);   /* escurece ~8% */
+  transition: filter 0.1s ease-in-out;
+}

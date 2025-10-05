@@ -46,31 +46,54 @@
     <main>
 
  <section class="report-section">
-  <h2>Relatórios</h2>
+  <h2 class="center">Análise Apartamentos</h2>
+  <h3 class="center">Faturação</h3>
 
   <section class="relatorio-container" id="analise-faturacao-container">
-    <h3>Análise Faturação</h3>
 
+    <div class="chart-and-table">
     <div class="chart-wrap">
       <canvas id="chart-total"></canvas>
     </div>
-    <hr class="divider">
 
-    <div class="chart-wrap">
-      <canvas id="chart-comparacao-apt"></canvas>
+    <div id="tabela-comparativa-anos-1231248"></div>
+    </div>
+
+    <h3 class="center">Valor médio/noite por reserva</h3>
+    <div class="chart-wrapper">
+    <canvas id="chart-vm-reservas-1231248"></canvas>
+    <hr class="divider">
+    </div>
+
+    <h3 class="center">Taxa de Ocupação</h3>
+    <div class="chart-wrapper">
+    <canvas id="chart-ocupacao-1231248"></canvas>
     </div>
     <hr class="divider">
 
+    <h3 class="center">Barras de Progresso</h3>
     <div id="progresso-anos" class="mt-4"></div>
     <hr class="divider">
 
-    <h3>Média Mensal de Receita (÷12 meses)</h3>
-    <div id="media-faturacao"></div>
+    <h3 class="center">Heatmap: Variação % vs. Ano Anterior</h3>
+    <div id="heatmap-variacao-1231248"></div>
     <hr class="divider">
 
-    <h3>Heatmap: Variação % vs. Ano Anterior</h3>
-    <div id="heatmap-variacao"></div>
-    <hr class="divider">
+    <h3 class="center">Taxa de Limpeza</h3>
+    <div id="tabela-limpeza-1231248"></div>
+
+    <div id="tabela-noites-1231248"></div>
+
+    <div id="tabela-hospedes-1231248"></div>
+
+    <section>
+  <h3 class="center">Dias da Semana - Check-ins</h3>
+  <div style="height:280px">
+    <canvas id="chart-checkins-dias-1231248"></canvas>
+  </div>
+</section>
+
+
   </section>
 </section> <!-- ✅ close report-section -->
 
@@ -84,8 +107,10 @@
 
 <!-- Load Chart.js BEFORE your module -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <script type="module" src="../js/script.js"></script>
 <script type="module" src="../js/analise.js"></script>
+
 
 
 </body>
