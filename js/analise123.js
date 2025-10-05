@@ -130,7 +130,17 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
   data: { labels, datasets: datasetsLine },
   options: {
     responsive: true,
-    maintainAspectRatio: false
+    maintainAspectRatio: false,
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          precision: 0,
+          stepSize: 100   // 👈 increments de 1000 em 1000
+        },
+        suggestedMax: 8500 // ou usa grace: '12%' se preferires automático
+      }
+    }
   }
 });
   
@@ -804,31 +814,34 @@ function renderCheckinsPorDiaSemana123(faturas) {
     chartCheckinsDiasSemana123 = null;
   }
 
-  chartCheckinsDiasSemana123 = new Chart(ctx, {
-  type: 'line',
+ chartCheckinsDiasSemana123 = new Chart(ctx, {
+  type: 'bar',
   data: {
     labels,
     datasets: [{
       label: `Check-ins por dia (${Y})`,
       data: cont,
-      tension: 0.25,
-      fill: false,
-      pointRadius: 3,        // pontos visíveis
-      pointHoverRadius: 5,   // maior no hover
-      pointHitRadius: 12,    // zona de acerto generosa
+      backgroundColor: '#24466F',
+      borderColor: '#24466F',
+      borderWidth: 1,
     }]
   },
   options: {
     responsive: true,
     maintainAspectRatio: false,
-    // 👇 hover/tooltip por coluna (dia), sem necessidade de "intersect"
     interaction: { mode: 'index', intersect: false, axis: 'x' },
     plugins: {
       legend: { position: 'bottom' },
       tooltip: { enabled: true }
     },
     scales: {
-      y: { beginAtZero: true, ticks: { precision: 0 } }
+      x: {
+        grid: { display: false }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { precision: 0 }
+      }
     }
   }
 });

@@ -105,7 +105,7 @@ tr:hover{background:#f1f1f1;}
 
 /* Media de Faturação table */
 .media-faturacao{width:100%;border-collapse:collapse;margin-top:1rem;}
-.media-faturacao th,.media-faturacao td{padding:.5rem;border:1px solid #ddd;text-align:right;}
+.media-faturacao th,.media-faturacao td{padding:.2rem .4rem;border:1px solid #ddd;text-align:right;}
 .media-faturacao th:first-child,.media-faturacao td:first-child{text-align:left;}
 .media-faturacao, .media-faturacao th, .media-faturacao td{ text-align:center; }
 
@@ -143,7 +143,7 @@ tr:hover{background:#f1f1f1;}
 
 /* Altura padrão no desktop 1920×1080 */
 :root {
-  --chart-h: 190px;
+  --chart-h: 260px;
 }
 
 /* Portáteis/monitores médios: um pouco mais alto */

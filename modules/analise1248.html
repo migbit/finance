@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise 1248</title>
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="icon" href="../favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#000000">
+
+</head>
+<body>
+    <header>
+        <h1>Análise 1248</h1>
+        
+         <!-- Ícone de menu "hambúrguer" para mobile -->
+         <div class="menu-icon" id="menu-icon">
+            &#9776; <!-- Ícone de três linhas -->
+        </div>
+    
+        <nav id="nav-menu">
+            <ul>
+                <li><a href="faturas.html">Faturas</a></li>
+                <li><a href="analise.html">Análise Apartamentos</a></li>
+                <li><a href="analise123.html">123</a></li>
+                <li><a href="analise1248.html" class="active">1248</a></li>
+                <li><a href="caixa.html">Caixa</a></li>
+                <li><a href="diversos.html">Diversos</a></li>
+                <li class="separator">|</li>
+                <li><a href="dca.html">DCA</a></li>
+                <li class="separator">|</li>
+                <!-- Login/User section, controlled by server-side or CSS visibility -->
+                <li id="login-section">
+                    <a href="#" id="login-btn" class="login-visible">Login</a>
+                    <span id="user-info" class="user-visible" style="display:none;">
+                        <a href="#" id="user-name">Username</a> <!-- Visible if logged in -->
+                    </span>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+  <main>
+
+ <section class="report-section">
+  <h2 class="center">Análise 1248</h2>
+  <h3 class="center">Faturação</h3>
+
+  <section class="relatorio-container" id="analise-faturacao-container">
+
+    <div class="chart-and-table">
+    <div class="chart-wrap">
+      <canvas id="chart-total"></canvas>
+    </div>
+
+    <div id="tabela-comparativa-anos-1248"></div>
+    </div>
+
+    <h3 class="center">Barras de Progresso</h3>
+    <div id="progresso-anos" class="mt-4"></div>
+    <hr class="divider">
+
+    <h3 class="center">Heatmap: Variação % vs. Ano Anterior</h3>
+    <div id="heatmap-variacao"></div>
+    <hr class="divider">
+
+    <h3 class="center">Taxa de Limpeza</h3>
+    <div id="tabela-limpeza-1248"></div>
+    <hr class="divider">
+
+    <div id="tabela-noites-1248"></div>
+
+    <div id="tabela-hospedes-1248"></div>
+
+    <section>
+  <h3 class="center">Dias da Semana - Check-ins</h3>
+  <div style="height:280px">
+    <canvas id="chart-checkins-dia-semana"></canvas>
+  </div>
+</section>
+</section> <!-- ✅ close report-section -->
+
+</main>
+
+<footer>
+  <div class="footer-container">
+    <p>&copy; 2025 OM&MT.</p>
+  </div>
+</footer>
+
+<!-- Load Chart.js BEFORE your module -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<script type="module" src="../js/script.js"></script>
+<script type="module" src="../js/analise1248.js"></script>
+
+
+
+</body>
+</html>
