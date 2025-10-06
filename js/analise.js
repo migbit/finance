@@ -91,12 +91,17 @@ function gerarAnaliseFaturacao(faturas) {
   
     // função auxiliar para somar valores por (ano, mes, apt)
     function somaPor(ano, mes, apt) {
-      return faturas
-        .filter(f => Number(f.ano) === Number(ano) &&
-                      Number(f.mes) === Number(mes) &&
-                      String(f.apartamento) === String(apt))
-        .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
+    return faturas
+    .filter(f =>
+      Number(f.ano) === Number(ano) &&
+      Number(f.mes) === Number(mes) &&
+      String(f.apartamento) === String(apt)
+    )
+    .reduce((s, f) =>
+      s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0))
+    , 0);
     }
+
   
     // 2) construir arrays mensais
     const labels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -159,7 +164,7 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
           precision: 0,
           stepSize: 100   
         },
-        suggestedMax: 15000 // ou usa grace: '12%' se preferires automático
+        suggestedMax: 16000 // ou usa grace: '12%' se preferires automático
       }
     }
   }
@@ -396,8 +401,7 @@ function renderTabelaComparativaAnos1231248(faturas, targetId) {
 
   const BASE_YEAR = 2024;
   const CURR_YEAR = new Date().getFullYear();
-  const anos = [];
-  for (let y = BASE_YEAR; y <= CURR_YEAR; y++) anos.push(y);
+  const anos = []; for (let y = BASE_YEAR; y <= CURR_YEAR; y++) anos.push(y);
 
   const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -429,18 +433,34 @@ function renderTabelaComparativaAnos1231248(faturas, targetId) {
 
   const yearBg = ['#fbfbff', '#f9fffb', '#fffaf5', '#f8f9ff', '#f9f7ff'];
 
+  // célula Δ (verde +, vermelho −), assume que há base (só chamada para anos > BASE_YEAR)
+  const yoyCell = (cur, prev, bg) => {
+    const diff = Math.round((Number(cur)||0) - (Number(prev)||0));
+    if (diff === 0) return `<td style="background:${bg}; text-align:center; color:#555">€0</td>`;
+    const color = diff > 0 ? '#28a745' : '#dc3545';
+    const sign  = diff > 0 ? '+' : '−';
+    return `<td style="background:${bg}; text-align:center; color:${color}"><strong>${sign} ${euroInt(Math.abs(diff))}</strong></td>`;
+  };
+
   let html = `
     <table class="media-faturacao">
       <thead>
         <tr>
           <th rowspan="2">Mês</th>
-          ${anos.map(a => `<th colspan="${mostraMedia[a] ? 2 : 1}" style="text-align:center">${a}</th>`).join('')}
+          ${anos.map(a => {
+            // Δ só a partir de 2025
+            const span = (mostraMedia[a] ? 2 : 1) + (a > BASE_YEAR ? 1 : 0);
+            return `<th colspan="${span}" style="text-align:center">${a}</th>`;
+          }).join('')}
         </tr>
         <tr>
-          ${anos.map(a => mostraMedia[a]
-            ? `<th style="text-align:center">Média</th><th style="text-align:center">Total</th>`
-            : `<th style="text-align:center">Total</th>`
-          ).join('')}
+          ${anos.map(a => {
+            const cols = [];
+            if (mostraMedia[a]) cols.push(`<th style="text-align:center">Média</th>`);
+            cols.push(`<th style="text-align:center">Total</th>`);
+            if (a > BASE_YEAR) cols.push(`<th style="text-align:center">Δ</th>`);
+            return cols.join('');
+          }).join('')}
         </tr>
       </thead>
       <tbody>
@@ -450,24 +470,30 @@ function renderTabelaComparativaAnos1231248(faturas, targetId) {
   meses.forEach((nome, i) => {
     html += `<tr><td>${nome}</td>`;
     anos.forEach((a, idx) => {
+      const bg = yearBg[idx % yearBg.length];
       const tot = totals[a][i];
       const nts = nights[a][i];
       const media = (nts > 0) ? Math.round(tot / nts) : null;
-      const bg = yearBg[idx % yearBg.length];
 
-      if (mostraMedia[a]) {
-        html += `<td style="background:${bg}; text-align:center">${media != null ? `€${media}` : '—'}</td>`;
-        html += `<td style="background:${bg}; text-align:center">€${Math.round(tot)}</td>`;
-      } else {
-        html += `<td style="background:${bg}; text-align:center">€${Math.round(tot)}</td>`;
+      if (mostraMedia[a])
+        html += `<td style="background:${bg}; text-align:center">${media != null ? euroInt(media) : '—'}</td>`;
+
+      html += `<td style="background:${bg}; text-align:center">${euroInt(tot)}</td>`;
+
+      // Δ vs ano anterior (só 2025+)
+      if (a > BASE_YEAR) {
+        const prevTot = totals[a - 1]?.[i] ?? 0;
+        html += yoyCell(tot, prevTot, bg);
       }
     });
     html += `</tr>`;
   });
 
-    // linha final única (Total e Preço médio/noite anual)
+  // linha Total (e Preço médio/noite anual) + Δ
   html += `<tr><td><strong>Total</strong></td>`;
   anos.forEach((a, idx) => {
+    const bg = yearBg[idx % yearBg.length];
+
     const totalAno = totals[a].reduce((s, v) => s + v, 0);
     const mediasMes = totals[a]
       .map((t, k) => (nights[a][k] > 0 ? t / nights[a][k] : null))
@@ -476,25 +502,33 @@ function renderTabelaComparativaAnos1231248(faturas, targetId) {
       ? Math.round(mediasMes.reduce((s, v) => s + v, 0) / mediasMes.length)
       : null;
 
-    const bg = yearBg[idx % yearBg.length];
-    if (mostraMedia[a]) {
-      html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno != null ? `€${precoMedioAno}` : '—'}</strong></td>`;
-      html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno)}</strong></td>`;
-    } else {
-      html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno)}</strong></td>`;
+    if (mostraMedia[a])
+      html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno != null ? euroInt(precoMedioAno) : '—'}</strong></td>`;
+
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno)}</strong></td>`;
+
+    if (a > BASE_YEAR) {
+      const totalPrev = totals[a - 1]?.reduce?.((s, v) => s + v, 0) ?? 0;
+      html += yoyCell(totalAno, totalPrev, bg);
     }
   });
   html += `</tr>`;
 
-  // nova linha: Média mensal (Total / 12)
+  // nova linha: Média mensal (Total / 12) + Δ
   html += `<tr><td><strong>Média mensal</strong></td>`;
   anos.forEach((a, idx) => {
     const bg = yearBg[idx % yearBg.length];
     const totalAno = totals[a].reduce((s, v) => s + v, 0);
+    const mediaMensal = totalAno / 12;
 
-    // mantém alinhamento das colunas (quando existe "Média")
     if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">—</td>`;
-    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno / 12)}</strong></td>`;
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(mediaMensal)}</strong></td>`;
+
+    if (a > BASE_YEAR) {
+      const totalPrev = totals[a - 1]?.reduce?.((s, v) => s + v, 0) ?? 0;
+      const mediaMensalPrev = totalPrev / 12;
+      html += yoyCell(mediaMensal, mediaMensalPrev, bg);
+    }
   });
   html += `</tr>`;
 

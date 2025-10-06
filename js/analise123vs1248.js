@@ -183,6 +183,9 @@ canvas.style.minWidth = '0';
 
 // ------------------------ Tabela comparativa (anos x apt) -----------------------------
 // Ordem por ano: 123 Média | 1248 Média | 123 Total | 1248 Total
+
+// ------------------------ Tabela comparativa (anos x apt) -----------------------------
+// Ordem por ano: 123 Média | 1248 Média | 123 Total | 1248 Total | Dif.
 function renderTabelaFaturacaoMensal(faturas, targetId) {
   const el = document.getElementById(targetId);
   if (!el) return;
@@ -218,6 +221,15 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
 
   const yearBg = ['#fbfbff', '#f9fffb', '#fffaf5', '#f8f9ff', '#f9f7ff'];
 
+  // helper para célula de diferença
+  const diffCell = (v123, v1248, bg) => {
+    const d = Math.abs((Number(v123)||0) - (Number(v1248)||0));
+    const who = (v123 > v1248) ? '123' : (v1248 > v123) ? '1248' : 'eq';
+    const cls = who === '123' ? 'apt-123' : who === '1248' ? 'apt-1248' : '';
+    const title = who === 'eq' ? 'Igual' : `Maior: ${who}`;
+    return `<td style="background:${bg}; text-align:center" title="${title}"><strong class="${cls}">${euroInt(d)}</strong></td>`;
+  };
+
   let html = `
     <table class="media-faturacao">
       <thead>
@@ -226,7 +238,7 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
           ${anos.map(a => {
             const cols123  = mostraMedia[a]['123']  ? 2 : 1;
             const cols1248 = mostraMedia[a]['1248'] ? 2 : 1;
-            const span = cols123 + cols1248;
+            const span = cols123 + cols1248 + 1; // +1 pela coluna Dif.
             return `<th colspan="${span}" style="text-align:center">${a}</th>`;
           }).join('')}
         </tr>
@@ -237,6 +249,7 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
             if (mostraMedia[a]['1248']) parts.push(`<th class="apt-1248" style="text-align:center">1248 Média</th>`);
             parts.push(`<th class="apt-123" style="text-align:center">123 Total</th>`);
             parts.push(`<th class="apt-1248" style="text-align:center">1248 Total</th>`);
+            parts.push(`<th style="text-align:center">Dif.</th>`); // nova coluna
             return parts.join('');
           }).join('')}
         </tr>
@@ -244,6 +257,7 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
       <tbody>
   `;
 
+  // linhas por mês
   mesesPT.forEach((nome, i) => {
     html += `<tr><td>${nome}</td>`;
     anos.forEach((a, idx) => {
@@ -258,18 +272,18 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
       const med1248 = (nts1248 > 0) ? Math.round(tot1248 / nts1248) : null;
 
       if (mostraMedia[a]['123'])
-      html += `<td style="background:${bg}; text-align:center">${med123 != null ? euroInt(med123) : '—'}</td>`;
+        html += `<td style="background:${bg}; text-align:center">${med123 != null ? euroInt(med123) : '—'}</td>`;
       if (mostraMedia[a]['1248'])
-      html += `<td style="background:${bg}; text-align:center">${med1248 != null ? euroInt(med1248) : '—'}</td>`;
+        html += `<td style="background:${bg}; text-align:center">${med1248 != null ? euroInt(med1248) : '—'}</td>`;
 
       html += `<td style="background:${bg}; text-align:center">${euroInt(tot123)}</td>`;
       html += `<td style="background:${bg}; text-align:center">${euroInt(tot1248)}</td>`;
-
+      html += diffCell(tot123, tot1248, bg); // nova célula Dif.
     });
     html += `</tr>`;
   });
 
-  // Totais e média anual
+  // linha Total (com média/noite no espaço de "Média", quando existir) + Dif.
   html += `<tr><td><strong>Total</strong></td>`;
   anos.forEach((a, idx) => {
     const bg = yearBg[idx % yearBg.length];
@@ -294,27 +308,32 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
     if (mostraMedia[a]['123'])
       html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno123 != null ? euroInt(precoMedioAno123) : '—'}</strong></td>`;
     if (mostraMedia[a]['1248'])
-      html += `<td style="background:${bg}; text-align:center"><strong>$${precoMedioAno1248 != null ? euroInt(precoMedioAno1248) : '—'}</strong></td>`;
+      html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno1248 != null ? euroInt(precoMedioAno1248) : '—'}</strong></td>`;
 
     html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno123)}</strong></td>`;
     html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno1248)}</strong></td>`;
+    html += diffCell(totalAno123, totalAno1248, bg); // Dif. anual
   });
   html += `</tr>`;
 
-  // Média mensal (totais / 12)
+  // linha Média mensal (totais/12) + Dif.
   html += `<tr><td><strong>Média mensal</strong></td>`;
   anos.forEach((a, idx) => {
     const bg = yearBg[idx % yearBg.length];
 
-    // colunas "Média" ficam vazias para manter alinhamento
+    // colunas "Média" (vazias) para alinhamento
     if (mostraMedia[a]['123'])  html += `<td style="background:${bg}; text-align:center">—</td>`;
     if (mostraMedia[a]['1248']) html += `<td style="background:${bg}; text-align:center">—</td>`;
 
     const totalAno123  = totals[a]['123'].reduce((s, v) => s + v, 0);
     const totalAno1248 = totals[a]['1248'].reduce((s, v) => s + v, 0);
 
-    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno123/12)}</strong></td>`;
-    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno1248/12)}</strong></td>`;
+    const m123  = totalAno123 / 12;
+    const m1248 = totalAno1248 / 12;
+
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(m123)}</strong></td>`;
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(m1248)}</strong></td>`;
+    html += diffCell(m123, m1248, bg); // Dif. média mensal
   });
   html += `</tr>`;
 

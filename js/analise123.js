@@ -95,12 +95,13 @@ function gerarAnaliseFaturacao(faturas) {
   
     // função auxiliar para somar valores por (ano, mes, apt)
     function somaPor(ano, mes, apt) {
-      return faturas
-        .filter(f => Number(f.ano) === Number(ano) &&
-                      Number(f.mes) === Number(mes) &&
-                      String(f.apartamento) === String(apt))
-        .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
+    return faturas
+    .filter(f => Number(f.ano) === Number(ano) &&
+                  Number(f.mes) === Number(mes) &&
+                  String(f.apartamento) === String(apt))
+    .reduce((s,f) => s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0)), 0);
     }
+
   
     // 2) construir arrays mensais
     const labels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -171,9 +172,10 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
   
  // ----------------------------------------------------------------------------> BARRAS DE PROGRESSO
 // helper: soma ano (opcionalmente por apt)
-const somaAno = (ano, apt = null) => faturas
+  const somaAno = (ano, apt = null) => faturas
   .filter(f => Number(f.ano) === Number(ano) && (!apt || String(f.apartamento) === String(apt)))
-  .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
+  .reduce((s,f) => s + _vm_totalReserva(f), 0);
+
 
 let htmlProg = '';
 
@@ -188,11 +190,13 @@ let htmlProg = '';
   );
   if (temDados) {
     const cur = faturas
-      .filter(f => Number(f.ano) === ultimoAno && Number(f.mes) === mesAtual && String(f.apartamento)==='123')
-      .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
+    .filter(f => Number(f.ano) === ultimoAno && Number(f.mes) === mesAtual && String(f.apartamento)==='123')
+    .reduce((s,f) => s + _vm_totalReserva(f), 0);
+
     const ant = faturas
-      .filter(f => Number(f.ano) === penultimoAno && Number(f.mes) === mesAtual && String(f.apartamento)==='123')
-      .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
+    .filter(f => Number(f.ano) === penultimoAno && Number(f.mes) === mesAtual && String(f.apartamento)==='123')
+    .reduce((s,f) => s + _vm_totalReserva(f), 0);
+
 
     const base  = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
     const diff  = ant - cur;
@@ -222,16 +226,13 @@ let htmlProg = '';
   const nomeMes      = obterNomeMes(prevMonth);
 
   const cur = faturas
-    .filter(f => Number(f.ano) === ultimoAno &&
-                 String(f.apartamento) === '123' &&
-                 Number(f.mes) < currentMonth)
-    .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
+  .filter(f => Number(f.ano) === ultimoAno && String(f.apartamento) === '123' && Number(f.mes) < currentMonth)
+  .reduce((s,f) => s + _vm_totalReserva(f), 0);
 
   const ant = faturas
-    .filter(f => Number(f.ano) === penultimoAno &&
-                 String(f.apartamento) === '123' &&
-                 Number(f.mes) < currentMonth)
-    .reduce((s,f) => s + Number(f.valorTransferencia || 0), 0);
+  .filter(f => Number(f.ano) === penultimoAno && String(f.apartamento) === '123' && Number(f.mes) < currentMonth)
+  .reduce((s,f) => s + _vm_totalReserva(f), 0);
+
 
   const base  = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
   const diff  = ant - cur;
@@ -292,7 +293,7 @@ function gerarHeatmapVariacao(faturas) {
         .forEach(f => {
         const ano = Number(f.ano), mes = Number(f.mes);
         if (!totais[ano]) totais[ano] = {};
-        totais[ano][mes] = (totais[ano][mes] || 0) + Number(f.valorTransferencia || 0);
+        totais[ano][mes] = (totais[ano][mes] || 0) + _vm_totalReserva(f);
     });
 
 
@@ -428,78 +429,88 @@ function renderTabelaComparativaAnos123(faturas, targetId) {
 
   const BASE_YEAR = 2024;
   const CURR_YEAR = new Date().getFullYear();
-  const anos = [];
-  for (let y = BASE_YEAR; y <= CURR_YEAR; y++) anos.push(y);
+  const anos = []; for (let y = BASE_YEAR; y <= CURR_YEAR; y++) anos.push(y);
 
   const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
-  const totals = {};
-  const nights = {};
+  const totals = {}, nights = {};
   anos.forEach(a => {
-    totals[a] = Array.from({ length: 12 }, () => 0);
-    nights[a] = Array.from({ length: 12 }, () => 0);
+    totals[a] = Array(12).fill(0);
+    nights[a] = Array(12).fill(0);
   });
 
-  // agrega só Apt 123
+  // agrega só Apt 123 (transferência + taxa Airbnb)
   faturas.forEach(f => {
     if (String(f.apartamento) !== '123') return;
     const ano = Number(f.ano), mes = Number(f.mes);
-    if (!anos.includes(ano) || !mes || mes < 1 || mes > 12) return;
-
+    if (!anos.includes(ano) || mes < 1 || mes > 12) return;
     const v = Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0);
     const n = Number(f.noites || 0);
-
     totals[ano][mes - 1] += v;
     nights[ano][mes - 1] += Number.isFinite(n) ? n : 0;
   });
 
-  // mostra "Média" se houver pelo menos um mês com noites > 0 nesse ano
   const mostraMedia = {};
   anos.forEach(a => { mostraMedia[a] = nights[a].some(x => x > 0); });
 
-  // paleta de cores clarinhas por ano
   const yearBg = ['#fbfbff', '#f9fffb', '#fffaf5', '#f8f9ff', '#f9f7ff'];
+
+  const yoyCell = (cur, prev, bg) => {
+    const diff = Math.round((Number(cur)||0) - (Number(prev)||0));
+    if (diff === 0) return `<td style="background:${bg}; text-align:center; color:#555">€0</td>`;
+    const color = diff > 0 ? '#28a745' : '#dc3545';
+    const sign  = diff > 0 ? '+' : '−';
+    return `<td style="background:${bg}; text-align:center; color:${color}"><strong>${sign} ${euroInt(Math.abs(diff))}</strong></td>`;
+  };
 
   let html = `
     <table class="media-faturacao">
       <thead>
         <tr>
           <th rowspan="2">Mês</th>
-          ${anos.map(a => `<th colspan="${mostraMedia[a] ? 2 : 1}" style="text-align:center">${a}</th>`).join('')}
+          ${anos.map(a => {
+            const span = (mostraMedia[a] ? 2 : 1) + (a > BASE_YEAR ? 1 : 0); // Δ só de 2025+
+            return `<th colspan="${span}" style="text-align:center">${a}</th>`;
+          }).join('')}
         </tr>
         <tr>
-          ${anos.map(a => mostraMedia[a]
-            ? `<th style="text-align:center">Média</th><th style="text-align:center">Total</th>`
-            : `<th style="text-align:center">Total</th>`
-          ).join('')}
+          ${anos.map(a => {
+            const cols = [];
+            if (mostraMedia[a]) cols.push(`<th style="text-align:center">Média</th>`);
+            cols.push(`<th style="text-align:center">Total</th>`);
+            if (a > BASE_YEAR) cols.push(`<th style="text-align:center">Δ</th>`);
+            return cols.join('');
+          }).join('')}
         </tr>
       </thead>
       <tbody>
   `;
 
-  // linhas por mês
   meses.forEach((nome, i) => {
     html += `<tr><td>${nome}</td>`;
     anos.forEach((a, idx) => {
+      const bg = yearBg[idx % yearBg.length];
       const tot = totals[a][i];
       const nts = nights[a][i];
       const media = (nts > 0) ? Math.round(tot / nts) : null;
-      const bg = yearBg[idx % yearBg.length];
 
-      if (mostraMedia[a]) {
-        html += `<td style="background:${bg}; text-align:center">${media != null ? `€${media}` : '—'}</td>`;
-        html += `<td style="background:${bg}; text-align:center">€${Math.round(tot)}</td>`;
-      } else {
-        html += `<td style="background:${bg}; text-align:center">€${Math.round(tot)}</td>`;
+      if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">${media != null ? euroInt(media) : '—'}</td>`;
+      html += `<td style="background:${bg}; text-align:center">${euroInt(tot)}</td>`;
+
+      if (a > BASE_YEAR) {
+        const prevTot = totals[a - 1]?.[i] ?? 0;
+        html += yoyCell(tot, prevTot, bg);
       }
     });
     html += `</tr>`;
   });
 
-    // linha final única: Total (e Preço médio/noite na coluna "Média" quando existir)
+  // Total anual + Δ
   html += `<tr><td><strong>Total</strong></td>`;
   anos.forEach((a, idx) => {
+    const bg = yearBg[idx % yearBg.length];
     const totalAno = totals[a].reduce((s, v) => s + v, 0);
+
     const mediasMes = totals[a]
       .map((t, k) => (nights[a][k] > 0 ? t / nights[a][k] : null))
       .filter(v => v != null);
@@ -507,33 +518,39 @@ function renderTabelaComparativaAnos123(faturas, targetId) {
       ? Math.round(mediasMes.reduce((s, v) => s + v, 0) / mediasMes.length)
       : null;
 
-    const bg = yearBg[idx % yearBg.length];
-    if (mostraMedia[a]) {
-      html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno != null ? `€${precoMedioAno}` : '—'}</strong></td>`;
-      html += `<td style="background:${bg}; text-align:center"><strong>€${Math.round(totalAno)}</strong></td>`;
-    } else {
-      html += `<td style="background:${bg}; text-align:center"><strong>€${Math.round(totalAno)}</strong></td>`;
+    if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center"><strong>${precoMedioAno != null ? euroInt(precoMedioAno) : '—'}</strong></td>`;
+    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(totalAno)}</strong></td>`;
+
+    if (a > BASE_YEAR) {
+      const totalPrev = totals[a - 1]?.reduce?.((s, v) => s + v, 0) ?? 0;
+      html += yoyCell(totalAno, totalPrev, bg);
     }
   });
   html += `</tr>`;
 
-  // nova linha: Média mensal (Total / 12)
+  // Média mensal (Total/12) + Δ
   html += `<tr><td><strong>Média mensal</strong></td>`;
   anos.forEach((a, idx) => {
     const bg = yearBg[idx % yearBg.length];
     const totalAno = totals[a].reduce((s, v) => s + v, 0);
     const mediaMensal = totalAno / 12;
 
-    if (mostraMedia[a])
-      html += `<td style="background:${bg}; text-align:center">—</td>`;
-
+    if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">—</td>`;
     html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(mediaMensal)}</strong></td>`;
+
+    if (a > BASE_YEAR) {
+      const totalPrev = totals[a - 1]?.reduce?.((s, v) => s + v, 0) ?? 0;
+      const mediaMensalPrev = totalPrev / 12;
+      html += yoyCell(mediaMensal, mediaMensalPrev, bg);
+    }
   });
   html += `</tr>`;
 
   html += `</tbody></table><hr class="divider">`;
   el.innerHTML = html;
 }
+
+
 
 
 // ---------------------------------------------------------------> Gráfico valor noite
