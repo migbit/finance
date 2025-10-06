@@ -9,7 +9,30 @@
   <link rel="stylesheet" href="../css/styles.css" />
   <link rel="icon" href="../favicon.ico" type="image/x-icon" />
 </head>
+
+<style>
+  /* Igualar largura à da página 123vs1248 */
+  body[data-page="dca"] main {
+    max-width: none !important;
+    width: 96vw !important;
+  }
+
+  body[data-page="dca"] .report-section,
+  body[data-page="dca"] .viz-card,
+  body[data-page="dca"] .table-wrap {
+    width: 100% !important;
+    max-width: 1200px !important;
+    margin: 0 auto;
+  }
+
+  /* (opcional) espaço uniforme entre seções */
+  body[data-page="dca"] .report-section {
+    margin-bottom: 1.5rem;
+  }
+</style>
+
 <body>
+  <body data-page="dca"></body>
   <header>
     <div class="menu-icon" id="menu-icon">&#9776;</div>
     <nav id="nav-menu">
@@ -35,70 +58,64 @@
     </nav>
   </header>
 
-  <main>
-    <!-- Parâmetros / Controlo -->
-    <section class="report-section">
-  <h1 class="page-title">DCA · Trade Republic</h1>
-   <h2>Parâmetros</h2>
+<main>
+  <!-- Parâmetros -->
+  <section class="report-section">
+    <div class="viz-card">
+      <h4>Parâmetros</h4>
 
-  <table class="table-dca" id="params-table">
-       <thead>
-  <tr>
-    <th rowspan="2" class="num">Data final</th>
-    <th rowspan="2" class="num">SWDA %</th>
-    <th rowspan="2" class="num">AGGH %</th>
-    <th colspan="3" style="text-align:center">Cenários</th>
-    <th rowspan="2" style="width:140px">Ações</th>
-  </tr>
-  <tr>
-    <th class="num">Pessimista (%)</th>
-    <th class="num">Realista (%)</th>
-    <th class="num">Otimista (%)</th>
-  </tr>
-</thead>
+      <div class="table-wrap">
+        <table class="table-dca" id="params-table">
+          <thead>
+            <tr>
+              <th rowspan="2" class="num">Data final</th>
+              <th rowspan="2" class="num">SWDA %</th>
+              <th rowspan="2" class="num">AGGH %</th>
+              <th colspan="3" style="text-align:center">Cenários</th>
+              <th rowspan="2" style="width:140px">Ações</th>
+            </tr>
+            <tr>
+              <th class="num">Pessimista (%)</th>
+              <th class="num">Realista (%)</th>
+              <th class="num">Otimista (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="num"><input id="end-date" type="month" /></td>
+              <td class="num"><input id="pct-swda" type="number" min="0" max="100" step="0.01" /></td>
+              <td class="num"><input id="pct-aggh" type="number" min="0" max="100" step="0.01" /></td>
+              <td class="num"><input id="rate-pes" type="number" step="0.01" /></td>
+              <td class="num"><input id="rate-real" type="number" step="0.01" /></td>
+              <td class="num"><input id="rate-otim" type="number" step="0.01" /></td>
+              <td style="text-align:right">
+                <button id="btn-save-params" type="button">Editar/Gravar</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
-       <tbody>
-     <tr>
-       <td class="num">
-         <input id="end-date" type="month" />
-       </td>
-       <td class="num">
-         <input id="pct-swda" type="number" min="0" max="100" step="0.01" />
-       </td>
-        <td class="num">
-         <input id="pct-aggh" type="number" min="0" max="100" step="0.01" />
-       </td>
-       <td class="num">
-          <input id="rate-pes" type="number" step="0.01" />
-       </td>
-       <td class="num">
-         <input id="rate-real" type="number" step="0.01" />
-        </td>
-        <td class="num">
-          <input id="rate-otim" type="number" step="0.01" />
-        </td>
-        <td style="text-align:right">
-      <button id="btn-save-params" type="button">Editar/Gravar</button>
-    </td>
-  </tr>
-</tbody>
+  <!-- Registo mensal -->
+  <section class="report-section">
+    <div class="viz-card">
+      <h4>Registo Mensal</h4>
 
-  </table>
-</section>
-
-    <!-- Tabela principal -->
-    <section class="report-section">
-      <h2>Registo Mensal</h2>
       <div class="form-actions" style="justify-content:flex-end; gap:.5rem; margin-bottom:.5rem">
         <button id="toggle-others" type="button">Expandir anos</button>
       </div>
-      <div id="dca-table-wrap"></div>
-    </section>
-  </main>
 
- <footer class="app-footer">
+      <div id="dca-table-wrap"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="app-footer">
   <p>© 2025 OM&MT</p>
-</footer>er>
+</footer>
+
 
   <script type="module" src="../js/dca.js"></script>
   <script>

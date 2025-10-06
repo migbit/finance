@@ -66,12 +66,19 @@ function obterNomeMes(numeroMes) {
   return nomes[n - 1];
 }
 
-function formatEuro(num) {
-  return '€' + Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-}
+  // Formata números em euros com separador de milhares (pt-PT)
+  const euroInt = (v) => {
+  const num = Math.round(Number(v) || 0);
+  return num.toLocaleString('pt-PT', {
+    maximumFractionDigits: 0,
+    useGrouping: true
+  })
+  .replace(/\./g, ' ') + ' €';
+  };
 
-// Formata inteiros em € (pt-PT)
-const euroInt = (v) => '€' + new Intl.NumberFormat('pt-PT').format(Math.round(Number(v) || 0));
+  // Alias para retrocompatibilidade
+  const formatEuro = euroInt;
+
 
 function gerarAnaliseFaturacao(faturas) {
 
@@ -1073,7 +1080,7 @@ function renderTabelaHospedes1231248(faturas, targetId) {
     categorias.forEach(h => {
       const { n, v } = mapa[i][h];
       const showV = (h <= 6) ? '' : euroInt(v);
-      html += `<td style="text-align:center">${n}</td><td style="text-align:right">${showV}</td>`;
+      html += `<td style="text-align:center">${n}</td><td style="text-align:center">${showV}</td>`;
       totaisAnoAtual.porHosp[h].n += n;
       totaisAnoAtual.porHosp[h].v += v;
       nMesTotal += n; vMesTotal += v;
@@ -1082,7 +1089,7 @@ function renderTabelaHospedes1231248(faturas, targetId) {
     totaisAnoAtual.total.n += nMesTotal;
     totaisAnoAtual.total.v += vMesTotal;
 
-    html += `<td style="text-align:center"><strong>${nMesTotal}</strong></td><td style="text-align:right"><strong>${euroInt(vMesTotal)}</strong></td>`;
+    html += `<td style="text-align:center"><strong>${nMesTotal}</strong></td><td style="text-align:center"><strong>${euroInt(vMesTotal)}</strong></td>`;
     html += `</tr>`;
   });
 
@@ -1092,10 +1099,10 @@ function renderTabelaHospedes1231248(faturas, targetId) {
     ${categorias.map(h => {
       const t = totaisAnoAtual.porHosp[h];
       const showV = (h <= 6) ? '' : euroInt(t.v);
-      return `<td style="text-align:center"><strong>${t.n}</strong></td><td style="text-align:right"><strong>${showV}</strong></td>`;
+      return `<td style="text-align:center"><strong>${t.n}</strong></td><td style="text-align:center"><strong>${showV}</strong></td>`;
     }).join('')}
     <td style="text-align:center"><strong>${totaisAnoAtual.total.n}</strong></td>
-    <td style="text-align:right"><strong>${euroInt(totaisAnoAtual.total.v)}</strong></td>
+    <td style="text-align:center"><strong>${euroInt(totaisAnoAtual.total.v)}</strong></td>
   </tr>`;
 
   // ---------- 2) Totais de ANOS ANTERIORES (≥ 2025) ----------
@@ -1131,10 +1138,10 @@ function renderTabelaHospedes1231248(faturas, targetId) {
       ${categorias.map(h => {
         const t = porHosp[h];
         const showV = (h <= 6) ? '' : euroInt(t.v);
-        return `<td style="text-align:center"><strong>${t.n}</strong></td><td style="text-align:right"><strong>${showV}</strong></td>`;
+        return `<td style="text-align:center"><strong>${t.n}</strong></td><td style="text-align:center"><strong>${showV}</strong></td>`;
       }).join('')}
       <td style="text-align:center"><strong>${totN}</strong></td>
-      <td style="text-align:right"><strong>${euroInt(totV)}</strong></td>
+      <td style="text-align:center"><strong>${euroInt(totV)}</strong></td>
     </tr>`;
   });
 

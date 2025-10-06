@@ -21,10 +21,16 @@ function setTipoTransacao(tipo) {
   btnSaida.classList.toggle('btn-active',   tipo === 'Saída');
 }
 
-// Formatação numérica
-function formatNumber(number) {
-  return number.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2, style: 'decimal' });
+// Formatação € com separador de milhares (PT) e sem casas decimais
+function formatEuro(v) {
+  const num = Math.round(Number(v) || 0);
+  return num.toLocaleString('pt-PT', {
+    maximumFractionDigits: 0,
+    useGrouping: true
+  })
+  .replace(/\./g, ' ') + ' €';
 }
+
 
 // Submeter transação
 caixaForm.addEventListener('submit', async (e) => {
@@ -98,13 +104,13 @@ async function carregarRelatorio() {
       const date = t._date.toLocaleDateString('pt-PT');
       const v = t._valor;
       const valorClass = v >= 0 ? 'valor-positivo' : 'valor-negativo';
-      const formattedValor = formatNumber(Math.abs(v));
-      return `
+      const formattedValor = formatEuro(Math.abs(v));
+        return `
         <tr data-id="${t.id}">
-          <td>${date}</td>
-          <td>${t.tipo}</td>
-          <td class="${valorClass} formatted-number">${v >= 0 ? '+' : '-'}€${formattedValor}</td>
-          <td>${rowActions(t.id)}</td>
+        <td>${date}</td>
+        <td>${t.tipo}</td>
+        <td class="${valorClass} formatted-number">${v >= 0 ? '' : '−'}${formattedValor}</td>
+        <td>${rowActions(t.id)}</td>
         </tr>`;
     };
 
@@ -116,8 +122,8 @@ async function carregarRelatorio() {
 
     const totalDiv = (label, total) => {
       const totalClass = total >= 0 ? 'valor-positivo' : 'valor-negativo';
-      const formatted = formatNumber(Math.abs(total));
-      return `<div class="total-caixa centered">${label}: <span class="${totalClass} formatted-number">${total >= 0 ? '+' : '-'}€${formatted}</span></div>`;
+      const formatted = formatEuro(Math.abs(total));
+      return `<div class="total-caixa centered">${label}: <span class="${totalClass} formatted-number">${total >= 0 ? '' : '−'}${formatted}</span></div>`;
     };
 
     const renderCaixa = (cont, dados, label = 'Total') => {

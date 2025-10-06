@@ -82,6 +82,8 @@ function entrarEmModoEdicao(f) {
   setNum('criancas', (typeof f.hospedesCriancas === 'number' ? f.hospedesCriancas : ''));
   setNum('bebes', (typeof f.hospedesBebes === 'number' ? f.hospedesBebes : ''));
 
+  calcAndSetPrecoMedioNoite();
+
   // Foco inicial
   const first = document.getElementById('apartamento');
   if (first) first.focus();
@@ -101,6 +103,23 @@ function sairDoModoEdicao() {
 if (cancelarEdicaoBtn) {
   cancelarEdicaoBtn.addEventListener('click', sairDoModoEdicao);
 }
+
+function calcAndSetPrecoMedioNoite() {
+  const vTransf = parseFloat(document.getElementById('valor-transferencia')?.value || '0') || 0;
+  const vTaxa   = parseFloat(document.getElementById('taxa-airbnb')?.value || '0') || 0;
+  const noites  = parseInt(document.getElementById('noites')?.value || '', 10);
+
+  const out = document.getElementById('preco-medio-noite');
+  if (!out) return;
+
+  if (Number.isInteger(noites) && noites > 0) {
+    const val = (vTransf + vTaxa) / noites;
+    out.value = val.toFixed(2);
+  } else {
+    out.value = ''; // sem noites, limpamos
+  }
+}
+
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
@@ -124,7 +143,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         out.value = '';
       }
+      calcAndSetPrecoMedioNoite();
     });
+  });
+
+  // Atualizar Preço Médio/Noite ao escrever valores
+  ['valor-transferencia','taxa-airbnb','noites'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', calcAndSetPrecoMedioNoite);
   });
 
   // Toggle anos anteriores no relatório
@@ -303,19 +329,26 @@ function gerarRelatorioFaturacao(faturas) {
         const grupoJSON = JSON.stringify(grupo).replace(/"/g, '&quot;');
 
         html += `
-            <tr>
-                <td>${ano}</td>
-                <td>${obterNomeMes(parseInt(mes))}</td>
-                <td>${grupo.map(f => f.numeroFatura).join(', ')}</td>
-                <td>€${totalTransferencia.toFixed(2)}</td>
-                <td>€${totalTaxaAirbnb.toFixed(2)}</td>
-                <td>€${totalFatura.toFixed(2)}</td>
-                <td>
-                    <button onclick="mostrarDetalhesFaturacao('${key}', this)" data-detalhes="${grupoJSON}">Ver Detalhes</button>
-                    <button onclick="exportarPDFFaturacao('${key}', '${grupoJSON}')">Exportar PDF</button>
-                </td>
-            </tr>
-        `;
+        <tr>
+         <td>${ano}</td>
+          <td>${obterNomeMes(parseInt(mes))}</td>
+          <td>${grupo.map(f => f.numeroFatura).join(', ')}</td>
+          <td>${euroInt(totalTransferencia)}</td>
+         <td>${euroInt(totalTaxaAirbnb)}</td>
+         <td>${euroInt(totalFatura)}</td>
+
+         <td class="acoes">
+             <div class="btn-col">
+                <button onclick="mostrarDetalhesFaturacao('${key}', this)" data-detalhes="${grupoJSON}">
+                  Ver Detalhes
+               </button>
+              <button onclick="exportarPDFFaturacao('${key}', '${grupoJSON}')">
+                 Exportar PDF
+              </button>
+             </div>
+             </td>
+           </tr>
+          `;
     });
 
     html += '</tbody></table>';
@@ -363,6 +396,20 @@ function obterNomeMes(numeroMes) {
     ];
     return meses[numeroMes - 1] || 'Mês Inválido';
 }
+
+// Formata números em euros com 2 casas decimais e separador de milhares (PT)
+function euroInt(v) {
+  const num = Number(v) || 0;
+  return num.toLocaleString('pt-PT', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: true
+  }).replace(/\./g, ' ') + ' €';
+}
+
+// garantir que o campo fica preenchido se noites > 0
+calcAndSetPrecoMedioNoite();
+
 
 // Funções de Detalhes e Exportação
 window.mostrarDetalhesFaturacao = function(key, button) {
@@ -486,18 +533,18 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
       <tr>
         <td>${dataStr}</td>
         <td>${d.numeroFatura || '—'}</td>
-        <td>€${Number(d.valorTransferencia || 0).toFixed(2)}</td>
-        <td>€${Number(d.taxaAirbnb || 0).toFixed(2)}</td>
-        <td>€${total.toFixed(2)}</td>
+        <td>${euroInt(d.valorTransferencia || 0)}</td>
+        <td>${euroInt(d.taxaAirbnb || 0)}</td>
+        <td>${euroInt(total)}</td>
         <td>${toDDMM(d.checkIn)}</td>
         <td>${toDDMM(d.checkOut)}</td>
         <td>${(typeof d.noites === 'number') ? d.noites : '—'}</td>
         <td>${
           (typeof d.noites === 'number' && d.noites > 0)
-            ? ((Number(d.valorTransferencia || 0) + Number(d.taxaAirbnb || 0)) / d.noites).toFixed(2) + ' €'
-            : '—'
+           ? euroInt((Number(d.valorTransferencia || 0) + Number(d.taxaAirbnb || 0)) / d.noites)
+           : '—'
         }</td>
-        <td>${taxaLimpeza != null ? '€' + taxaLimpeza.toFixed(2) : '—'}</td>     <!-- Limp. -->
+        <td>${taxaLimpeza != null ? euroInt(taxaLimpeza) : '—'}</td>
         <td>${d.hospedesAdultos ?? '—'}</td>   <!-- A -->
         <td>${d.hospedesCriancas ?? '—'}</td>  <!-- C -->
         <td>${d.hospedesBebes ?? '—'}</td>     <!-- B -->
@@ -548,98 +595,122 @@ window.exportarPDFFaturacao = function(key, grupoJson) {
       doc.setFontSize(16);
       doc.text(`Relatório de Faturação - ${meses[mes-1]} ${ano}`, 105, 15, { align: 'center' });
 
-      // --- Cabeçalho de 7 colunas ---
+      // --- Cabeçalho de 7 colunas (mais compacto) ---
       const headers = [
         'Fatura Nº','Data','Transferência','Taxa Airbnb','Base','IVA (€)','Total (€)'
-      ];
-      const xPos = [2,32,62,92,122,152,182];
-      const wCol = 30;
-      let y = 30;
+        ];
 
-      doc.setFontSize(12);
-      doc.setFont('helvetica','bold');
-      headers.forEach((h,i) => {
-        const tw = doc.getStringUnitWidth(h)*doc.internal.getFontSize()/doc.internal.scaleFactor;
+        // encolhemos a largura de cada coluna e aumentamos as margens
+        const LEFT = 8;                 // margem esquerda maior
+        const wCol = 27;                // largura de cada coluna (antes: 30)
+        const xPos = Array.from({length:7}, (_,i) => LEFT + i*wCol);
+
+        let y = 28;                     // sobe ligeiramente o cabeçalho
+        const ROW_H = 8;                // altura de linha mais compacta
+
+        doc.setFontSize(11);            // cabeçalho ligeiramente menor (antes: 12)
+        doc.setFont('helvetica','bold');
+       headers.forEach((h,i) => {
+       const tw = doc.getStringUnitWidth(h)*doc.internal.getFontSize()/doc.internal.scaleFactor;
         doc.text(h, xPos[i] + (wCol - tw)/2, y);
       });
+
 
       // --- separar M… vs CX… ---
       const mItems  = grupo.filter(f => f.numeroFatura.startsWith('M'));
       const cxItems = grupo.filter(f => !f.numeroFatura.startsWith('M'));
 
       // --- linhas M… + totais ---
-      let sumT=0, sumTax=0, sumB=0, sumI=0, sumTot=0;
-      doc.setFont('helvetica','normal');
-      y += 10;
-      mItems.forEach(f => {
-        const dataStr = new Date(f.timestamp.seconds*1000).toLocaleDateString();
-        const total     = f.valorTransferencia + f.taxaAirbnb;
-        const base      = total / 1.06;
-        const iva       = total - base;
+       let sumT=0, sumTax=0, sumB=0, sumI=0, sumTot=0;
+       doc.setFont('helvetica','normal');
+       doc.setFontSize(10);     // corpo mais pequeno para caber melhor
+       y += ROW_H;
 
-        sumT   += f.valorTransferencia;
-        sumTax += f.taxaAirbnb;
-        sumB   += base;
-        sumI   += iva;
-        sumTot += total;
+       mItems.forEach((f, idx) => {
+       const dataStr = new Date(f.timestamp.seconds*1000).toLocaleDateString();
+       const total   = f.valorTransferencia + f.taxaAirbnb;
+       const base    = total / 1.06;
+       const iva     = total - base;
 
-        const vals = [
-          f.numeroFatura,
-          dataStr,
-          `€${f.valorTransferencia.toFixed(2)}`,
-          `€${f.taxaAirbnb.toFixed(2)}`,
-          `€${base.toFixed(2)}`,
-          `€${iva.toFixed(2)}`,
-          `€${total.toFixed(2)}`
-        ];
-        vals.forEach((txt,i) => {
+       sumT   += f.valorTransferencia;
+       sumTax += f.taxaAirbnb;
+       sumB   += base;
+       sumI   += iva;
+       sumTot += total;
+
+       // sombreado linha sim/linha não (cinzento muito suave)
+       if (idx % 2 === 1) {
+         doc.setFillColor(245,245,245);
+          // retângulo por trás da linha (toda a largura da tabela)
+         doc.rect(xPos[0], y - (ROW_H - 3), wCol * 7, ROW_H, 'F');
+       }
+
+       const vals = [
+         f.numeroFatura,
+         dataStr,
+         euroInt(f.valorTransferencia),
+         euroInt(f.taxaAirbnb),
+         euroInt(base),
+         euroInt(iva),
+         euroInt(total)
+       ];
+
+       vals.forEach((txt,i) => {
           const tw = doc.getStringUnitWidth(txt)*doc.internal.getFontSize()/doc.internal.scaleFactor;
-          doc.text(txt, xPos[i] + (wCol - tw)/2, y);
-        });
-        y += 10;
+         doc.text(txt, xPos[i] + (wCol - tw)/2, y);
+       });
+
+       y += ROW_H;
       });
 
       // totais linha
       doc.setFont('helvetica','bold');
+      doc.setFontSize(10);
       const totalVals = [
         'Totais','',
-        `€${sumT.toFixed(2)}`,
-        `€${sumTax.toFixed(2)}`,
-        `€${sumB.toFixed(2)}`,
-        `€${sumI.toFixed(2)}`,
-        `€${sumTot.toFixed(2)}`
+        euroInt(sumT),
+        euroInt(sumTax),
+        euroInt(sumB),
+        euroInt(sumI),
+        euroInt(sumTot)
       ];
       totalVals.forEach((txt,i) => {
         const tw = doc.getStringUnitWidth(txt)*doc.internal.getFontSize()/doc.internal.scaleFactor;
         doc.text(txt, xPos[i] + (wCol - tw)/2, y);
       });
+      y += ROW_H;  // dá uma folga antes da secção CX
+
+      
 
       // --- CX entries at bottom, only Nº / Data / Total ---
       const pageH = doc.internal.pageSize.getHeight();
       let yCX = pageH - 20;
       doc.setFont('helvetica','normal');
+      doc.setFontSize(10);
       cxItems.forEach(f => {
-        const dataStr = new Date(f.timestamp.seconds*1000).toLocaleDateString();
+       const dataStr = new Date(f.timestamp.seconds*1000).toLocaleDateString();
         const total   = f.valorTransferencia + f.taxaAirbnb;
-        // Nº
-        {
-          const txt = f.numeroFatura;
-          const tw  = doc.getStringUnitWidth(txt)*doc.internal.getFontSize()/doc.internal.scaleFactor;
-          doc.text(txt, xPos[0] + (wCol - tw)/2, yCX);
+
+       // Nº
+       {
+         const txt = f.numeroFatura;
+         const tw  = doc.getStringUnitWidth(txt)*doc.internal.getFontSize()/doc.internal.scaleFactor;
+         doc.text(txt, xPos[0] + (wCol - tw)/2, yCX);
         }
-        // Data
+       // Data
         {
-          const tw  = doc.getStringUnitWidth(dataStr)*doc.internal.getFontSize()/doc.internal.scaleFactor;
-          doc.text(dataStr, xPos[1] + (wCol - tw)/2, yCX);
+         const tw  = doc.getStringUnitWidth(dataStr)*doc.internal.getFontSize()/doc.internal.scaleFactor;
+         doc.text(dataStr, xPos[1] + (wCol - tw)/2, yCX);
         }
         // Total
         {
-          const txt = `€${total.toFixed(2)}`;
-          const tw  = doc.getStringUnitWidth(txt)*doc.internal.getFontSize()/doc.internal.scaleFactor;
-          doc.text(txt, xPos[6] + (wCol - tw)/2, yCX);
+         const txt = euroInt(total);
+         const tw  = doc.getStringUnitWidth(txt)*doc.internal.getFontSize()/doc.internal.scaleFactor;
+         doc.text(txt, xPos[6] + (wCol - tw)/2, yCX);
         }
-        yCX += 10;
+       yCX += ROW_H;
       });
+
 
       // salvar
       doc.save(`relatorio-faturacao-${ano}-${meses[mes-1]}.pdf`);

@@ -893,38 +893,46 @@ table:not(.grid) th{
   --g5:#f5fbf5;  /* Juro */
 }
 
-/* 1) Mês | Inv. | Res. Total (€/%) */
+/* 1) Mês | Inv. */
 .table-dca tbody td:nth-child(1),
-.table-dca tbody td:nth-child(2),
-.table-dca tbody td:nth-child(3){
-  background: var(--g1);
-}
+.table-dca tbody td:nth-child(2){ background: var(--g1); }
 
-/* 2) SWDA: Inv. | Atual | Res. */
+/* 2) SWDA: 3–5 */
+.table-dca tbody td:nth-child(3),
 .table-dca tbody td:nth-child(4),
-.table-dca tbody td:nth-child(5),
-.table-dca tbody td:nth-child(6){
-  background: var(--g2);
-}
+.table-dca tbody td:nth-child(5){ background: var(--g2); }
 
-/* 3) AGGH: Inv. | Atual | Res. */
+/* 3) AGGH: 6–8 */
+.table-dca tbody td:nth-child(6),
 .table-dca tbody td:nth-child(7),
-.table-dca tbody td:nth-child(8),
-.table-dca tbody td:nth-child(9){
-  background: var(--g3);
-}
+.table-dca tbody td:nth-child(8){ background: var(--g3); }
 
-/* 4) Cenários (€): Atual | Pes. | Real. | Ot.  (Atual a bold) */
+/* 4) Res. Total (coluna 9) – cor distinta das restantes */
+.table-dca tbody td:nth-child(9){ background: #fcdbdb; } /* ou #fff se preferires branco */
+
+/* 5) Cenários (€): 10–13 (Atual + Pes + Real + Ot) */
 .table-dca tbody td:nth-child(10),
 .table-dca tbody td:nth-child(11),
 .table-dca tbody td:nth-child(12),
-.table-dca tbody td:nth-child(13){
-  background: var(--g4);
-}
-.table-dca tbody td:nth-child(10){ font-weight: 600; } /* Atual */
+.table-dca tbody td:nth-child(13){ background: var(--g4); }
 
-/* 5) Juro */
+/* 6) Juro (coluna 14) */
 .table-dca tbody td:nth-child(14){ background: var(--g5); }
+
+
+
+/* Centrar JURO (header + célula + input) */
+.table-dca thead th:nth-child(14),
+.table-dca tbody td:nth-child(14){ text-align: center !important; }
+
+.table-dca tbody td:nth-child(14) input {
+  display: block;          /* permite usar margin auto */
+  margin: 0 auto;          /* centra o próprio input */
+  text-align: center !important;  /* centra o texto dentro do input */
+  width: 8ch;              /* igual ao resto das células numéricas */
+  height: 32px; line-height: 32px;
+}
+
 
 /* Inputs alinhados e consistentes (mantém leve) */
 .table-dca input.cell{
@@ -1143,4 +1151,53 @@ body[data-page="analise123vs1248"] .chart-wrap {
   border-radius: 0;     /* remove cantos arredondados */
   box-shadow: none;     /* remove sombra */
   position: static;     /* garante que não fica fixo */
+}
+
+/* IVA Estrangeiro */
+#iva-estrangeiro-tri td, #iva-estrangeiro-tri th { text-align: center; }
+#iva-more-btn { margin-top: .25rem; }
+
+#iva-estrangeiro-form input{
+  height: 36px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+}
+
+/* Res. Total (€/%) – mesmo fundo do cabeçalho principal */
+.table-dca th.res-total-block {
+  white-space: pre-line;        /* permite quebra de linha */
+  text-align: center;           /* centra horizontalmente */
+  vertical-align: middle;       /* centra verticalmente */
+  background: var(--color-primary) !important; /* mesma cor do header principal */
+  color: #fff !important;       /* texto branco */
+  font-weight: 700;
+}
+
+/* Coluna de AÇÕES com botões respiráveis */
+#relatorio-faturacao td.acoes {
+  padding-right: 12px;               /* afasta da borda direita */
+  vertical-align: middle;            /* alinha com a linha */
+}
+
+#relatorio-faturacao td.acoes .btn-col {
+  display: flex;
+  flex-direction: column;            /* empilha verticalmente */
+  align-items: flex-end;             /* encosta à direita mas com espaço */
+  gap: 8px;                          /* espaço entre os botões */
+}
+
+/* Botões mais confortáveis ao toque */
+#relatorio-faturacao td.acoes .btn-col button {
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+/* Em ecrãs pequenos, põe os botões lado a lado com espaço */
+@media (max-width: 680px) {
+  #relatorio-faturacao td.acoes .btn-col {
+    flex-direction: row;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
 }

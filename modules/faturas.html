@@ -10,9 +10,33 @@
     <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
     <link rel="manifest" href="../manifest.json">
     <meta name="theme-color" content="#000000">
+    <style>
+  /* Igualar largura ao layout expandido da 123 vs 1248 */
+  body[data-page="faturas"] main {
+    max-width: none !important;
+    width: 96vw !important;
+  }
+
+  /* Garantir que os blocos principais ficam centrados e alinhados */
+  body[data-page="faturas"] .form-section,
+  body[data-page="faturas"] .report-section,
+  body[data-page="faturas"] .relatorio-container {
+    width: 100% !important;
+    max-width: 1400px !important; /* igual à analise123vs1248 */
+    margin: 0 auto;
+  }
+
+  /* Espaço consistente entre secções */
+  body[data-page="faturas"] .form-section,
+  body[data-page="faturas"] .report-section {
+    margin-bottom: 2rem;
+  }
+</style>
+
 
 </head>
-<body>
+<body data-page="faturas">
+
     <header>
         <h1>Faturas</h1>
         

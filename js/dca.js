@@ -11,7 +11,15 @@ import {
 const $  = (s,ctx=document)=>ctx.querySelector(s);
 const $$ = (s,ctx=document)=>Array.from(ctx.querySelectorAll(s));
 const pad = (n)=> String(n).padStart(2,'0');
-const toEUR = (v)=> new Intl.NumberFormat('pt-PT',{style:'currency',currency:'EUR'}).format(v||0);
+// Formata em euros no estilo PT (sem casas decimais, separador espaço)
+const toEUR = (v) => {
+  const num = Math.round(Number(v) || 0);
+  return num.toLocaleString('pt-PT', {
+    maximumFractionDigits: 0,
+    useGrouping: true
+  })
+  .replace(/\./g, ' ') + ' €';
+};
 const asNum = (v)=> {
   if (v === '' || v === null || v === undefined) return null;
   const n = Number(v);
@@ -182,36 +190,42 @@ function renderTable(rows){
     table.className = 'table-dca';
 
     // Cabeçalho agrupado — Cenários (€) começa por "Atual" (valor total = SWDA+AGGH+Juro)
-    const theadHTML = `
-      <thead>
-        <tr>
-          <th rowspan="2">Mês</th>
-          <th rowspan="2" class="num">Inv.</th>
-          <th rowspan="2" class="num">Res. Total (€/%)</th>
+const theadHTML = `
+  <thead>
+    <tr>
+      <th rowspan="2">Mês</th>
+      <th rowspan="2" class="num">Inv.</th>
 
-          <th colspan="3" class="swda-block cenarios">SWDA</th>
-          <th colspan="3" class="aggh-block cenarios">AGGH</th>
-          <th colspan="4" class="cenarios">Cenários (€)</th>
+      <th colspan="3" class="swda-block cenarios">SWDA</th>
+      <th colspan="3" class="aggh-block cenarios">AGGH</th>
 
-          <th rowspan="2" class="num">Juro</th>
-          <th rowspan="2">Ações</th>
-        </tr>
-        <tr>
-          <th class="num swda-block">Inv.</th>
-          <th class="num swda-block">Atual</th>
-          <th class="num swda-block">Res.</th>
+      <th rowspan="2" class="num res-total-block">
+        Res.<br>Total<br>(€/%) 
+      </th>
 
-          <th class="num aggh-block">Inv.</th>
-          <th class="num aggh-block">Atual</th>
-          <th class="num aggh-block">Res.</th>
+      <th colspan="4" class="cenarios">Cenários (€)</th>
 
-          <th class="num">Atual</th>
-          <th class="num">Pes.</th>
-          <th class="num">Real.</th>
-          <th class="num">Ot.</th>
-        </tr>
-      </thead>
-    `;
+      <th rowspan="2" class="num">Juro</th>
+      <th rowspan="2">Ações</th>
+    </tr>
+    <tr>
+      <th class="num swda-block">Inv.</th>
+      <th class="num swda-block">Atual</th>
+      <th class="num swda-block">Res.</th>
+
+      <th class="num aggh-block">Inv.</th>
+      <th class="num aggh-block">Atual</th>
+      <th class="num aggh-block">Res.</th>
+
+      <th class="num">Atual</th>
+      <th class="num">Pes.</th>
+      <th class="num">Real.</th>
+      <th class="num">Ot.</th>
+    </tr>
+  </thead>
+`;
+
+
 
     table.innerHTML = theadHTML + '<tbody></tbody>';
     const tbody = table.querySelector('tbody');
@@ -372,7 +386,7 @@ $('#btn-save-params')?.addEventListener('click', async ()=>{
 const style = document.createElement('style');
 style.textContent = `
 .table-dca th{ white-space:pre-line; }
-.table-dca .num{ text-align:right; }
+.table-dca .num{ text-align:center; }
 .table-dca .pos{ color:#0a7f2e; font-weight:600; }
 .table-dca .neg{ color:#b00020; font-weight:600; }
 .table-dca input.cell{ width:9ch; text-align:center; }

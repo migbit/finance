@@ -203,7 +203,7 @@ let htmlProg = '';
     const pct   = Math.round(Math.abs(diff) / base * 100);
     const lbl   = diff > 0 ? `-${pct}%` : `+${pct}%`;
     const cor   = diff > 0 ? '#dc3545' : '#28a745';
-    const texto = diff > 0 ? `Faltam €${diff.toFixed(2)}` : `Excedeu €${(-diff).toFixed(2)}`;
+    const texto = diff > 0 ? `Faltam ${euroInt(diff)}` : `Excedeu ${euroInt(-diff)}`;
 
     htmlProg += `
       <div class="comparacao-item">
@@ -239,7 +239,7 @@ let htmlProg = '';
   const pct   = Math.min(100, Math.round(Math.abs(diff) / base * 100));
   const lbl   = diff > 0 ? `-${pct}%` : `+${pct}%`;
   const cor   = diff > 0 ? '#dc3545' : '#28a745';
-  const texto = diff > 0 ? `Faltam €${diff.toFixed(2)}` : `Excedeu €${(-diff).toFixed(2)}`;
+  const texto = diff > 0 ? `Faltam ${euroInt(diff)}` : `Excedeu ${euroInt(-diff)}`;
 
   htmlProg += `
     <div class="comparacao-item">
@@ -263,7 +263,7 @@ let htmlProg = '';
   const pct     = Math.round(Math.abs(diff) / (antes || 1) * 100);
   const labelPct= diff > 0 ? `-${pct}%` : `+${pct}%`;
   const cor     = diff > 0 ? '#dc3545' : '#28a745';
-  const label   = diff > 0 ? `Faltam €${diff.toFixed(2)}` : `Excedeu €${(-diff).toFixed(2)}`;
+  const label   = diff > 0 ? `Faltam ${euroInt(diff)}` : `Excedeu ${euroInt(-diff)}`;
 
   htmlProg += `
     <div class="comparacao-item">
@@ -841,7 +841,7 @@ function renderTabelaLimpeza123(faturas, targetId) {
           ${anos.map(a => `<th colspan="2">${a}</th>`).join('')}
         </tr>
         <tr>
-          ${anos.map(() => `<th style="text-align:center">N.</th><th>Total</th>`).join('')}
+          ${anos.map(() => `<th style="text-align:center">N.</th><th style="text-align:center">Total</th>`).join('')}
         </tr>
       </thead>
       <tbody>
@@ -860,7 +860,7 @@ function renderTabelaLimpeza123(faturas, targetId) {
   anos.forEach(ano => {
     const totCount = limpeza[ano].reduce((s, m) => s + m.count, 0);
     const totVal   = limpeza[ano].reduce((s, m) => s + m.total, 0);
-    html += `<td><strong>${totCount}</strong></td><td><strong>${Math.round(totVal)}€</strong></td>`;
+    html += `<td><strong>${totCount}</strong></td><td style="text-align:center"><strong>${euroInt(totVal)}</strong></td>`;
   });
   html += `</tr>`;
 
@@ -987,8 +987,6 @@ function renderTabelaHospedes123(faturas, targetId) {
   const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const categorias = [1,2,3,4,5,6,7,8]; // 1..8 hosp
 
-  const euroInt = v => `${Math.round(Number(v)||0)}€`;
-
   // regra do valor extra (20€ por hóspede acima de 6, por noite) a partir de Jun/2025
   const extraValor = (ano, mes, hosp, noites) => {
     if (ano < 2025) return 0;
@@ -1048,7 +1046,7 @@ function renderTabelaHospedes123(faturas, targetId) {
     categorias.forEach(h => {
       const { n, v } = mapa[i][h];
       const showV = (h <= 6) ? '' : euroInt(v);
-      html += `<td style="text-align:center">${n}</td><td style="text-align:right">${showV}</td>`;
+      html += `<td style="text-align:center">${n}</td><td style="text-align:center">${showV}</td>`;
       // acumula totais do ano atual
       totaisAnoAtual.porHosp[h].n += n;
       totaisAnoAtual.porHosp[h].v += v;
@@ -1058,7 +1056,7 @@ function renderTabelaHospedes123(faturas, targetId) {
     totaisAnoAtual.total.n += nMesTotal;
     totaisAnoAtual.total.v += vMesTotal;
 
-    html += `<td style="text-align:center"><strong>${nMesTotal}</strong></td><td style="text-align:right"><strong>${euroInt(vMesTotal)}</strong></td>`;
+    html += `<td style="text-align:center"><strong>${nMesTotal}</strong></td><td style="text-align:center"><strong>${euroInt(vMesTotal)}</strong></td>`;
     html += `</tr>`;
   });
 
@@ -1068,10 +1066,10 @@ function renderTabelaHospedes123(faturas, targetId) {
     ${categorias.map(h => {
       const t = totaisAnoAtual.porHosp[h];
       const showV = (h <= 6) ? '' : euroInt(t.v);
-      return `<td style="text-align:center"><strong>${t.n}</strong></td><td style="text-align:right"><strong>${showV}</strong></td>`;
+      return `<td style="text-align:center"><strong>${t.n}</strong></td><td style="text-align:center"><strong>${showV}</strong></td>`;
     }).join('')}
     <td style="text-align:center"><strong>${totaisAnoAtual.total.n}</strong></td>
-    <td style="text-align:right"><strong>${euroInt(totaisAnoAtual.total.v)}</strong></td>
+    <td style="text-align:center"><strong>${euroInt(totaisAnoAtual.total.v)}</strong></td>
   </tr>`;
 
   // ---------- 2) Totais de ANOS ANTERIORES (≥ 2025) ----------
@@ -1106,10 +1104,10 @@ function renderTabelaHospedes123(faturas, targetId) {
       ${categorias.map(h => {
         const t = porHosp[h];
         const showV = (h <= 6) ? '' : euroInt(t.v);
-        return `<td style="text-align:center"><strong>${t.n}</strong></td><td style="text-align:right"><strong>${showV}</strong></td>`;
+        return `<td style="text-align:center"><strong>${t.n}</strong></td><td style="text-align:center"><strong>${showV}</strong></td>`;
       }).join('')}
       <td style="text-align:center"><strong>${totN}</strong></td>
-      <td style="text-align:right"><strong>${euroInt(totV)}</strong></td>
+      <td style="text-align:center"><strong>${euroInt(totV)}</strong></td>
     </tr>`;
   });
 

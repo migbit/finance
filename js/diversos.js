@@ -1,7 +1,16 @@
 // js/diversos.js
 import { db } from '../js/script.js';
-import { collection, addDoc, getDocs } 
-  from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+// ---- Formatação € (padrão PT) ----
+function euroInt(v) {
+  const num = Math.round(Number(v) || 0);
+  return num.toLocaleString('pt-PT', {
+    maximumFractionDigits: 0,
+    useGrouping: true
+  }).replace(/\./g, ' ') + ' €';
+}
+
 
 // DOM
 const invoiceForm  = document.getElementById('carlos-invoice-form');
@@ -71,9 +80,9 @@ async function renderInvoiceRow(inv) {
   trInv.innerHTML = `
     <td>${inv.numero}</td>
     <td>${inv.data}</td>
-    <td>€${Number(inv.total).toFixed(2)}</td>
-    <td>€${paidSum.toFixed(2)}</td>
-    <td>€${balance.toFixed(2)}</td>
+    <td>${euroInt(inv.total)}</td>
+    <td>${euroInt(paidSum)}</td>
+    <td>${euroInt(balance)}</td>
     <td>
       <button class="btn btn-sm btn-primary btn-add-payment">Adicionar Pag.</button>
     </td>
@@ -128,4 +137,179 @@ async function renderInvoiceRow(inv) {
       alert('Erro ao registar pagamento');
     }
   });
+}
+
+
+// ===========================
+// IVA Estrangeiro
+// ===========================
+
+// DOM refs
+const ivaForm     = document.getElementById('iva-estrangeiro-form');
+const ivaBody     = document.getElementById('iva-estrangeiro-body');
+const triBody     = document.getElementById('iva-estrangeiro-tri-body');
+const btnIvaMore  = document.getElementById('iva-more-btn');
+
+// Guardas simples
+if (!ivaForm || !ivaBody || !triBody) {
+  console.warn('Secção "IVA Estrangeiro" não encontrada no DOM (ok se estiveres noutra página).');
+}
+
+// Estado local para paginar/expandir
+let _ivaRowsAll = [];     // linhas já ordenadas (mais recentes primeiro)
+let _ivaVisible = 0;      // quantas linhas estão visíveis
+const IVA_PAGE = 6;       // mostra 5-6 linhas como pediste
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (ivaForm) {
+    ivaForm.addEventListener('submit', onAddIva);
+    loadIvaEstrangeiro();
+  }
+});
+
+// Adicionar registo
+async function onAddIva(e){
+  e.preventDefault();
+  const dataStr = document.getElementById('iva-data').value;
+  const valor   = parseFloat(document.getElementById('iva-valor').value);
+
+  if (!dataStr || isNaN(valor)) {
+    alert('Preenche a Data e o Valor (sem IVA).');
+    return;
+  }
+
+  // Cálculos corretos: IVA = 23% do valor; Total = valor + IVA
+  const iva   = +(valor * 0.23).toFixed(2);
+  const total = +(valor * 1.23).toFixed(2);
+
+  try {
+    await _addDoc(_collection(db, 'ivaEstrangeiro'), {
+      data: dataStr,
+      valor: +valor.toFixed(2),
+      iva,
+      total,
+      ts: Date.now()
+    });
+    ivaForm.reset();
+    await loadIvaEstrangeiro();
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao adicionar registo de IVA Estrangeiro.');
+  }
+}
+
+// Carregar todos os registos e renderizar tabela + trimestre
+async function loadIvaEstrangeiro(){
+  if (!ivaBody) return;
+
+  ivaBody.innerHTML = '<tr><td colspan="4">Carregando…</td></tr>';
+
+  try {
+    const snap = await _getDocs(_collection(db, 'ivaEstrangeiro'));
+    const itens = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Ordena por data (desc) usando data (YYYY-MM-DD) ou ts
+    itens.sort((a,b) => {
+      const ad = (a.data || '').replaceAll('-','');
+      const bd = (b.data || '').replaceAll('-','');
+      // fallback com ts se faltar data
+      const aa = ad ? parseInt(ad,10) : (a.ts || 0);
+      const bb = bd ? parseInt(bd,10) : (b.ts || 0);
+      return bb - aa;
+    });
+
+    _ivaRowsAll = itens;
+    _ivaVisible = 0;
+    ivaBody.innerHTML = '';
+    renderNextPage();           // primeira página
+    renderResumoTrimestres(itens);
+
+    // Mostrar/ocultar botão "Mostrar mais"
+    btnIvaMore.style.display = (_ivaVisible < _ivaRowsAll.length) ? 'inline-block' : 'none';
+    if (!btnIvaMore.dataset.bound) {
+      btnIvaMore.addEventListener('click', () => {
+        renderNextPage();
+        btnIvaMore.style.display = (_ivaVisible < _ivaRowsAll.length) ? 'inline-block' : 'none';
+      });
+      btnIvaMore.dataset.bound = '1';
+    }
+
+  } catch (err) {
+    console.error(err);
+    ivaBody.innerHTML = '<tr><td colspan="4">Erro ao carregar registos</td></tr>';
+  }
+}
+
+// Renderiza próxima “página” de linhas (5-6 de cada vez)
+function renderNextPage(){
+  const slice = _ivaRowsAll.slice(_ivaVisible, _ivaVisible + IVA_PAGE);
+  slice.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(r.data || '')}</td>
+      <td>${euroInt(r.valor)}</td>
+      <td>${euroInt(r.iva ?? (r.valor*0.23))}</td>
+      <td>${euroInt(r.total ?? (r.valor*1.23))}</td>
+      `;
+    ivaBody.appendChild(tr);
+  });
+  _ivaVisible += slice.length;
+
+  if (_ivaVisible === 0) {
+    ivaBody.innerHTML = '<tr><td colspan="4">Sem registos</td></tr>';
+  }
+}
+
+// Resumo por trimestre (Ano, T, Valor, IVA, Total)
+function renderResumoTrimestres(items){
+  triBody.innerHTML = '';
+
+  // Agrupar por ano-tri
+  const acc = {};
+  items.forEach(r => {
+    const d = r.data ? new Date(r.data) : (r.ts ? new Date(r.ts) : null);
+    if (!d || isNaN(d)) return;
+
+    const y = d.getFullYear();
+    const q = Math.floor(d.getMonth() / 3) + 1; // 0..11 -> 1..4
+    const key = `${y}-Q${q}`;
+
+    if (!acc[key]) acc[key] = { ano: y, tri: q, valor: 0, iva: 0, total: 0 };
+    const valor = +(+r.valor || 0);
+    const iva   = +(r.iva ?? (valor * 0.23));
+    const total = +(r.total ?? (valor * 1.23));
+
+    acc[key].valor += valor;
+    acc[key].iva   += iva;
+    acc[key].total += total;
+  });
+
+  // Ordenar por ano desc, trimestre asc
+  const rows = Object.values(acc).sort((a,b) => b.ano - a.ano || a.tri - b.tri);
+
+  if (rows.length === 0) {
+    triBody.innerHTML = '<tr><td colspan="5">Sem dados</td></tr>';
+    return;
+  }
+
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.ano}</td>
+      <td>Q${r.tri}</td>
+      <td>${euroInt(r.valor)}</td>
+      <td>${euroInt(r.iva)}</td>
+      <td>${euroInt(r.total)}</td>
+      `;
+    triBody.appendChild(tr);
+  });
+}
+
+// Helpers
+function toMoney(n){
+  const v = Number(n || 0);
+  return v.toFixed(2);
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 }
