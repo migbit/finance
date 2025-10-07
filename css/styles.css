@@ -1201,3 +1201,49 @@ body[data-page="analise123vs1248"] .chart-wrap {
     gap: 8px;
   }
 }
+
+/* DCA – Parâmetros compacto e encostado à esquerda */
+body[data-page="dca"] .params-card {
+  max-width: 560px;     /* reduz o cartão */
+  margin: 0;            /* encosta à esquerda */
+  padding: 10px 12px;
+}
+body[data-page="dca"] .params-table {
+  font-size: 0.92rem;   /* ligeiramente menor */
+}
+body[data-page="dca"] .params-table input[type="month"],
+body[data-page="dca"] .params-table input[type="number"] {
+  height: 34px;
+  line-height: 34px;
+}
+
+/* DCA – Tabela Juro com o mesmo look dos cartões */
+body[data-page="dca"] .juro-card { max-width: 680px; margin: 10px 0 0 0; }
+#juro-table th, #juro-table td { text-align: center; }
+#juro-table input.cell {
+  width: 12ch;
+  text-align: center;
+  height: 32px; line-height: 32px;
+  display: inline-block;
+}
+
+/* Input com sufixo € */
+.money-wrap { position: relative; display: inline-block; }
+.money-wrap input { padding-right: 18px; }
+.money-wrap::after {
+  content: "€";
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.95em;
+  color: #666;
+  pointer-events: none;
+}
+
+/* Destaque do mês atual na DCA */
+.table-dca tbody tr.current-month {
+  font-weight: 700;
+  background: #eef4ff !important;        /* azul muito claro */
+}
+

@@ -59,19 +59,22 @@
   </header>
 
 <main>
-  <!-- Parâmetros -->
+  <!-- Título da página -->
+  <h2 class="page-title center">DCA – Trade Republic</h2>
+
+  <!-- Parâmetros (mais compacto e à esquerda) -->
   <section class="report-section">
-    <div class="viz-card">
+    <div class="viz-card params-card">
       <h4>Parâmetros</h4>
 
       <div class="table-wrap">
-        <table class="table-dca" id="params-table">
+        <table class="table-dca params-table" id="params-table">
           <thead>
             <tr>
               <th rowspan="2" class="num">Data final</th>
               <th rowspan="2" class="num">SWDA %</th>
               <th rowspan="2" class="num">AGGH %</th>
-              <th colspan="3" style="text-align:center">Cenários</th>
+              <th colspan="3" class="cenarios" style="text-align:center">Cenários</th>
               <th rowspan="2" style="width:140px">Ações</th>
             </tr>
             <tr>
@@ -98,19 +101,58 @@
     </div>
   </section>
 
-  <!-- Registo mensal -->
+  <!-- NOVO: Tabela Juro -->
+  <section class="report-section">
+    <div class="viz-card juro-card">
+      <h4>Juro</h4>
+
+      <div class="table-wrap">
+        <table class="table-dca" id="juro-table">
+          <thead>
+            <tr>
+              <th class="num">Saldo</th>
+              <th class="num">Taxa de juro</th>
+              <th class="num">Valor mensal</th>
+              <th class="num">Valor ganho em Juros</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+  <tr>
+    <td class="num">
+      <span class="money-wrap">
+        <input id="juro-saldo" type="number" step="0.01" class="cell" placeholder="0,00" />
+      </span>
+    </td>
+    <td class="num">
+      <input id="juro-taxa" type="number" step="0.01" class="cell" value="2.00" disabled />
+    </td>
+    <td class="num"><span id="juro-mensal">0 €</span></td>
+    <td class="num"><span id="juro-acumulado">0 €</span></td>
+    <td style="text-align:right">
+      <button id="btn-juro-editar" type="button">Editar</button>
+      <button id="btn-juro-gravar" type="button">Gravar</button>
+    </td>
+  </tr>
+</tbody>
+
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Registo mensal (mantém como estava) -->
   <section class="report-section">
     <div class="viz-card">
       <h4>Registo Mensal</h4>
-
       <div class="form-actions" style="justify-content:flex-end; gap:.5rem; margin-bottom:.5rem">
         <button id="toggle-others" type="button">Expandir anos</button>
       </div>
-
       <div id="dca-table-wrap"></div>
     </div>
   </section>
 </main>
+
 
 <footer class="app-footer">
   <p>© 2025 OM&MT</p>

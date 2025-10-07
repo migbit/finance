@@ -26,6 +26,161 @@ const asNum = (v)=> {
   return Number.isFinite(n) ? n : null;
 };
 
+// ==== Juro – módulo (cálculo + persistência) ====
+const TAXA_ANUAL_FIXA = 0.02; // 2%
+
+function diasNoMes(refYYYYMM) {
+  let ano, mes;
+  if (refYYYYMM && /^\d{4}-\d{2}$/.test(refYYYYMM)) {
+    const [y, m] = refYYYYMM.split('-').map(Number);
+    ano = y; mes = m;
+  } else {
+    const d = new Date();
+    ano = d.getFullYear(); mes = d.getMonth() + 1;
+  }
+  return new Date(ano, mes, 0).getDate();
+}
+
+function euroFmt(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
+// Soma a coluna JURO (coluna 14) do “Registo Mensal”
+function somaJuroTabelaDCA() {
+  const root = document.querySelector('#dca-table-wrap');
+  if (!root) return 0;
+  let soma = 0;
+
+  // inputs
+  root.querySelectorAll('table.table-dca tbody td:nth-child(14) input').forEach(inp => {
+    const v = parseFloat((inp.value || '').toString().replace(',', '.'));
+    if (!isNaN(v)) soma += v;
+  });
+  // texto (se não houver input)
+  root.querySelectorAll('table.table-dca tbody td:nth-child(14)').forEach(td => {
+    if (td.querySelector('input')) return;
+    const txt = (td.textContent || '').replace(/[^\d,.\-]/g, '').replace(',', '.');
+    const v = parseFloat(txt);
+    if (!isNaN(v)) soma += v;
+  });
+
+  return soma;
+}
+
+async function saveJuroSaldo(saldo) {
+  try {
+    const docRef = doc(db, "dca_juro", "current");
+    await setDoc(docRef, {
+      saldo: parseFloat(saldo) || 0,
+      taxa: TAXA_ANUAL_FIXA,
+      updatedAt: new Date()
+    });
+  } catch (err) {
+    console.error('Erro a gravar saldo:', err);
+    alert('Erro ao gravar o saldo de juro.');
+  }
+}
+
+// === Destacar o mês atual no Registo Mensal ===
+function highlightCurrentMonthRow() {
+  const wrap = document.getElementById('dca-table-wrap');
+  if (!wrap) return;
+  const tbl = wrap.querySelector('table.table-dca');
+  if (!tbl) return;
+
+  // limpar anterior
+  tbl.querySelectorAll('tbody tr.current-month').forEach(tr => tr.classList.remove('current-month'));
+
+  const now   = new Date();
+  const ymNow = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  // 1) tentar via data-ym (mais fiável)
+  let row = tbl.querySelector(`tbody tr[data-ym="${ymNow}"]`);
+
+  // 2) fallback: se não tiver data-ym, tenta ler o texto da 1ª célula
+  if (!row) {
+    const rows = Array.from(tbl.querySelectorAll('tbody tr'));
+    for (const tr of rows) {
+      const td = tr.querySelector('td'); if (!td) continue;
+      const t = (td.textContent || '').trim().toLowerCase();
+
+      // aceita mm/yy (2 dígitos) OU mm/yyyy (4 dígitos)
+      const m = now.getMonth()+1, y = now.getFullYear();
+      const yy2 = String(y).slice(-2);
+      const rx = new RegExp(`^${m}\\/(?:${y}|${yy2})$`); // ex.: 10/2025 ou 10/25
+      if (rx.test(t)) { row = tr; break; }
+    }
+  }
+
+  if (row) row.classList.add('current-month');
+}
+
+
+// correr ao carregar e após mutações (quando a tabela muda)
+if (document.readyState !== 'loading') highlightCurrentMonthRow();
+else document.addEventListener('DOMContentLoaded', highlightCurrentMonthRow);
+
+(() => {
+  const target = document.getElementById('dca-table-wrap');
+  if (target && 'MutationObserver' in window) {
+    const mo = new MutationObserver(() => highlightCurrentMonthRow());
+    mo.observe(target, { childList: true, subtree: true });
+  }
+})();
+
+
+// Liga eventos e calcula valores (podes chamar isto em qualquer altura)
+function bindJuroModule() {
+  const saldoInp   = document.getElementById('juro-saldo');
+  const taxaInp    = document.getElementById('juro-taxa');
+  const mensalLbl  = document.getElementById('juro-mensal');
+  const acumLbl    = document.getElementById('juro-acumulado');
+  const endDateInp = document.getElementById('end-date');
+
+  // se a página não tiver o bloco "Juro", sai
+  if (!saldoInp || !taxaInp || !mensalLbl || !acumLbl) return;
+
+  taxaInp.value = '2.00'; // fixa visualmente
+
+  const atualizar = () => {
+    const saldo = parseFloat((saldoInp.value || '').toString().replace(',', '.')) || 0;
+    const dias  = diasNoMes(endDateInp?.value);
+    const mensal = saldo * TAXA_ANUAL_FIXA * (dias / 365);
+    mensalLbl.textContent = euroFmt(mensal);
+
+    const soma = somaJuroTabelaDCA();
+    acumLbl.textContent = euroFmt(soma);
+  };
+
+  ['input','change'].forEach(evt => {
+    saldoInp.addEventListener(evt, atualizar);
+    endDateInp?.addEventListener(evt, atualizar);
+  });
+
+  // observar alterações no Registo Mensal
+  const obsRoot = document.getElementById('dca-table-wrap');
+  if (obsRoot && 'MutationObserver' in window) {
+    const mo = new MutationObserver(atualizar);
+    mo.observe(obsRoot, { childList: true, subtree: true, characterData: true });
+  }
+
+  // Botões
+  document.getElementById('btn-juro-editar')?.addEventListener('click', () => {
+    saldoInp.removeAttribute('disabled');
+    saldoInp.focus();
+  });
+  document.getElementById('btn-juro-gravar')?.addEventListener('click', async () => {
+    saldoInp.setAttribute('disabled','disabled');
+    await saveJuroSaldo(saldoInp.value);
+  });
+
+  atualizar();
+}
+
+
+
+
 // ---------- Parâmetros default ----------
 const START_YM = { y: 2025, m: 9 }; // set 2025 fixo
 const DEFAULTS  = {
@@ -233,6 +388,7 @@ const theadHTML = `
     for (const r of arr){
       const tr = document.createElement('tr');
       tr.dataset.id = r.id;
+      tr.dataset.ym = `${r.y}-${pad(r.m)}`;
 
       const clsTotal = r.resTotal != null ? (r.resTotal >= 0 ? 'pos' : 'neg') : '';
       const clsSWDA  = r.resSWDA  != null ? (r.resSWDA  >= 0 ? 'pos' : 'neg') : '';
@@ -415,3 +571,7 @@ async function boot(skipParamUI){
 }
 
 boot();
+
+// garante bind mesmo se o DOM já estiver carregado
+if (document.readyState !== 'loading') bindJuroModule();
+else document.addEventListener('DOMContentLoaded', bindJuroModule);
