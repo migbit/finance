@@ -82,6 +82,28 @@ async function saveJuroSaldo(saldo) {
   }
 }
 
+// Load saved Saldo from Firestore and fill input
+async function loadJuroSaldo() {
+  try {
+    const ref = doc(db, "dca_juro", "current");
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      const data = snap.data();
+      const saldoInp = document.getElementById('juro-saldo');
+      if (saldoInp && data.saldo != null) {
+        saldoInp.value = parseFloat(data.saldo).toFixed(2);
+      }
+      const taxaInp = document.getElementById('juro-taxa');
+      if (taxaInp && data.taxa != null) {
+        taxaInp.value = (data.taxa * 100).toFixed(2);
+      }
+    }
+  } catch (err) {
+    console.error("Error loading Saldo:", err);
+  }
+}
+
+
 // === Destacar o mês atual no Registo Mensal ===
 function highlightCurrentMonthRow() {
   const wrap = document.getElementById('dca-table-wrap');
@@ -131,7 +153,7 @@ else document.addEventListener('DOMContentLoaded', highlightCurrentMonthRow);
 
 
 // Liga eventos e calcula valores (podes chamar isto em qualquer altura)
-function bindJuroModule() {
+async function bindJuroModule() {
   const saldoInp   = document.getElementById('juro-saldo');
   const taxaInp    = document.getElementById('juro-taxa');
   const mensalLbl  = document.getElementById('juro-mensal');
@@ -173,7 +195,10 @@ function bindJuroModule() {
   document.getElementById('btn-juro-gravar')?.addEventListener('click', async () => {
     saldoInp.setAttribute('disabled','disabled');
     await saveJuroSaldo(saldoInp.value);
+    await loadJuroSaldo(); // refresh displayed value after saving
   });
+
+  await loadJuroSaldo();
 
   atualizar();
 }
