@@ -2,11 +2,25 @@
 <html lang="pt">
   <meta charset="utf-8" />
   <title>Portfolio</title>
+  <style>
+    body { font-family: system-ui, Arial; max-width: 800px; margin: 40px auto; }
+    pre { background:#111; color:#0f0; padding:16px; border-radius:8px; overflow:auto; }
+  </style>
+  <h1>Portfolio (Binance)</h1>
+  <p>Dados atuais:</p>
   <pre id="out">A carregar…</pre>
-  <script>
-  fetch('/__/functions/region/europe-west1/binancePortfolio')
-    .then(r => r.json())
-    .then(j => { document.getElementById('out').textContent = JSON.stringify(j, null, 2); })
-    .catch(e => { document.getElementById('out').textContent = 'Erro: ' + e; });
-  </script>
+
+<script>
+(async () => {
+  try {
+    const res = await fetch('/api/portfolio');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    document.getElementById('out').textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    document.getElementById('out').textContent = 'Erro: ' + e.message;
+  }
+})();
+</script>
+
 </html>
