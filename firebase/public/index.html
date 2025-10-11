@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="pt">
+  <meta charset="utf-8" />
+  <title>Portfolio</title>
+  <pre id="out">A carregar…</pre>
+  <script>
+  fetch('/__/functions/region/europe-west1/binancePortfolio')
+    .then(r => r.json())
+    .then(j => { document.getElementById('out').textContent = JSON.stringify(j, null, 2); })
+    .catch(e => { document.getElementById('out').textContent = 'Erro: ' + e; });
+  </script>
+</html>
