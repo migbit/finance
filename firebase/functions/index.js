@@ -72,34 +72,41 @@ exports.binancePortfolio = onRequest(
         fetchAllSimpleEarn("/sapi/v1/simple-earn/locked/position"),
       ]);
 
-      // Spot balances (normalize assets like LDBTC -> BTC just in case)
-      const spot = (account.balances || [])
-        .map(b => ({ asset: normalizeAsset(b.asset), qty: (+b.free) + (+b.locked) }))
-        .filter(b => b.qty > 0);
+      // --- Combine Spot + Simple Earn ---
 
-      // Merge Spot + Earn into a single map
-      const byAsset = new Map();
-      const add = (asset, qty) => byAsset.set(asset, (byAsset.get(asset) || 0) + qty);
+// Spot: skip LD* because Earn will provide those
+const spot = (account.balances || [])
+  .filter(b => !String(b.asset).startsWith("LD"))         // <-- important
+  .map(b => ({
+    asset: /* normalize after filtering */ (b.asset.startsWith("LD") ? b.asset.slice(2) : b.asset),
+    qty: (+b.free) + (+b.locked)
+  }))
+  .filter(b => b.qty > 0);
 
-      // Seed with spot
-      for (const s of spot) add(s.asset, s.qty);
+const byAsset = new Map();
+const add = (asset, qty) => byAsset.set(asset, (byAsset.get(asset) || 0) + qty);
 
-      // Flexible: sum totalAmount/amount/positionAmount (varies across products)
-      for (const p of flexRows) {
-        const asset = normalizeAsset(p.asset);
-        const amt = Number(p.totalAmount ?? p.amount ?? p.positionAmount ?? 0);
-        if (asset && amt > 0) add(asset, amt);
-      }
+// seed with spot
+for (const s of spot) add(s.asset, s.qty);
 
-      // Locked: same idea
-      for (const p of lockedRows) {
-        const asset = normalizeAsset(p.asset);
-        const amt = Number(p.totalAmount ?? p.amount ?? p.positionAmount ?? 0);
-        if (asset && amt > 0) add(asset, amt);
-      }
+// Flexible Earn
+for (const p of flexRows) {
+  const asset = (p.asset && p.asset.startsWith("LD")) ? p.asset.slice(2) : p.asset;
+  const amt = Number(p.totalAmount ?? p.amount ?? p.positionAmount ?? 0);
+  if (asset && amt > 0) add(asset, amt);
+}
 
-      const balances = Array.from(byAsset, ([asset, qty]) => ({ asset, qty }))
-        .filter(b => b.qty > 0);
+// Locked Earn
+for (const p of lockedRows) {
+  const asset = (p.asset && p.asset.startsWith("LD")) ? p.asset.slice(2) : p.asset;
+  const amt = Number(p.totalAmount ?? p.amount ?? p.positionAmount ?? 0);
+  if (asset && amt > 0) add(asset, amt);
+}
+
+// final combined balances
+const balances = Array.from(byAsset, ([asset, qty]) => ({ asset, qty }))
+  .filter(b => b.qty > 0);
+
 
       // 2) Build price map (USDT) and convert to EUR
       const assets = balances.map(b => b.asset);
