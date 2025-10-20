@@ -1247,3 +1247,15 @@ body[data-page="dca"] .juro-card { max-width: 680px; margin: 10px 0 0 0; }
   background: #eef4ff !important;        /* azul muito claro */
 }
 
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.badge-stake { background: #fff6e6; color: #9a5a12; } /* warm orange */
+.badge-earn  { background: #f0ffe5; color: #5a7a1a; } /* green */
+.badge-spot  { background: #e6f1ff; color: #24466F; } /* blue */

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crypto Portfolio</title>
+
+  <!-- Site-wide styles -->
+  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="icon" href="../favicon.ico" type="image/x-icon">
+
+  <style>
+    /* Page-scoped tweaks that respect your global CSS */
+    .kpis-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .kpi-card {
+      background: #fff;
+      border: 1px solid var(--border-color, #e5e7eb);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05));
+    }
+    .kpi-label {
+      font-size: 0.9rem;
+      color: var(--text-muted, #6b7280);
+    }
+    .kpi-value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-top: 6px;
+      color: var(--text-strong, #0b1220);
+    }
+
+    /* Center table content without touching other tables globally */
+    #crypto-table th,
+    #crypto-table td { text-align: center; }
+
+    /* Compact select styling to match your forms */
+    .location-select {
+      padding: 6px 8px;
+      border: 1px solid var(--border-color, #e5e7eb);
+      border-radius: 8px;
+      background: #fff;
+      font: inherit;
+    }
+    .status { font-size: 0.9rem; color: var(--text-muted, #6b7280); }
+    .status.ok { color: #166534; }
+    .status.err { color: #991b1b; }
+
+    @media (max-width: 900px){
+      .kpis-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header / Nav (kept consistent with your other pages) -->
+  <header>
+    <h1>Crypto Portfolio</h1>
+
+    <div class="menu-icon" id="menu-icon">&#9776;</div>
+
+    <nav id="nav-menu">
+      <ul>
+        <li><a href="faturas.html">Faturas e Relatórios</a></li>
+        <li><a href="analise.html">Análise Apartamentos</a></li>
+        <li><a href="caixa.html">Caixa</a></li>
+        <li><a href="diversos.html">Diversos</a></li>
+        <li class="separator">|</li>
+        <li><a href="dca.html">DCA</a></li>
+        <li class="separator">|</li>
+        <li id="login-section">
+          <a href="#" id="login-btn" class="login-visible">Login</a>
+          <span id="user-info" class="user-visible" style="display:none;">
+            <a href="#" id="user-name">Username</a>
+          </span>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <!-- KPIs -->
+    <section class="report-section">
+      <div class="kpis-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Total (EUR)</div>
+          <div id="kpiTotalEUR" class="kpi-value">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Total (USDT)</div>
+          <div id="kpiTotalUSDT" class="kpi-value">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Gerado em</div>
+          <div id="kpiStamp" class="kpi-value" style="font-size:1rem;">—</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="report-section">
+      <h2>Posições</h2>
+      <div class="table-wrap">
+        <table id="crypto-table">
+          <thead>
+            <tr>
+              <th>Asset</th>
+              <th>Quantity</th>
+              <th>Value (USDT)</th>
+              <th>Value (EUR)</th>
+              <th>Location</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="6" class="text-muted">Loading…</td></tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Total</th>
+              <th id="ft-qty">—</th>
+              <th id="ft-usdt">—</th>
+              <th id="ft-eur">—</th>
+              <th colspan="2"></th>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p id="stamp" class="text-muted" style="margin-top:8px;"></p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-container">
+      <p>&copy; 2025 OM&MT.</p>
+    </div>
+  </footer>
+
+  <!-- Page script -->
+  <script type="module" src="../js/crypto.js"></script>
+
+  <!-- Mobile nav toggle -->
+  <script>
+    const menuIcon = document.getElementById('menu-icon');
+    const navMenu  = document.getElementById('nav-menu');
+    if (menuIcon && navMenu) {
+      menuIcon.addEventListener('click', () => navMenu.classList.toggle('active'));
+    }
+  </script>
+</body>
+</html>
