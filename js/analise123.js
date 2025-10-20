@@ -381,32 +381,43 @@ let html = `
       <tbody>
 `;
 
+    const hoje = new Date();
+    const CURR_YEAR  = hoje.getFullYear();
+    const CURR_MONTH = hoje.getMonth() + 1;
+
 meses.forEach(m => {
   html += `<tr><th>${nomesMes[m - 1]}</th>`;
 
   anos.forEach(a => {
-    const prev = totais[a - 1]?.[m] ?? null;
-    const cur  = totais[a]?.[m] ?? null;
+const prev = totais[a - 1]?.[m] ?? null;  // 👈 ano anterior
+const cur  = totais[a]?.[m] ?? null;      // 👈 ano atual
 
-    let pct = null;
-    if (prev === null) {
-      pct = null;                 // sem ano anterior → N/A (vazio)
-    } else if (prev === 0 && cur === 0) {
-      pct = 0;                    // 0 → 0% (cinza claro)
-    } else if (prev === 0 && cur !== 0) {
-      pct = null;                 // sem base → N/A (vazio)
-    } else {
-      pct = (cur - prev) / prev;  // variação %
-    }
 
-if (pct === null) {
+// meses futuros do ano atual → célula neutra
+if (a === CURR_YEAR && m > CURR_MONTH) {
   html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
 } else {
-  const bg = pctToColor(pct);
-  const fg = idealTextOn(bg);   // ✅ ensure contrast
-  const label = `${(pct * 100).toFixed(0)}%`;
-  html += `<td class="heatmap-cell" style="background:${bg};color:${fg};font-weight:600">${label}</td>`;
+  let pct = null;
+  if (prev === null) {
+    pct = null;
+  } else if (prev === 0 && cur === 0) {
+    pct = 0;
+  } else if (prev === 0 && cur !== 0) {
+    pct = null; // sem base
+  } else {
+    pct = (cur - prev) / prev;
+  }
+
+  if (pct === null) {
+    html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
+  } else {
+    const bg = pctToColor(pct);
+    const fg = idealTextOn(bg);
+    const label = `${(pct * 100).toFixed(0)}%`;
+    html += `<td class="heatmap-cell" style="background:${bg};color:${fg};font-weight:600">${label}</td>`;
+  }
 }
+
 
   });
 
@@ -497,10 +508,20 @@ function renderTabelaComparativaAnos123(faturas, targetId) {
       if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">${media != null ? euroInt(media) : '—'}</td>`;
       html += `<td style="background:${bg}; text-align:center">${euroInt(tot)}</td>`;
 
-      if (a > BASE_YEAR) {
-        const prevTot = totals[a - 1]?.[i] ?? 0;
-        html += yoyCell(tot, prevTot, bg);
-      }
+      // Δ vs ano anterior (só 2025+), ocultando meses futuros do ano atual
+const currentMonth = new Date().getMonth() + 1;
+if (a > BASE_YEAR) {
+  if (a === CURR_YEAR && (i + 1) > currentMonth) {
+    // Meses futuros → mostrar €0 (ou deixa vazio)
+    html += `<td style="background:${bg}; text-align:center; color:#999">€0</td>`;
+    // alternativa:
+    // html += `<td style="background:${bg}"></td>`;
+  } else {
+    const prevTot = totals[a - 1]?.[i] ?? 0;
+    html += yoyCell(tot, prevTot, bg);
+  }
+}
+
     });
     html += `</tr>`;
   });

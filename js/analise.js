@@ -313,6 +313,9 @@ document.getElementById('progresso-anos').innerHTML =
 
 // --------------------------------------------------------------> HeatMap
 function gerarHeatmapVariacao1231248(faturas) {
+  const hoje = new Date();
+  const CURR_YEAR = hoje.getFullYear();
+  const CURR_MONTH = hoje.getMonth() + 1;
   // --- 0) helpers visuais (mesma escala que já usámos)
   function pctToColor(p) {
     if (p === null) return '#f5f5f5';
@@ -374,24 +377,34 @@ function gerarHeatmapVariacao1231248(faturas) {
 
   for (let m=1; m<=12; m++){
     html += `<tr><th>${meses[m-1]}</th>`;
-    anos.forEach(a=>{
-      const prev = totais[a-1]?.[m] ?? null;
-      const cur  = totais[a]?.[m] ?? null;
-      let pct = null;
-      if (prev === null) pct = null;
-      else if (prev === 0 && cur === 0) pct = 0;
-      else if (prev === 0 && cur !== 0) pct = null; // sem base
-      else pct = (cur - prev) / prev;
+  anos.forEach(a => {
+  const prev = totais[a - 1]?.[m] ?? null;
+  const cur = totais[a]?.[m] ?? null;
 
-      if (pct === null){
+  // 🔸 Meses futuros do ano atual → célula neutra
+      if (a === CURR_YEAR && m > CURR_MONTH) {
         html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
-      } else {
-        const bg = pctToColor(pct);
-        const fg = idealTextOn(bg);
-        const label = `${(pct*100).toFixed(0)}%`;
-        html += `<td class="heatmap-cell" style="background:${bg};color:${fg};font-weight:600">${label}</td>`;
+        return;
       }
-    });
+
+
+
+  let pct = null;
+  if (prev === null) pct = null;
+  else if (prev === 0 && cur === 0) pct = 0;
+  else if (prev === 0 && cur !== 0) pct = null;
+  else pct = (cur - prev) / prev;
+
+  if (pct === null) {
+    html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
+  } else {
+    const bg = pctToColor(pct);
+    const fg = idealTextOn(bg);
+    const label = `${(pct * 100).toFixed(0)}%`;
+    html += `<td class="heatmap-cell" style="background:${bg};color:${fg};font-weight:600">${label}</td>`;
+  }
+  });
+
     html += `</tr>`;
   }
 
@@ -488,10 +501,18 @@ function renderTabelaComparativaAnos1231248(faturas, targetId) {
       html += `<td style="background:${bg}; text-align:center">${euroInt(tot)}</td>`;
 
       // Δ vs ano anterior (só 2025+)
-      if (a > BASE_YEAR) {
-        const prevTot = totals[a - 1]?.[i] ?? 0;
-        html += yoyCell(tot, prevTot, bg);
-      }
+// Mostrar Δ só até ao mês corrente do ano atual
+const currentMonth = new Date().getMonth() + 1;
+
+if (a > BASE_YEAR) {
+  if (a === CURR_YEAR && (i + 1) > currentMonth) {
+    html += `<td style="background:${bg}; text-align:center; color:#999">€0</td>`;
+    // ou vazio:
+    // html += `<td style="background:${bg}"></td>`;
+  } else {
+    html += yoyCell(totals[a][i], totals[a - 1]?.[i] ?? 0, bg);
+  }
+}
     });
     html += `</tr>`;
   });

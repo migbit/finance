@@ -395,6 +395,10 @@ chartOcupacao1248 = new Chart(ctx, {
 
 // --------------------------- Heatmap (Apt 1248) — sem legenda
 function gerarHeatmapVariacao1248(faturas) {
+  const hoje = new Date();
+  const CURR_YEAR = hoje.getFullYear();
+  const CURR_MONTH = hoje.getMonth() + 1;
+
   const totais = {};
   faturas
     .filter(f => String(f.apartamento) === '1248')
@@ -468,6 +472,13 @@ function gerarHeatmapVariacao1248(faturas) {
     anos.forEach(a => {
       const prev = (totais[a - 1] && totais[a - 1][m] !== undefined) ? totais[a - 1][m] : null;
       const cur  = (totais[a]     && totais[a][m]     !== undefined) ? totais[a][m]     : null;
+
+      if (a === CURR_YEAR && m > CURR_MONTH) {
+      html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
+      return; // ou "continue" num for normal
+      }
+
+
       let pct = null;
       if (prev === null) {
         pct = null;
@@ -575,10 +586,17 @@ function renderTabelaComparativaAnos1248(faturas, targetId) {
       if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">${media != null ? euroInt(media) : '—'}</td>`;
       html += `<td style="background:${bg}; text-align:center">${euroInt(tot)}</td>`;
 
+      // Δ vs ano anterior (só 2025+), ocultando meses futuros do ano atual
       if (a > BASE_YEAR) {
-        const prevTot = totals[a - 1]?.[i] ?? 0;
-        html += yoyCell(tot, prevTot, bg);
+        const currentMonth = new Date().getMonth() + 1;
+        if (a === CURR_YEAR && (i + 1) > currentMonth) {
+          html += `<td style="background:${bg}; text-align:center; color:#999">€0</td>`;
+        } else {
+          const prevTot = totals[a - 1]?.[i] ?? 0;
+          html += yoyCell(tot, prevTot, bg);
+        }
       }
+
     });
     html += `</tr>`;
   });
@@ -606,23 +624,20 @@ function renderTabelaComparativaAnos1248(faturas, targetId) {
   });
   html += `</tr>`;
 
-  // Média mensal (Total/12) + Δ
-  html += `<tr><td><strong>Média mensal</strong></td>`;
-  anos.forEach((a, idx) => {
-    const bg = yearBg[idx % yearBg.length];
-    const totalAno = totals[a].reduce((s, v) => s + v, 0);
-    const mediaMensal = totalAno / 12;
+  // Média mensal (Total/12) — sem Δ nesta linha
+html += `<tr><td><strong>Média mensal</strong></td>`;
+anos.forEach((a, idx) => {
+  const bg = yearBg[idx % yearBg.length];
+  const totalAno = totals[a].reduce((s, v) => s + v, 0);
+  const mediaMensal = totalAno / 12;
 
-    if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">—</td>`;
-    html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(mediaMensal)}</strong></td>`;
+  if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">—</td>`;
+  html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(mediaMensal)}</strong></td>`;
 
-    if (a > BASE_YEAR) {
-      const totalPrev = totals[a - 1]?.reduce?.((s, v) => s + v, 0) ?? 0;
-      const mediaMensalPrev = totalPrev / 12;
-      html += yoyCell(mediaMensal, mediaMensalPrev, bg);
-    }
-  });
-  html += `</tr>`;
+  // Se quiseres mesmo um Δ anual médio, colocamos na linha "Total", não aqui.
+});
+html += `</tr>`;
+
 
   html += `</tbody></table><hr class="divider">`;
   el.innerHTML = html;
