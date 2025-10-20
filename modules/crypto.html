@@ -24,32 +24,49 @@
       padding: 16px;
       box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05));
     }
-    .kpi-label {
-      font-size: 0.9rem;
-      color: var(--text-muted, #6b7280);
-    }
-    .kpi-value {
-      font-size: 1.4rem;
-      font-weight: 700;
-      margin-top: 6px;
-      color: var(--text-strong, #0b1220);
-    }
+    .kpi-label { font-size: 0.9rem; color: var(--text-muted, #6b7280); }
+    .kpi-value { font-size: 1.4rem; font-weight: 700; margin-top: 6px; color: var(--text-strong, #0b1220); }
 
     /* Center table content without touching other tables globally */
-    #crypto-table th,
-    #crypto-table td { text-align: center; }
+    #crypto-table th, #crypto-table td { text-align: center; }
 
-    /* Compact select styling to match your forms */
-    .location-select {
-      padding: 6px 8px;
+    .toolbar { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:8px; }
+
+    /* Make buttons visible (fix white-on-white) */
+    .btn {
+      padding: 8px 12px;
       border: 1px solid var(--border-color, #e5e7eb);
       border-radius: 8px;
-      background: #fff;
-      font: inherit;
+      background: #f7f7f7;
+      color: #0b1220;
+      cursor: pointer;
+    }
+    .btn:hover { background: #efefef; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .location-select {
+      padding: 6px 8px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; background: #fff; font: inherit;
     }
     .status { font-size: 0.9rem; color: var(--text-muted, #6b7280); }
     .status.ok { color: #166534; }
     .status.err { color: #991b1b; }
+
+    /* Simple modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      display:none; align-items:center; justify-content:center; z-index: 50;
+    }
+    .modal {
+      width: 100%; max-width: 480px; background:#fff; border:1px solid var(--border-color, #e5e7eb);
+      border-radius: 12px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.15);
+    }
+    .modal h3 { margin: 0 0 12px; }
+    .field { display:grid; gap:6px; margin-bottom:10px; text-align:left; }
+    .field label { font-size:.9rem; color: var(--text-muted, #6b7280); }
+    .field input, .field select {
+      padding:8px 10px; border:1px solid var(--border-color, #e5e7eb); border-radius:8px; width:100%; font: inherit;
+    }
+    .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
 
     @media (max-width: 900px){
       .kpis-grid { grid-template-columns: 1fr; }
@@ -57,7 +74,7 @@
   </style>
 </head>
 <body>
-  <!-- Header / Nav (kept consistent with your other pages) -->
+  <!-- Header / Nav -->
   <header>
     <h1>Crypto Portfolio</h1>
 
@@ -91,7 +108,7 @@
           <div id="kpiTotalEUR" class="kpi-value">—</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Total (USDT)</div>
+          <div class="kpi-label">Total ($)</div>
           <div id="kpiTotalUSDT" class="kpi-value">—</div>
         </div>
         <div class="kpi-card">
@@ -101,35 +118,29 @@
       </div>
     </section>
 
-    <!-- Table -->
     <section class="report-section">
-      <h2>Posições</h2>
-      <div class="table-wrap">
-        <table id="crypto-table">
-          <thead>
-            <tr>
-              <th>Asset</th>
-              <th>Quantity</th>
-              <th>Value (USDT)</th>
-              <th>Value (EUR)</th>
-              <th>Location</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody id="rows">
-            <tr><td colspan="6" class="text-muted">Loading…</td></tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <th>Total</th>
-              <th id="ft-qty">—</th>
-              <th id="ft-usdt">—</th>
-              <th id="ft-eur">—</th>
-              <th colspan="2"></th>
-            </tr>
-          </tfoot>
-        </table>
+      <div class="toolbar">
+        <button id="btn-add" class="btn">+ Add asset</button>
       </div>
+
+<div class="table-wrap">
+  <table id="crypto-table">
+    <thead>
+      <tr>
+        <th>Asset</th>
+        <th>Quantity</th>
+        <th>Value ($)</th>
+        <th>Value (EUR)</th>
+        <th>Location</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody id="rows">
+      <tr><td colspan="6" class="text-muted">Loading…</td></tr>
+    </tbody>
+  </table>
+</div>
+
       <p id="stamp" class="text-muted" style="margin-top:8px;"></p>
     </section>
   </main>
@@ -139,6 +150,29 @@
       <p>&copy; 2025 OM&MT.</p>
     </div>
   </footer>
+
+  <!-- Modal (no price field anymore) -->
+  <div id="modal-backdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h3 id="modal-title">Add asset</h3>
+      <div class="field">
+        <label for="m-asset">Ticker</label>
+        <input id="m-asset" type="text" placeholder="e.g. BTC" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="m-qty">Quantity</label>
+        <input id="m-qty" type="number" step="any" placeholder="0.0" />
+      </div>
+      <div class="field">
+        <label for="m-loc">Location</label>
+        <select id="m-loc"></select>
+      </div>
+      <div class="modal-actions">
+        <button id="m-cancel" class="btn">Cancel</button>
+        <button id="m-save" class="btn">Save</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Page script -->
   <script type="module" src="../js/crypto.js"></script>

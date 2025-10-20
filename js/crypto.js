@@ -1,17 +1,20 @@
 // js/crypto.js
-// KISS page: pull positions from Function, show Asset / Qty / Value (USDT/EUR) / Location dropdown.
-// Autosave Location to Firestore collection "cryptoportfolio" with doc id = asset symbol.
-// Uses your site's styles.css; table text is centered via page-scoped CSS.
+// Binance positions + manual assets (Ledger, etc.).
+// - Prices: reuse Binance per-asset price if available; otherwise fetch USD price from CoinGecko.
+// - Prices are cached in localStorage to reduce calls.
+// - Manual assets saved in 'cryptoportfolio_manual' (asset, quantity, location). No manual price field.
+// - Binance locations in 'cryptoportfolio' (unchanged).
+// - Buttons fixed (visible background).
 
 const isLocal = location.hostname === 'localhost' || location.hostname.startsWith('127.');
 const API_URL = isLocal
   ? 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio'
   : '/api/portfolio';
 
-// --- Intl formatters
-const nfQty   = new Intl.NumberFormat('en-PT', { maximumFractionDigits: 8 });
-const nfEUR   = new Intl.NumberFormat('en-PT', { style:'currency', currency:'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const nfUSDT  = new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// Intl formatters
+const nfQty  = new Intl.NumberFormat('en-PT', { maximumFractionDigits: 8 });
+const nfEUR  = new Intl.NumberFormat('en-PT', { style:'currency', currency:'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const nfUSD  = new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // Hide delisted/noise if desired
 const HIDE_SYMBOLS = new Set(['NEBL','ETHW']);
@@ -22,70 +25,212 @@ const LOCATION_CHOICES = [
   'Binance Earn Flexible',
   'Binance Staking',
   'Binance Earn',
-  'Other'
+  'Ledger'
 ];
 
 // ---- Firestore (match your caixa.js pattern) ----
 import { db } from './script.js';
 import {
-  collection, doc, getDocs, setDoc
+  collection, doc, getDocs, getDoc, setDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-let savedLocations = new Map();
+let savedLocations = new Map();   // from 'cryptoportfolio'
+let manualAssets   = [];          // from 'cryptoportfolio_manual' (asset, quantity, location)
+let binanceRows    = [];          // from API
+let usdtToEurRate  = 0;           // derived from Binance rows only
+let binancePriceMap = new Map();  // symbol -> priceUSDT (per unit)
 
+/* ======== CoinGecko price resolver (symbol -> USD) ======== */
+const LS_PRICE_PREFIX = 'price_usd_';     // key: price_usd_BTC
+const LS_ID_PREFIX    = 'cg_id_';         // key: cg_id_btc
+const PRICE_TTL_MS    = 1000 * 60 * 60;   // 1 hour cache
+
+async function getUsdPriceForSymbol(sym){
+  const s = String(sym || '').toUpperCase();
+
+  // 1) Use Binance price if we have it
+  if (binancePriceMap.has(s)) {
+    return { price: binancePriceMap.get(s), source: 'binance' };
+  }
+
+  // 2) Cached CoinGecko price?
+  try {
+    const cache = JSON.parse(localStorage.getItem(LS_PRICE_PREFIX + s) || 'null');
+    if (cache && (Date.now() - cache.ts) < PRICE_TTL_MS) {
+      return { price: Number(cache.usd || 0), source: 'coingecko' };
+    }
+  } catch {}
+
+  // 3) Resolve CoinGecko id (cached)
+  let id = null;
+  try {
+    const cachedId = localStorage.getItem(LS_ID_PREFIX + s);
+    if (cachedId) id = cachedId;
+  } catch {}
+  if (!id) {
+    id = await resolveCoingeckoIdFromSymbol(s);
+    if (!id) return { price: 0, source: 'unknown' };
+    try { localStorage.setItem(LS_ID_PREFIX + s, id); } catch {}
+  }
+
+  // 4) Fetch fresh USD price
+  const usd = await fetchCoingeckoUsdPrice(id);
+  if (usd > 0) {
+    try { localStorage.setItem(LS_PRICE_PREFIX + s, JSON.stringify({ usd, ts: Date.now() })); } catch {}
+  }
+  return { price: usd || 0, source: 'coingecko' };
+}
+
+
+async function resolveCoingeckoIdFromSymbol(symbol){
+  try {
+    const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`, { cache: 'no-cache' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const coins = j?.coins || [];
+
+    // Prefer exact symbol match; else startsWith; else first
+    let hit = coins.find(c => (c.symbol || '').toUpperCase() === symbol);
+    if (!hit) hit = coins.find(c => (c.symbol || '').toUpperCase().startsWith(symbol));
+    if (!hit) hit = coins[0];
+
+    return hit ? hit.id : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchCoingeckoUsdPrice(id){
+  try {
+    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=usd`, { cache: 'no-cache' });
+    if (!r.ok) return 0;
+    const j = await r.json();
+    const v = j?.[id]?.usd;
+    return typeof v === 'number' ? v : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/* =============== Init =============== */
 document.addEventListener('DOMContentLoaded', () => { init(); });
 
 async function init(){
   try {
     await loadSavedLocations();
+    await loadManualAssets();
+
     const data = await fetchPortfolio();
-    const view = normalize(data);
+    binanceRows = normalizeBinance(data);
 
-    renderKpis(view);
-    renderTable(view.rows);
-    renderTotals(view.rows);
+    // derive USDT→EUR from Binance rows (for manual EUR calc)
+    const bEur  = binanceRows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
+    const bUsdt = binanceRows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
+    usdtToEurRate = (bUsdt > 0 && bEur > 0) ? (bEur / bUsdt) : 0;
 
-    const d = data?.generatedAt ? new Date(data.generatedAt) : null;
-    $('#stamp').textContent = d ? `Generated at: ${d.toLocaleString('pt-PT')}` : '';
+    await renderAll(data?.generatedAt);
   } catch (e) {
     $('#rows').innerHTML = `<tr><td colspan="6" class="text-muted">Error: ${e.message}</td></tr>`;
   }
+
+  // UI: add button & modal init
+  setupModal();
 }
 
+/* =============== Data =============== */
 async function fetchPortfolio(){
   const r = await fetch(API_URL, { cache: 'no-cache' });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return await r.json();
 }
 
-function normalize(api){
+function normalizeBinance(api){
   const positions = Array.isArray(api?.positions) ? api.positions : [];
-
   const rows = positions
-    .map(p => ({
-      asset: String(p.asset || '').toUpperCase(),
-      quantity: Number(p.quantity || 0),
-      valueUSDT: Number(p.valueUSDT || 0),
-      valueEUR: Number(p.valueEUR || 0),
-    }))
+    .map(p => {
+      const asset = String(p.asset || '').toUpperCase();
+      const qty   = Number(p.quantity || 0);
+      let priceU  = (p.priceUSDT == null) ? 0 : Number(p.priceUSDT || 0);
+      const valU  = Number(p.valueUSDT || 0);
+      const valE  = Number(p.valueEUR  || 0);
+
+      // If priceUSDT missing but we have total value and qty, derive it.
+      if ((!priceU || priceU <= 0) && qty > 0 && valU > 0) priceU = valU / qty;
+
+      // Keep per-unit price in a map for reuse by manual assets
+      if (priceU > 0) binancePriceMap.set(asset, priceU);
+
+      return {
+     asset,
+     quantity: qty,
+     valueUSDT: valU,
+     valueEUR: valE,
+      priceUSDT: priceU,
+      priceSource: 'binance',
+      source: 'binance'
+      };
+    })
     .filter(r => !HIDE_SYMBOLS.has(r.asset))
-    .filter(r => (r.valueUSDT || 0) >= 5)   // hide positions worth less than $5
+    .filter(r => (r.valueEUR || r.valueUSDT || 0) > 0)
     .sort((a,b) => (b.valueEUR || 0) - (a.valueEUR || 0));
-
-
-  const totalEUR  = rows.reduce((s,r) => s + (r.valueEUR  || 0), 0);
-  const totalUSDT = rows.reduce((s,r) => s + (r.valueUSDT || 0), 0);
-
-  return { rows, totalEUR, totalUSDT, generatedAt: api?.generatedAt };
+  return rows;
 }
 
-function renderKpis(view){
-  $('#kpiTotalEUR').textContent  = nfEUR.format(view.totalEUR || 0);
-  $('#kpiTotalUSDT').textContent = `${nfUSDT.format(view.totalUSDT || 0)} USDT`;
-  $('#kpiStamp').textContent     = view.generatedAt ? new Date(view.generatedAt).toLocaleString('pt-PT') : '—';
+async function loadSavedLocations(){
+  savedLocations = new Map();
+  const snap = await getDocs(collection(db, 'cryptoportfolio'));
+  snap.forEach(docSnap => {
+    const id = docSnap.id;
+    const loc = docSnap.data()?.location || null;
+    if (id && typeof loc === 'string') savedLocations.set(id.toUpperCase(), loc);
+  });
+}
+
+async function loadManualAssets(){
+  manualAssets = [];
+  const snap = await getDocs(collection(db, 'cryptoportfolio_manual'));
+  snap.forEach(docSnap => {
+    const d = docSnap.data() || {};
+    manualAssets.push({
+      asset: String(d.asset || docSnap.id || '').toUpperCase(),
+      quantity: Number(d.quantity || 0),
+      location: typeof d.location === 'string' ? d.location : 'Other',
+      updatedAt: d.updatedAt || null,
+      source: 'manual'
+    });
+  });
+}
+
+/* =============== Render =============== */
+async function renderAll(generatedAt){
+  // Compute manual values with auto price
+const manualWithValues = await Promise.all(manualAssets.map(async m => {
+  const { price, source: priceSource } = await getUsdPriceForSymbol(m.asset);
+  const valUSDT = (price > 0 && m.quantity > 0) ? (m.quantity * price) : 0;
+  const valEUR  = usdtToEurRate ? (valUSDT * usdtToEurRate) : 0;
+  return { ...m, valueUSDT: valUSDT, valueEUR: valEUR, priceUSDT: price, priceSource };
+}));
+
+
+  // combine rows: Binance first, then manual
+  const combined = [
+    ...binanceRows.map(r => ({ ...r, location: savedLocations.get(r.asset) || '' })),
+    ...manualWithValues
+  ].sort((a,b) => (b.valueEUR || 0) - (a.valueEUR || 0));
+
+  renderKpis(combined, generatedAt);
+  renderTable(combined);
+}
+
+function renderKpis(rows, generatedAt){
+  const totalEUR  = rows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
+  const totalUSDT = rows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
+  $('#kpiTotalEUR').textContent  = nfEUR.format(totalEUR);
+  $('#kpiTotalUSDT').textContent = `$${nfUSD.format(totalUSDT)}`;
+  $('#kpiStamp').textContent     = generatedAt ? new Date(generatedAt).toLocaleString('pt-PT') : '—';
 }
 
 function renderTable(rows){
@@ -96,30 +241,65 @@ function renderTable(rows){
   }
 
   const html = rows.map(r => {
-    const sel = locationSelectHtml(r.asset, savedLocations.get(r.asset));
+    const sel = locationSelectHtml(r.asset, r.location || '');
+
+    // per-row price source icon (native tooltip)
+    const priceInfoIcon =
+      r.priceSource === 'binance'
+        ? '<span title="Price from Binance">ⓘ</span>'
+        : r.priceSource === 'coingecko'
+        ? '<span title="Price from CoinGecko">ⓘ</span>'
+        : '';
+
+    const actions = r.source === 'manual'
+      ? `<button class="btn btn-edit" data-edit="${escapeHtml(r.asset)}">Edit</button>
+         <button class="btn btn-del" data-del="${escapeHtml(r.asset)}">Delete</button>`
+      : `<span class="status" id="status-${escapeHtml(r.asset)}"></span>`;
+
     return `
-      <tr data-asset="${escapeHtml(r.asset)}">
+      <tr data-asset="${escapeHtml(r.asset)}" data-source="${r.source}">
         <td><b>${escapeHtml(r.asset)}</b></td>
         <td>${nfQty.format(r.quantity)}</td>
-        <td>$${nfUSDT.format(r.valueUSDT)}</td>
-        <td>${nfEUR.format(r.valueEUR)}</td>
+        <td>$${nfUSD.format(r.valueUSDT || 0)} ${priceInfoIcon}</td>
+        <td>${nfEUR.format(r.valueEUR || 0)}</td>
         <td>${sel}</td>
-        <td class="status" id="status-${escapeHtml(r.asset)}"></td>
+        <td>${actions}</td>
       </tr>
     `;
   }).join('');
 
   tbody.innerHTML = html;
 
-  // Bind autosave handlers
+  // Autosave location (Binance -> cryptoportfolio, Manual -> cryptoportfolio_manual)
   $$('select[data-asset]').forEach(el => {
     el.addEventListener('change', async (e) => {
       const asset = e.target.getAttribute('data-asset');
-      const value = e.target.value;
-      await saveLocation(asset, value);
+      const location = e.target.value;
+      const row = e.target.closest('tr');
+      const source = row?.getAttribute('data-source') || 'binance';
+      if (source === 'manual') {
+        await saveManual(asset, { location });
+      } else {
+        await saveBinanceLocation(asset, location);
+      }
+    });
+  });
+
+  // Edit/Delete for manual rows
+  $$('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', () => openModalForEdit(btn.getAttribute('data-edit')));
+  });
+  $$('.btn-del').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const asset = btn.getAttribute('data-del');
+      if (!confirm(`Delete manual asset ${asset}?`)) return;
+      await deleteManual(asset);
+      await loadManualAssets();
+      await renderAll(); // re-render totals
     });
   });
 }
+
 
 function renderTotals(rows){
   const totalQty   = rows.reduce((s,r)=> s + (r.quantity || 0), 0);
@@ -127,7 +307,7 @@ function renderTotals(rows){
   const totalEUR   = rows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
 
   $('#ft-qty').textContent  = nfQty.format(totalQty);
-  $('#ft-usdt').textContent = `$${nfUSDT.format(totalUSDT)}`;
+  $('#ft-usdt').textContent = `$${nfUSD.format(totalUSDT)}`;
   $('#ft-eur').textContent  = nfEUR.format(totalEUR);
 }
 
@@ -139,18 +319,8 @@ function locationSelectHtml(asset, selected){
   return `<select class="location-select" data-asset="${escapeHtml(asset)}">${opts}</select>`;
 }
 
-// ----- Firestore persistence -----
-async function loadSavedLocations(){
-  savedLocations = new Map();
-  const snap = await getDocs(collection(db, 'cryptoportfolio'));
-  snap.forEach(docSnap => {
-    const id = docSnap.id;
-    const loc = docSnap.data()?.location || null;
-    if (id && typeof loc === 'string') savedLocations.set(id.toUpperCase(), loc);
-  });
-}
-
-async function saveLocation(asset, location){
+/* =============== Firestore ops =============== */
+async function saveBinanceLocation(asset, location){
   const cell = document.getElementById(`status-${asset}`);
   try {
     if (cell) { cell.textContent = 'saving…'; cell.classList.remove('ok','err'); }
@@ -165,7 +335,73 @@ async function saveLocation(asset, location){
   }
 }
 
-// ----- utils -----
+// manual assets live in 'cryptoportfolio_manual'
+async function saveManual(asset, partial){
+  const ref = doc(collection(db, 'cryptoportfolio_manual'), asset);
+  const snap = await getDoc(ref);
+  const prev = snap.exists() ? (snap.data() || {}) : {};
+  const next = { ...prev, ...partial, asset, updatedAt: new Date() };
+  await setDoc(ref, next, { merge: true });
+}
+
+async function deleteManual(asset){
+  const ref = doc(collection(db, 'cryptoportfolio_manual'), asset);
+  await deleteDoc(ref);
+}
+
+/* =============== Modal (Add/Edit) =============== */
+function setupModal(){
+  const modal = $('#modal-backdrop');
+  const selLoc = $('#m-loc');
+  selLoc.innerHTML = LOCATION_CHOICES.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+
+  $('#btn-add')?.addEventListener('click', () => openModalForAdd());
+  $('#m-cancel')?.addEventListener('click', closeModal);
+  $('#m-save')?.addEventListener('click', saveModal);
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+}
+
+function openModalForAdd(){
+  $('#modal-title').textContent = 'Add asset';
+  $('#m-asset').value = '';
+  $('#m-qty').value = '';
+  $('#m-loc').value = 'Other';
+  $('#modal-backdrop').style.display = 'flex';
+  $('#m-asset').focus();
+}
+
+function openModalForEdit(asset){
+  const m = manualAssets.find(x => x.asset === asset);
+  $('#modal-title').textContent = `Edit ${asset}`;
+  $('#m-asset').value = m?.asset || asset;
+  $('#m-asset').disabled = true; // editing keeps same id
+  $('#m-qty').value = m?.quantity ?? '';
+  $('#m-loc').value = m?.location || 'Other';
+  $('#modal-backdrop').style.display = 'flex';
+}
+
+function closeModal(){
+  $('#modal-backdrop').style.display = 'none';
+  $('#m-asset').disabled = false;
+}
+
+async function saveModal(){
+  const asset = String($('#m-asset').value || '').toUpperCase().trim();
+  const qty   = Number($('#m-qty').value || 0);
+  const loc   = $('#m-loc').value;
+
+  if (!asset || !isFinite(qty) || qty <= 0) {
+    alert('Ticker e quantidade são obrigatórios.');
+    return;
+  }
+
+  await saveManual(asset, { asset, quantity: qty, location: loc });
+  await loadManualAssets();
+  closeModal();
+  await renderAll(); // recalc totals with new price
+}
+
+/* =============== Utils =============== */
 function escapeHtml(str=''){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
