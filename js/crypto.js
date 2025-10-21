@@ -34,6 +34,7 @@ import { db } from './script.js';
 import {
   collection, doc, getDocs, getDoc, setDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import jsPDF from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js";
 
 const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -448,4 +449,87 @@ async function saveModal(){
 // =============== Utils ===============
 function escapeHtml(str=''){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+
+/* =============== PDF Export =============== */
+function setupPdfButton() {
+  const btn = document.getElementById('btn-pdf');
+  if (!btn) return;
+
+  btn.addEventListener('click', async () => {
+    const rows = getCurrentRows();
+    if (!rows.length) {
+      alert('Sem dados para exportar.');
+      return;
+    }
+
+    // Cria documento
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let y = 40;
+
+    // Cabeçalho
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Relatório de Portefólio Cripto', pageWidth / 2, y, { align: 'center' });
+    y += 20;
+
+    // Data de geração
+    const dataStr = new Date().toLocaleString('pt-PT');
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Gerado em: ${dataStr}`, pageWidth - 40, y, { align: 'right' });
+    y += 20;
+
+    // Cabeçalho da tabela
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Ativo', 40, y);
+    doc.text('Qtd', 120, y);
+    doc.text('USD', 240, y);
+    doc.text('EUR', 320, y);
+    doc.text('Localização', 420, y);
+    y += 10;
+    doc.line(40, y, pageWidth - 40, y);
+    y += 15;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+
+    // Linhas
+    const displayRows = hideSmall
+      ? rows.filter(r => (r.valueUSDT || 0) >= SMALL_USD_THRESHOLD)
+      : rows;
+
+    for (const r of displayRows) {
+      if (y > 760) { // Nova página se necessário
+        doc.addPage();
+        y = 40;
+      }
+      doc.text(r.asset, 40, y);
+      doc.text(nfQty.format(r.quantity), 120, y, { align: 'left' });
+      doc.text(`$${nfUSD.format(r.valueUSDT || 0)}`, 240, y, { align: 'left' });
+      doc.text(`${nfEUR.format(r.valueEUR || 0)}`, 320, y, { align: 'left' });
+      doc.text(r.location || '', 420, y, { align: 'left' });
+      y += 14;
+    }
+
+    y += 20;
+    const totalEUR  = rows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
+    const totalUSDT = rows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total:  $${nfUSD.format(totalUSDT)}   (${nfEUR.format(totalEUR)})`, 40, y);
+
+    // Guarda ficheiro
+    const filename = `Crypto_Portfolio_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+  });
+}
+
+// Ativar após render inicial
+document.addEventListener('DOMContentLoaded', setupPdfButton);
+
+
+
 }
