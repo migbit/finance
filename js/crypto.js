@@ -1,89 +1,60 @@
 // js/crypto.js
-// Use Firebase rewrite only when hosted on Firebase domains.
-// Otherwise (GitHub Pages, custom domains, localhost) hit the full CF URL.
 
+/* ================== Host / API ================== */
 const HOST = location.hostname;
 const ON_FIREBASE = /\.web\.app$/.test(HOST) || /firebaseapp\.com$/.test(HOST);
-
 const CF_URL = 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio';
 const API_URL = ON_FIREBASE ? '/api/portfolio' : CF_URL;
 
-// Intl formatters
+/* ================== Intl ================== */
 const nfQty  = new Intl.NumberFormat('en-PT', { maximumFractionDigits: 8 });
 const nfEUR  = new Intl.NumberFormat('en-PT', { style:'currency', currency:'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const nfUSD  = new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// Small value toggle
-const SMALL_USD_THRESHOLD = 5;   // Value ($) threshold
-let hideSmall = true;            // start hidden by default
+/* ================== UI State ================== */
+const SMALL_USD_THRESHOLD = 5;   // threshold do toggle
+let hideSmall = true;            // começa a ocultar < $5
 
-// Hide delisted/noise if desired
+/* ================== Config ================== */
 const HIDE_SYMBOLS = new Set(['NEBL','ETHW']);
-
-// Dropdown choices
 const LOCATION_CHOICES = [
   'Binance Spot',
   'Binance Earn Flexible',
   'Binance Staking',
   'Binance Earn',
-  'Ledger'
+  'Ledger',
+  'Other'
 ];
 
-// ---- Firestore (match your caixa.js pattern) ----
+/* ================== Firebase ================== */
 import { db } from './script.js';
 import {
   collection, doc, getDocs, getDoc, setDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
+/* ================== DOM utils ================== */
 const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-let savedLocations   = new Map();  // from 'cryptoportfolio'
-let manualAssets     = [];         // from 'cryptoportfolio_manual' (asset, quantity, location)
-let binanceRows      = [];         // from API
-let usdtToEurRate    = 0;          // derived from Binance rows only
-let binancePriceMap  = new Map();  // symbol -> priceUSDT (per unit)
+/* ================== App State ================== */
+let savedLocations   = new Map();  // cryptoportfolio
+let manualAssets     = [];         // cryptoportfolio_manual
+let binanceRows      = [];         // da função
+let usdtToEurRate    = 0;          // EUR/USDT ratio
+let binancePriceMap  = new Map();  // symbol -> priceUSDT
+let _latestCombinedRows = [];      // linhas mostradas
 
-// ======== CoinGecko price resolver (symbol -> USD) ========
-const LS_PRICE_PREFIX = 'price_usd_';   // key: price_usd_BTC
-const LS_ID_PREFIX    = 'cg_id_';       // key: cg_id_btc
-const PRICE_TTL_MS    = 1000 * 60 * 60; // 1 hour cache
+// Expor helpers no window (debug / PDF)
+window.getCurrentRows  = () => _latestCombinedRows.slice();
+window.getHideSmall    = () => hideSmall;
+window.getUsdThreshold = () => SMALL_USD_THRESHOLD;
 
-async function getUsdPriceForSymbol(sym){
-  const s = String(sym || '').toUpperCase();
+/* ================== CoinGecko helpers ================== */
+const LS_PRICE_PREFIX = 'price_usd_';   // price_usd_BTC
+const LS_ID_PREFIX    = 'cg_id_';       // cg_id_BTC
+const PRICE_TTL_MS    = 1000 * 60 * 60; // 1h
 
-  // 1) Use Binance price if we have it
-  if (binancePriceMap.has(s)) {
-    return { price: binancePriceMap.get(s), source: 'binance' };
-  }
-
-  // 2) Cached CoinGecko price?
-  try {
-    const cache = JSON.parse(localStorage.getItem(LS_PRICE_PREFIX + s) || 'null');
-    if (cache && (Date.now() - cache.ts) < PRICE_TTL_MS && cache.usd > 0) {
-      return { price: Number(cache.usd || 0), source: 'coingecko' };
-    }
-  } catch {}
-
-  // 3) Resolve CoinGecko id (cached)
-  let id = null;
-  try {
-    const cachedId = localStorage.getItem(LS_ID_PREFIX + s);
-    if (cachedId) id = cachedId;
-  } catch {}
-  if (!id) {
-    id = await resolveCoingeckoIdFromSymbol(s);
-    if (!id) return { price: 0, source: 'unknown' };
-    try { localStorage.setItem(LS_ID_PREFIX + s, id); } catch {}
-  }
-
-  // 4) Fetch fresh USD price (retry/backoff)
-  const usd = await fetchCoingeckoUsdPrice(id);
-  if (usd > 0) {
-    try { localStorage.setItem(LS_PRICE_PREFIX + s, JSON.stringify({ usd, ts: Date.now() })); } catch {}
-  }
-  return { price: usd || 0, source: 'coingecko' };
-}
+async function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
 async function resolveCoingeckoIdFromSymbol(symbol){
   try {
@@ -91,7 +62,6 @@ async function resolveCoingeckoIdFromSymbol(symbol){
     if (!r.ok) return null;
     const j = await r.json();
     const coins = j?.coins || [];
-    // Prefer exact symbol match; else startsWith; else first
     let hit = coins.find(c => (c.symbol || '').toUpperCase() === symbol);
     if (!hit) hit = coins.find(c => (c.symbol || '').toUpperCase().startsWith(symbol));
     if (!hit) hit = coins[0];
@@ -102,11 +72,12 @@ async function resolveCoingeckoIdFromSymbol(symbol){
 }
 
 async function fetchCoingeckoUsdPrice(id){
-  const tries = [0, 400, 900]; // ms backoff
+  const tries = [0, 500, 1000]; // retry/backoff simples
   for (const delay of tries) {
-    if (delay) await new Promise(r => setTimeout(r, delay));
+    if (delay) await sleep(delay);
     try {
       const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=usd`, { cache: 'no-cache' });
+      if (r.status === 429) continue;
       if (!r.ok) continue;
       const j = await r.json();
       const v = j?.[id]?.usd;
@@ -119,7 +90,117 @@ async function fetchCoingeckoUsdPrice(id){
   return 0;
 }
 
-// =============== Init ===============
+// Pré-carrega e cacheia preços em batch para evitar 429 no 1º load
+async function ensureCoingeckoIdsForSymbols(symbols){
+  const need = [];
+  for (const s0 of symbols) {
+    const s = String(s0).toUpperCase();
+    const key = LS_ID_PREFIX + s;
+    const cached = localStorage.getItem(key);
+    if (!cached) need.push(s);
+  }
+  for (const s of need) {
+    const id = await resolveCoingeckoIdFromSymbol(s);
+    if (id) try { localStorage.setItem(LS_ID_PREFIX + s, id); } catch {}
+    await sleep(120);
+  }
+}
+
+function symbolsNeedingPrice(symbols){
+  const out = [];
+  for (const s0 of symbols) {
+    const s = String(s0).toUpperCase();
+    const cache = localStorage.getItem(LS_PRICE_PREFIX + s);
+    if (cache) {
+      try {
+        const c = JSON.parse(cache);
+        if (c && (Date.now() - c.ts) < PRICE_TTL_MS && c.usd > 0) continue;
+      } catch {}
+    }
+    out.push(s);
+  }
+  return out;
+}
+
+async function fetchCoingeckoPricesBatch(ids){
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids.join(','))}&vs_currencies=usd`;
+  let tries = 0;
+  while (tries < 3) {
+    tries++;
+    try {
+      const res = await fetch(url, { cache: 'no-cache' });
+      if (res.status === 429) { await sleep(900 + Math.random()*600); continue; }
+      if (!res.ok) { await sleep(400); continue; }
+      const json = await res.json();
+      return json || {};
+    } catch {
+      await sleep(400);
+    }
+  }
+  return {};
+}
+
+async function prefetchUsdPricesForSymbols(symbols, batchSize=30){
+  await ensureCoingeckoIdsForSymbols(symbols);
+
+  const symToId = new Map();
+  for (const s0 of symbols) {
+    const s = String(s0).toUpperCase();
+    const id = localStorage.getItem(LS_ID_PREFIX + s);
+    if (id) symToId.set(s, id);
+  }
+
+  const needSyms = symbolsNeedingPrice(symbols);
+  const needIds = needSyms.map(s => symToId.get(s)).filter(Boolean);
+
+  for (let i=0; i<needIds.length; i+=batchSize) {
+    const slice = needIds.slice(i, i+batchSize);
+    const data = await fetchCoingeckoPricesBatch(slice);
+    for (const id of slice) {
+      const v = data?.[id]?.usd;
+      for (const [sym, symId] of symToId.entries()) {
+        if (symId === id && typeof v === 'number' && v > 0) {
+          try { localStorage.setItem(LS_PRICE_PREFIX + sym, JSON.stringify({ usd: v, ts: Date.now() })); } catch {}
+        }
+      }
+    }
+    await sleep(600 + Math.random()*600);
+  }
+}
+
+// Único resolvedor por símbolo (usa Binance se possível; senão cache/CG)
+async function getUsdPriceForSymbol(sym){
+  const s = String(sym || '').toUpperCase();
+
+  // 1) preço por ativo vindo da própria Binance
+  if (binancePriceMap.has(s)) {
+    return { price: binancePriceMap.get(s), source: 'binance' };
+  }
+
+  // 2) cache local válida
+  try {
+    const cache = JSON.parse(localStorage.getItem(LS_PRICE_PREFIX + s) || 'null');
+    if (cache && (Date.now() - cache.ts) < PRICE_TTL_MS && cache.usd > 0) {
+      return { price: Number(cache.usd || 0), source: 'coingecko' };
+    }
+  } catch {}
+
+  // 3) resolver id (cacheado) e pedir preço
+  let id = null;
+  try { id = localStorage.getItem(LS_ID_PREFIX + s) || null; } catch {}
+  if (!id) {
+    id = await resolveCoingeckoIdFromSymbol(s);
+    if (!id) return { price: 0, source: 'unknown' };
+    try { localStorage.setItem(LS_ID_PREFIX + s, id); } catch {}
+  }
+  const usd = await fetchCoingeckoUsdPrice(id);
+  if (usd > 0) {
+    try { localStorage.setItem(LS_PRICE_PREFIX + s, JSON.stringify({ usd, ts: Date.now() })); } catch {}
+  }
+  return { price: usd || 0, source: 'coingecko' };
+}
+
+/* ================== Init ================== */
 document.addEventListener('DOMContentLoaded', () => { init(); });
 
 async function init(){
@@ -130,7 +211,7 @@ async function init(){
     const data = await fetchPortfolio();
     binanceRows = normalizeBinance(data);
 
-    // derive USDT→EUR from Binance rows (for manual EUR calc)
+    // ratio EUR/USDT a partir da Binance
     const bEur  = binanceRows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
     const bUsdt = binanceRows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
     usdtToEurRate = (bUsdt > 0 && bEur > 0) ? (bEur / bUsdt) : 0;
@@ -140,35 +221,32 @@ async function init(){
     $('#rows').innerHTML = `<tr><td colspan="6" class="text-muted">Error: ${e.message}</td></tr>`;
   }
 
-  // UI: add button & modal init
+  // UI/Bind
   setupModal();
 
-  // Toggle small values
   const btnToggle = document.getElementById('btn-toggle-small');
   if (btnToggle) {
-    btnToggle.textContent = hideSmall ? 'Mostrar valores < $5' : 'Ocultar valores < $5';
+    btnToggle.textContent = hideSmall ? 'Ocultar valores < $5' : 'Mostrar apenas ≥ $5';
     btnToggle.addEventListener('click', () => {
       hideSmall = !hideSmall;
-      btnToggle.textContent = hideSmall ? 'Mostrar valores < $5' : 'Ocultar valores < $5';
+      btnToggle.textContent = hideSmall ? 'Ocultar valores < $5' : 'Mostrar apenas ≥ $5';
       renderTable(getCurrentRows());
       updateSmallNote(getCurrentRows());
     });
   }
+
+  // PDF button bind (também é chamado mais abaixo por segurança)
+  setupPdfButton();
 }
 
-// =============== Data ===============
+/* ================== Data fetch/normalize ================== */
 async function fetchPortfolio(){
-  // Try primary
   let res = await fetch(API_URL, { cache: 'no-cache' });
   if (res.ok) return res.json();
-
-  // If we were on Firebase and rewrite failed for some reason, try direct CF
   if (ON_FIREBASE) {
     res = await fetch(CF_URL, { cache: 'no-cache' });
     if (res.ok) return res.json();
   }
-
-  // Surface the original error
   throw new Error(`HTTP ${res.status}`);
 }
 
@@ -181,11 +259,7 @@ function normalizeBinance(api){
       let priceU  = (p.priceUSDT == null) ? 0 : Number(p.priceUSDT || 0);
       const valU  = Number(p.valueUSDT || 0);
       const valE  = Number(p.valueEUR  || 0);
-
-      // If priceUSDT missing but we have total value and qty, derive it.
       if ((!priceU || priceU <= 0) && qty > 0 && valU > 0) priceU = valU / qty;
-
-      // Keep per-unit price in a map for reuse by manual assets
       if (priceU > 0) binancePriceMap.set(asset, priceU);
 
       return {
@@ -229,11 +303,16 @@ async function loadManualAssets(){
   });
 }
 
-// =============== Render ===============
-let _latestCombinedRows = [];
-
+/* ================== Render ================== */
 async function renderAll(generatedAt){
-  // Compute manual values with auto price
+  // Prefetch: símbolos manuais que não têm preço da Binance
+  const manualSyms = manualAssets
+    .map(m => String(m.asset || '').toUpperCase())
+    .filter(s => s && !binancePriceMap.has(s));
+  if (manualSyms.length) {
+    await prefetchUsdPricesForSymbols(manualSyms, 25); // batches menores reduzem 429
+  }
+
   const manualWithValues = await Promise.all(manualAssets.map(async m => {
     const { price, source: priceSource } = await getUsdPriceForSymbol(m.asset);
     const valUSDT = (price > 0 && m.quantity > 0) ? (m.quantity * price) : 0;
@@ -241,7 +320,6 @@ async function renderAll(generatedAt){
     return { ...m, valueUSDT: valUSDT, valueEUR: valEUR, priceUSDT: price, priceSource };
   }));
 
-  // Combine rows: Binance first, then manual
   const combined = [
     ...binanceRows.map(r => ({ ...r, location: savedLocations.get(r.asset) || '' })),
     ...manualWithValues
@@ -252,10 +330,6 @@ async function renderAll(generatedAt){
   renderKpis(combined, generatedAt);
   renderTable(combined);
   updateSmallNote(combined);
-}
-
-function getCurrentRows(){
-  return _latestCombinedRows || [];
 }
 
 function renderKpis(rows, generatedAt){
@@ -270,7 +344,6 @@ function renderTable(rows){
   const tbody = $('#rows');
   if (!tbody) return;
 
-  // Apply small-value filter for display only
   const displayRows = hideSmall
     ? rows.filter(r => (r.valueUSDT || 0) >= SMALL_USD_THRESHOLD)
     : rows;
@@ -282,13 +355,10 @@ function renderTable(rows){
 
   const html = displayRows.map(r => {
     const sel = locationSelectHtml(r.asset, r.location || '');
-
     const priceInfoIcon =
-      r.priceSource === 'binance'
-        ? '<span title="Price from Binance">ⓘ</span>'
-        : r.priceSource === 'coingecko'
-        ? '<span title="Price from CoinGecko">ⓘ</span>'
-        : '';
+      r.priceSource === 'binance'       ? '<span title="Price from Binance">ⓘ</span>' :
+      r.priceSource === 'coingecko'     ? '<span title="Price from CoinGecko">ⓘ</span>' :
+                                          '';
 
     const actions = r.source === 'manual'
       ? `<button class="btn btn-edit" data-edit="${escapeHtml(r.asset)}">Edit</button>
@@ -309,8 +379,7 @@ function renderTable(rows){
 
   tbody.innerHTML = html;
 
-  // ---- Bind handlers (inside renderTable) ----
-  // Autosave location (Binance -> cryptoportfolio, Manual -> cryptoportfolio_manual)
+  // Bind: select (autosave)
   $$('select[data-asset]').forEach(el => {
     el.addEventListener('change', async (e) => {
       const asset = e.target.getAttribute('data-asset');
@@ -325,7 +394,7 @@ function renderTable(rows){
     });
   });
 
-  // Edit/Delete for manual rows
+  // Bind: edit/delete manual
   $$('.btn-edit').forEach(btn => {
     btn.addEventListener('click', () => openModalForEdit(btn.getAttribute('data-edit')));
   });
@@ -335,7 +404,7 @@ function renderTable(rows){
       if (!confirm(`Delete manual asset ${asset}?`)) return;
       await deleteManual(asset);
       await loadManualAssets();
-      await renderAll(); // re-render totals
+      await renderAll(); // recalc e re‐render
     });
   });
 }
@@ -343,9 +412,7 @@ function renderTable(rows){
 function updateSmallNote(allRows) {
   const note = document.getElementById('small-note');
   if (!note) return;
-
   const hiddenCount = allRows.filter(r => (r.valueUSDT || 0) < SMALL_USD_THRESHOLD).length;
-
   if (hideSmall && hiddenCount > 0) {
     note.textContent = `A ocultar ${hiddenCount} posições com valor < $${SMALL_USD_THRESHOLD}.`;
   } else {
@@ -361,7 +428,7 @@ function locationSelectHtml(asset, selected){
   return `<select class="location-select" data-asset="${escapeHtml(asset)}">${opts}</select>`;
 }
 
-// =============== Firestore ops ===============
+/* ================== Firestore ops ================== */
 async function saveBinanceLocation(asset, location){
   const cell = document.getElementById(`status-${asset}`);
   try {
@@ -377,7 +444,6 @@ async function saveBinanceLocation(asset, location){
   }
 }
 
-// manual assets live in 'cryptoportfolio_manual'
 async function saveManual(asset, partial){
   const ref = doc(collection(db, 'cryptoportfolio_manual'), asset);
   const snap = await getDoc(ref);
@@ -391,14 +457,13 @@ async function deleteManual(asset){
   await deleteDoc(ref);
 }
 
-// =============== Modal (Add/Edit) ===============
+/* ================== Modal Add/Edit ================== */
 function setupModal(){
   const modal = $('#modal-backdrop');
   const selLoc = $('#m-loc');
   if (selLoc) {
     selLoc.innerHTML = LOCATION_CHOICES.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   }
-
   $('#btn-add')?.addEventListener('click', () => openModalForAdd());
   $('#m-cancel')?.addEventListener('click', closeModal);
   $('#m-save')?.addEventListener('click', saveModal);
@@ -418,7 +483,7 @@ function openModalForEdit(asset){
   const m = manualAssets.find(x => x.asset === asset);
   $('#modal-title').textContent = `Edit ${asset}`;
   $('#m-asset').value = m?.asset || asset;
-  $('#m-asset').disabled = true; // editing keeps same id
+  $('#m-asset').disabled = true;
   $('#m-qty').value = m?.quantity ?? '';
   $('#m-loc').value = m?.location || 'Other';
   $('#modal-backdrop').style.display = 'flex';
@@ -442,95 +507,85 @@ async function saveModal(){
   await saveManual(asset, { asset, quantity: qty, location: loc });
   await loadManualAssets();
   closeModal();
-  await renderAll(); // recalc totals with new price
+  await renderAll(); // recalc preços e totais
 }
 
-// =============== Utils ===============
-function escapeHtml(str=''){
-  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-
-
-/* =============== PDF Export =============== */
+/* ================== PDF Export (jsPDF UMD) ================== */
 function setupPdfButton() {
   const btn = document.getElementById('btn-pdf');
   if (!btn) return;
 
-  btn.addEventListener('click', async () => {
-    const rows = getCurrentRows();
-    if (!rows.length) {
-      alert('Sem dados para exportar.');
-      return;
-    }
+  btn.addEventListener('click', async (ev) => {
+    ev.preventDefault();
+    try {
+      if (!window.jspdf) { alert('Módulo jsPDF não carregado.'); return; }
+      const { jsPDF } = window.jspdf;
 
-    // Cria documento
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      const rows = window.getCurrentRows ? window.getCurrentRows() : [];
+      if (!rows.length) { alert('Sem dados para exportar.'); return; }
 
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let y = 40;
 
-    const pageWidth = doc.internal.pageSize.getWidth();
-    let y = 40;
+      // ======== HEADER ========
+      const now = new Date();
+      const monthName = now.toLocaleString('pt-PT', { month: 'long' });
+      const year = now.getFullYear();
+      const title = `Portefólio Cripto — ${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
 
-    // Cabeçalho
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.text('Relatório de Portefólio Cripto', pageWidth / 2, y, { align: 'center' });
-    y += 20;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text(title, pageWidth / 2, y, { align: 'center' });
+      y += 30;
 
-    // Data de geração
-    const dataStr = new Date().toLocaleString('pt-PT');
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Gerado em: ${dataStr}`, pageWidth - 40, y, { align: 'right' });
-    y += 20;
+      // ======== TABLE HEADER ========
+      doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.text('Ativo', 40, y); doc.text('Qtd', 120, y);
+      doc.text('USD', 240, y); doc.text('EUR', 320, y); doc.text('Localização', 420, y);
+      y += 10; doc.line(40, y, pageWidth - 40, y); y += 15;
 
-    // Cabeçalho da tabela
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Ativo', 40, y);
-    doc.text('Qtd', 120, y);
-    doc.text('USD', 240, y);
-    doc.text('EUR', 320, y);
-    doc.text('Localização', 420, y);
-    y += 10;
-    doc.line(40, y, pageWidth - 40, y);
-    y += 15;
+      // ======== TABLE ROWS ========
+      const hide = window.getHideSmall ? window.getHideSmall() : hideSmall;
+      const thr  = window.getUsdThreshold ? window.getUsdThreshold() : SMALL_USD_THRESHOLD;
+      const displayRows = hide ? rows.filter(r => (r.valueUSDT || 0) >= thr) : rows;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-
-    // Linhas
-    const displayRows = hideSmall
-      ? rows.filter(r => (r.valueUSDT || 0) >= SMALL_USD_THRESHOLD)
-      : rows;
-
-    for (const r of displayRows) {
-      if (y > 760) { // Nova página se necessário
-        doc.addPage();
-        y = 40;
+      doc.setFont('helvetica','normal'); doc.setFontSize(10);
+      for (const r of displayRows) {
+        if (y > 760) { doc.addPage(); y = 40; }
+        doc.text(r.asset, 40, y);
+        doc.text(nfQty.format(r.quantity), 120, y);
+        doc.text(`$${nfUSD.format(r.valueUSDT || 0)}`, 240, y);
+        doc.text(`${nfEUR.format(r.valueEUR || 0)}`, 320, y);
+        doc.text(r.location || '', 420, y);
+        y += 14;
       }
-      doc.text(r.asset, 40, y);
-      doc.text(nfQty.format(r.quantity), 120, y, { align: 'left' });
-      doc.text(`$${nfUSD.format(r.valueUSDT || 0)}`, 240, y, { align: 'left' });
-      doc.text(`${nfEUR.format(r.valueEUR || 0)}`, 320, y, { align: 'left' });
-      doc.text(r.location || '', 420, y, { align: 'left' });
-      y += 14;
+
+      // ======== TOTAL ========
+      y += 20;
+      const totalEUR  = rows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
+      const totalUSDT = rows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
+      doc.setFont('helvetica','bold');
+      doc.text(`Total:  $${nfUSD.format(totalUSDT)}   (${nfEUR.format(totalEUR)})`, 40, y);
+
+      const filename = `Crypto_Portfolio_${year}-${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
+      doc.save(filename);
+    } catch (e) {
+      console.error('PDF error:', e);
+      alert('Falha ao gerar PDF. Ver consola.');
     }
-
-    y += 20;
-    const totalEUR  = rows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
-    const totalUSDT = rows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Total:  $${nfUSD.format(totalUSDT)}   (${nfEUR.format(totalEUR)})`, 40, y);
-
-    // Guarda ficheiro
-    const filename = `Crypto_Portfolio_${new Date().toISOString().slice(0,10)}.pdf`;
-    doc.save(filename);
   });
 }
 
-// Ativar após render inicial
-document.addEventListener('DOMContentLoaded', setupPdfButton);
+// Se o DOM já estiver pronto, liga já; senão espera
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupPdfButton);
+} else {
+  setupPdfButton();
+}
 
 
-
+/* ================== Utils ================== */
+function escapeHtml(str=''){
+  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
