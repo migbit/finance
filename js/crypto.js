@@ -34,7 +34,6 @@ import { db } from './script.js';
 import {
   collection, doc, getDocs, getDoc, setDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-import jsPDF from "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.es.min.js";
 
 const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -464,7 +463,9 @@ function setupPdfButton() {
     }
 
     // Cria documento
+    const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
 
     const pageWidth = doc.internal.pageSize.getWidth();
     let y = 40;
