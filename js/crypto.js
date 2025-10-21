@@ -104,16 +104,24 @@ async function resolveCoingeckoIdFromSymbol(symbol){
 }
 
 async function fetchCoingeckoUsdPrice(id){
-  try {
-    const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=usd`, { cache: 'no-cache' });
-    if (!r.ok) return 0;
-    const j = await r.json();
-    const v = j?.[id]?.usd;
-    return typeof v === 'number' ? v : 0;
-  } catch {
-    return 0;
+  // simple retry/backoff to dodge transient 429/empty responses
+  const tries = [0, 400, 900]; // ms backoff
+  for (const delay of tries) {
+    if (delay) await new Promise(r => setTimeout(r, delay));
+    try {
+      const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=usd`, { cache: 'no-cache' });
+      if (!r.ok) continue;
+      const j = await r.json();
+      const v = j?.[id]?.usd;
+      if (typeof v === 'number' && v > 0) return v;
+      console.warn('CG empty/zero price for', id, j);
+    } catch (e) {
+      console.warn('CG fetch error', id, e);
+    }
   }
+  return 0;
 }
+
 
 /* =============== Init =============== */
 document.addEventListener('DOMContentLoaded', () => { init(); });
