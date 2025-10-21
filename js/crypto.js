@@ -3,22 +3,19 @@
 // Otherwise (GitHub Pages, custom domains, localhost) hit the full CF URL.
 
 const HOST = location.hostname;
-const ON_FIREBASE =
-  /\.web\.app$/.test(HOST) || /firebaseapp\.com$/.test(HOST);
+const ON_FIREBASE = /\.web\.app$/.test(HOST) || /firebaseapp\.com$/.test(HOST);
 
 const CF_URL = 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio';
-
 const API_URL = ON_FIREBASE ? '/api/portfolio' : CF_URL;
-
 
 // Intl formatters
 const nfQty  = new Intl.NumberFormat('en-PT', { maximumFractionDigits: 8 });
 const nfEUR  = new Intl.NumberFormat('en-PT', { style:'currency', currency:'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const nfUSD  = new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-
-const SMALL_USD_THRESHOLD = 5;     // Value ($) threshold
-let hideSmall = true;              // start hidden by default
+// Small value toggle
+const SMALL_USD_THRESHOLD = 5;   // Value ($) threshold
+let hideSmall = true;            // start hidden by default
 
 // Hide delisted/noise if desired
 const HIDE_SYMBOLS = new Set(['NEBL','ETHW']);
@@ -41,16 +38,16 @@ import {
 const $  = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-let savedLocations = new Map();   // from 'cryptoportfolio'
-let manualAssets   = [];          // from 'cryptoportfolio_manual' (asset, quantity, location)
-let binanceRows    = [];          // from API
-let usdtToEurRate  = 0;           // derived from Binance rows only
-let binancePriceMap = new Map();  // symbol -> priceUSDT (per unit)
+let savedLocations   = new Map();  // from 'cryptoportfolio'
+let manualAssets     = [];         // from 'cryptoportfolio_manual' (asset, quantity, location)
+let binanceRows      = [];         // from API
+let usdtToEurRate    = 0;          // derived from Binance rows only
+let binancePriceMap  = new Map();  // symbol -> priceUSDT (per unit)
 
-/* ======== CoinGecko price resolver (symbol -> USD) ======== */
-const LS_PRICE_PREFIX = 'price_usd_';     // key: price_usd_BTC
-const LS_ID_PREFIX    = 'cg_id_';         // key: cg_id_btc
-const PRICE_TTL_MS    = 1000 * 60 * 60;   // 1 hour cache
+// ======== CoinGecko price resolver (symbol -> USD) ========
+const LS_PRICE_PREFIX = 'price_usd_';   // key: price_usd_BTC
+const LS_ID_PREFIX    = 'cg_id_';       // key: cg_id_btc
+const PRICE_TTL_MS    = 1000 * 60 * 60; // 1 hour cache
 
 async function getUsdPriceForSymbol(sym){
   const s = String(sym || '').toUpperCase();
@@ -63,7 +60,7 @@ async function getUsdPriceForSymbol(sym){
   // 2) Cached CoinGecko price?
   try {
     const cache = JSON.parse(localStorage.getItem(LS_PRICE_PREFIX + s) || 'null');
-    if (cache && (Date.now() - cache.ts) < PRICE_TTL_MS) {
+    if (cache && (Date.now() - cache.ts) < PRICE_TTL_MS && cache.usd > 0) {
       return { price: Number(cache.usd || 0), source: 'coingecko' };
     }
   } catch {}
@@ -80,7 +77,7 @@ async function getUsdPriceForSymbol(sym){
     try { localStorage.setItem(LS_ID_PREFIX + s, id); } catch {}
   }
 
-  // 4) Fetch fresh USD price
+  // 4) Fetch fresh USD price (retry/backoff)
   const usd = await fetchCoingeckoUsdPrice(id);
   if (usd > 0) {
     try { localStorage.setItem(LS_PRICE_PREFIX + s, JSON.stringify({ usd, ts: Date.now() })); } catch {}
@@ -88,19 +85,16 @@ async function getUsdPriceForSymbol(sym){
   return { price: usd || 0, source: 'coingecko' };
 }
 
-
 async function resolveCoingeckoIdFromSymbol(symbol){
   try {
     const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`, { cache: 'no-cache' });
     if (!r.ok) return null;
     const j = await r.json();
     const coins = j?.coins || [];
-
     // Prefer exact symbol match; else startsWith; else first
     let hit = coins.find(c => (c.symbol || '').toUpperCase() === symbol);
     if (!hit) hit = coins.find(c => (c.symbol || '').toUpperCase().startsWith(symbol));
     if (!hit) hit = coins[0];
-
     return hit ? hit.id : null;
   } catch {
     return null;
@@ -108,7 +102,6 @@ async function resolveCoingeckoIdFromSymbol(symbol){
 }
 
 async function fetchCoingeckoUsdPrice(id){
-  // simple retry/backoff to dodge transient 429/empty responses
   const tries = [0, 400, 900]; // ms backoff
   for (const delay of tries) {
     if (delay) await new Promise(r => setTimeout(r, delay));
@@ -126,8 +119,7 @@ async function fetchCoingeckoUsdPrice(id){
   return 0;
 }
 
-
-/* =============== Init =============== */
+// =============== Init ===============
 document.addEventListener('DOMContentLoaded', () => { init(); });
 
 async function init(){
@@ -154,21 +146,17 @@ async function init(){
   // Toggle small values
   const btnToggle = document.getElementById('btn-toggle-small');
   if (btnToggle) {
-  btnToggle.addEventListener('click', () => {
-    hideSmall = !hideSmall;
-    // Update label
-    btnToggle.textContent = hideSmall
-      ? 'Ocultar valores < $5'
-      : 'Mostrar apenas ≥ $5';
-    // Re-render just the table (KPIs stay as full totals)
-    renderTable(getCurrentRows());
-    updateSmallNote(getCurrentRows());
-  });
+    btnToggle.textContent = hideSmall ? 'Ocultar valores < $5' : 'Mostrar apenas ≥ $5';
+    btnToggle.addEventListener('click', () => {
+      hideSmall = !hideSmall;
+      btnToggle.textContent = hideSmall ? 'Ocultar valores < $5' : 'Mostrar apenas ≥ $5';
+      renderTable(getCurrentRows());
+      updateSmallNote(getCurrentRows());
+    });
   }
-
 }
 
-/* =============== Data =============== */
+// =============== Data ===============
 async function fetchPortfolio(){
   // Try primary
   let res = await fetch(API_URL, { cache: 'no-cache' });
@@ -183,7 +171,6 @@ async function fetchPortfolio(){
   // Surface the original error
   throw new Error(`HTTP ${res.status}`);
 }
-
 
 function normalizeBinance(api){
   const positions = Array.isArray(api?.positions) ? api.positions : [];
@@ -202,13 +189,13 @@ function normalizeBinance(api){
       if (priceU > 0) binancePriceMap.set(asset, priceU);
 
       return {
-     asset,
-     quantity: qty,
-     valueUSDT: valU,
-     valueEUR: valE,
-      priceUSDT: priceU,
-      priceSource: 'binance',
-      source: 'binance'
+        asset,
+        quantity: qty,
+        valueUSDT: valU,
+        valueEUR: valE,
+        priceUSDT: priceU,
+        priceSource: 'binance',
+        source: 'binance'
       };
     })
     .filter(r => !HIDE_SYMBOLS.has(r.asset))
@@ -216,20 +203,6 @@ function normalizeBinance(api){
     .sort((a,b) => (b.valueEUR || 0) - (a.valueEUR || 0));
   return rows;
 }
-
-function updateSmallNote(allRows){
-  const note = document.getElementById('small-note');
-  if (!note) return;
-  const hiddenCount = allRows.filter(r => (r.valueUSDT || 0) < SMALL_USD_THRESHOLD).length;
-  if (hideSmall && hiddenCount > 0) {
-    note.textContent = `A ocultar ${hiddenCount} posições com valor < $${SMALL_USD_THRESHOLD}.`;
-  } else if (!hideSmall && hiddenCount > 0) {
-    note.textContent = `${hiddenCount} posições estão abaixo de $${SMALL_USD_THRESHOLD}.`;
-  } else {
-    note.textContent = '';
-  }
-}
-
 
 async function loadSavedLocations(){
   savedLocations = new Map();
@@ -256,25 +229,33 @@ async function loadManualAssets(){
   });
 }
 
-/* =============== Render =============== */
+// =============== Render ===============
+let _latestCombinedRows = [];
+
 async function renderAll(generatedAt){
   // Compute manual values with auto price
-const manualWithValues = await Promise.all(manualAssets.map(async m => {
-  const { price, source: priceSource } = await getUsdPriceForSymbol(m.asset);
-  const valUSDT = (price > 0 && m.quantity > 0) ? (m.quantity * price) : 0;
-  const valEUR  = usdtToEurRate ? (valUSDT * usdtToEurRate) : 0;
-  return { ...m, valueUSDT: valUSDT, valueEUR: valEUR, priceUSDT: price, priceSource };
-}));
+  const manualWithValues = await Promise.all(manualAssets.map(async m => {
+    const { price, source: priceSource } = await getUsdPriceForSymbol(m.asset);
+    const valUSDT = (price > 0 && m.quantity > 0) ? (m.quantity * price) : 0;
+    const valEUR  = usdtToEurRate ? (valUSDT * usdtToEurRate) : 0;
+    return { ...m, valueUSDT: valUSDT, valueEUR: valEUR, priceUSDT: price, priceSource };
+  }));
 
-
-  // combine rows: Binance first, then manual
+  // Combine rows: Binance first, then manual
   const combined = [
     ...binanceRows.map(r => ({ ...r, location: savedLocations.get(r.asset) || '' })),
     ...manualWithValues
   ].sort((a,b) => (b.valueEUR || 0) - (a.valueEUR || 0));
 
+  _latestCombinedRows = combined;
+
   renderKpis(combined, generatedAt);
   renderTable(combined);
+  updateSmallNote(combined);
+}
+
+function getCurrentRows(){
+  return _latestCombinedRows || [];
 }
 
 function renderKpis(rows, generatedAt){
@@ -307,8 +288,6 @@ function renderTable(rows){
         ? '<span title="Price from Binance">ⓘ</span>'
         : r.priceSource === 'coingecko'
         ? '<span title="Price from CoinGecko">ⓘ</span>'
-        : r.priceSource === 'binanceTicker'
-        ? '<span title="Price from Binance Ticker">ⓘ</span>'
         : '';
 
     const actions = r.source === 'manual'
@@ -330,10 +309,7 @@ function renderTable(rows){
 
   tbody.innerHTML = html;
 
-  // ... keep the rest (bind select change, edit/delete handlers)
-}
-
-
+  // ---- Bind handlers (inside renderTable) ----
   // Autosave location (Binance -> cryptoportfolio, Manual -> cryptoportfolio_manual)
   $$('select[data-asset]').forEach(el => {
     el.addEventListener('change', async (e) => {
@@ -364,15 +340,17 @@ function renderTable(rows){
   });
 }
 
-
-function renderTotals(rows){
-  const totalQty   = rows.reduce((s,r)=> s + (r.quantity || 0), 0);
-  const totalUSDT  = rows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
-  const totalEUR   = rows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
-
-  $('#ft-qty').textContent  = nfQty.format(totalQty);
-  $('#ft-usdt').textContent = `$${nfUSD.format(totalUSDT)}`;
-  $('#ft-eur').textContent  = nfEUR.format(totalEUR);
+function updateSmallNote(allRows){
+  const note = document.getElementById('small-note');
+  if (!note) return;
+  const hiddenCount = allRows.filter(r => (r.valueUSDT || 0) < SMALL_USD_THRESHOLD).length;
+  if (hideSmall && hiddenCount > 0) {
+    note.textContent = `A ocultar ${hiddenCount} posições com valor < $${SMALL_USD_THRESHOLD}.`;
+  } else if (!hideSmall && hiddenCount > 0) {
+    note.textContent = `${hiddenCount} posições estão abaixo de $${SMALL_USD_THRESHOLD}.`;
+  } else {
+    note.textContent = '';
+  }
 }
 
 function locationSelectHtml(asset, selected){
@@ -383,7 +361,7 @@ function locationSelectHtml(asset, selected){
   return `<select class="location-select" data-asset="${escapeHtml(asset)}">${opts}</select>`;
 }
 
-/* =============== Firestore ops =============== */
+// =============== Firestore ops ===============
 async function saveBinanceLocation(asset, location){
   const cell = document.getElementById(`status-${asset}`);
   try {
@@ -413,16 +391,18 @@ async function deleteManual(asset){
   await deleteDoc(ref);
 }
 
-/* =============== Modal (Add/Edit) =============== */
+// =============== Modal (Add/Edit) ===============
 function setupModal(){
   const modal = $('#modal-backdrop');
   const selLoc = $('#m-loc');
-  selLoc.innerHTML = LOCATION_CHOICES.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  if (selLoc) {
+    selLoc.innerHTML = LOCATION_CHOICES.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  }
 
   $('#btn-add')?.addEventListener('click', () => openModalForAdd());
   $('#m-cancel')?.addEventListener('click', closeModal);
   $('#m-save')?.addEventListener('click', saveModal);
-  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 }
 
 function openModalForAdd(){
@@ -465,37 +445,7 @@ async function saveModal(){
   await renderAll(); // recalc totals with new price
 }
 
-// Keep the latest combined rows in memory so we can re-render without refetching
-let _latestCombinedRows = [];
-
-async function renderAll(generatedAt){
-  // (existing code that builds combined rows)
-  const manualWithValues = await Promise.all(manualAssets.map(async m => {
-    const { price, source: priceSource } = await getUsdPriceForSymbol(m.asset);
-    const valUSDT = (price > 0 && m.quantity > 0) ? (m.quantity * price) : 0;
-    const valEUR  = usdtToEurRate ? (valUSDT * usdtToEurRate) : 0;
-    return { ...m, valueUSDT: valUSDT, valueEUR: valEUR, priceUSDT: price, priceSource };
-  }));
-
-  const combined = [
-    ...binanceRows.map(r => ({ ...r, location: savedLocations.get(r.asset) || '' })),
-    ...manualWithValues
-  ].sort((a,b) => (b.valueEUR || 0) - (a.valueEUR || 0));
-
-  _latestCombinedRows = combined;
-
-  renderKpis(combined, generatedAt);
-  renderTable(combined);
-  // remove renderTotals() call if you deleted the tfoot
-  updateSmallNote(combined);
-}
-
-function getCurrentRows(){
-  return _latestCombinedRows || [];
-}
-
-
-/* =============== Utils =============== */
+// =============== Utils ===============
 function escapeHtml(str=''){
   return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }
