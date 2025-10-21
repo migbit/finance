@@ -1,15 +1,15 @@
 // js/crypto.js
-// Binance positions + manual assets (Ledger, etc.).
-// - Prices: reuse Binance per-asset price if available; otherwise fetch USD price from CoinGecko.
-// - Prices are cached in localStorage to reduce calls.
-// - Manual assets saved in 'cryptoportfolio_manual' (asset, quantity, location). No manual price field.
-// - Binance locations in 'cryptoportfolio' (unchanged).
-// - Buttons fixed (visible background).
+// Use Firebase rewrite only when hosted on Firebase domains.
+// Otherwise (GitHub Pages, custom domains, localhost) hit the full CF URL.
 
-const isLocal = location.hostname === 'localhost' || location.hostname.startsWith('127.');
-const API_URL = isLocal
-  ? 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio'
-  : '/api/portfolio';
+const HOST = location.hostname;
+const ON_FIREBASE =
+  /\.web\.app$/.test(HOST) || /firebaseapp\.com$/.test(HOST);
+
+const CF_URL = 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio';
+
+const API_URL = ON_FIREBASE ? '/api/portfolio' : CF_URL;
+
 
 // Intl formatters
 const nfQty  = new Intl.NumberFormat('en-PT', { maximumFractionDigits: 8 });
@@ -142,10 +142,20 @@ async function init(){
 
 /* =============== Data =============== */
 async function fetchPortfolio(){
-  const r = await fetch(API_URL, { cache: 'no-cache' });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return await r.json();
+  // Try primary
+  let res = await fetch(API_URL, { cache: 'no-cache' });
+  if (res.ok) return res.json();
+
+  // If we were on Firebase and rewrite failed for some reason, try direct CF
+  if (ON_FIREBASE) {
+    res = await fetch(CF_URL, { cache: 'no-cache' });
+    if (res.ok) return res.json();
+  }
+
+  // Surface the original error
+  throw new Error(`HTTP ${res.status}`);
 }
+
 
 function normalizeBinance(api){
   const positions = Array.isArray(api?.positions) ? api.positions : [];
