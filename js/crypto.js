@@ -146,10 +146,10 @@ async function init(){
   // Toggle small values
   const btnToggle = document.getElementById('btn-toggle-small');
   if (btnToggle) {
-    btnToggle.textContent = hideSmall ? 'Ocultar valores < $5' : 'Mostrar apenas ≥ $5';
+    btnToggle.textContent = hideSmall ? 'Mostrar valores < $5' : 'Ocultar valores < $5';
     btnToggle.addEventListener('click', () => {
       hideSmall = !hideSmall;
-      btnToggle.textContent = hideSmall ? 'Ocultar valores < $5' : 'Mostrar apenas ≥ $5';
+      btnToggle.textContent = hideSmall ? 'Mostrar valores < $5' : 'Ocultar valores < $5';
       renderTable(getCurrentRows());
       updateSmallNote(getCurrentRows());
     });
