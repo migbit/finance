@@ -16,6 +16,10 @@ const nfQty  = new Intl.NumberFormat('en-PT', { maximumFractionDigits: 8 });
 const nfEUR  = new Intl.NumberFormat('en-PT', { style:'currency', currency:'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const nfUSD  = new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+
+const SMALL_USD_THRESHOLD = 5;     // Value ($) threshold
+let hideSmall = true;              // start hidden by default
+
 // Hide delisted/noise if desired
 const HIDE_SYMBOLS = new Set(['NEBL','ETHW']);
 
@@ -146,6 +150,22 @@ async function init(){
 
   // UI: add button & modal init
   setupModal();
+
+  // Toggle small values
+  const btnToggle = document.getElementById('btn-toggle-small');
+  if (btnToggle) {
+  btnToggle.addEventListener('click', () => {
+    hideSmall = !hideSmall;
+    // Update label
+    btnToggle.textContent = hideSmall
+      ? 'Ocultar valores < $5'
+      : 'Mostrar apenas ≥ $5';
+    // Re-render just the table (KPIs stay as full totals)
+    renderTable(getCurrentRows());
+    updateSmallNote(getCurrentRows());
+  });
+  }
+
 }
 
 /* =============== Data =============== */
@@ -196,6 +216,20 @@ function normalizeBinance(api){
     .sort((a,b) => (b.valueEUR || 0) - (a.valueEUR || 0));
   return rows;
 }
+
+function updateSmallNote(allRows){
+  const note = document.getElementById('small-note');
+  if (!note) return;
+  const hiddenCount = allRows.filter(r => (r.valueUSDT || 0) < SMALL_USD_THRESHOLD).length;
+  if (hideSmall && hiddenCount > 0) {
+    note.textContent = `A ocultar ${hiddenCount} posições com valor < $${SMALL_USD_THRESHOLD}.`;
+  } else if (!hideSmall && hiddenCount > 0) {
+    note.textContent = `${hiddenCount} posições estão abaixo de $${SMALL_USD_THRESHOLD}.`;
+  } else {
+    note.textContent = '';
+  }
+}
+
 
 async function loadSavedLocations(){
   savedLocations = new Map();
@@ -253,20 +287,28 @@ function renderKpis(rows, generatedAt){
 
 function renderTable(rows){
   const tbody = $('#rows');
-  if (!rows.length) {
+  if (!tbody) return;
+
+  // Apply small-value filter for display only
+  const displayRows = hideSmall
+    ? rows.filter(r => (r.valueUSDT || 0) >= SMALL_USD_THRESHOLD)
+    : rows;
+
+  if (!displayRows.length) {
     tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No data</td></tr>`;
     return;
   }
 
-  const html = rows.map(r => {
+  const html = displayRows.map(r => {
     const sel = locationSelectHtml(r.asset, r.location || '');
 
-    // per-row price source icon (native tooltip)
     const priceInfoIcon =
       r.priceSource === 'binance'
         ? '<span title="Price from Binance">ⓘ</span>'
         : r.priceSource === 'coingecko'
         ? '<span title="Price from CoinGecko">ⓘ</span>'
+        : r.priceSource === 'binanceTicker'
+        ? '<span title="Price from Binance Ticker">ⓘ</span>'
         : '';
 
     const actions = r.source === 'manual'
@@ -287,6 +329,10 @@ function renderTable(rows){
   }).join('');
 
   tbody.innerHTML = html;
+
+  // ... keep the rest (bind select change, edit/delete handlers)
+}
+
 
   // Autosave location (Binance -> cryptoportfolio, Manual -> cryptoportfolio_manual)
   $$('select[data-asset]').forEach(el => {
@@ -418,6 +464,36 @@ async function saveModal(){
   closeModal();
   await renderAll(); // recalc totals with new price
 }
+
+// Keep the latest combined rows in memory so we can re-render without refetching
+let _latestCombinedRows = [];
+
+async function renderAll(generatedAt){
+  // (existing code that builds combined rows)
+  const manualWithValues = await Promise.all(manualAssets.map(async m => {
+    const { price, source: priceSource } = await getUsdPriceForSymbol(m.asset);
+    const valUSDT = (price > 0 && m.quantity > 0) ? (m.quantity * price) : 0;
+    const valEUR  = usdtToEurRate ? (valUSDT * usdtToEurRate) : 0;
+    return { ...m, valueUSDT: valUSDT, valueEUR: valEUR, priceUSDT: price, priceSource };
+  }));
+
+  const combined = [
+    ...binanceRows.map(r => ({ ...r, location: savedLocations.get(r.asset) || '' })),
+    ...manualWithValues
+  ].sort((a,b) => (b.valueEUR || 0) - (a.valueEUR || 0));
+
+  _latestCombinedRows = combined;
+
+  renderKpis(combined, generatedAt);
+  renderTable(combined);
+  // remove renderTotals() call if you deleted the tfoot
+  updateSmallNote(combined);
+}
+
+function getCurrentRows(){
+  return _latestCombinedRows || [];
+}
+
 
 /* =============== Utils =============== */
 function escapeHtml(str=''){
