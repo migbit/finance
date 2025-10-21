@@ -340,14 +340,14 @@ function renderTable(rows){
   });
 }
 
-function updateSmallNote(allRows){
+function updateSmallNote(allRows) {
   const note = document.getElementById('small-note');
   if (!note) return;
+
   const hiddenCount = allRows.filter(r => (r.valueUSDT || 0) < SMALL_USD_THRESHOLD).length;
+
   if (hideSmall && hiddenCount > 0) {
     note.textContent = `A ocultar ${hiddenCount} posições com valor < $${SMALL_USD_THRESHOLD}.`;
-  } else if (!hideSmall && hiddenCount > 0) {
-    note.textContent = `${hiddenCount} posições estão abaixo de $${SMALL_USD_THRESHOLD}.`;
   } else {
     note.textContent = '';
   }
