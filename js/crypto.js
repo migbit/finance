@@ -1,591 +1,799 @@
-// js/crypto.js
+// js/crypto.js  — KISS version with global Investido + Realizado = Total - Investido
 
-/* ================== Host / API ================== */
-const HOST = location.hostname;
-const ON_FIREBASE = /\.web\.app$/.test(HOST) || /firebaseapp\.com$/.test(HOST);
-const CF_URL = 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio';
-const API_URL = ON_FIREBASE ? '/api/portfolio' : CF_URL;
+/* ================== CONSTANTS & CONFIG ================== */
+const CONFIG = {
+  HOST: location.hostname,
+  ON_FIREBASE: /\.web\.app$/.test(location.hostname) || /firebaseapp\.com$/.test(location.hostname),
+  CF_URL: 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio',
+  API_URL: null, // set in init
+  SMALL_USD_THRESHOLD: 5,
+  HIDE_SYMBOLS: new Set(['NEBL','ETHW']),
+  LOCATION_CHOICES: [
+    'Binance Spot',
+    'Binance Earn Flexible',
+    'Binance Staking',
+    'Binance Earn',
+    'Ledger',
+    'Other'
+  ],
+  COINGECKO: {
+    PRICE_TTL_MS: 1000 * 60 * 60, // 1 hour
+    BATCH_SIZE: 25,
+    RETRY_DELAYS: [0, 500, 1000],
+    RATE_LIMIT_DELAY: 1200
+  },
+  META_COLLECTION: 'cryptoportfolio_meta',
+  META_DOC: 'invested' // stores investedUSD, investedEUR
+};
 
-/* ================== Intl ================== */
-const nfQty  = new Intl.NumberFormat('en-PT', { maximumFractionDigits: 8 });
-const nfEUR  = new Intl.NumberFormat('en-PT', { style:'currency', currency:'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const nfUSD  = new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
 
-/* ================== UI State ================== */
-const SMALL_USD_THRESHOLD = 5;   // threshold do toggle
-let hideSmall = true;            // começa a ocultar < $5
+/* ================== FORMATTERS ================== */
+const FORMATTERS = {
+  quantity: new Intl.NumberFormat('en-PT', { maximumFractionDigits: 8 }),
+  eur: new Intl.NumberFormat('en-PT', { style: 'currency', currency: 'EUR' }),
+  usd: new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+};
 
-/* ================== Config ================== */
-const HIDE_SYMBOLS = new Set(['NEBL','ETHW']);
-const LOCATION_CHOICES = [
-  'Binance Spot',
-  'Binance Earn Flexible',
-  'Binance Staking',
-  'Binance Earn',
-  'Ledger',
-  'Other'
-];
+/* ================== DOM UTILS ================== */
+const DOM = {
+  $: (sel) => document.querySelector(sel),
+  $$: (sel) => Array.from(document.querySelectorAll(sel)),
+  show: (el) => el && (el.style.display = 'flex'),
+  hide: (el) => el && (el.style.display = 'none'),
+  enable: (el) => el && (el.disabled = false),
+  disable: (el) => el && (el.disabled = true)
+};
 
-/* ================== Firebase ================== */
-import { db } from './script.js';
-import {
-  collection, doc, getDocs, getDoc, setDoc, deleteDoc
-} from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+/* ================== STORAGE (for CoinGecko cache) ================== */
+const Storage = {
+  PREFIXES: { PRICE: 'price_usd_', COINGECKO_ID: 'cg_id_' },
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k,v) => { try { localStorage.setItem(k,v); return true; } catch { return false; } },
+  getJSON(k){ const s=this.get(k); try {return s?JSON.parse(s):null;} catch {return null;} },
+  setJSON(k,v){ return this.set(k, JSON.stringify(v)); }
+};
 
-/* ================== DOM utils ================== */
-const $  = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
-
-/* ================== App State ================== */
-let savedLocations   = new Map();  // cryptoportfolio
-let manualAssets     = [];         // cryptoportfolio_manual
-let binanceRows      = [];         // da função
-let usdtToEurRate    = 0;          // EUR/USDT ratio
-let binancePriceMap  = new Map();  // symbol -> priceUSDT
-let _latestCombinedRows = [];      // linhas mostradas
-
-// Expor helpers no window (debug / PDF)
-window.getCurrentRows  = () => _latestCombinedRows.slice();
-window.getHideSmall    = () => hideSmall;
-window.getUsdThreshold = () => SMALL_USD_THRESHOLD;
-
-/* ================== CoinGecko helpers ================== */
-const LS_PRICE_PREFIX = 'price_usd_';   // price_usd_BTC
-const LS_ID_PREFIX    = 'cg_id_';       // cg_id_BTC
-const PRICE_TTL_MS    = 1000 * 60 * 60; // 1h
-
-async function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-async function resolveCoingeckoIdFromSymbol(symbol){
-  try {
-    const r = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`, { cache: 'no-cache' });
-    if (!r.ok) return null;
-    const j = await r.json();
-    const coins = j?.coins || [];
-    let hit = coins.find(c => (c.symbol || '').toUpperCase() === symbol);
-    if (!hit) hit = coins.find(c => (c.symbol || '').toUpperCase().startsWith(symbol));
-    if (!hit) hit = coins[0];
-    return hit ? hit.id : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchCoingeckoUsdPrice(id){
-  const tries = [0, 500, 1000]; // retry/backoff simples
-  for (const delay of tries) {
-    if (delay) await sleep(delay);
-    try {
-      const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=usd`, { cache: 'no-cache' });
-      if (r.status === 429) continue;
-      if (!r.ok) continue;
-      const j = await r.json();
-      const v = j?.[id]?.usd;
-      if (typeof v === 'number' && v > 0) return v;
-      console.warn('CG empty/zero price for', id, j);
-    } catch (e) {
-      console.warn('CG fetch error', id, e);
-    }
-  }
-  return 0;
-}
-
-// Pré-carrega e cacheia preços em batch para evitar 429 no 1º load
-async function ensureCoingeckoIdsForSymbols(symbols){
-  const need = [];
-  for (const s0 of symbols) {
-    const s = String(s0).toUpperCase();
-    const key = LS_ID_PREFIX + s;
-    const cached = localStorage.getItem(key);
-    if (!cached) need.push(s);
-  }
-  for (const s of need) {
-    const id = await resolveCoingeckoIdFromSymbol(s);
-    if (id) try { localStorage.setItem(LS_ID_PREFIX + s, id); } catch {}
-    await sleep(120);
-  }
-}
-
-function symbolsNeedingPrice(symbols){
-  const out = [];
-  for (const s0 of symbols) {
-    const s = String(s0).toUpperCase();
-    const cache = localStorage.getItem(LS_PRICE_PREFIX + s);
-    if (cache) {
+/* ================== API SERVICE ================== */
+class ApiService {
+  static async fetchPortfolio() {
+    const tries = [CONFIG.API_URL, CONFIG.CF_URL];
+    for (const url of tries) {
+      if (!url) continue;
       try {
-        const c = JSON.parse(cache);
-        if (c && (Date.now() - c.ts) < PRICE_TTL_MS && c.usd > 0) continue;
+        const res = await fetch(url, { cache: 'no-cache' });
+        if (res.ok) return await res.json();
       } catch {}
     }
-    out.push(s);
+    throw new Error('HTTP 404');
   }
-  return out;
+  static async fetchWithRetry(url, opt={}, max=3){
+    for (let i=0;i<max;i++){
+      try {
+        if (i>0) await new Promise(r=>setTimeout(r, [0,500,1000][i]||500));
+        const res = await fetch(url, opt);
+        if (res.status===429){ await new Promise(r=>setTimeout(r, 900+Math.random()*600)); continue; }
+        if (res.ok) return res;
+      } catch {}
+    }
+    throw new Error(`Failed ${url}`);
+  }
 }
 
-async function fetchCoingeckoPricesBatch(ids){
-  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(ids.join(','))}&vs_currencies=usd`;
-  let tries = 0;
-  while (tries < 3) {
-    tries++;
-    try {
-      const res = await fetch(url, { cache: 'no-cache' });
-      if (res.status === 429) { await sleep(900 + Math.random()*600); continue; }
-      if (!res.ok) { await sleep(400); continue; }
-      const json = await res.json();
-      return json || {};
-    } catch {
-      await sleep(400);
+/* ================== COINGECKO ================== */
+class Coingecko {
+  static isFresh(p){ return p && p.usd>0 && (Date.now()-p.ts)<CONFIG.COINGECKO.PRICE_TTL_MS; }
+
+  static async resolveId(symbol){
+    const key = Storage.PREFIXES.COINGECKO_ID + symbol.toUpperCase();
+    const cached = Storage.get(key);
+    if (cached) return cached;
+
+    const r = await ApiService.fetchWithRetry(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`);
+    const data = await r.json();
+    const coins = data?.coins || [];
+    const exact = coins.find(c=>c.symbol?.toUpperCase()===symbol.toUpperCase());
+    const sw = coins.find(c=>c.symbol?.toUpperCase().startsWith(symbol.toUpperCase()));
+    const id = exact?.id || sw?.id || coins[0]?.id || null;
+    if (id) Storage.set(key, id);
+    return id;
+  }
+
+  static async fetchUSD(id){
+    const r = await ApiService.fetchWithRetry(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=usd`);
+    const j = await r.json();
+    return Number(j?.[id]?.usd || 0);
+  }
+
+  static async prefetch(symbols){
+    const toFetch = [];
+    for (const s of symbols){
+      const up = s.toUpperCase();
+      const cached = Storage.getJSON(Storage.PREFIXES.PRICE + up);
+      if (!this.isFresh(cached)) toFetch.push(up);
+    }
+    // resolve ids
+    const pairs = [];
+    for (const s of toFetch){
+      const id = await this.resolveId(s);
+      if (id) pairs.push([s,id]);
+      await new Promise(r=>setTimeout(r, CONFIG.COINGECKO.RATE_LIMIT_DELAY));
+    }
+    // batch prices
+    const ids = pairs.map(p=>p[1]);
+    for (let i=0;i<ids.length;i+=CONFIG.COINGECKO.BATCH_SIZE){
+      const batch = ids.slice(i,i+CONFIG.COINGECKO.BATCH_SIZE);
+      const r = await ApiService.fetchWithRetry(`https://api.coingecko.com/api/v3/simple/price?ids=${batch.join(',')}&vs_currencies=usd`);
+      const data = await r.json();
+      for (const [sym,id] of pairs){
+        const price = Number(data?.[id]?.usd || 0);
+        if (price>0) Storage.setJSON(Storage.PREFIXES.PRICE + sym, { usd:price, ts:Date.now() });
+      }
+      await new Promise(r=>setTimeout(r, CONFIG.COINGECKO.RATE_LIMIT_DELAY));
     }
   }
-  return {};
+
+  static getCachedUSD(symbol){
+    const up = symbol.toUpperCase();
+    const c = Storage.getJSON(Storage.PREFIXES.PRICE + up);
+    return this.isFresh(c) ? c.usd : 0;
+  }
 }
 
-async function prefetchUsdPricesForSymbols(symbols, batchSize=30){
-  await ensureCoingeckoIdsForSymbols(symbols);
+/* ================== PRICE RESOLVER ================== */
+class PriceResolver {
+  constructor(binancePriceMap){ this.binancePriceMap = binancePriceMap; }
+  async getUSD(symbol){
+    const up = symbol.toUpperCase();
+    if (this.binancePriceMap.has(up)) return { price: this.binancePriceMap.get(up), src: 'binance' };
+    const cached = Coingecko.getCachedUSD(up);
+    if (cached>0) return { price: cached, src:'coingecko' };
+    const id = await Coingecko.resolveId(up);
+    if (!id) return { price:0, src:'unknown' };
+    const p = await Coingecko.fetchUSD(id);
+    if (p>0) Storage.setJSON(Storage.PREFIXES.PRICE+up, {usd:p, ts:Date.now()});
+    return { price:p, src:'coingecko' };
+  }
+}
 
-  const symToId = new Map();
-  for (const s0 of symbols) {
-    const s = String(s0).toUpperCase();
-    const id = localStorage.getItem(LS_ID_PREFIX + s);
-    if (id) symToId.set(s, id);
+/* ================== FIREBASE SERVICE ================== */
+import { db } from './script.js';
+import { collection, doc, getDocs, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+
+class FirebaseService {
+  static async getCollection(name){
+    const snap = await getDocs(collection(db, name));
+    return snap.docs.map(d=>({id:d.id, ...d.data()}));
+  }
+  static async getDocument(name, id){
+    const ref = doc(db, name, id);
+    const snap = await getDoc(ref);
+    return snap.exists()? {id: snap.id, ...snap.data()} : null;
+  }
+  static async setDocument(name, id, data){
+    const ref = doc(db, name, id);
+    await setDoc(ref, {...data, updatedAt: new Date()}, { merge:true });
+  }
+  static async deleteDocument(name, id){
+    await deleteDoc(doc(db, name, id));
+  }
+}
+
+/* ================== APP STATE ================== */
+class AppState {
+  constructor(){
+    this.savedLocations = new Map(); // Binance positions -> location
+    this.manualAssets = [];
+    this.binanceRows = [];
+    this.binancePriceMap = new Map();
+    this.usdtToEurRate = 0;
+
+    this.hideSmall = true;
+    this.currentRows = [];
+    this.currency = 'EUR';
+
+    // Invested (global)
+    this.investedUSD = 0;
+    this.investedEUR = 0;
   }
 
-  const needSyms = symbolsNeedingPrice(symbols);
-  const needIds = needSyms.map(s => symToId.get(s)).filter(Boolean);
+  get visibleRows(){
+    return this.hideSmall
+      ? this.currentRows.filter(r => (r.valueUSDT||0) >= CONFIG.SMALL_USD_THRESHOLD)
+      : this.currentRows;
+  }
 
-  for (let i=0; i<needIds.length; i+=batchSize) {
-    const slice = needIds.slice(i, i+batchSize);
-    const data = await fetchCoingeckoPricesBatch(slice);
-    for (const id of slice) {
-      const v = data?.[id]?.usd;
-      for (const [sym, symId] of symToId.entries()) {
-        if (symId === id && typeof v === 'number' && v > 0) {
-          try { localStorage.setItem(LS_PRICE_PREFIX + sym, JSON.stringify({ usd: v, ts: Date.now() })); } catch {}
+  get totals(){
+    return this.currentRows.reduce((t,r)=>({
+      eur: t.eur + (r.valueEUR||0),
+      usdt: t.usdt + (r.valueUSDT||0)
+    }), {eur:0, usdt:0});
+  }
+}
+
+/* ================== MAIN APP ================== */
+class CryptoPortfolioApp {
+  constructor(){
+    this.state = new AppState();
+    this.priceResolver = null;
+    this.initialized = false;
+  }
+
+  async init(){
+    if (this.initialized) return;
+    CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
+
+    try {
+      await Promise.all([
+        this.loadSavedLocations(),
+        this.loadManualAssets(),
+        this.loadInvested()
+      ]);
+      const api = await ApiService.fetchPortfolio();
+      this.state.binanceRows = this.normalizeBinance(api);
+
+      // FX
+      const eur = this.state.binanceRows.reduce((s,r)=>s+(r.valueEUR||0),0);
+      const usd = this.state.binanceRows.reduce((s,r)=>s+(r.valueUSDT||0),0);
+      this.state.usdtToEurRate = usd>0 ? eur/usd : 0;
+
+      // Prices for manual
+      this.priceResolver = new PriceResolver(this.state.binancePriceMap);
+      const missing = this.state.manualAssets
+        .map(a=>a.asset)
+        .filter(sym=>!this.state.binancePriceMap.has(sym));
+      if (missing.length) await Coingecko.prefetch(missing);
+
+      await this.renderAll(api.generatedAt);
+      this.setupEvents();
+      this.initialized = true;
+    } catch (e) {
+      this.showError(e.message || String(e));
+    }
+  }
+
+  async loadSavedLocations(){
+    const locs = await FirebaseService.getCollection('cryptoportfolio');
+    this.state.savedLocations = new Map(locs.map(x=>[String(x.id).toUpperCase(), x.location || '']));
+  }
+
+  async loadManualAssets(){
+    const rows = await FirebaseService.getCollection('cryptoportfolio_manual');
+    this.state.manualAssets = rows.map(x=>({
+      asset: String(x.asset || x.id || '').toUpperCase(),
+      quantity: Number(x.quantity || 0),
+      location: x.location || 'Other',
+      source: 'manual'
+    }));
+  }
+
+  async loadInvested(){
+    const doc = await FirebaseService.getDocument(CONFIG.META_COLLECTION, CONFIG.META_DOC);
+    if (doc){
+      this.state.investedUSD = Number(doc.investedUSD || 0);
+      this.state.investedEUR = Number(doc.investedEUR || 0);
+    }
+  }
+
+  async saveInvested(value, currency){
+    const v = Number(value || 0);
+    if (!isFinite(v) || v<0) throw new Error('Valor inválido');
+    const rate = this.state.usdtToEurRate || 0;
+
+    if (currency === 'EUR') {
+      this.state.investedEUR = v;
+      this.state.investedUSD = rate>0 ? v / rate : 0;
+    } else {
+      // USD
+      this.state.investedUSD = v;
+      this.state.investedEUR = rate>0 ? v * rate : 0;
+    }
+    await FirebaseService.setDocument(CONFIG.META_COLLECTION, CONFIG.META_DOC, {
+      investedUSD: this.state.investedUSD,
+      investedEUR: this.state.investedEUR
+    });
+  }
+
+      // === NOVA FUNÇÃO: adiciona delta ao Investido existente ===
+    async addInvestedDelta(delta, currency){
+      const rate = this.state.usdtToEurRate || 0;
+
+      if (currency === 'EUR') {
+        this.state.investedEUR = (this.state.investedEUR || 0) + delta;
+        this.state.investedUSD = rate > 0 ? this.state.investedEUR / rate : 0;
+      } else {
+        this.state.investedUSD = (this.state.investedUSD || 0) + delta;
+        this.state.investedEUR = rate > 0 ? this.state.investedUSD * rate : 0;
+      }
+
+      await FirebaseService.setDocument('cryptoportfolio_meta', 'invested', {
+        investedUSD: this.state.investedUSD,
+        investedEUR: this.state.investedEUR
+      });
+    }
+
+
+  normalizeBinance(api){
+    const pos = Array.isArray(api?.positions)? api.positions : [];
+    return pos
+      .map(p=>{
+        const asset = String(p.asset||'').toUpperCase();
+        const qty = Number(p.quantity||0);
+        let priceUSDT = Number(p.priceUSDT||0);
+        const vUSDT = Number(p.valueUSDT||0);
+        const vEUR  = Number(p.valueEUR||0);
+        if ((!priceUSDT || priceUSDT<=0) && qty>0 && vUSDT>0) priceUSDT = vUSDT/qty;
+        if (priceUSDT>0) this.state.binancePriceMap.set(asset, priceUSDT);
+        return { asset, quantity:qty, valueUSDT:vUSDT, valueEUR:vEUR, priceUSDT, source:'binance' };
+      })
+      .filter(r=>!CONFIG.HIDE_SYMBOLS.has(r.asset))
+      .filter(r=>(r.valueEUR||r.valueUSDT||0)>0)
+      .sort((a,b)=>(b.valueEUR||0)-(a.valueEUR||0));
+  }
+
+  async renderAll(generatedAt){
+    // compute manual values
+    const manualVal = await Promise.all(this.state.manualAssets.map(async m=>{
+      const { price } = await this.priceResolver.getUSD(m.asset);
+      const vUSDT = price>0 ? price * m.quantity : 0;
+      const vEUR = (this.state.usdtToEurRate||0) ? vUSDT * this.state.usdtToEurRate : 0;
+      return { ...m, valueUSDT: vUSDT, valueEUR: vEUR, priceUSDT: price, priceSource: 'coingecko' };
+    }));
+
+    // merge
+    this.state.currentRows = [
+      ...this.state.binanceRows.map(r=>({ ...r, location: this.state.savedLocations.get(r.asset)||'' })),
+      ...manualVal
+    ].sort((a,b)=>(b.valueEUR||0)-(a.valueEUR||0));
+
+    this.renderKPIs(generatedAt);
+    this.renderTable();
+    this.updateSmallNote();
+  }
+
+  /* ================== KPIs ================== */
+      renderKPIs(generatedAt){
+      const t = this.state.totals;
+      const investedEUR = this.state.investedEUR || 0;
+      const investedUSD = this.state.investedUSD || 0;
+
+      const realizedEUR = (t.eur || 0) - investedEUR;
+      const realizedUSD = (t.usdt || 0) - investedUSD;
+
+      // principais
+      const kEUR = document.getElementById('kpiTotalEUR');
+      const kUSD = document.getElementById('kpiTotalUSDT');
+      if (kEUR) kEUR.textContent = FORMATTERS.eur.format(t.eur || 0);
+      if (kUSD) kUSD.textContent = `$${FORMATTERS.usd.format(t.usdt || 0)}`;
+
+      // sublinhas (Realizado)
+      const subE = document.getElementById('kpiRealizedEUR');
+      const subU = document.getElementById('kpiRealizedUSD');
+      if (subE){
+        const sign = realizedEUR >= 0 ? '+' : '−';
+        subE.textContent = `${sign}${FORMATTERS.eur.format(Math.abs(realizedEUR))}`;
+        subE.classList.toggle('pos', realizedEUR >= 0);
+        subE.classList.toggle('neg', realizedEUR < 0);
+      }
+      if (subU){
+        const sign = realizedUSD >= 0 ? '+' : '−';
+        subU.textContent = `${sign}$${FORMATTERS.usd.format(Math.abs(realizedUSD))}`;
+        subU.classList.toggle('pos', realizedUSD >= 0);
+        subU.classList.toggle('neg', realizedUSD < 0);
+      }
+
+      // Investido (mostra na moeda selecionada)
+      const kINV = document.getElementById('kpiInvested');
+      if (kINV){
+        if (this.state.currency === 'EUR') {
+          kINV.textContent = FORMATTERS.eur.format(investedEUR);
+        } else {
+          kINV.textContent = `$${FORMATTERS.usd.format(investedUSD)}`;
         }
       }
-    }
-    await sleep(600 + Math.random()*600);
-  }
-}
 
-// Único resolvedor por símbolo (usa Binance se possível; senão cache/CG)
-async function getUsdPriceForSymbol(sym){
-  const s = String(sym || '').toUpperCase();
-
-  // 1) preço por ativo vindo da própria Binance
-  if (binancePriceMap.has(s)) {
-    return { price: binancePriceMap.get(s), source: 'binance' };
-  }
-
-  // 2) cache local válida
-  try {
-    const cache = JSON.parse(localStorage.getItem(LS_PRICE_PREFIX + s) || 'null');
-    if (cache && (Date.now() - cache.ts) < PRICE_TTL_MS && cache.usd > 0) {
-      return { price: Number(cache.usd || 0), source: 'coingecko' };
-    }
-  } catch {}
-
-  // 3) resolver id (cacheado) e pedir preço
-  let id = null;
-  try { id = localStorage.getItem(LS_ID_PREFIX + s) || null; } catch {}
-  if (!id) {
-    id = await resolveCoingeckoIdFromSymbol(s);
-    if (!id) return { price: 0, source: 'unknown' };
-    try { localStorage.setItem(LS_ID_PREFIX + s, id); } catch {}
-  }
-  const usd = await fetchCoingeckoUsdPrice(id);
-  if (usd > 0) {
-    try { localStorage.setItem(LS_PRICE_PREFIX + s, JSON.stringify({ usd, ts: Date.now() })); } catch {}
-  }
-  return { price: usd || 0, source: 'coingecko' };
-}
-
-/* ================== Init ================== */
-document.addEventListener('DOMContentLoaded', () => { init(); });
-
-async function init(){
-  try {
-    await loadSavedLocations();
-    await loadManualAssets();
-
-    const data = await fetchPortfolio();
-    binanceRows = normalizeBinance(data);
-
-    // ratio EUR/USDT a partir da Binance
-    const bEur  = binanceRows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
-    const bUsdt = binanceRows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
-    usdtToEurRate = (bUsdt > 0 && bEur > 0) ? (bEur / bUsdt) : 0;
-
-    await renderAll(data?.generatedAt);
-  } catch (e) {
-    $('#rows').innerHTML = `<tr><td colspan="6" class="text-muted">Error: ${e.message}</td></tr>`;
-  }
-
-  // UI/Bind
-  setupModal();
-
-  const btnToggle = document.getElementById('btn-toggle-small');
-  if (btnToggle) {
-    btnToggle.textContent = hideSmall ? 'Ocultar valores < $5' : 'Mostrar apenas ≥ $5';
-    btnToggle.addEventListener('click', () => {
-      hideSmall = !hideSmall;
-      btnToggle.textContent = hideSmall ? 'Ocultar valores < $5' : 'Mostrar apenas ≥ $5';
-      renderTable(getCurrentRows());
-      updateSmallNote(getCurrentRows());
-    });
-  }
-
-  // PDF button bind (também é chamado mais abaixo por segurança)
-  setupPdfButton();
-}
-
-/* ================== Data fetch/normalize ================== */
-async function fetchPortfolio(){
-  let res = await fetch(API_URL, { cache: 'no-cache' });
-  if (res.ok) return res.json();
-  if (ON_FIREBASE) {
-    res = await fetch(CF_URL, { cache: 'no-cache' });
-    if (res.ok) return res.json();
-  }
-  throw new Error(`HTTP ${res.status}`);
-}
-
-function normalizeBinance(api){
-  const positions = Array.isArray(api?.positions) ? api.positions : [];
-  const rows = positions
-    .map(p => {
-      const asset = String(p.asset || '').toUpperCase();
-      const qty   = Number(p.quantity || 0);
-      let priceU  = (p.priceUSDT == null) ? 0 : Number(p.priceUSDT || 0);
-      const valU  = Number(p.valueUSDT || 0);
-      const valE  = Number(p.valueEUR  || 0);
-      if ((!priceU || priceU <= 0) && qty > 0 && valU > 0) priceU = valU / qty;
-      if (priceU > 0) binancePriceMap.set(asset, priceU);
-
-      return {
-        asset,
-        quantity: qty,
-        valueUSDT: valU,
-        valueEUR: valE,
-        priceUSDT: priceU,
-        priceSource: 'binance',
-        source: 'binance'
-      };
-    })
-    .filter(r => !HIDE_SYMBOLS.has(r.asset))
-    .filter(r => (r.valueEUR || r.valueUSDT || 0) > 0)
-    .sort((a,b) => (b.valueEUR || 0) - (a.valueEUR || 0));
-  return rows;
-}
-
-async function loadSavedLocations(){
-  savedLocations = new Map();
-  const snap = await getDocs(collection(db, 'cryptoportfolio'));
-  snap.forEach(docSnap => {
-    const id = docSnap.id;
-    const loc = docSnap.data()?.location || null;
-    if (id && typeof loc === 'string') savedLocations.set(id.toUpperCase(), loc);
-  });
-}
-
-async function loadManualAssets(){
-  manualAssets = [];
-  const snap = await getDocs(collection(db, 'cryptoportfolio_manual'));
-  snap.forEach(docSnap => {
-    const d = docSnap.data() || {};
-    manualAssets.push({
-      asset: String(d.asset || docSnap.id || '').toUpperCase(),
-      quantity: Number(d.quantity || 0),
-      location: typeof d.location === 'string' ? d.location : 'Other',
-      updatedAt: d.updatedAt || null,
-      source: 'manual'
-    });
-  });
-}
-
-/* ================== Render ================== */
-async function renderAll(generatedAt){
-  // Prefetch: símbolos manuais que não têm preço da Binance
-  const manualSyms = manualAssets
-    .map(m => String(m.asset || '').toUpperCase())
-    .filter(s => s && !binancePriceMap.has(s));
-  if (manualSyms.length) {
-    await prefetchUsdPricesForSymbols(manualSyms, 25); // batches menores reduzem 429
-  }
-
-  const manualWithValues = await Promise.all(manualAssets.map(async m => {
-    const { price, source: priceSource } = await getUsdPriceForSymbol(m.asset);
-    const valUSDT = (price > 0 && m.quantity > 0) ? (m.quantity * price) : 0;
-    const valEUR  = usdtToEurRate ? (valUSDT * usdtToEurRate) : 0;
-    return { ...m, valueUSDT: valUSDT, valueEUR: valEUR, priceUSDT: price, priceSource };
-  }));
-
-  const combined = [
-    ...binanceRows.map(r => ({ ...r, location: savedLocations.get(r.asset) || '' })),
-    ...manualWithValues
-  ].sort((a,b) => (b.valueEUR || 0) - (a.valueEUR || 0));
-
-  _latestCombinedRows = combined;
-
-  renderKpis(combined, generatedAt);
-  renderTable(combined);
-  updateSmallNote(combined);
-}
-
-function renderKpis(rows, generatedAt){
-  const totalEUR  = rows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
-  const totalUSDT = rows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
-  $('#kpiTotalEUR').textContent  = nfEUR.format(totalEUR);
-  $('#kpiTotalUSDT').textContent = `$${nfUSD.format(totalUSDT)}`;
-  $('#kpiStamp').textContent     = generatedAt ? new Date(generatedAt).toLocaleString('pt-PT') : '—';
-}
-
-function renderTable(rows){
-  const tbody = $('#rows');
-  if (!tbody) return;
-
-  const displayRows = hideSmall
-    ? rows.filter(r => (r.valueUSDT || 0) >= SMALL_USD_THRESHOLD)
-    : rows;
-
-  if (!displayRows.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="text-muted">No data</td></tr>`;
-    return;
-  }
-
-  const html = displayRows.map(r => {
-    const sel = locationSelectHtml(r.asset, r.location || '');
-    const priceInfoIcon =
-      r.priceSource === 'binance'       ? '<span title="Price from Binance">ⓘ</span>' :
-      r.priceSource === 'coingecko'     ? '<span title="Price from CoinGecko">ⓘ</span>' :
-                                          '';
-
-    const actions = r.source === 'manual'
-      ? `<button class="btn btn-edit" data-edit="${escapeHtml(r.asset)}">Edit</button>
-         <button class="btn btn-del" data-del="${escapeHtml(r.asset)}">Delete</button>`
-      : `<span class="status" id="status-${escapeHtml(r.asset)}"></span>`;
-
-    return `
-      <tr data-asset="${escapeHtml(r.asset)}" data-source="${r.source}">
-        <td><b>${escapeHtml(r.asset)}</b></td>
-        <td>${nfQty.format(r.quantity)}</td>
-        <td>$${nfUSD.format(r.valueUSDT || 0)} ${priceInfoIcon}</td>
-        <td>${nfEUR.format(r.valueEUR || 0)}</td>
-        <td>${sel}</td>
-        <td>${actions}</td>
-      </tr>
-    `;
-  }).join('');
-
-  tbody.innerHTML = html;
-
-  // Bind: select (autosave)
-  $$('select[data-asset]').forEach(el => {
-    el.addEventListener('change', async (e) => {
-      const asset = e.target.getAttribute('data-asset');
-      const location = e.target.value;
-      const row = e.target.closest('tr');
-      const source = row?.getAttribute('data-source') || 'binance';
-      if (source === 'manual') {
-        await saveManual(asset, { location });
-      } else {
-        await saveBinanceLocation(asset, location);
+      // Carimbo
+      const stamp = document.getElementById('kpiStamp');
+      if (generatedAt && stamp){
+        stamp.textContent = new Date(generatedAt).toLocaleString('pt-PT');
       }
-    });
-  });
+    }
 
-  // Bind: edit/delete manual
-  $$('.btn-edit').forEach(btn => {
-    btn.addEventListener('click', () => openModalForEdit(btn.getAttribute('data-edit')));
-  });
-  $$('.btn-del').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const asset = btn.getAttribute('data-del');
-      if (!confirm(`Delete manual asset ${asset}?`)) return;
-      await deleteManual(asset);
-      await loadManualAssets();
-      await renderAll(); // recalc e re‐render
-    });
-  });
-}
 
-function updateSmallNote(allRows) {
-  const note = document.getElementById('small-note');
-  if (!note) return;
-  const hiddenCount = allRows.filter(r => (r.valueUSDT || 0) < SMALL_USD_THRESHOLD).length;
-  if (hideSmall && hiddenCount > 0) {
-    note.textContent = `A ocultar ${hiddenCount} posições com valor < $${SMALL_USD_THRESHOLD}.`;
-  } else {
-    note.textContent = '';
-  }
-}
+  /* ================== TABLE ================== */
+    renderTable(){
+      const tbody = DOM.$('#rows');
+      if (!tbody) return;
 
-function locationSelectHtml(asset, selected){
-  const opts = LOCATION_CHOICES.map(v => {
-    const sel = v === (selected || '') ? 'selected' : '';
-    return `<option value="${escapeHtml(v)}" ${sel}>${escapeHtml(v)}</option>`;
-  }).join('');
-  return `<select class="location-select" data-asset="${escapeHtml(asset)}">${opts}</select>`;
-}
-
-/* ================== Firestore ops ================== */
-async function saveBinanceLocation(asset, location){
-  const cell = document.getElementById(`status-${asset}`);
-  try {
-    if (cell) { cell.textContent = 'saving…'; cell.classList.remove('ok','err'); }
-    const ref = doc(collection(db, 'cryptoportfolio'), asset);
-    await setDoc(ref, { asset, location, updatedAt: new Date() }, { merge: true });
-    savedLocations.set(asset, location);
-    if (cell) { cell.textContent = 'saved ✓'; cell.classList.add('ok'); }
-  } catch (e) {
-    console.error(e);
-    if (cell) { cell.textContent = 'error'; cell.classList.add('err'); }
-    alert('Falha ao guardar localização');
-  }
-}
-
-async function saveManual(asset, partial){
-  const ref = doc(collection(db, 'cryptoportfolio_manual'), asset);
-  const snap = await getDoc(ref);
-  const prev = snap.exists() ? (snap.data() || {}) : {};
-  const next = { ...prev, ...partial, asset, updatedAt: new Date() };
-  await setDoc(ref, next, { merge: true });
-}
-
-async function deleteManual(asset){
-  const ref = doc(collection(db, 'cryptoportfolio_manual'), asset);
-  await deleteDoc(ref);
-}
-
-/* ================== Modal Add/Edit ================== */
-function setupModal(){
-  const modal = $('#modal-backdrop');
-  const selLoc = $('#m-loc');
-  if (selLoc) {
-    selLoc.innerHTML = LOCATION_CHOICES.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-  }
-  $('#btn-add')?.addEventListener('click', () => openModalForAdd());
-  $('#m-cancel')?.addEventListener('click', closeModal);
-  $('#m-save')?.addEventListener('click', saveModal);
-  modal?.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-}
-
-function openModalForAdd(){
-  $('#modal-title').textContent = 'Add asset';
-  $('#m-asset').value = '';
-  $('#m-qty').value = '';
-  $('#m-loc').value = 'Other';
-  $('#modal-backdrop').style.display = 'flex';
-  $('#m-asset').focus();
-}
-
-function openModalForEdit(asset){
-  const m = manualAssets.find(x => x.asset === asset);
-  $('#modal-title').textContent = `Edit ${asset}`;
-  $('#m-asset').value = m?.asset || asset;
-  $('#m-asset').disabled = true;
-  $('#m-qty').value = m?.quantity ?? '';
-  $('#m-loc').value = m?.location || 'Other';
-  $('#modal-backdrop').style.display = 'flex';
-}
-
-function closeModal(){
-  $('#modal-backdrop').style.display = 'none';
-  $('#m-asset').disabled = false;
-}
-
-async function saveModal(){
-  const asset = String($('#m-asset').value || '').toUpperCase().trim();
-  const qty   = Number($('#m-qty').value || 0);
-  const loc   = $('#m-loc').value;
-
-  if (!asset || !isFinite(qty) || qty <= 0) {
-    alert('Ticker e quantidade são obrigatórios.');
-    return;
-  }
-
-  await saveManual(asset, { asset, quantity: qty, location: loc });
-  await loadManualAssets();
-  closeModal();
-  await renderAll(); // recalc preços e totais
-}
-
-/* ================== PDF Export (jsPDF UMD) ================== */
-function setupPdfButton() {
-  const btn = document.getElementById('btn-pdf');
-  if (!btn) return;
-
-  btn.addEventListener('click', async (ev) => {
-    ev.preventDefault();
-    try {
-      if (!window.jspdf) { alert('Módulo jsPDF não carregado.'); return; }
-      const { jsPDF } = window.jspdf;
-
-      const rows = window.getCurrentRows ? window.getCurrentRows() : [];
-      if (!rows.length) { alert('Sem dados para exportar.'); return; }
-
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      let y = 40;
-
-      // ======== HEADER ========
-      const now = new Date();
-      const monthName = now.toLocaleString('pt-PT', { month: 'long' });
-      const year = now.getFullYear();
-      const title = `Portefólio Cripto — ${monthName.charAt(0).toUpperCase() + monthName.slice(1)} ${year}`;
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text(title, pageWidth / 2, y, { align: 'center' });
-      y += 30;
-
-      // ======== TABLE HEADER ========
-      doc.setFont('helvetica','bold'); doc.setFontSize(11);
-      doc.text('Ativo', 40, y); doc.text('Qtd', 120, y);
-      doc.text('USD', 240, y); doc.text('EUR', 320, y); doc.text('Localização', 420, y);
-      y += 10; doc.line(40, y, pageWidth - 40, y); y += 15;
-
-      // ======== TABLE ROWS ========
-      const hide = window.getHideSmall ? window.getHideSmall() : hideSmall;
-      const thr  = window.getUsdThreshold ? window.getUsdThreshold() : SMALL_USD_THRESHOLD;
-      const displayRows = hide ? rows.filter(r => (r.valueUSDT || 0) >= thr) : rows;
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(10);
-      for (const r of displayRows) {
-        if (y > 760) { doc.addPage(); y = 40; }
-        doc.text(r.asset, 40, y);
-        doc.text(nfQty.format(r.quantity), 120, y);
-        doc.text(`$${nfUSD.format(r.valueUSDT || 0)}`, 240, y);
-        doc.text(`${nfEUR.format(r.valueEUR || 0)}`, 320, y);
-        doc.text(r.location || '', 420, y);
-        y += 14;
+      const vis = this.state.visibleRows;
+      if (!vis.length){
+        tbody.innerHTML = '<tr><td colspan="6" class="text-muted">No data to display</td></tr>';
+        this.applyCurrencyMode();
+        return;
       }
 
-      // ======== TOTAL ========
-      y += 20;
-      const totalEUR  = rows.reduce((s,r)=> s + (r.valueEUR  || 0), 0);
-      const totalUSDT = rows.reduce((s,r)=> s + (r.valueUSDT || 0), 0);
-      doc.setFont('helvetica','bold');
-      doc.text(`Total:  $${nfUSD.format(totalUSDT)}   (${nfEUR.format(totalEUR)})`, 40, y);
+      const esc = s=>String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[m]));
 
-      const filename = `Crypto_Portfolio_${year}-${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
-      doc.save(filename);
-    } catch (e) {
-      console.error('PDF error:', e);
-      alert('Falha ao gerar PDF. Ver consola.');
+      // group by asset
+      const groups = new Map();
+      for (const row of vis){
+        const a = (row.asset||'').toUpperCase();
+        if (!groups.has(a)) groups.set(a, []);
+        groups.get(a).push(row);
+      }
+      const assets = Array.from(groups.keys()).sort((a,b)=>{
+        const sum = sym => groups.get(sym).reduce((s,x)=>s+(x.valueEUR||0),0);
+        return sum(b)-sum(a);
+      });
+
+      let html = '';
+      for (const asset of assets){
+        const rows = groups.get(asset).sort((x,y)=>(y.valueEUR||0)-(x.valueEUR||0));
+
+        // linhas individuais
+        for (const r of rows){
+          const actions = r.source==='manual'
+            ? `<button class="btn btn-edit" data-edit="${esc(r.asset)}">Edit</button>
+              <button class="btn btn-del" data-del="${esc(r.asset)}">Delete</button>`
+            : `<span class="status" id="status-${esc(r.asset)}"></span>`;
+          const sel = this.renderLocationSelect(r.asset, r.location);
+
+          html += `
+            <tr data-asset="${esc(r.asset)}" data-source="${esc(r.source||'')}">
+              <td><b>${esc(r.asset)}</b></td>
+              <td class="col-qty">${FORMATTERS.quantity.format(r.quantity)}</td>
+              <td class="col-usd">$${FORMATTERS.usd.format(r.valueUSDT||0)}</td>
+              <td class="col-eur">${FORMATTERS.eur.format(r.valueEUR||0)}</td>
+              <td class="col-loc">${sel}</td>
+              <td>${actions}</td>
+            </tr>
+          `;
+        }
+
+        // subtotal (quando há várias localizações)
+        if (rows.length > 1){
+          const totalQty = rows.reduce((s,x)=>s+(x.quantity||0),0);
+          const totalUSD = rows.reduce((s,x)=>s+(x.valueUSDT||0),0);
+          const totalEUR = rows.reduce((s,x)=>s+(x.valueEUR||0),0);
+
+          html += `
+            <tr class="subtotal-row" data-asset="${esc(asset)}" data-subtotal="1">
+              <td>Total ${esc(asset)}</td>
+              <td class="col-qty">${FORMATTERS.quantity.format(totalQty)}</td>
+              <td class="col-usd">$${FORMATTERS.usd.format(totalUSD)}</td>
+              <td class="col-eur">${FORMATTERS.eur.format(totalEUR)}</td>
+              <td class="col-loc">Total</td>
+              <td></td>
+            </tr>
+          `;
+        }
+      }
+
+      tbody.innerHTML = html;
+      this.bindTableEvents();
+      this.applyCurrencyMode();
     }
-  });
-}
-
-// Se o DOM já estiver pronto, liga já; senão espera
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupPdfButton);
-} else {
-  setupPdfButton();
-}
 
 
-/* ================== Utils ================== */
-function escapeHtml(str=''){
-  return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  renderLocationSelect(asset, selected){
+    const opts = CONFIG.LOCATION_CHOICES.map(loc =>
+      `<option value="${this.escape(asset, loc)}" ${loc === (selected||'') ? 'selected':''}>${this.escape(asset, loc, true)}</option>`
+    ).join('');
+    return `<select class="location-select" data-asset="${this.escapeHtml(asset)}">${opts}</select>`;
+  }
+  escape(asset, s, textOnly=false){
+    const t = String(s||'');
+    return textOnly ? t.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[m]))
+                    : t.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[m]));
+  }
+  escapeHtml(s){ return this.escape('', s, true); }
+
+  /* ================== UI HELPERS ================== */
+  applyCurrencyMode(){
+    const show = (sel,on)=>document.querySelectorAll(sel).forEach(el=>{el.style.display = on?'':'none';});
+    const showEUR = this.state.currency==='EUR';
+    const showUSD = this.state.currency==='USD';
+    show('th.col-usd, td.col-usd', showUSD);
+    show('th.col-eur, td.col-eur', showEUR);
+
+    // update invested box (displayed in selected currency)
+    const kINV = DOM.$('#kpiInvested');
+    if (kINV){
+      if (this.state.currency==='EUR') kINV.textContent = FORMATTERS.eur.format(this.state.investedEUR||0);
+      else kINV.textContent = `$${FORMATTERS.usd.format(this.state.investedUSD||0)}`;
+    }
+    // update totals with realized
+    this.renderKPIs(); // refresh signs/values
+  }
+
+  updateSmallNote(){
+    const note = DOM.$('#small-note');
+    if (!note) return;
+    const hidden = this.state.currentRows.filter(r=>(r.valueUSDT||0)<CONFIG.SMALL_USD_THRESHOLD).length;
+    if (this.state.hideSmall && hidden>0) note.textContent = `A ocultar ${hidden} posições com valor < $${CONFIG.SMALL_USD_THRESHOLD}.`;
+    else note.textContent = '';
+  }
+
+  /* ================== EVENTS ================== */
+  setupEvents(){
+    // Toggle small assets
+    DOM.$('#btn-toggle-small')?.addEventListener('click', ()=>{
+      this.state.hideSmall = !this.state.hideSmall;
+      const btn = DOM.$('#btn-toggle-small');
+      if (btn) btn.textContent = this.state.hideSmall ? 'Mostrar valores < $5' : 'Mostrar apenas ≥ $5';
+      this.renderTable();
+      this.updateSmallNote();
+    });
+
+    // Add / Edit modal
+    this.setupModal();
+
+    // PDF
+    this.setupPdf();
+
+    // Currency toggle
+    const btnEUR = DOM.$('#btn-eur');
+    const btnUSD = DOM.$('#btn-usd');
+    if (btnEUR && btnUSD){
+      const setActive = (on,off)=>{ on.classList.add('active'); off.classList.remove('active'); };
+      btnEUR.addEventListener('click', ()=>{
+        this.state.currency='EUR';
+        setActive(btnEUR, btnUSD);
+        this.applyCurrencyMode();
+      });
+      btnUSD.addEventListener('click', ()=>{
+        this.state.currency='USD';
+        setActive(btnUSD, btnEUR);
+        this.applyCurrencyMode();
+      });
+    }
+
+      // Investido (somar ao existente)
+      const btnINV = DOM.$('#btn-invested');
+      if (btnINV){
+        btnINV.addEventListener('click', async ()=>{
+          try {
+            const mode = this.state.currency;
+            const current = mode==='EUR' ? (this.state.investedEUR||0) : (this.state.investedUSD||0);
+            const label = mode==='EUR' ? 'Adicionar ao Investido (EUR) — pode ser negativo' 
+                                      : 'Adicionar ao Investido ($) — pode ser negativo';
+            const inp = prompt(`${label}\nAtual: ${mode==='EUR' ? FORMATTERS.eur.format(current) : '$'+FORMATTERS.usd.format(current)}\n\nValor a adicionar:`, '0');
+            if (inp === null) return;
+            const delta = Number(inp);
+            if (!isFinite(delta)) { alert('Valor inválido'); return; }
+
+            await this.addInvestedDelta(delta, mode);
+            this.renderKPIs();
+          } catch (e){
+            alert('Falha ao atualizar investido');
+            console.error(e);
+          }
+        });
+      }
+    }
+
+  /* ===== Modal Add/Edit manual asset ===== */
+  setupModal(){
+    const modal = DOM.$('#modal-backdrop');
+    const locSelect = DOM.$('#m-loc');
+    if (locSelect){
+      locSelect.innerHTML = CONFIG.LOCATION_CHOICES.map(l=>`<option value="${this.escapeHtml(l)}">${this.escapeHtml(l)}</option>`).join('');
+    }
+    DOM.$('#btn-add')?.addEventListener('click', ()=>this.openAddModal());
+    DOM.$('#m-cancel')?.addEventListener('click', ()=>this.closeModal());
+    DOM.$('#m-save')?.addEventListener('click', ()=>this.saveModal());
+    modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeModal(); });
+  }
+
+  openAddModal(){
+    DOM.$('#modal-title').textContent = 'Add asset';
+    DOM.$('#m-asset').value = '';
+    DOM.$('#m-qty').value = '';
+    DOM.$('#m-loc').value = 'Other';
+    DOM.enable(DOM.$('#m-asset'));
+    DOM.show(DOM.$('#modal-backdrop'));
+    DOM.$('#m-asset').focus();
+  }
+  openEditModal(asset){
+    const row = this.state.manualAssets.find(a=>a.asset===asset);
+    DOM.$('#modal-title').textContent = `Edit ${asset}`;
+    DOM.$('#m-asset').value = row?.asset || asset;
+    DOM.disable(DOM.$('#m-asset'));
+    DOM.$('#m-qty').value = row?.quantity || '';
+    DOM.$('#m-loc').value = row?.location || 'Other';
+    DOM.show(DOM.$('#modal-backdrop'));
+  }
+  closeModal(){ DOM.hide(DOM.$('#modal-backdrop')); DOM.enable(DOM.$('#m-asset')); }
+
+  async saveModal(){
+    const asset = DOM.$('#m-asset').value.trim().toUpperCase();
+    const qty = Number(DOM.$('#m-qty').value || 0);
+    const loc = DOM.$('#m-loc').value;
+    if (!asset || !isFinite(qty) || qty<=0){ alert('Asset/quantidade inválidos'); return; }
+    await FirebaseService.setDocument('cryptoportfolio_manual', asset, { asset, quantity: qty, location: loc });
+    await this.loadManualAssets();
+    this.closeModal();
+    await this.renderAll();
+  }
+
+  bindTableEvents(){
+    // location changes
+    DOM.$$('select[data-asset]').forEach(sel=>{
+      sel.addEventListener('change', async (e)=>{
+        const asset = e.target.getAttribute('data-asset');
+        const loc = e.target.value;
+        const row = e.target.closest('tr');
+        const source = row?.getAttribute('data-source') || 'binance';
+        if (source==='manual'){
+          await FirebaseService.setDocument('cryptoportfolio_manual', asset, { location: loc });
+          await this.loadManualAssets();
+        } else {
+          await FirebaseService.setDocument('cryptoportfolio', asset, { asset, location: loc });
+        }
+      });
+    });
+    // edit/delete
+    DOM.$$('.btn-edit').forEach(b=>b.addEventListener('click', ()=>this.openEditModal(b.getAttribute('data-edit'))));
+    DOM.$$('.btn-del').forEach(b=>b.addEventListener('click', async ()=>{
+      const asset = b.getAttribute('data-del');
+      if (!confirm(`Delete ${asset}?`)) return;
+      await FirebaseService.deleteDocument('cryptoportfolio_manual', asset);
+      await this.loadManualAssets();
+      await this.renderAll();
+    }));
+  }
+
+  /* ================== PDF ================== */
+  setupPdf(){
+    DOM.$('#btn-pdf')?.addEventListener('click', (e)=>{
+      e.preventDefault();
+      this.exportToPdf();
+    });
+  }
+
+  exportToPdf(){
+    if (!window.jspdf){ alert('PDF library not loaded.'); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    const now = new Date();
+    const month = now.toLocaleString('pt-PT', { month:'long' });
+    const title = `Portefólio Cripto - ${month.charAt(0).toUpperCase()+month.slice(1)} ${now.getFullYear()}`;
+    doc.setFont('helvetica','bold'); doc.setFontSize(18);
+    doc.text(title, pageWidth/2, 40, { align:'center' });
+
+    const rows = this.state.visibleRows;
+    if (!rows.length){ alert('Sem dados para exportar.'); return; }
+
+    // Build table for selected currency
+    const mode = this.state.currency; // 'EUR'|'USD'
+    const head = (mode==='EUR')
+      ? [['Ativo','Quantidade','Valor (EUR)','Localização']]
+      : [['Ativo','Quantidade','Valor ($)','Localização']];
+
+    const body = rows.map(r=>{
+      return (mode==='EUR')
+        ? [ r.asset, FORMATTERS.quantity.format(r.quantity), FORMATTERS.eur.format(r.valueEUR||0), r.location||'' ]
+        : [ r.asset, FORMATTERS.quantity.format(r.quantity), `$${FORMATTERS.usd.format(r.valueUSDT||0)}`, r.location||'' ];
+    });
+
+    // ----- construir head/body como já fazes acima -----
+
+      // 1) Larguras por modo (mais estreitas para Ativo / Valor / Localização)
+      const widths = (mode === 'EUR')
+        // Ativo | Quantidade | Valor(€) | Localização
+        ? [70, 95, 85, 150]
+        // Ativo | Quantidade | Valor($) | Localização
+        : [70, 95, 80, 155];
+
+      // 2) Centragem: margem simétrica com base na soma das colunas
+      const totalTableWidth = widths.reduce((a, b) => a + b, 0);
+      const marginLeft = Math.max(20, Math.floor((pageWidth - totalTableWidth) / 2));
+      const margin = { left: marginLeft, right: marginLeft };
+
+      // 3) Tabela
+      doc.autoTable({
+        startY: 70,
+        head,
+        body,
+        theme: 'grid',
+        styles: {
+          font: 'helvetica',
+          fontSize: 9,
+          cellPadding: 3,
+          lineColor: [200, 200, 200],
+          lineWidth: 0.2,
+          halign: 'center' // centra texto das células
+        },
+        headStyles: {
+          fillColor: [245, 245, 245],
+          textColor: 30,
+          fontStyle: 'bold',
+          halign: 'center'
+        },
+        margin,
+        tableWidth: 'wrap',
+        // colunas: usamos as larguras calculadas acima
+        columnStyles: {
+          0: { cellWidth: widths[0] },                  // Ativo
+          1: { cellWidth: widths[1], halign: 'center' }, // Quantidade
+          2: { cellWidth: widths[2], halign: 'center' }, // Valor
+          3: { cellWidth: widths[3] }                   // Localização
+        }
+      });
+
+      // === Totais imediatamente abaixo da tabela, alinhados à esquerda da tabela ===
+        const t = this.state.totals;
+        const invEUR = this.state.investedEUR || 0;
+        const invUSD = this.state.investedUSD || 0;
+        const realEUR = (t.eur || 0) - invEUR;
+        const realUSD = (t.usdt || 0) - invUSD;
+
+        let y = (doc.lastAutoTable?.finalY || 70) + 25;
+        // usa a mesma margem esquerda da tabela; fallback para 40 px
+        const leftX = (typeof marginLeft !== 'undefined')
+          ? marginLeft
+          : (doc.lastAutoTable?.settings?.margin?.left ?? 40);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+
+        if (mode === 'EUR') {
+          const part1 = `Total: ${FORMATTERS.eur.format(t.eur || 0)}   `;
+          const part2 = `Investido: ${FORMATTERS.eur.format(invEUR)}   `;
+          const sign = realEUR >= 0 ? '+' : '−';
+          const part3 = `Realizado: ${sign}${FORMATTERS.eur.format(Math.abs(realEUR))}`;
+
+          // texto 1 (preto)
+          doc.setTextColor(0, 0, 0);
+          doc.text(part1, leftX, y);
+
+          // texto 2 (preto), encostado a seguir ao 1
+          let x2 = leftX + doc.getTextWidth(part1);
+          doc.text(part2, x2, y);
+
+          // texto 3 (verde/vermelho), encostado a seguir ao 2
+          let x3 = x2 + doc.getTextWidth(part2);
+          doc.setTextColor(realEUR >= 0 ? 22 : 220, realEUR >= 0 ? 163 : 38, realEUR >= 0 ? 74 : 38);
+          doc.text(part3, x3, y);
+        } else {
+          const part1 = `Total: $${FORMATTERS.usd.format(t.usdt || 0)}   `;
+          const part2 = `Investido: $${FORMATTERS.usd.format(invUSD)}   `;
+          const sign = realUSD >= 0 ? '+' : '−';
+          const part3 = `Realizado: ${sign}$${FORMATTERS.usd.format(Math.abs(realUSD))}`;
+
+          doc.setTextColor(0, 0, 0);
+          doc.text(part1, leftX, y);
+
+          let x2 = leftX + doc.getTextWidth(part1);
+          doc.text(part2, x2, y);
+
+          let x3 = x2 + doc.getTextWidth(part2);
+          doc.setTextColor(realUSD >= 0 ? 22 : 220, realUSD >= 0 ? 163 : 38, realUSD >= 0 ? 74 : 38);
+          doc.text(part3, x3, y);
+        }
+
+        // reset cor para o que vier depois
+        doc.setTextColor(0, 0, 0);
+
+
+
+    const filename = `Crypto_Portfolio_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
+    doc.save(filename);
+  }
+
+  /* ================== MISC ================== */
+  showError(msg){
+    console.error(msg);
+    const tb = DOM.$('#rows');
+    if (tb) tb.innerHTML = `<tr><td colspan="6" class="text-muted">Error: ${msg}</td></tr>`;
+  }
 }
+
+/* ================== BOOT ================== */
+const app = new CryptoPortfolioApp();
+document.addEventListener('DOMContentLoaded', ()=> app.init() );
+
+// expose for console debug
+window.cryptoApp = app;

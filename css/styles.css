@@ -1259,3 +1259,55 @@ body[data-page="dca"] .juro-card { max-width: 680px; margin: 10px 0 0 0; }
 .badge-stake { background: #fff6e6; color: #9a5a12; } /* warm orange */
 .badge-earn  { background: #f0ffe5; color: #5a7a1a; } /* green */
 .badge-spot  { background: #e6f1ff; color: #24466F; } /* blue */
+
+.subtotal-row {
+  background: #fafafa;
+  font-weight: 700;
+  border-top: 2px solid #e5e7eb;
+}
+.val-pos { color: #166534; } /* verde */
+.val-neg { color: #991b1b; } /* vermelho */
+
+/* NEW CRYPTO */
+.loading, .error-message {
+  padding: 1rem;
+  text-align: center;
+  margin: 1rem 0;
+  border-radius: 8px;
+}
+
+.loading {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+}
+
+.error-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+}
+
+.val-pos { color: #166534; }
+.val-neg { color: #991b1b; }
+
+.btn-toggle.active { background:#166534; color:#fff; border-color:#111827; }
+
+
+/* KPIs: 4 cartões na mesma linha e alinhados no topo */
+.kpis-grid{
+  display:grid;
+  grid-template-columns:repeat(4, minmax(0,1fr));
+  gap:10px;
+  align-items:start;
+}
+.kpi-card{ padding:12px; }
+.kpi-label{ font-size:.85rem; color:#6b7280; }
+.kpi-value{ font-size:1.15rem; font-weight:700; line-height:1.2; }
+.kpi-stamp{ font-size:1rem; font-weight:500; }
+.kpi-sub{ margin-top:4px; font-size:.85rem; line-height:1; }
+.kpi-sub.pos{ color:#16a34a; } /* verde */
+.kpi-sub.neg{ color:#dc2626; } /* vermelho */
+
+@media (max-width: 800px){
+  .kpis-grid{ grid-template-columns:1fr 1fr; }
+}

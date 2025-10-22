@@ -76,75 +76,97 @@
 <body>
   <!-- Header / Nav -->
   <header>
-    <h1>Crypto Portfolio</h1>
-
     <div class="menu-icon" id="menu-icon">&#9776;</div>
 
     <nav id="nav-menu">
-      <ul>
-        <li><a href="faturas.html">Faturas e Relatórios</a></li>
-        <li><a href="analise.html">Análise Apartamentos</a></li>
-        <li><a href="caixa.html">Caixa</a></li>
-        <li><a href="diversos.html">Diversos</a></li>
-        <li class="separator">|</li>
-        <li><a href="dca.html">DCA</a></li>
-        <li class="separator">|</li>
-        <li id="login-section">
-          <a href="#" id="login-btn" class="login-visible">Login</a>
-          <span id="user-info" class="user-visible" style="display:none;">
-            <a href="#" id="user-name">Username</a>
-          </span>
-        </li>
-      </ul>
-    </nav>
+            <ul>
+                <li><a href="faturas.html">Faturas</a></li>  
+                <li class="separator">|</li>
+                <li><a href="analise.html">Análise Apartamentos</a></li>
+                <li><a href="analise123.html">123</a></li>
+                <li><a href="analise1248.html">1248</a></li>
+                <li><a href="analise123vs1248.html">123 vs 1248</a></li>
+                <li class="separator">|</li>
+                <li><a href="caixa.html">Caixa</a></li>
+                <li><a href="diversos.html">Diversos</a></li>
+                <li class="separator">|</li>
+                <li><a href="dca.html">DCA</a></li>
+                <li><a href="crypto.html" class="active">Cripto</a></li>
+                <li class="separator">|</li>
+                <!-- Login/User section, controlled by server-side or CSS visibility -->
+                <li id="login-section">
+                    <a href="#" id="login-btn" class="login-visible">Login</a>
+                    <span id="user-info" class="user-visible" style="display:none;">
+                        <a href="#" id="user-name">Username</a> <!-- Visible if logged in -->
+                    </span>
+                </li>
+            </ul>
+        </nav>
   </header>
 
   <main>
     <!-- KPIs -->
-    <section class="report-section">
+        <section class="report-section">
       <div class="kpis-grid">
         <div class="kpi-card">
           <div class="kpi-label">Total (EUR)</div>
           <div id="kpiTotalEUR" class="kpi-value">—</div>
+          <div id="kpiRealizedEUR" class="kpi-sub">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Total ($)</div>
           <div id="kpiTotalUSDT" class="kpi-value">—</div>
+          <div id="kpiRealizedUSD" class="kpi-sub">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Investido</div>
+          <div id="kpiInvested" class="kpi-value">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Gerado em</div>
-          <div id="kpiStamp" class="kpi-value" style="font-size:1rem;">—</div>
+          <div id="kpiStamp" class="kpi-value kpi-stamp">—</div>
         </div>
       </div>
     </section>
 
+
     <section class="report-section">
        <div class="toolbar">
-         <button id="btn-add" class="btn">+ Adicionar Crypto</button>
-          <button id="btn-pdf" class="btn">Exportar PDF</button>
-       </div>
+        <button id="btn-add" class="btn">+ Adicionar Crypto</button>
+        <button id="btn-invested" class="btn">Investido</button>
+        <button id="btn-pdf" class="btn">Exportar PDF</button>
+        <button id="btn-eur" class="btn btn-toggle active">EUR</button>
+        <button id="btn-usd" class="btn btn-toggle">USD</button>
+      </div>
+
 
 
 <div class="table-wrap">
   <table id="crypto-table">
     <thead>
-      <tr>
-        <th>Asset</th>
-        <th>Quantity</th>
-        <th>Value ($)</th>
-        <th>Value (EUR)</th>
-        <th>Location</th>
+        <tr>
+        <th>Ativo</th>
+        <th class="col-qty">Quantidade</th>
+        <th class="col-usd">Valor ($)</th>
+        <th class="col-eur">Valor (EUR)</th>
+        <th class="col-loc">Localização</th>
         <th>Ações</th>
       </tr>
     </thead>
+
     <tbody id="rows">
       <tr><td colspan="6" class="text-muted">Loading…</td></tr>
     </tbody>
+
   </table>
+  <div id="loading" class="loading" style="display: none;">
+  <p>Loading portfolio data...</p>
+</div>
+
 </div>
 
     <div class="toolbar" style="justify-content:flex-end; margin-top:8px;">
-     <button id="btn-toggle-small" class="btn">Ocultar valores &lt; $5</button>
+     <button id="btn-toggle-small" class="btn">Mostrar valores &lt; $5</button>
     </div>
     <p id="small-note" class="text-muted" style="text-align:right; margin-top:6px;"></p>
 
@@ -182,8 +204,11 @@
     </div>
   </div>
 
+  <div id="error-message" class="error-message" style="display: none;"></div>
+
   <!-- Page script -->
    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
    <script type="module" src="../js/crypto.js"></script>
 
   <!-- Mobile nav toggle -->
