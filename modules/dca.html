@@ -1,165 +1,140 @@
-<!-- modules/dca.html -->
 <!DOCTYPE html>
-<html lang="pt-pt">
+<html lang="pt-PT">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DCA</title>
-  <link rel="stylesheet" href="../css/styles.css" />
+
+  <!-- Global palette -->
+  <link rel="stylesheet" href="../css/styles.pcolor.css" />
   <link rel="icon" href="../favicon.ico" type="image/x-icon" />
 </head>
 
-<style>
-  /* Igualar largura à da página 123vs1248 */
-  body[data-page="dca"] main {
-    max-width: none !important;
-    width: 96vw !important;
-  }
-
-  body[data-page="dca"] .report-section,
-  body[data-page="dca"] .viz-card,
-  body[data-page="dca"] .table-wrap {
-    width: 100% !important;
-    max-width: 1200px !important;
-    margin: 0 auto;
-  }
-
-  /* (opcional) espaço uniforme entre seções */
-  body[data-page="dca"] .report-section {
-    margin-bottom: 1.5rem;
-  }
-</style>
-
-<body>
-  <body data-page="dca"></body>
-  <header>
-    <div class="menu-icon" id="menu-icon">&#9776;</div>
-    <nav id="nav-menu">
-      <ul>
-               <li><a href="faturas.html">Faturas</a></li>  
-                <li class="separator">|</li>
-                <li><a href="analise.html">Análise Apartamentos</a></li>
-                <li><a href="analise123.html">123</a></li>
-                <li><a href="analise1248.html">1248</a></li>
-                <li><a href="analise123vs1248.html">123 vs 1248</a></li>
-                <li class="separator">|</li>
-                <li><a href="caixa.html">Caixa</a></li>
-                <li><a href="diversos.html">Diversos</a></li>
-                <li class="separator">|</li>
-                <li><a href="dca.html" class="active">DCA</a></li>
-                <li><a href="crypto.html">Cripto</a></li>
-                <li class="separator">|</li>
-          <a href="#" id="login-btn" class="login-visible">Login</a>
-          <span id="user-info" class="user-visible" style="display:none;">
-            <a href="#" id="user-name">Username</a>
-          </span>
-        </li>
-      </ul>
-    </nav>
-  </header>
-
-<main>
-  <!-- Título da página -->
-  <h2 class="page-title center">DCA – Trade Republic</h2>
-
-  <!-- Parâmetros (mais compacto e à esquerda) -->
-  <section class="report-section">
-    <div class="viz-card params-card">
-      <h4>Parâmetros</h4>
-
-      <div class="table-wrap">
-        <table class="table-dca params-table" id="params-table">
-          <thead>
-            <tr>
-              <th rowspan="2" class="num">Data final</th>
-              <th rowspan="2" class="num">SWDA %</th>
-              <th rowspan="2" class="num">AGGH %</th>
-              <th colspan="3" class="cenarios" style="text-align:center">Cenários</th>
-              <th rowspan="2" style="width:140px">Ações</th>
-            </tr>
-            <tr>
-              <th class="num">Pessimista (%)</th>
-              <th class="num">Realista (%)</th>
-              <th class="num">Otimista (%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="num"><input id="end-date" type="month" /></td>
-              <td class="num"><input id="pct-swda" type="number" min="0" max="100" step="0.01" /></td>
-              <td class="num"><input id="pct-aggh" type="number" min="0" max="100" step="0.01" /></td>
-              <td class="num"><input id="rate-pes" type="number" step="0.01" /></td>
-              <td class="num"><input id="rate-real" type="number" step="0.01" /></td>
-              <td class="num"><input id="rate-otim" type="number" step="0.01" /></td>
-              <td style="text-align:right">
-                <button id="btn-save-params" type="button">Editar/Gravar</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- NOVO: Tabela Juro -->
-  <section class="report-section">
-    <div class="viz-card juro-card">
-      <h4>Juro</h4>
-
-      <div class="table-wrap">
-        <table class="table-dca" id="juro-table">
-          <thead>
-            <tr>
-              <th class="num">Saldo</th>
-              <th class="num">Taxa de juro</th>
-              <th class="num">Valor mensal</th>
-              <th class="num">Valor ganho em Juros</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-        <tr>
-         <td class="num">
-            <span class="money-wrap">
-             <input id="juro-saldo" type="number" step="0.01" class="cell" placeholder="0,00" />
+<body data-page="dca">
+  <!-- Header / Nav -->
+    <header>
+      <nav id="nav-menu">
+        <ul>
+          <!-- Login/User section at top -->
+          <li id="login-section" class="login-block">
+            <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+            <span id="user-info" class="user-visible" style="display:none;">
+              <a href="#" id="user-name">👤 Username</a>
             </span>
-         </td>
-         <td class="num">
-           <input id="juro-taxa" type="number" step="0.01" class="cell" value="2.00" disabled />
-         </td>
-         <td class="num"><span id="juro-mensal">0 €</span></td>
-         <td class="num"><span id="juro-acumulado">0 €</span></td>
-          <td style="text-align:right">
-           <button id="btn-juro-editar" type="button">Editar</button>
-           <button id="btn-juro-gravar" type="button">Gravar</button>
-         </td>
-        </tr>
-      </tbody>
+          </li>
 
-        </table>
+          <li class="separator"></li>
+
+          <!-- Secção: Apartamentos -->
+          <li class="menu-title">Apartamentos</li>
+          <li><a href="faturas.html">📄 Faturas</a></li>
+          <li><a href="analise.html">📊 Análise</a></li>
+          <li><a href="analise123.html">🏠 123</a></li>
+          <li><a href="analise1248.html">🏠 1248</a></li>
+          <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+          <li><a href="caixa.html">💰 Caixa</a></li>
+          <li><a href="diversos.html">📋 Diversos</a></li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Investimentos -->
+          <li class="menu-title">Investimentos</li>
+          <li><a href="dca.html" class="active">📈 DCA</a></li>
+          <li><a href="crypto.html">🚀 Cripto</a></li>
+        </ul>
+      </nav>
+    </header>
+
+  <main class="dca-page">
+    <!-- Título da página -->
+    <h2 class="page-title center">DCA – Trade Republic</h2>
+
+    <!-- Parâmetros -->
+    <section class="report-section">
+      <div class="viz-card params-card">
+        <h4>Parâmetros</h4>
+        <div class="table-wrap">
+          <table class="table-dca params-table" id="params-table">
+            <thead>
+              <tr>
+                <th rowspan="2" class="num">Data final</th>
+                <th rowspan="2" class="num">SWDA %</th>
+                <th rowspan="2" class="num">AGGH %</th>
+                <th colspan="3" style="text-align:center">Cenários</th>
+                <th rowspan="2" style="width:140px">Ações</th>
+              </tr>
+              <tr>
+                <th class="num">Pessimista (%)</th>
+                <th class="num">Realista (%)</th>
+                <th class="num">Otimista (%)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="num"><input id="end-date" type="month" /></td>
+                <td class="num"><input id="pct-swda" type="number" min="0" max="100" step="0.01" /></td>
+                <td class="num"><input id="pct-aggh" type="number" min="0" max="100" step="0.01" /></td>
+                <td class="num"><input id="rate-pes" type="number" step="0.01" /></td>
+                <td class="num"><input id="rate-real" type="number" step="0.01" /></td>
+                <td class="num"><input id="rate-otim" type="number" step="0.01" /></td>
+                <td style="text-align:right">
+                  <button id="btn-save-params" type="button" class="primary">Editar/Gravar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- Registo mensal (mantém como estava) -->
-  <section class="report-section">
-    <div class="viz-card">
-      <h4>Registo Mensal</h4>
-      <div class="form-actions" style="justify-content:flex-end; gap:.5rem; margin-bottom:.5rem">
+    <!-- Juro -->
+    <section class="report-section">
+      <div class="viz-card juro-card">
+        <h4>Juro</h4>
+        <div class="table-wrap">
+          <table class="table-dca" id="juro-table">
+            <thead>
+              <tr>
+                <th class="num">Saldo</th>
+                <th class="num">Taxa de juro</th>
+                <th class="num">Valor mensal</th>
+                <th class="num">Valor ganho em Juros</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="num">
+                  <input id="juro-saldo" type="number" step="0.01" class="cell" placeholder="0,00" />
+                </td>
+                <td class="num">
+                  <input id="juro-taxa" type="number" step="0.01" class="cell" value="2.00" disabled />
+                </td>
+                <td class="num"><span id="juro-mensal">0 €</span></td>
+                <td class="num"><span id="juro-acumulado">0 €</span></td>
+                <td style="text-align:right">
+                  <button id="btn-juro-editar" type="button">Editar</button>
+                  <button id="btn-juro-gravar" type="button">Gravar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div id="dca-table-wrap"></div>
-      <button id="toggle-others" type="button">Expandir anos</button>
-    </div>
-  </section>
-</main>
+    </section>
 
+    <!-- Registo Mensal -->
+    <section class="report-section">
+      <div class="viz-card">
+        <h4>Registo Mensal</h4>
+        <div id="dca-table-wrap"></div>
+        <button id="toggle-others" type="button">Expandir anos</button>
+      </div>
+    </section>
+  </main>
 
-<footer class="app-footer">
-  <p>© 2025 OM&MT</p>
-</footer>
-
-
+  <!-- Keep original JS for now (no code changes in this step) -->
   <script type="module" src="../js/dca.js"></script>
   <script>
     const menuIcon = document.getElementById('menu-icon');

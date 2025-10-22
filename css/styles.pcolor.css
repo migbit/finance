@@ -1,0 +1,711 @@
+/* ===============================================================
+   PColor Theme (lighter, not too dark) — Sidebar Left
+   Palette: 27374D, 526D82, 9DB2BF, DDE6ED
+   =============================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+
+/* ---- Reset ---- */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ---- Palette ---- */
+:root{
+  --p1:#27374D;   /* deep blue — sidebar / strong accents */
+  --p2:#526D82;   /* medium blue — headers, primary buttons */
+  --p3:#9DB2BF;   /* soft blue — table header / tags */
+  --p4:#DDE6ED;   /* very light blue — app background */
+
+  --bg:var(--p4);
+  --card:#ffffff;
+  --text:#0f172a;       /* slate-900 */
+  --text-dim:#334155;   /* slate-700 */
+  --border:#e5e7eb;     /* gray-200 */
+  --divider:#eef2f7;
+
+  --radius-sm:8px;
+  --radius-md:12px;
+  --radius-lg:16px;
+
+  --space-1:.25rem;
+  --space-2:.5rem;
+  --space-3:.75rem;
+  --space-4:1rem;
+  --space-5:1.5rem;
+  --space-6:2rem;
+
+  --shadow-1:0 1px 2px rgba(0,0,0,.04),0 1px 1px rgba(0,0,0,.02);
+  --shadow-2:0 10px 24px rgba(2,6,23,.08);
+
+  --ctrl-h:40px;
+  --sidebar-w:260px;
+
+  /* Tables */
+  --th-bg:#f3f6f9;
+  --tr-alt:#fafbfc;
+  --tr-hover:#f3f7fb;
+
+  /* States */
+  --ok:#16a34a;
+  --bad:#e11d48;
+}
+
+/* ---- Base ---- */
+
+.page-title { text-align: center; }
+
+h3 {
+  text-align: center;
+  padding-top: 0.3rem;
+  padding-bottom: 0.8rem;
+  font-size: 1.2rem;
+}
+
+h4 {
+  text-align: center;
+  padding-top: 0.3rem;
+  padding-bottom: 0.8rem;
+  font-size: 1.1rem;
+}
+
+.viz-card h3,
+.viz-card h4 {
+  margin-top: 0;     /* smaller gap from top border */
+  margin-bottom: 0.6rem;  /* closer to the table below */
+  padding: 0;             /* remove any inherited padding */
+  font-size: 1.15rem;     /* slightly larger and clear */
+  font-weight: 700;
+}
+
+html,body{height:100%}
+body {
+  font-family: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  min-height: 100vh;
+  line-height: 1.55;
+}
+
+
+/* Remove number spinners (Chrome/Safari/Edge/Firefox) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0 }
+input[type="number"]{ -moz-appearance: textfield; appearance: textfield; }
+
+/* ---- Sidebar ---- */
+header{
+  position:fixed; left:0; top:0; width:var(--sidebar-w); height:100vh;
+  background: var(--p1);
+  color:#fff;
+  border-right:1px solid rgba(255,255,255,.08);
+  box-shadow: var(--shadow-1);
+  z-index:1000;
+  display:flex; flex-direction:column; overflow-y:auto;
+  transition: transform .18s ease;
+}
+header h1{
+  font-size:1.1rem; letter-spacing:.2px;
+  padding: var(--space-5) var(--space-4);
+  text-align:center;
+  background: rgba(255,255,255,.03);
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+#menu-icon,.menu-icon{
+  display:none; position:fixed; top:14px; left:14px;
+  width:44px; height:44px; border-radius:12px;
+  background:#ffffff; color:var(--p1);
+  align-items:center; justify-content:center; cursor:pointer;
+  border:1px solid var(--border);
+  z-index:1001; box-shadow: var(--shadow-1);
+}
+
+nav{flex:1; padding: var(--space-3) 0}
+#nav-menu ul{list-style:none; display:flex; flex-direction:column; gap:6px}
+#nav-menu li{margin:0; padding:0 var(--space-3)}
+#nav-menu li.separator{height:1px; background:rgba(255,255,255,.1); margin:10px var(--space-3)}
+#nav-menu a{
+  display:flex; align-items:center; gap:10px;
+  color: rgba(255,255,255,.9);
+  text-decoration:none; font-weight:500;
+  padding:10px 12px; border-radius:10px;
+  transition: background .18s ease, color .18s ease, transform .18s ease;
+}
+#nav-menu a:hover{ background: rgba(255,255,255,.08) }
+#nav-menu a.active{
+  background: linear-gradient(0deg, rgba(255,255,255,.16), rgba(255,255,255,.16));
+  color:#fff; border:1px solid rgba(255,255,255,.18);
+}
+
+#nav-menu .login-block a,
+#nav-menu .login-block #user-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+#nav-menu .menu-title {
+  font-size: 1rem;          /* was 0.85rem */
+}
+
+/* ---- Main ---- */
+main{
+  flex:1;
+  margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
+  max-width: calc(100% - var(--sidebar-w));
+  padding: var(--space-6) var(--space-6);
+}
+@media (max-width: 1024px){
+  header{ transform: translateX(-100%) }
+  header.active{ transform: translateX(0) }
+  #menu-icon,.menu-icon{ display:flex }
+  main{ margin-left:0; max-width:100%; padding:72px var(--space-4) var(--space-5) }
+}
+
+/* ---- Cards / Sections ---- */
+.card,.form-section,.report-section,.viz-card,.params-card,.juro-card{
+  background: var(--card);
+  border:1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-1);
+  margin-bottom: var(--space-5);
+}
+.page-title,h2,h3,h4{ color:var(--text); font-weight:700 }
+
+/* ---- Inputs & Buttons ---- */
+label{display:block; margin-bottom:6px; font-size:.9rem; color: var(--text-dim)}
+
+input[type="text"],input[type="number"],input[type="date"],select,textarea{
+  background:#fff; color:var(--text);
+  border:1px solid var(--border); border-radius: var(--radius-sm);
+  height: var(--ctrl-h); line-height: var(--ctrl-h);
+  padding: 0 .7rem; outline:none;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+textarea{ min-height: 120px; padding: .6rem .7rem; line-height: 1.45 }
+input:focus,select:focus,textarea:focus{
+  border-color: var(--p2);
+  box-shadow: 0 0 0 3px rgba(82,109,130,.18);
+}
+
+button,input[type="submit"],input[type="button"]{
+  height: var(--ctrl-h);
+  padding: 0 .9rem;
+  border-radius: 10px;
+  border:1px solid var(--border);
+  background: #fff; color: var(--text);
+  cursor:pointer; font-weight:700;
+  transition: filter .18s ease, transform .18s ease, background .18s ease;
+}
+button:hover{ filter: brightness(0.98) }
+button:active{ transform: translateY(1px) }
+button.primary{ background: var(--p2); color:#fff; border-color: #3b5569 }
+button.ghost{ background: transparent; border-color:transparent; color: var(--p2) }
+button:disabled{ opacity:.55; cursor:not-allowed }
+
+/* ---- Tables ---- */
+table{
+  width:100%;
+  border-collapse: separate; border-spacing:0;
+  margin: var(--space-4) 0;
+  background: var(--card);
+  border:1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+th,td{
+  padding: 14px 12px;
+  text-align: center;
+  border-bottom:1px solid var(--divider);
+  color: var(--text);
+}
+th{
+  background: var(--th-bg);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: .78rem; letter-spacing:.4px;
+}
+tr:nth-child(even){ background: var(--tr-alt) }
+tr:hover{ background: var(--tr-hover) }
+tbody tr:last-child td{ border-bottom: none }
+
+/* ---- Badges (Crypto) ---- */
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.78rem;line-height:1.2;font-weight:700;border:1px solid var(--border)}
+.badge-spot{ background:#f8fafc; color:#0f172a }
+.badge-earn{ background:#eef6ff; color:#1e3a8a; border-color:#c7d2fe }
+.badge-locked{ background:#fff7ed; color:#9a3412; border-color:#fed7aa }
+
+/* ---- KPI (Crypto) ---- */
+.kpis-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:20px }
+@media (max-width: 900px){ .kpis-grid { grid-template-columns:1fr } }
+.kpi-card {
+  background:#fff; border:1px solid var(--border);
+  border-radius:16px; padding:24px; box-shadow: var(--shadow-1);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+.kpi-label { font-size:.9rem; color:var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:.5px }
+.kpi-value { font-size:1.8rem; font-weight:800; color:var(--text); margin-top:6px }
+.kpi-sub { font-size:.95rem; margin-top:4px; font-weight:700 }
+.pos { color: var(--ok) }
+.neg { color: var(--bad) }
+
+/* ---- Toolbar / Buttons ---- */
+.toolbar { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:8px }
+.btn-toggle { border:1px solid var(--border); background:#fff; color:var(--text); border-radius:10px; height: var(--ctrl-h); padding:0 .9rem; font-weight:700; cursor:pointer }
+.btn-toggle.active { background: var(--p2); color:#fff; border-color:#3b5569 }
+
+/* ---- Modals ---- */
+.modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:50 }
+.modal { width:100%; max-width:520px; background:#fff; border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow: var(--shadow-2) }
+.modal h3 { margin:0 0 12px }
+.field { display:grid; gap:6px; margin-bottom:10px; text-align:left }
+.field label { font-size:.9rem; color:var(--text-dim) }
+.field input, .field select { padding:10px 14px; border:1px solid var(--border); border-radius:10px; width:100%; background:#fff; font:inherit; height: var(--ctrl-h) }
+.field input:focus, .field select:focus { outline:none; border-color:var(--p2); box-shadow:0 0 0 3px rgba(82,109,130,.18) }
+.modal-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:16px }
+
+/* ===================== DCA (scoped) ===================== */
+body[data-page="dca"] main {
+  margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
+  max-width: calc(100% - var(--sidebar-w));
+  padding: var(--space-6) var(--space-6);
+}
+@media (max-width: 1024px) {
+  body[data-page="dca"] main {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 72px var(--space-4) var(--space-5);
+  }
+}
+body[data-page="dca"] .page-title { margin-bottom: 1.2rem }
+
+/* DCA cards */
+.dca-page .params-card{ background: var(--card); border:1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow-1) }
+.dca-page .juro-card input.cell{ width: 9ch; text-align:center }
+
+/* DCA table containers */
+#dca-table-wrap{ background: var(--card); border:1px solid var(--border); border-radius: 16px; padding: 8px 8px 16px; box-shadow: var(--shadow-1) }
+
+/* DCA table */
+.table-dca{ width:100%; border-collapse: separate; border-spacing:0; background:#fff; border:1px solid var(--border); border-radius: 12px; overflow: hidden }
+.table-dca th, .table-dca td{ padding: 10px 10px; text-align: center; border-bottom: 1px solid var(--divider); color: var(--text); vertical-align: middle }
+.table-dca thead th{ background: var(--th-bg); color: var(--text-dim); text-transform: uppercase; font-size: .78rem; letter-spacing:.4px }
+.table-dca tbody tr:nth-child(even){ background: var(--tr-alt) }
+.table-dca tbody tr:hover{ background: var(--tr-hover) }
+.table-dca tbody tr:last-child td{ border-bottom: none }
+.table-dca .num{ text-align:center; white-space: nowrap }
+.table-dca .pos{ color: var(--ok); font-weight: 700 }
+.table-dca .neg{ color: var(--bad); font-weight: 700 }
+.table-dca tbody tr.current-month{ background:#eef6ff !important; font-weight:700 }
+
+/* DCA params inputs */
+.dca-page .params-table input[type="month"],
+.dca-page .params-table input[type="number"]{
+  height: 36px; border-radius: 10px; border:1px solid var(--border); background:#fff; text-align:center
+}
+
+/* DCA toggle */
+#toggle-others{ height:36px; padding:0 .9rem; border-radius:10px; border:1px solid var(--border); background:#fff; color:var(--text); font-weight:700; cursor:pointer; margin-top:10px }
+
+/* Tight, consistent subtitle spacing inside cards */
+.viz-card > h3,
+.viz-card > h4 {
+  margin-top: 0;
+  margin-bottom: 0.6rem;
+  padding: 0;
+  font-weight: 700;
+}
+
+/* Year group (created by JS) – small gap between yearly blocks */
+.year-group {
+  margin-bottom: 14px;   /* replaces the JS-injected var(--spacing-lg) */
+}
+
+/* Optional: slightly reduce top padding of cards so titles sit closer to the border */
+.viz-card {
+  padding-top: 14px;
+  /* keep your existing side/bottom padding from before */
+}
+
+
+/* ===================== CAIXA (scoped) ===================== */
+/* Align Caixa layout with sidebar like other pages */
+body[data-page="caixa"] main {
+  margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
+  max-width: calc(100% - var(--sidebar-w));
+  padding: var(--space-6) var(--space-6);
+}
+@media (max-width: 1024px) {
+  body[data-page="caixa"] main {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 72px var(--space-4) var(--space-5);
+  }
+}
+
+/* Buttons Entrada/Saída */
+.btn-entrada, .btn-saida {
+  height: 36px;
+  padding: 0 .9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-entrada.btn-active {
+  background: #e8f5ee;             /* light green */
+  color: #166534;                   /* green-700 */
+  border-color: #b7e4c7;
+}
+.btn-saida.btn-active {
+  background: #ffeeee;             /* light red */
+  color: #991b1b;                  /* red-700 */
+  border-color: #fecaca;
+}
+
+/* Form groups (remove inline styles from HTML) */
+#caixa-form .form-group.buttons {
+  display: flex;
+  gap: .5rem;
+  justify-content: center;
+  margin-bottom: .75rem;
+}
+#caixa-form .form-actions {
+  margin-top: .75rem;
+}
+
+/* Subcards and totals */
+.subcard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: var(--space-4);
+  box-shadow: var(--shadow-1);
+  margin-bottom: var(--space-4);
+}
+.subcard h3 {
+  margin: 0 0 .5rem;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+.total-caixa {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: center;
+  padding: 6px 10px;
+  font-weight: 700;
+}
+
+/* Value coloring helpers */
+.valor-positivo { color: var(--ok); font-weight: 700; }
+.valor-negativo { color: var(--bad); font-weight: 700; }
+
+/* Caixa – form compacto, centrado e responsivo */
+#caixa-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;            /* centra tudo no card */
+  gap: 10px;
+}
+
+/* linha com Select + Input + Botão lado a lado */
+#caixa-form .form-inline {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;                /* deixa partir linha se faltar espaço */
+  margin-top: 6px;
+}
+
+/* tamanhos simpáticos para os controlos */
+#caixa-form select,
+#caixa-form input[type="number"] {
+  width: 220px;                   /* bom equilíbrio em desktop */
+}
+
+#caixa-form button[type="submit"] {
+  height: 40px;                   /* igual a var(--ctrl-h) */
+}
+
+/* rótulos centrados e com pouco ar */
+#caixa-form label {
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+/* reduzir “vazio” do cartão onde está o formulário */
+.report-section .viz-card:first-of-type {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+/* mobile: empilha vertical a partir de 700px */
+@media (max-width: 700px) {
+  #caixa-form .form-inline {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  #caixa-form select,
+  #caixa-form input[type="number"] {
+    width: 100%;
+  }
+  #caixa-form button[type="submit"] {
+    width: 100%;
+  }
+}
+
+/* Caixa — "Mostra Mais" button */
+.report-section .viz-card .mostrar-mais,
+button.mostrar-mais {
+  display: block;
+  margin-left: auto;          /* right align */
+  margin-top: 10px;
+  margin-bottom: 16px;        /* breathing space before Total */
+  padding: 8px 16px;
+  background: var(--p2);      /* darker */
+  color: #fff;
+  border: 1px solid #3b5569;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter .15s ease, transform .15s ease;
+}
+
+button.mostrar-mais:hover { filter: brightness(0.95) }
+button.mostrar-mais:active { transform: translateY(1px) }
+
+/* Caixa — "Registar" button visual match to Mostra Mais */
+#caixa-form button[type="submit"],
+#submit-caixa {
+  background: var(--p2);
+  color: #fff;
+  border: 1px solid #3b5569;
+  border-radius: 10px;
+  font-weight: 700;
+  height: 40px;
+  padding: 0 1rem;
+  cursor: pointer;
+  transition: filter .15s ease, transform .15s ease;
+}
+
+#caixa-form button[type="submit"]:hover,
+#submit-caixa:hover {
+  filter: brightness(0.95);
+}
+
+#caixa-form button[type="submit"]:active,
+#submit-caixa:active {
+  transform: translateY(1px);
+}
+
+/* 1️⃣ Username block — bigger, bold, and centered */
+#nav-menu .login-block {
+  text-align: center;
+}
+
+#nav-menu .login-block a,
+#nav-menu .login-block #user-name {
+  display: inline-block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #fff;
+  text-decoration: none;
+}
+
+/* Optional subtle hover */
+#nav-menu .login-block a:hover,
+#nav-menu .login-block #user-name:hover {
+  text-decoration: underline;
+}
+
+/* 2️⃣ Section titles — centered, bigger, bold */
+#nav-menu .menu-title {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: rgba(255,255,255,.9);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-top: 8px;
+  margin-bottom: 6px;
+}
+
+/* --- 123 vs 1248 page (aligned with DCA & Crypto) --- */
+body[data-page="analise123vs1248"] main {
+  margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
+  max-width: calc(100% - var(--sidebar-w));
+  padding: var(--space-6) var(--space-6);
+}
+
+/* Mobile view alignment */
+@media (max-width: 1024px) {
+  body[data-page="analise123vs1248"] main {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 72px var(--space-4) var(--space-5);
+  }
+}
+
+/* Section structure and spacing */
+body[data-page="analise123vs1248"] .report-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+  max-width: 98vw;
+  margin: 0 auto;
+}
+
+/* Titles */
+body[data-page="analise123vs1248"] h2.center {
+  text-align: center;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--p1);
+  margin-bottom: 1rem;
+}
+
+body[data-page="analise123vs1248"] h3.center {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 1.2rem 0 0.8rem;
+}
+
+/* Chart containers */
+body[data-page="analise123vs1248"] .viz-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-1);
+  padding: var(--space-4);
+  width: 100%;
+  max-width: 98vw;
+  margin: 0 auto;
+}
+
+/* Make the charts responsive and consistent */
+body[data-page="analise123vs1248"] canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* 123 vs 1248 — match DCA & Crypto */
+body[data-page="analise123vs1248"] main {
+  margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
+  max-width: calc(100% - var(--sidebar-w));
+  padding: var(--space-6) var(--space-6);
+}
+
+@media (max-width: 1024px) {
+  body[data-page="analise123vs1248"] main {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 72px var(--space-4) var(--space-5);
+  }
+}
+
+/* Let the sections and chart containers breathe full width */
+body[data-page="analise123vs1248"] .report-section,
+body[data-page="analise123vs1248"] .chart-wrapper,
+body[data-page="analise123vs1248"] .chart-and-table {
+  width: 100%;
+  max-width: none;
+  margin: 0 auto;
+}
+
+/* Cards and canvases (same look as elsewhere) */
+body[data-page="analise123vs1248"] .viz-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-1);
+  padding: var(--space-4);
+}
+
+body[data-page="analise123vs1248"] canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* 123 vs 1248 — keep the Faturação Mensal chart inside the card */
+body[data-page="analise123vs1248"] .viz-card { 
+  overflow: hidden;                    /* clip any stray overflow */
+}
+
+body[data-page="analise123vs1248"] .chart-wrapper,
+body[data-page="analise123vs1248"] .chart-and-table {
+  overflow-x: auto;                    /* allow horizontal scroll if ever needed */
+}
+
+body[data-page="analise123vs1248"] canvas {
+  display: block;
+  width: 100% !important;              /* lock to card width */
+  max-width: 100% !important;
+  height: auto !important;             /* keep proportions */
+}
+
+/* === Faturas page: restore toggle + layout === */
+.hidden { display: none !important; }  /* needed by the Show/Hide button */
+
+body[data-page="faturas"] .form-header{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:12px;
+}
+
+body[data-page="faturas"] .form-row{
+  display:grid; gap:16px; margin-bottom:12px;
+  align-items:end;         /* align fields by their bottoms */
+  justify-items:start;     /* keep fields left-aligned */
+  justify-content:start;
+}
+body[data-page="faturas"] .form-row.row-5{ grid-template-columns: repeat(5, minmax(140px, auto)); }
+body[data-page="faturas"] .form-row.row-4{ grid-template-columns: repeat(4, minmax(160px, auto)); }
+body[data-page="faturas"] .form-row.row-3{ grid-template-columns: repeat(3, minmax(180px, auto)); }
+
+@media (max-width:1100px){
+  body[data-page="faturas"] .form-row.row-5{ grid-template-columns: repeat(3, auto); }
+}
+@media (max-width:800px){
+  body[data-page="faturas"] .form-row.row-4,
+  body[data-page="faturas"] .form-row.row-5{ grid-template-columns: repeat(2, auto); }
+  body[data-page="faturas"] .form-row.row-3{ grid-template-columns: repeat(2, auto); }
+}
+@media (max-width:520px){
+  body[data-page="faturas"] .form-row{ grid-template-columns: 1fr; }
+}
+
+/* Inputs shouldn’t stretch to full column width */
+body[data-page="faturas"] #fatura-form input,
+body[data-page="faturas"] #fatura-form select,
+body[data-page="faturas"] #fatura-form textarea{
+  width:auto; max-width:none; box-sizing:border-box;
+  height: var(--ctrl-h); line-height: var(--ctrl-h); padding: 0 .6rem;
+}
+
+/* Optional: keep a few consistent widths (from the old page) */
+body[data-page="faturas"] #valor-transferencia{ width:220px; }
+body[data-page="faturas"] #checkin,
+body[data-page="faturas"] #checkout{ width:220px; }
+body[data-page="faturas"] #taxa-airbnb,
+body[data-page="faturas"] #valor-operador,
+body[data-page="faturas"] #valor-direto,
+body[data-page="faturas"] #valor-tmt,
+body[data-page="faturas"] #noites-extra,
+body[data-page="faturas"] #noites-criancas{ width:120px; }

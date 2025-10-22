@@ -1,53 +1,56 @@
 <!DOCTYPE html>
 <html lang="pt-pt">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-  <title>Migbit – Finance</title>
-
-  <link rel="icon" href="./favicon.ico" sizes="any">
-  <link rel="manifest" href="./manifest.json" />
-  <meta name="theme-color" content="#000000" />
-
-  <link rel="stylesheet" href="./css/styles.css" />
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise Apartamentos</title>
+    <link rel="stylesheet" href="../css/styles.pcolor.css" />
+    <link rel="icon" href="../favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
+    <link rel="manifest" href="../manifest.json">
+    <meta name="theme-color" content="#000000">
 </head>
+
 <body>
   <header>
-    <div class="container">
-      <h1>Ferramenta Finanças</h1>
-      <div class="menu-icon" id="menu-icon" aria-label="Abrir menu" role="button" tabindex="0">&#9776;</div>
-      <nav id="nav-menu" aria-label="Menu principal">
+      <nav id="nav-menu">
         <ul>
-          <li><a href="./modules/faturas.html">Faturas</a></li>
-                <li class="separator">|</li>
-                <li><a href="./modules/analise.html">Análise Apartamentos</a></li>
-                <li><a href="./modules/analise123.html">123</a></li>
-                <li><a href="./modules/analise1248.html">1248</a></li>
-                <li><a href="./modules/analise123vs1248.html">123 vs 1248</a></li>
-                <li class="separator">|</li>
-                <li><a href="./modules/caixa.html">Caixa</a></li>
-                <li><a href="./modules/diversos.html">Diversos</a></li>
-                <li class="separator">|</li>
-                <li><a href="./modules/dca.html">DCA</a></li>
-                <li><a href="crypto.html">Cripto</a></li>
-                <li class="separator">|</li>
+          <!-- Login/User section at top -->
+          <li id="login-section" class="login-block">
+            <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+            <span id="user-info" class="user-visible" style="display:none;">
+              <a href="#" id="user-name">👤 Username</a>
+            </span>
+          </li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Apartamentos -->
+          <li class="menu-title">Apartamentos</li>
+          <li><a href="/modules/faturas.html">📄 Faturas</a></li>
+          <li><a href="/modules/analise.html">📊 Análise</a></li>
+          <li><a href="/modules/analise123.html">🏠 123</a></li>
+          <li><a href="/modules/analise1248.html">🏠 1248</a></li>
+          <li><a href="/modules/analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+          <li><a href="/modules/caixa.html">💰 Caixa</a></li>
+          <li><a href="/modules/diversos.html">📋 Diversos</a></li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Investimentos -->
+          <li class="menu-title">Investimentos</li>
+          <li><a href="/modules/dca.html">📈 DCA</a></li>
+          <li><a href="/modules/crypto.html">🚀 Cripto</a></li>
         </ul>
       </nav>
-    </div>
-  </header>
+    </header>
 
   <main>
     <section class="card">
-      <h2>Migbit – Finanças</h2>
-      <p class="muted">Selecione uma funcionalidade no menu para começar.</p>
+      <p class="muted">Seleciona uma funcionalidade no menu para começar.</p>
     </section>
   </main>
-
-<footer class="app-footer">
-  <p>© 2025 OM&MT</p>
-</footer>
 
   <script type="module" src="./js/script.js"></script>
 </body>

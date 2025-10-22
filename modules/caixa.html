@@ -5,108 +5,115 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Caixa</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/styles.pcolor.css" />
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
     <header>
-        <!-- Ícone de menu "hambúrguer" para mobile -->
-        <div class="menu-icon" id="menu-icon">
-            &#9776; <!-- Ícone de três linhas -->
-        </div>
-    
-        <nav id="nav-menu">
-            <ul>
-                <li><a href="faturas.html">Faturas</a></li>  
-                <li class="separator">|</li>
-                <li><a href="analise.html">Análise Apartamentos</a></li>
-                <li><a href="analise123.html">123</a></li>
-                <li><a href="analise1248.html">1248</a></li>
-                <li><a href="analise123vs1248.html">123 vs 1248</a></li>
-                <li class="separator">|</li>
-                <li><a href="caixa.html" class="active">Caixa</a></li>
-                <li><a href="diversos.html">Diversos</a></li>
-                <li class="separator">|</li>
-                <li><a href="dca.html">DCA</a></li>
-                <li><a href="crypto.html">Cripto</a></li>
-                <li class="separator">|</li>
-                <!-- Login/User section, controlled by server-side or CSS visibility -->
-                <li id="login-section">
-                    <a href="#" id="login-btn" class="login-visible">Login</a>
-                    <span id="user-info" class="user-visible" style="display:none;">
-                        <a href="#" id="user-name">Username</a> <!-- Visible if logged in -->
-                    </span>
-                </li>
-            </ul>
-        </nav>
+      <nav id="nav-menu">
+        <ul>
+          <!-- Login/User section at top -->
+          <li id="login-section" class="login-block">
+            <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+            <span id="user-info" class="user-visible" style="display:none;">
+              <a href="#" id="user-name">👤 Username</a>
+            </span>
+          </li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Apartamentos -->
+          <li class="menu-title">Apartamentos</li>
+          <li><a href="faturas.html">📄 Faturas</a></li>
+          <li><a href="analise.html">📊 Análise</a></li>
+          <li><a href="analise123.html">🏠 123</a></li>
+          <li><a href="analise1248.html">🏠 1248</a></li>
+          <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+          <li><a href="caixa.html" class="active">💰 Caixa</a></li>
+          <li><a href="diversos.html">📋 Diversos</a></li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Investimentos -->
+          <li class="menu-title">Investimentos</li>
+          <li><a href="dca.html">📈 DCA</a></li>
+          <li><a href="crypto.html">🚀 Cripto</a></li>
+        </ul>
+      </nav>
     </header>
 
-<main>
-  <!-- Formulário -->
-  <section class="report-section">
-    <div class="viz-card">
-      <h4>Registar Transação</h4>
 
-      <form id="caixa-form">
-        <div class="form-group buttons" style="display:flex;gap:.5rem;justify-content:center;margin-bottom:.75rem">
-          <button type="button" id="btn-entrada" class="btn-entrada">Entrada</button>
-          <button type="button" id="btn-saida" class="btn-saida">Saída</button>
-          <input type="hidden" id="tipo" value="">
+    <main>
+      <!-- Formulário -->
+      <section class="report-section">
+        <div class="viz-card">
+          <h4>Registar Transação</h4>
+
+          <form id="caixa-form">
+            <div class="form-group buttons">
+              <button type="button" id="btn-entrada" class="btn-entrada">Entrada</button>
+              <button type="button" id="btn-saida" class="btn-saida">Saída</button>
+              <input type="hidden" id="tipo" value="">
+            </div>
+
+            <div class="form-inline">
+              <div class="form-group">
+                <label for="caixa">Selecionar Caixa:</label>
+                <select id="caixa" required>
+                  <option value="banco">Caixa Banco</option>
+                  <option value="direita">Caixa Direita</option>
+                  <option value="esquerda">Caixa Esquerda</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="valor">Valor (€):</label>
+                <input type="number" id="valor" step="0.01" required>
+              </div>
+
+              <div class="form-actions">
+                <button type="submit" id="submit-caixa">Registar</button>
+              </div>
+            </div>
+          </form>
         </div>
+      </section>
 
-        <div class="form-group">
-          <label for="caixa">Selecionar Caixa:</label>
-          <select id="caixa" required>
-            <option value="banco">Caixa Banco</option>
-            <option value="direita">Caixa Direita</option>
-            <option value="esquerda">Caixa Esquerda</option>
-          </select>
+      <!-- Caixa Banco -->
+      <section class="report-section">
+        <div class="viz-card">
+          <h4>Caixa Banco</h4>
+          <div id="caixa-banco"></div>
         </div>
+      </section>
 
-        <div class="form-group">
-          <label for="valor">Valor (€):</label>
-          <input type="number" id="valor" step="0.01" required>
+      <!-- Caixa Esquerda -->
+      <section class="report-section">
+        <div class="viz-card">
+          <h4>Caixa Esquerda</h4>
+          <div id="caixa-esquerda"></div>
         </div>
+      </section>
 
-        <div class="form-actions" style="margin-top:.75rem">
-          <button type="submit" id="submit-caixa">Registar</button>
+      <!-- Total Banco + Esquerda -->
+      <section class="report-section">
+        <div class="viz-card">
+          <h4>Total Banco + Esquerda</h4>
+          <div id="total-banco-esquerda"></div>
         </div>
-      </form>
-    </div>
-  </section>
+      </section>
 
-  <!-- Caixas internas -->
-  <section class="report-section">
-    <div class="viz-card">
-      <h4>Caixas</h4>
+            <!-- Caixa Direita -->
+      <section class="report-section">
+        <div class="viz-card">
+          <h4>Caixa Direita (Pai)</h4>
+          <div id="caixa-direita"></div>
+        </div>
+      </section>
 
-      <div class="subcard">
-        <h3>Caixa Banco</h3>
-        <div id="caixa-banco"></div>
-      </div>
-
-      <div class="subcard">
-        <h3>Caixa Esquerda</h3>
-        <div id="caixa-esquerda"></div>
-      </div>
-
-      <div class="subcard">
-        <div id="total-banco-esquerda"></div>
-      </div>
-    </div>
-
-    <div class="viz-card">
-      <h4>Caixa Direita (Pai)</h4>
-      <div id="caixa-direita"></div>
-    </div>
-  </section>
-</main>
+    </main>
 
 
-
-<footer class="app-footer">
-  <p>© 2025 OM&MT</p>
-</footer>
 
     <!-- Importar o script.js e caixa.js como módulos -->
     <script type="module" src="../js/script.js"></script>

@@ -7,102 +7,46 @@
   <title>Crypto Portfolio</title>
 
   <!-- Site-wide styles -->
-  <link rel="stylesheet" href="../css/styles.css" />
+  <link rel="stylesheet" href="/css/styles.pcolor.css">
   <link rel="icon" href="../favicon.ico" type="image/x-icon">
 
-  <style>
-    /* Page-scoped tweaks that respect your global CSS */
-    .kpis-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-    .kpi-card {
-      background: #fff;
-      border: 1px solid var(--border-color, #e5e7eb);
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,.05));
-    }
-    .kpi-label { font-size: 0.9rem; color: var(--text-muted, #6b7280); }
-    .kpi-value { font-size: 1.4rem; font-weight: 700; margin-top: 6px; color: var(--text-strong, #0b1220); }
-
-    /* Center table content without touching other tables globally */
-    #crypto-table th, #crypto-table td { text-align: center; }
-
-    .toolbar { display:flex; gap:8px; align-items:center; justify-content:flex-end; margin-bottom:8px; }
-
-    /* Make buttons visible (fix white-on-white) */
-    .btn {
-      padding: 8px 12px;
-      border: 1px solid var(--border-color, #e5e7eb);
-      border-radius: 8px;
-      background: #f7f7f7;
-      color: #0b1220;
-      cursor: pointer;
-    }
-    .btn:hover { background: #efefef; }
-    .btn:disabled { opacity: .5; cursor: not-allowed; }
-
-    .location-select {
-      padding: 6px 8px; border: 1px solid var(--border-color, #e5e7eb); border-radius: 8px; background: #fff; font: inherit;
-    }
-    .status { font-size: 0.9rem; color: var(--text-muted, #6b7280); }
-    .status.ok { color: #166534; }
-    .status.err { color: #991b1b; }
-
-    /* Simple modal */
-    .modal-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,.35);
-      display:none; align-items:center; justify-content:center; z-index: 50;
-    }
-    .modal {
-      width: 100%; max-width: 480px; background:#fff; border:1px solid var(--border-color, #e5e7eb);
-      border-radius: 12px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.15);
-    }
-    .modal h3 { margin: 0 0 12px; }
-    .field { display:grid; gap:6px; margin-bottom:10px; text-align:left; }
-    .field label { font-size:.9rem; color: var(--text-muted, #6b7280); }
-    .field input, .field select {
-      padding:8px 10px; border:1px solid var(--border-color, #e5e7eb); border-radius:8px; width:100%; font: inherit;
-    }
-    .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
-
-    @media (max-width: 900px){
-      .kpis-grid { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
+  </head>
 <body>
   <!-- Header / Nav -->
-  <header>
-    <div class="menu-icon" id="menu-icon">&#9776;</div>
+    <header>
+      <nav id="nav-menu">
+        <ul>
+          <!-- Login/User section at top -->
+          <li id="login-section" class="login-block">
+            <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+            <span id="user-info" class="user-visible" style="display:none;">
+              <a href="#" id="user-name">👤 Username</a>
+            </span>
+          </li>
 
-    <nav id="nav-menu">
-            <ul>
-                <li><a href="faturas.html">Faturas</a></li>  
-                <li class="separator">|</li>
-                <li><a href="analise.html">Análise Apartamentos</a></li>
-                <li><a href="analise123.html">123</a></li>
-                <li><a href="analise1248.html">1248</a></li>
-                <li><a href="analise123vs1248.html">123 vs 1248</a></li>
-                <li class="separator">|</li>
-                <li><a href="caixa.html">Caixa</a></li>
-                <li><a href="diversos.html">Diversos</a></li>
-                <li class="separator">|</li>
-                <li><a href="dca.html">DCA</a></li>
-                <li><a href="crypto.html" class="active">Cripto</a></li>
-                <li class="separator">|</li>
-                <!-- Login/User section, controlled by server-side or CSS visibility -->
-                <li id="login-section">
-                    <a href="#" id="login-btn" class="login-visible">Login</a>
-                    <span id="user-info" class="user-visible" style="display:none;">
-                        <a href="#" id="user-name">Username</a> <!-- Visible if logged in -->
-                    </span>
-                </li>
-            </ul>
-        </nav>
-  </header>
+          <li class="separator"></li>
+
+          <!-- Secção: Apartamentos -->
+          <li class="menu-title">Apartamentos</li>
+          <li><a href="faturas.html">📄 Faturas</a></li>
+          <li><a href="analise.html">📊 Análise</a></li>
+          <li><a href="analise123.html">🏠 123</a></li>
+          <li><a href="analise1248.html">🏠 1248</a></li>
+          <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+          <li><a href="caixa.html">💰 Caixa</a></li>
+          <li><a href="diversos.html">📋 Diversos</a></li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Investimentos -->
+          <li class="menu-title">Investimentos</li>
+          <li><a href="dca.html">📈 DCA</a></li>
+          <li><a href="crypto.html" class="active">🚀 Cripto</a></li>
+        </ul>
+      </nav>
+    </header>
+  
+  <div class="menu-icon" id="menu-icon">&#9776;</div>
 
   <main>
     <!-- KPIs -->
@@ -146,13 +90,16 @@
         <th class="col-qty">Quantidade</th>
         <th class="col-usd">Valor ($)</th>
         <th class="col-eur">Valor (EUR)</th>
+        <th class="col-invested-usd">Investido ($)</th>
+        <th class="col-invested-eur">Investido (EUR)</th>
+        <th class="col-realized">Realizado</th>
         <th class="col-loc">Localização</th>
         <th>Ações</th>
       </tr>
     </thead>
 
     <tbody id="rows">
-      <tr><td colspan="6" class="text-muted">Loading…</td></tr>
+      <tr><td colspan="9" class="text-muted">Loading…</td></tr>
     </tbody>
 
   </table>
@@ -171,12 +118,6 @@
       <p id="stamp" class="text-muted" style="margin-top:8px;"></p>
     </section>
   </main>
-
-  <footer>
-    <div class="footer-container">
-      <p>&copy; 2025 OM&MT.</p>
-    </div>
-  </footer>
 
   <!-- Modal (no price field anymore) -->
   <div id="modal-backdrop" class="modal-backdrop" aria-hidden="true">
@@ -201,6 +142,46 @@
     </div>
   </div>
 
+  <!-- Investment Modal -->
+  <div id="investment-modal-backdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" style="max-width: 600px;">
+      <h3 id="investment-modal-title">Investimentos - <span id="inv-asset-name"></span></h3>
+      
+      <!-- Add new investment form -->
+      <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 16px; background: #f9fafb;">
+        <h4 style="margin: 0 0 8px; font-size: 0.95rem;">Adicionar Investimento</h4>
+        <div class="field">
+          <label for="inv-amount">Valor</label>
+          <input id="inv-amount" type="number" step="any" placeholder="0.00" />
+        </div>
+        <div class="field">
+          <label for="inv-currency">Moeda</label>
+          <select id="inv-currency">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="inv-date">Data</label>
+          <input id="inv-date" type="date" />
+        </div>
+        <button id="inv-add-btn" class="btn" style="width: 100%; margin-top: 8px;">Adicionar</button>
+      </div>
+
+      <!-- List of investments -->
+      <div style="max-height: 300px; overflow-y: auto; margin-bottom: 12px;">
+        <h4 style="margin: 0 0 8px; font-size: 0.95rem;">Histórico de Investimentos</h4>
+        <div id="investment-list" style="display: grid; gap: 8px;">
+          <!-- Will be populated dynamically -->
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="inv-close" class="btn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <div id="error-message" class="error-message" style="display: none;"></div>
 
   <!-- Page script -->
@@ -211,9 +192,21 @@
   <!-- Mobile nav toggle -->
   <script>
     const menuIcon = document.getElementById('menu-icon');
-    const navMenu  = document.getElementById('nav-menu');
-    if (menuIcon && navMenu) {
-      menuIcon.addEventListener('click', () => navMenu.classList.toggle('active'));
+    const header = document.querySelector('header');
+    if (menuIcon && header) {
+      menuIcon.addEventListener('click', () => {
+        header.classList.toggle('active');
+      });
+      
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 1024 && 
+            !header.contains(e.target) && 
+            !menuIcon.contains(e.target) && 
+            header.classList.contains('active')) {
+          header.classList.remove('active');
+        }
+      });
     }
   </script>
 </body>

@@ -5,7 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análise 123</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/styles.pcolor.css" />
     <link rel="icon" href="../favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
     <link rel="manifest" href="../manifest.json">
@@ -13,36 +13,37 @@
 
 </head>
 <body>
-    <header>      
-         <!-- Ícone de menu "hambúrguer" para mobile -->
-         <div class="menu-icon" id="menu-icon">
-            &#9776; <!-- Ícone de três linhas -->
-        </div>
-    
-        <nav id="nav-menu">
-            <ul>
-                <li><a href="faturas.html">Faturas</a></li>
-                <li class="separator">|</li>
-                <li><a href="analise.html">Análise Apartamentos</a></li>
-                <li><a href="analise123.html" class="active">123</a></li>
-                <li><a href="analise1248.html">1248</a></li>
-                <li><a href="analise123vs1248.html">123 vs 1248</a></li>
-                <li class="separator">|</li>
-                <li><a href="caixa.html">Caixa</a></li>
-                <li><a href="diversos.html">Diversos</a></li>
-                <li class="separator">|</li>
-                <li><a href="dca.html">DCA</a></li>
-                <li><a href="crypto.html">Cripto</a></li>
-                <li class="separator">|</li>
-                <!-- Login/User section, controlled by server-side or CSS visibility -->
-                <li id="login-section">
-                    <a href="#" id="login-btn" class="login-visible">Login</a>
-                    <span id="user-info" class="user-visible" style="display:none;">
-                        <a href="#" id="user-name">Username</a> <!-- Visible if logged in -->
-                    </span>
-                </li>
-            </ul>
-        </nav>
+    <header>
+      <nav id="nav-menu">
+        <ul>
+          <!-- Login/User section at top -->
+          <li id="login-section" class="login-block">
+            <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+            <span id="user-info" class="user-visible" style="display:none;">
+              <a href="#" id="user-name">👤 Username</a>
+            </span>
+          </li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Apartamentos -->
+          <li class="menu-title">Apartamentos</li>
+          <li><a href="faturas.html">📄 Faturas</a></li>
+          <li><a href="analise.html">📊 Análise</a></li>
+          <li><a href="analise123.html" class="active">🏠 123</a></li>
+          <li><a href="analise1248.html">🏠 1248</a></li>
+          <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+          <li><a href="caixa.html">💰 Caixa</a></li>
+          <li><a href="diversos.html">📋 Diversos</a></li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Investimentos -->
+          <li class="menu-title">Investimentos</li>
+          <li><a href="dca.html">📈 DCA</a></li>
+          <li><a href="crypto.html">🚀 Cripto</a></li>
+        </ul>
+      </nav>
     </header>
 
  <main>
@@ -105,11 +106,6 @@
 
   </section>
 </main>
-
-
-<footer class="app-footer">
-  <p>© 2025 OM&MT</p>
-</footer>
 
 <!-- Load Chart.js BEFORE your module -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

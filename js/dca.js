@@ -563,19 +563,6 @@ $('#btn-save-params')?.addEventListener('click', async ()=>{
   await boot(true);      // refaz meses/tabela com novos parâmetros
 });
 
-// ---------- Estilos mínimos específicos ----------
-const style = document.createElement('style');
-style.textContent = `
-.table-dca th{ white-space:pre-line; }
-.table-dca .num{ text-align:center; }
-.table-dca .pos{ color:#0a7f2e; font-weight:600; }
-.table-dca .neg{ color:#b00020; font-weight:600; }
-.table-dca input.cell{ width:9ch; text-align:center; }
-.year-group{ margin-bottom: var(--spacing-lg); }
-.btn-minor{ padding:.4rem .6rem; border-radius: var(--border-radius-sm); }
-`;
-document.head.appendChild(style);
-
 // Arranque
 async function boot(skipParamUI){
   if (!skipParamUI){

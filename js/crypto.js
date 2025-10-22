@@ -23,7 +23,8 @@ const CONFIG = {
     RATE_LIMIT_DELAY: 1200
   },
   META_COLLECTION: 'cryptoportfolio_meta',
-  META_DOC: 'invested' // stores investedUSD, investedEUR
+  META_DOC: 'invested', // stores investedUSD, investedEUR
+  INVESTMENTS_COLLECTION: 'cryptoportfolio_investments' // stores individual investments
 };
 
 CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
@@ -195,6 +196,9 @@ class AppState {
     // Invested (global)
     this.investedUSD = 0;
     this.investedEUR = 0;
+    
+    // Individual investments per asset { assetSymbol: [{amount, currency, date, id}, ...] }
+    this.investments = new Map();
   }
 
   get visibleRows(){
@@ -227,7 +231,8 @@ class CryptoPortfolioApp {
       await Promise.all([
         this.loadSavedLocations(),
         this.loadManualAssets(),
-        this.loadInvested()
+        this.loadInvested(),
+        this.loadInvestments()
       ]);
       const api = await ApiService.fetchPortfolio();
       this.state.binanceRows = this.normalizeBinance(api);
@@ -273,6 +278,49 @@ class CryptoPortfolioApp {
       this.state.investedUSD = Number(doc.investedUSD || 0);
       this.state.investedEUR = Number(doc.investedEUR || 0);
     }
+  }
+
+  async loadInvestments(){
+    const investments = await FirebaseService.getCollection(CONFIG.INVESTMENTS_COLLECTION);
+    this.state.investments.clear();
+    
+    for (const inv of investments) {
+      const asset = String(inv.asset || '').toUpperCase();
+      if (!this.state.investments.has(asset)) {
+        this.state.investments.set(asset, []);
+      }
+      this.state.investments.get(asset).push({
+        id: inv.id,
+        amountUSD: Number(inv.amountUSD || 0),
+        amountEUR: Number(inv.amountEUR || 0),
+        currency: inv.currency || 'USD',
+        date: inv.date || '',
+        originalAmount: Number(inv.originalAmount || 0)
+      });
+    }
+  }
+
+  getAssetInvestedAmounts(asset) {
+    const investments = this.state.investments.get(asset.toUpperCase()) || [];
+    return investments.reduce(
+      (acc, inv) => ({
+        usd: acc.usd + inv.amountUSD,
+        eur: acc.eur + inv.amountEUR
+      }),
+      { usd: 0, eur: 0 }
+    );
+  }
+
+  getTotalInvestedAmounts() {
+    let totalUSD = 0;
+    let totalEUR = 0;
+    for (const [asset, investments] of this.state.investments) {
+      for (const inv of investments) {
+        totalUSD += inv.amountUSD;
+        totalEUR += inv.amountEUR;
+      }
+    }
+    return { usd: totalUSD, eur: totalEUR };
   }
 
   async saveInvested(value, currency){
@@ -354,8 +402,9 @@ class CryptoPortfolioApp {
   /* ================== KPIs ================== */
       renderKPIs(generatedAt){
       const t = this.state.totals;
-      const investedEUR = this.state.investedEUR || 0;
-      const investedUSD = this.state.investedUSD || 0;
+      const totalInv = this.getTotalInvestedAmounts();
+      const investedEUR = totalInv.eur;
+      const investedUSD = totalInv.usd;
 
       const realizedEUR = (t.eur || 0) - investedEUR;
       const realizedUSD = (t.usdt || 0) - investedUSD;
@@ -403,7 +452,7 @@ class CryptoPortfolioApp {
 
       const vis = this.state.visibleRows;
       if (!vis.length){
-        tbody.innerHTML = '<tr><td colspan="6" class="text-muted">No data to display</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-muted">No data to display</td></tr>';
         this.applyCurrencyMode();
         return;
       }
@@ -426,13 +475,27 @@ class CryptoPortfolioApp {
       for (const asset of assets){
         const rows = groups.get(asset).sort((x,y)=>(y.valueEUR||0)-(x.valueEUR||0));
 
+        // Get invested amounts for this asset
+        const invested = this.getAssetInvestedAmounts(asset);
+
         // linhas individuais
         for (const r of rows){
           const actions = r.source==='manual'
-            ? `<button class="btn btn-edit" data-edit="${esc(r.asset)}">Edit</button>
+            ? `<button class="btn btn-invest" data-invest="${esc(r.asset)}">Investimento</button>
+              <button class="btn btn-edit" data-edit="${esc(r.asset)}">Edit</button>
               <button class="btn btn-del" data-del="${esc(r.asset)}">Delete</button>`
-            : `<span class="status" id="status-${esc(r.asset)}"></span>`;
+            : `<button class="btn btn-invest" data-invest="${esc(r.asset)}">Investimento</button>
+              <span class="status" id="status-${esc(r.asset)}"></span>`;
           const sel = this.renderLocationSelect(r.asset, r.location);
+
+          // Calculate realized (profit/loss) = current value - invested
+          const realizedUSD = (r.valueUSDT || 0) - invested.usd;
+          const realizedEUR = (r.valueEUR || 0) - invested.eur;
+          const realizedColor = (this.state.currency === 'EUR' ? realizedEUR : realizedUSD) >= 0 ? 'green' : 'red';
+          const realizedSign = (this.state.currency === 'EUR' ? realizedEUR : realizedUSD) >= 0 ? '+' : '';
+          const realizedValue = this.state.currency === 'EUR' 
+            ? `${realizedSign}${FORMATTERS.eur.format(realizedEUR)}`
+            : `${realizedSign}$${FORMATTERS.usd.format(realizedUSD)}`;
 
           html += `
             <tr data-asset="${esc(r.asset)}" data-source="${esc(r.source||'')}">
@@ -440,6 +503,9 @@ class CryptoPortfolioApp {
               <td class="col-qty">${FORMATTERS.quantity.format(r.quantity)}</td>
               <td class="col-usd">$${FORMATTERS.usd.format(r.valueUSDT||0)}</td>
               <td class="col-eur">${FORMATTERS.eur.format(r.valueEUR||0)}</td>
+              <td class="col-invested-usd">$${FORMATTERS.usd.format(invested.usd)}</td>
+              <td class="col-invested-eur">${FORMATTERS.eur.format(invested.eur)}</td>
+              <td class="col-realized" style="color: ${realizedColor}; font-weight: 600;">${realizedValue}</td>
               <td class="col-loc">${sel}</td>
               <td>${actions}</td>
             </tr>
@@ -451,6 +517,14 @@ class CryptoPortfolioApp {
           const totalQty = rows.reduce((s,x)=>s+(x.quantity||0),0);
           const totalUSD = rows.reduce((s,x)=>s+(x.valueUSDT||0),0);
           const totalEUR = rows.reduce((s,x)=>s+(x.valueEUR||0),0);
+          
+          const realizedUSD = totalUSD - invested.usd;
+          const realizedEUR = totalEUR - invested.eur;
+          const realizedColor = (this.state.currency === 'EUR' ? realizedEUR : realizedUSD) >= 0 ? 'green' : 'red';
+          const realizedSign = (this.state.currency === 'EUR' ? realizedEUR : realizedUSD) >= 0 ? '+' : '';
+          const realizedValue = this.state.currency === 'EUR' 
+            ? `${realizedSign}${FORMATTERS.eur.format(realizedEUR)}`
+            : `${realizedSign}$${FORMATTERS.usd.format(realizedUSD)}`;
 
         html += `
           <tr class="subtotal-row" data-asset="${esc(asset)}" data-subtotal="1">
@@ -458,6 +532,9 @@ class CryptoPortfolioApp {
             <td class="col-qty">${FORMATTERS.quantity.format(totalQty)}</td>
             <td class="col-usd">$${FORMATTERS.usd.format(totalUSD)}</td>
             <td class="col-eur">${FORMATTERS.eur.format(totalEUR)}</td>
+            <td class="col-invested-usd">$${FORMATTERS.usd.format(invested.usd)}</td>
+            <td class="col-invested-eur">${FORMATTERS.eur.format(invested.eur)}</td>
+            <td class="col-realized" style="color: ${realizedColor}; font-weight: 600;">${realizedValue}</td>
             <td class="col-loc"></td>
             <td></td>
           </tr>
@@ -507,12 +584,15 @@ class CryptoPortfolioApp {
     const showUSD = this.state.currency==='USD';
     show('th.col-usd, td.col-usd', showUSD);
     show('th.col-eur, td.col-eur', showEUR);
+    show('th.col-invested-usd, td.col-invested-usd', showUSD);
+    show('th.col-invested-eur, td.col-invested-eur', showEUR);
 
     // update invested box (displayed in selected currency)
+    const totalInv = this.getTotalInvestedAmounts();
     const kINV = DOM.$('#kpiInvested');
     if (kINV){
-      if (this.state.currency==='EUR') kINV.textContent = FORMATTERS.eur.format(this.state.investedEUR||0);
-      else kINV.textContent = `$${FORMATTERS.usd.format(this.state.investedUSD||0)}`;
+      if (this.state.currency==='EUR') kINV.textContent = FORMATTERS.eur.format(totalInv.eur);
+      else kINV.textContent = `$${FORMATTERS.usd.format(totalInv.usd)}`;
     }
     // update totals with realized
     this.renderKPIs(); // refresh signs/values
@@ -539,6 +619,9 @@ class CryptoPortfolioApp {
 
     // Add / Edit modal
     this.setupModal();
+    
+    // Investment modal
+    this.setupInvestmentModal();
 
     // PDF
     this.setupPdf();
@@ -597,6 +680,144 @@ class CryptoPortfolioApp {
     modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeModal(); });
   }
 
+  /* ===== Investment Modal ===== */
+  setupInvestmentModal(){
+    const modal = DOM.$('#investment-modal-backdrop');
+    DOM.$('#inv-close')?.addEventListener('click', ()=>this.closeInvestmentModal());
+    DOM.$('#inv-add-btn')?.addEventListener('click', ()=>this.addInvestment());
+    modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeInvestmentModal(); });
+    
+    // Set default date to today
+    const dateInput = DOM.$('#inv-date');
+    if (dateInput) {
+      dateInput.value = new Date().toISOString().split('T')[0];
+    }
+  }
+
+  openInvestmentModal(asset){
+    this.currentInvestmentAsset = asset.toUpperCase();
+    DOM.$('#inv-asset-name').textContent = this.currentInvestmentAsset;
+    this.renderInvestmentList();
+    DOM.show(DOM.$('#investment-modal-backdrop'));
+  }
+
+  closeInvestmentModal(){
+    DOM.hide(DOM.$('#investment-modal-backdrop'));
+    this.currentInvestmentAsset = null;
+  }
+
+  renderInvestmentList(){
+    const list = DOM.$('#investment-list');
+    if (!list) return;
+
+    const investments = this.state.investments.get(this.currentInvestmentAsset) || [];
+    
+    if (investments.length === 0) {
+      list.innerHTML = '<p style="color: #6b7280; font-size: 0.9rem; padding: 12px; text-align: center;">Nenhum investimento registrado</p>';
+      return;
+    }
+
+    // Sort by date (most recent first)
+    const sorted = [...investments].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    list.innerHTML = sorted.map(inv => {
+      const displayAmount = inv.currency === 'EUR' 
+        ? FORMATTERS.eur.format(inv.originalAmount)
+        : `$${FORMATTERS.usd.format(inv.originalAmount)}`;
+      const date = new Date(inv.date).toLocaleDateString('pt-PT');
+      
+      return `
+        <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: white; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 600;">${displayAmount}</div>
+            <div style="font-size: 0.85rem; color: #6b7280;">${date}</div>
+          </div>
+          <button class="btn btn-del-inv" data-inv-id="${this.escapeHtml(inv.id)}" style="padding: 4px 8px; font-size: 0.85rem;">Remover</button>
+        </div>
+      `;
+    }).join('');
+
+    // Bind delete buttons
+    list.querySelectorAll('.btn-del-inv').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const invId = e.target.getAttribute('data-inv-id');
+        await this.deleteInvestment(invId);
+      });
+    });
+  }
+
+  async addInvestment(){
+    try {
+      const amount = parseFloat(DOM.$('#inv-amount').value);
+      const currency = DOM.$('#inv-currency').value;
+      const date = DOM.$('#inv-date').value;
+
+      if (!isFinite(amount) || amount < 0) {
+        alert('Por favor, insira um valor válido (≥ 0)');
+        return;
+      }
+
+      if (!date) {
+        alert('Por favor, selecione uma data');
+        return;
+      }
+
+      const rate = this.state.usdtToEurRate || 1;
+      
+      // Convert to both currencies
+      let amountUSD, amountEUR;
+      if (currency === 'EUR') {
+        amountEUR = amount;
+        amountUSD = rate > 0 ? amount / rate : 0;
+      } else {
+        amountUSD = amount;
+        amountEUR = rate > 0 ? amount * rate : 0;
+      }
+
+      const investmentData = {
+        asset: this.currentInvestmentAsset,
+        amountUSD,
+        amountEUR,
+        currency,
+        originalAmount: amount,
+        date
+      };
+
+      // Generate unique ID
+      const id = `${this.currentInvestmentAsset}_${Date.now()}`;
+      await FirebaseService.setDocument(CONFIG.INVESTMENTS_COLLECTION, id, investmentData);
+
+      // Reload investments and update UI
+      await this.loadInvestments();
+      this.renderInvestmentList();
+      this.renderTable();
+      this.renderKPIs();
+
+      // Clear form
+      DOM.$('#inv-amount').value = '';
+      DOM.$('#inv-date').value = new Date().toISOString().split('T')[0];
+
+    } catch (e) {
+      alert('Erro ao adicionar investimento');
+      console.error(e);
+    }
+  }
+
+  async deleteInvestment(invId){
+    if (!confirm('Remover este investimento?')) return;
+    
+    try {
+      await FirebaseService.deleteDocument(CONFIG.INVESTMENTS_COLLECTION, invId);
+      await this.loadInvestments();
+      this.renderInvestmentList();
+      this.renderTable();
+      this.renderKPIs();
+    } catch (e) {
+      alert('Erro ao remover investimento');
+      console.error(e);
+    }
+  }
+
   openAddModal(){
     DOM.$('#modal-title').textContent = 'Add asset';
     DOM.$('#m-asset').value = '';
@@ -653,6 +874,8 @@ class CryptoPortfolioApp {
       await this.loadManualAssets();
       await this.renderAll();
     }));
+    // investment
+    DOM.$$('.btn-invest').forEach(b=>b.addEventListener('click', ()=>this.openInvestmentModal(b.getAttribute('data-invest'))));
   }
 
   /* ================== PDF ================== */
@@ -737,8 +960,9 @@ class CryptoPortfolioApp {
 
       // === Totais imediatamente abaixo da tabela, alinhados à esquerda da tabela ===
         const t = this.state.totals;
-        const invEUR = this.state.investedEUR || 0;
-        const invUSD = this.state.investedUSD || 0;
+        const totalInv = this.getTotalInvestedAmounts();
+        const invEUR = totalInv.eur;
+        const invUSD = totalInv.usd;
         const realEUR = (t.eur || 0) - invEUR;
         const realUSD = (t.usdt || 0) - invUSD;
 
