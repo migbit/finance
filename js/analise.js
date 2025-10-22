@@ -177,138 +177,170 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
   }
 });
   
- // ----------------------------------------------------------------------------> BARRAS DE PROGRESSO
+// ----------------------------------------------------------------------------> BARRAS DE PROGRESSO (DOUGHNUTS)
 
- // --- helpers ---
+// helpers
 const APTS = ['123', '1248'];
-
-// soma por ano para vários apartamentos (valorTransferencia + taxaAirbnb)
 const somaAnoApts = (ano, apts = APTS) => faturas
   .filter(f => Number(f.ano) === Number(ano) && apts.includes(String(f.apartamento)))
   .reduce((s, f) => s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0)), 0);
 
-let htmlProg = '';
+// css var
+const cssVar = (name, fallback) =>
+  (getComputedStyle(document.documentElement).getPropertyValue(name) || '').trim() || fallback;
 
-// ─── 1) Parcial do mês atual (123 + 1248) ───
+// plugin center text
+const centerText = {
+  id: 'centerText',
+  afterDraw(chart, args, opts) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    const { left, right, top, bottom } = chartArea;
+    const x = (left + right) / 2;
+    const y = (top + bottom) / 2;
+    const txt = opts.text || '';
+    if (!txt) return;
+    ctx.save();
+    ctx.fillStyle = opts.color || '#0f172a';
+    ctx.font = '600 14px Montserrat, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(txt, x, y);
+    ctx.restore();
+  }
+};
+
+function makeDonut(canvas, percentSigned) {
+  if (!canvas) return null;
+
+  // Ensure sane size
+  canvas.style.width = '160px';
+  canvas.style.height = '160px';
+  canvas.width = 160;
+  canvas.height = 160;
+
+  // If re-rendering, clean up old chart
+  if (canvas._chart) {
+    try { canvas._chart.destroy(); } catch {}
+  }
+
+  const val  = Math.max(0, Math.min(100, Math.abs(percentSigned)));
+  const ring = (percentSigned >= 0)
+    ? cssVar('--ok', '#16a34a')
+    : cssVar('--bad', '#e11d48');
+
+  // format with 2 decimals
+  const formatted = val.toFixed(2);
+
+  const chart = new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [val, 100 - val],
+        backgroundColor: [ring, '#eef2f7'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
+      devicePixelRatio: 1,
+      cutout: '70%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        centerText: {
+          text: `${percentSigned > 0 ? '+' : ''}${formatted}%`,
+          color: ring
+        }
+      },
+      animation: false
+    },
+    plugins: [centerText]
+  });
+
+  canvas._chart = chart;
+  return chart;
+}
+
+
+// set main title
+{
+  const titleEl = document.getElementById('progress-title');
+  if (titleEl) titleEl.textContent = `Progresso vs ${penultimoAno}`;
+}
+
+// === calculate values and render into existing canvases ===
+
+// 1) Parcial do mês atual
 {
   const mesAtual = new Date().getMonth() + 1;
-  const nomeMesAtual = obterNomeMes(mesAtual);
-
-  const temDados = faturas.some(f =>
-    Number(f.ano) === ultimoAno &&
-    Number(f.mes) === mesAtual &&
-    APTS.includes(String(f.apartamento))
-  );
-
-  if (temDados) {
-    const cur = faturas
-      .filter(f =>
-        Number(f.ano) === ultimoAno &&
-        Number(f.mes) === mesAtual &&
-        APTS.includes(String(f.apartamento))
-      )
-      .reduce((s, f) => s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0)), 0);
-
-    const ant = faturas
-      .filter(f =>
-        Number(f.ano) === penultimoAno &&
-        Number(f.mes) === mesAtual &&
-        APTS.includes(String(f.apartamento))
-      )
-      .reduce((s, f) => s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0)), 0);
-
-    const base  = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
-    const diff  = ant - cur;
-    const pct   = Math.round(Math.abs(diff) / base * 100);
-    const lbl   = diff > 0 ? `-${pct}%` : `+${pct}%`;
-    const cor   = diff > 0 ? '#dc3545' : '#28a745';
-    const texto = diff > 0 ? `Faltam ${formatEuro(diff)}` : `Excedeu ${formatEuro(-diff)}`;
-
-
-    htmlProg += `
-      <div class="comparacao-item">
-        <strong>Parcial ${nomeMesAtual}:</strong>
-        <span style="color:${cor}; margin-left:0.5rem;">${texto}</span>
-        <div class="progress" style="background:#e9ecef; height:1.5rem; margin-top:0.5rem;">
-          <div class="progress-bar"
-              style="width:${pct}%; background:${cor}; display:flex; align-items:center; justify-content:center;">
-            ${lbl}
-          </div>
-        </div>
-      </div>`;
-  }
-}
-
-// ─── 2) Até mês anterior (123 + 1248) ───
-{
-  const currentMonth = new Date().getMonth() + 1;
-  const prevMonth    = Math.max(1, currentMonth - 1);
-  const nomeMes      = obterNomeMes(prevMonth);
 
   const cur = faturas
-    .filter(f =>
-      Number(f.ano) === ultimoAno &&
-      APTS.includes(String(f.apartamento)) &&
-      Number(f.mes) < currentMonth
-    )
-    .reduce((s, f) => s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0)), 0);
+    .filter(f => Number(f.ano) === ultimoAno && Number(f.mes) === mesAtual && APTS.includes(String(f.apartamento)))
+    .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
 
   const ant = faturas
-    .filter(f =>
-      Number(f.ano) === penultimoAno &&
-      APTS.includes(String(f.apartamento)) &&
-      Number(f.mes) < currentMonth
-    )
-    .reduce((s, f) => s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0)), 0);
+    .filter(f => Number(f.ano) === penultimoAno && Number(f.mes) === mesAtual && APTS.includes(String(f.apartamento)))
+    .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
 
-  const base  = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
-  const diff  = ant - cur;
-  const pct   = Math.min(100, Math.round(Math.abs(diff) / base * 100));
-  const lbl   = diff > 0 ? `-${pct}%` : `+${pct}%`;
-  const cor   = diff > 0 ? '#dc3545' : '#28a745';
-  const texto = diff > 0 ? `Faltam ${formatEuro(diff)}` : `Excedeu ${formatEuro(-diff)}`;
+  const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
+  const diff = cur - ant; // positivo = melhor
+  const pct  = (diff / base) * 100;
 
-  htmlProg += `
-    <div class="comparacao-item">
-      <strong>Até ${nomeMes}:</strong>
-      <span style="color:${cor}; margin-left:0.5rem;">${texto}</span>
-      <div class="progress" style="background:#e9ecef; height:1.5rem; margin-top:0.5rem;">
-        <div class="progress-bar"
-            style="width:${pct}%; background:${cor}; display:flex; align-items:center; justify-content:center;">
-          ${lbl}
-        </div>
-      </div>
-    </div>`;
+  const lblEl = document.getElementById('label-parcial');
+  if (lblEl) lblEl.textContent = `Parcial ${obterNomeMes(mesAtual)}`;
+
+  const txtEl = document.getElementById('donut-parcial-text');
+  if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${formatEuro(diff)}` : `Faltam ${formatEuro(-diff)}`;
+
+  makeDonut(document.getElementById('donut-parcial'), pct);
 }
 
-// ─── 3) ${ultimoAno} vs ${penultimoAno} (123 + 1248) ───
+// 2) Até mês anterior (acumulado)
+{
+  const currentMonth = new Date().getMonth() + 1;
+
+  const cur = faturas
+    .filter(f => Number(f.ano) === ultimoAno && APTS.includes(String(f.apartamento)) && Number(f.mes) < currentMonth)
+    .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
+
+  const ant = faturas
+    .filter(f => Number(f.ano) === penultimoAno && APTS.includes(String(f.apartamento)) && Number(f.mes) < currentMonth)
+    .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
+
+  const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
+  const diff = cur - ant;
+  const pct  = (diff / base) * 100;
+
+  const prevMonth = Math.max(1, currentMonth - 1);
+
+  const lblEl = document.getElementById('label-ateset');
+  if (lblEl) lblEl.textContent = `Até ${obterNomeMes(prevMonth)}`;
+
+  const txtEl = document.getElementById('donut-ateset-text');
+  if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${formatEuro(diff)}` : `Faltam ${formatEuro(-diff)}`;
+
+  makeDonut(document.getElementById('donut-ateset'), pct);
+}
+
+// 3) Ano atual vs anterior (total até agora)
 {
   const atual = somaAnoApts(ultimoAno, APTS);
   const antes = somaAnoApts(penultimoAno, APTS);
+  const base  = antes === 0 ? (atual === 0 ? 1 : atual) : antes;
+  const diff  = atual - antes;
+  const pct   = (diff / base) * 100;
 
-  const diff     = antes - atual;
-  const pct      = Math.round(Math.abs(diff) / (antes || 1) * 100);
-  const labelPct = diff > 0 ? `-${pct}%` : `+${pct}%`;
-  const cor      = diff > 0 ? '#dc3545' : '#28a745';
-  const label = diff > 0 ? `Faltam ${formatEuro(diff)}` : `Excedeu ${formatEuro(-diff)}`;
+  const lblEl = document.getElementById('label-vs');
+  if (lblEl) lblEl.textContent = `${ultimoAno} vs ${penultimoAno}`;
 
+  const txtEl = document.getElementById('donut-vs-text');
+  if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${formatEuro(diff)}` : `Faltam ${formatEuro(-diff)}`;
 
-  htmlProg += `
-    <div class="comparacao-item">
-      <strong>${ultimoAno} vs ${penultimoAno}:</strong>
-      <span style="color:${cor}; margin-left:0.5rem;">${label}</span>
-      <div class="progress" style="background:#e9ecef; height:1.5rem; margin-top:0.5rem;">
-        <div class="progress-bar"
-            style="width:${pct}%; background:${cor}; display:flex; align-items:center; justify-content:center;">
-          ${labelPct}
-        </div>
-      </div>
-    </div>`;
+  makeDonut(document.getElementById('donut-vs'), pct);
 }
-
-// envolve as barras num wrapper que dá espaçamento vertical
-document.getElementById('progresso-anos').innerHTML =
-  `<div class="progress-list">${htmlProg}</div>`;
 }
 
 // --------------------------------------------------------------> HeatMap
@@ -451,7 +483,7 @@ function renderTabelaComparativaAnos1231248(faturas, targetId) {
   const mostraMedia = {};
   anos.forEach(a => { mostraMedia[a] = nights[a].some(x => x > 0); });
 
-  const yearBg = ['#fbfbff', '#f9fffb', '#fffaf5', '#f8f9ff', '#f9f7ff'];
+  const yearBg = ['#fbfbff', '#e9ffebff', '#fffaf5', '#f8f9ff', '#f9f7ff'];
 
   // célula Δ (verde +, vermelho −), assume que há base (só chamada para anos > BASE_YEAR)
   const yoyCell = (cur, prev, bg) => {
@@ -872,7 +904,7 @@ function renderTabelaLimpeza1231248(faturas, targetId) {
   }
 
   // fundos suaves por ano
-  const yearBg = ['#fbfbff', '#f9fffb', '#fffaf5', '#f8f9ff', '#f9f7ff'];
+  const yearBg = ['#fbfbff', '#d9f4e2ff', '#fffaf5', '#f8f9ff', '#f9f7ff'];
 
   let html = `
     <table class="media-faturacao">

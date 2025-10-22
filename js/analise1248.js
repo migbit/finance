@@ -134,115 +134,150 @@ chartTotal1248 = new Chart(document.getElementById('chart-total'), {
   }
 });
 
- // --------------- Barras de Progresso (Apt 1248)
-  const somaAno = (ano, apt = null) => faturas
-    .filter(f => Number(f.ano) === Number(ano) && (!apt || String(f.apartamento) === String(apt)))
+// --------------- Donuts de Progresso (Apt 1248)
+
+// helpers
+const APT = '1248';
+const somaAno = (ano, apt = APT) => faturas
+  .filter(f => Number(f.ano) === Number(ano) && String(f.apartamento) === String(apt))
+  .reduce((s,f) => s + _vm_totalReserva(f), 0);
+
+// css var
+const cssVar = (name, fallback) =>
+  (getComputedStyle(document.documentElement).getPropertyValue(name) || '').trim() || fallback;
+
+// plugin center text (robusto)
+const centerText = {
+  id: 'centerText',
+  afterDraw(chart, args, opts) {
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    const x = (chartArea.left + chartArea.right) / 2;
+    const y = (chartArea.top + chartArea.bottom) / 2;
+    const txt = opts.text || '';
+    if (!txt) return;
+    ctx.save();
+    ctx.fillStyle = opts.color || '#0f172a';
+    ctx.font = '600 14px Montserrat, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(txt, x, y);
+    ctx.restore();
+  }
+};
+
+function makeDonut(canvas, percentSigned) {
+  if (!canvas) return null;
+
+  // Evita canvases gigantes
+  canvas.style.width = '160px';
+  canvas.style.height = '160px';
+  canvas.width = 160;
+  canvas.height = 160;
+
+  // destroy anterior se existir
+  if (canvas._chart) { try { canvas._chart.destroy(); } catch {} }
+
+  const val = Math.max(0, Math.min(100, Math.abs(percentSigned)));
+  const ring = (percentSigned >= 0) ? cssVar('--ok', '#16a34a') : cssVar('--bad', '#e11d48');
+  const formatted = val.toFixed(2); // 2 casas decimais no centro
+
+  const chart = new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: { datasets: [{ data: [val, 100 - val], backgroundColor: [ring, '#eef2f7'], borderWidth: 0 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
+      devicePixelRatio: 1,
+      cutout: '70%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        centerText: { text: `${percentSigned > 0 ? '+' : ''}${formatted}%`, color: ring }
+      },
+      animation: false
+    },
+    plugins: [centerText]
+  });
+
+  canvas._chart = chart;
+  return chart;
+}
+
+// Título
+{
+  const titleEl = document.getElementById('progress-title');
+  if (titleEl) titleEl.textContent = `Progresso vs ${penultimoAno}`;
+}
+
+// 1) Parcial do mês atual (Apt 1248)
+{
+  const mesAtual = new Date().getMonth() + 1;
+
+  const cur = faturas
+    .filter(f => Number(f.ano) === ultimoAno && Number(f.mes) === mesAtual && String(f.apartamento) === APT)
     .reduce((s,f) => s + _vm_totalReserva(f), 0);
 
-  let htmlProg = '';
+  const ant = faturas
+    .filter(f => Number(f.ano) === penultimoAno && Number(f.mes) === mesAtual && String(f.apartamento) === APT)
+    .reduce((s,f) => s + _vm_totalReserva(f), 0);
 
-  // 1) Parcial do mês atual (Apt 1248)
-  {
-    const mesAtual = new Date().getMonth() + 1;
-    const nomeMesAtual = obterNomeMes(mesAtual);
-    const temDados = faturas.some(f =>
-      Number(f.ano) === ultimoAno &&
-      Number(f.mes) === mesAtual &&
-      String(f.apartamento) === '1248'
-    );
-    if (temDados) {
-      const cur = faturas
-        .filter(f => Number(f.ano) === ultimoAno && Number(f.mes) === mesAtual && String(f.apartamento)==='1248')
-        .reduce((s,f) => s + _vm_totalReserva(f), 0);
-      const ant = faturas
-        .filter(f => Number(f.ano) === penultimoAno && Number(f.mes) === mesAtual && String(f.apartamento)==='1248')
-        .reduce((s,f) => s + _vm_totalReserva(f), 0);
+  const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
+  const diff = cur - ant;              // + = melhor que ano anterior
+  const pct  = (diff / base) * 100;    // float, sem arredondar para evitar 0%
 
-      const base  = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
-      const diff  = ant - cur;
-      const pct   = Math.round(Math.abs(diff) / base * 100);
-      const lbl   = diff > 0 ? `-${pct}%` : `+${pct}%`;
-      const cor   = diff > 0 ? '#dc3545' : '#28a745';
-      const texto = diff > 0 ? `Faltam ${euroInt(diff)}` : `Excedeu ${euroInt(-diff)}`;
+  const lblEl = document.getElementById('label-parcial');
+  if (lblEl) lblEl.textContent = `Parcial ${obterNomeMes(mesAtual)}`;
 
-      htmlProg += `
-        <div class="comparacao-item">
-          <strong>Parcial ${nomeMesAtual}:</strong>
-          <span style="color:${cor}; margin-left:0.5rem;">${texto}</span>
-          <div class="progress" style="background:#e9ecef; height:1.5rem; margin-top:0.5rem;">
-            <div class="progress-bar"
-                style="width:${pct}%; background:${cor}; display:flex; align-items:center; justify-content:center;">
-              ${lbl}
-            </div>
-          </div>
-        </div>`;
-    }
-  }
+  const txtEl = document.getElementById('donut-parcial-text');
+  if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${euroInt(diff)}` : `Faltam ${euroInt(-diff)}`;
 
-  // 2) Até mês anterior (Apt 1248)
-  {
-    const currentMonth = new Date().getMonth() + 1;
-    const prevMonth    = Math.max(1, currentMonth - 1);
-    const nomeMes      = obterNomeMes(prevMonth);
+  makeDonut(document.getElementById('donut-parcial'), pct);
+}
 
-    const cur = faturas
-      .filter(f => Number(f.ano) === ultimoAno &&
-                   String(f.apartamento) === '1248' &&
-                   Number(f.mes) < currentMonth)
-      .reduce((s,f) => s + _vm_totalReserva(f), 0);
+// 2) Até mês anterior (acumulado, Apt 1248)
+{
+  const currentMonth = new Date().getMonth() + 1;
 
-    const ant = faturas
-      .filter(f => Number(f.ano) === penultimoAno &&
-                   String(f.apartamento) === '1248' &&
-                   Number(f.mes) < currentMonth)
-      .reduce((s,f) => s + _vm_totalReserva(f), 0);
+  const cur = faturas
+    .filter(f => Number(f.ano) === ultimoAno && String(f.apartamento) === APT && Number(f.mes) < currentMonth)
+    .reduce((s,f) => s + _vm_totalReserva(f), 0);
 
-    const base  = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
-    const diff  = ant - cur;
-    const pct   = Math.min(100, Math.round(Math.abs(diff) / base * 100));
-    const lbl   = diff > 0 ? `-${pct}%` : `+${pct}%`;
-    const cor   = diff > 0 ? '#dc3545' : '#28a745';
-    const texto = diff > 0 ? `Faltam ${euroInt(diff)}` : `Excedeu ${euroInt(-diff)}`;
+  const ant = faturas
+    .filter(f => Number(f.ano) === penultimoAno && String(f.apartamento) === APT && Number(f.mes) < currentMonth)
+    .reduce((s,f) => s + _vm_totalReserva(f), 0);
 
-    htmlProg += `
-      <div class="comparacao-item">
-        <strong>Até ${nomeMes}:</strong>
-        <span style="color:${cor}; margin-left:0.5rem;">${texto}</span>
-        <div class="progress" style="background:#e9ecef; height:1.5rem; margin-top:0.5rem;">
-          <div class="progress-bar"
-              style="width:${pct}%; background:${cor}; display:flex; align-items:center; justify-content:center;">
-            ${lbl}
-          </div>
-        </div>
-      </div>`;
-  }
+  const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
+  const diff = cur - ant;
+  const pct  = (diff / base) * 100;
 
-  // 3) Ano atual vs anterior (Apt 1248)
-  {
-    const atual = somaAno(ultimoAno, '1248');
-    const antes = somaAno(penultimoAno, '1248');
+  const prevMonth = Math.max(1, currentMonth - 1);
+  const lblEl = document.getElementById('label-ateset');
+  if (lblEl) lblEl.textContent = `Até ${obterNomeMes(prevMonth)}`;
 
-    const diff     = antes - atual;
-    const pct      = Math.round(Math.abs(diff) / (antes || 1) * 100);
-    const labelPct = diff > 0 ? `-${pct}%` : `+${pct}%`;
-    const cor      = diff > 0 ? '#dc3545' : '#28a745';
-    const label    = diff > 0 ? `Faltam ${euroInt(diff)}` : `Excedeu ${euroInt(-diff)}`;
+  const txtEl = document.getElementById('donut-ateset-text');
+  if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${euroInt(diff)}` : `Faltam ${euroInt(-diff)}`;
 
-    htmlProg += `
-      <div class="comparacao-item">
-        <strong>${ultimoAno} vs ${penultimoAno}:</strong>
-        <span style="color:${cor}; margin-left:0.5rem;">${label}</span>
-        <div class="progress" style="background:#e9ecef; height:1.5rem; margin-top:0.5rem;">
-          <div class="progress-bar"
-              style="width:${pct}%; background:${cor}; display:flex; align-items:center; justify-content:center;">
-            ${labelPct}
-          </div>
-        </div>
-      </div>`;
-  }
+  makeDonut(document.getElementById('donut-ateset'), pct);
+}
 
-  const alvo = document.getElementById('progresso-anos');
-  if (alvo) alvo.innerHTML = `<div class="progress-list">${htmlProg}</div>`;
+// 3) Ano atual vs anterior (total, Apt 1248)
+{
+  const atual = somaAno(ultimoAno, APT);
+  const antes = somaAno(penultimoAno, APT);
+  const base  = antes === 0 ? (atual === 0 ? 1 : atual) : antes;
+  const diff  = atual - antes;
+  const pct   = (diff / base) * 100;
+
+  const lblEl = document.getElementById('label-vs');
+  if (lblEl) lblEl.textContent = `${ultimoAno} vs ${penultimoAno}`;
+
+  const txtEl = document.getElementById('donut-vs-text');
+  if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${euroInt(diff)}` : `Faltam ${euroInt(-diff)}`;
+
+  makeDonut(document.getElementById('donut-vs'), pct);
+}
 }
 
 // ---------------------------------------------------------> Gráfico ocupação
@@ -540,7 +575,7 @@ function renderTabelaComparativaAnos1248(faturas, targetId) {
   const mostraMedia = {};
   anos.forEach(a => { mostraMedia[a] = nights[a].some(x => x > 0); });
 
-  const yearBg = ['#fbfbff', '#f9fffb', '#fffaf5', '#f8f9ff', '#f9f7ff'];
+  const yearBg = ['#fbfbff', '#e9ffebff', '#fffaf5', '#f8f9ff', '#f9f7ff'];
 
   // célula Δ (verde +, vermelho −)
   const yoyCell = (cur, prev, bg) => {

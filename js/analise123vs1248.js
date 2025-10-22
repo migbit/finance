@@ -80,8 +80,37 @@ async function carregarFaturas(){
   }
 }
 
+function lockYAxis(chart, gutterEl) {
+  if (!chart || !chart.scales || !chart.scales.y || !gutterEl) return;
+
+  const yScale = chart.scales.y;
+  const area   = chart.chartArea;
+  const ticks  = yScale.ticks || [];
+  const toPx   = (v) => yScale.getPixelForValue(v);
+
+  // limpar e redesenhar
+  gutterEl.innerHTML = '';
+  // offset do chartArea para posicionar corretamente
+  const topOffset = area ? area.top : 0;
+
+  ticks.forEach(t => {
+    const y = toPx(t.value);
+    if (isFinite(y)) {
+      const el = document.createElement('div');
+      el.className = 'tick';
+      el.style.top = `${y + Y_LOCK_OFFSET}px`;
+      el.textContent = t.label ?? String(t.value);
+      el.style.left = '0';
+      el.style.right = '0';
+      el.style.textAlign = 'left';
+      gutterEl.appendChild(el);
+    }
+  });
+}
+
+
 // ------------------------ Faturação Mensal (timeline contínua) ------------------------
-function renderGraficoFaturacaoMensal(faturas, ano /* compat */){
+function renderGraficoFaturacaoMensal(faturas, ano /* compat */) {
   const BASE_YEAR = 2024;
 
   // último (ano, mês) com dados
@@ -107,79 +136,179 @@ function renderGraficoFaturacaoMensal(faturas, ano /* compat */){
   for (let y = BASE_YEAR; y <= end.year; y++) {
     const mEnd = (y === end.year) ? end.month : 12;
     for (let m = 1; m <= mEnd; m++) {
-      labels.push([mesesPT[m-1], String(y).slice(-2)]); // mês em cima, ano (2 dígitos) em baixo
+      labels.push([mesesPT[m - 1], String(y).slice(-2)]); // mês em cima, ano (2 dígitos) em baixo
       seq.push({ year: y, month: m });
     }
   }
 
   const sumMesApt = (apt, y, m) => faturas
-    .filter(f => String(f.apartamento)===String(apt) && Number(f.ano)===y && Number(f.mes)===m)
-    .reduce((s,f)=> s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
+    .filter(f => String(f.apartamento) === String(apt) && Number(f.ano) === y && Number(f.mes) === m)
+    .reduce((s, f) => s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0)), 0);
 
-  const data123  = seq.map(({year,month}) => sumMesApt('123',  year, month));
-  const data1248 = seq.map(({year,month}) => sumMesApt('1248', year, month));
+  const data123  = seq.map(({ year, month }) => sumMesApt('123',  year, month));
+  const data1248 = seq.map(({ year, month }) => sumMesApt('1248', year, month));
 
-    const canvas = document.getElementById('chart-fat-mensal');
-    if (!canvas) return;
-    if (gFatMensal) { gFatMensal.destroy(); gFatMensal = null; }
+  // canvas e limpeza
+  const canvas = document.getElementById('chart-fat-mensal');
+  if (!canvas) return;
+  if (gFatMensal) { gFatMensal.destroy(); gFatMensal = null; }
 
-/* garante que não há largura forçada */
-canvas.style.width = '100%';
-canvas.style.minWidth = '0';
-  // largura mínima por mês, mas só ativa scroll quando ultrapassar o contentor
-  const pxPerLabel = 48; // podes afinar (40–56)
-  const wrapper =
-  canvas.closest('.chart-wrap') ||
-  canvas.closest('.chart-wrap-480') ||
-  canvas.closest('.chart-wrapper') ||
-  canvas.parentElement;
+  // helper local para desenhar os valores do eixo-Y no gutter fixo
+  function lockYAxisLocal(chart, gutterEl) {
+    try {
+      if (!chart || !chart.scales || !chart.scales.y || !gutterEl) return;
+      const yScale = chart.scales.y;
+      const area = chart.chartArea;
+      const ticks = yScale.ticks || [];
+      const topOffset = area?.top ?? 0; // corrige deslocamento vertical
+      gutterEl.innerHTML = '';
 
-  const available = (wrapper && wrapper.clientWidth) ? wrapper.clientWidth : 0;
-  const needed    = (labels.length * pxPerLabel);
+      ticks.forEach(t => {
+        const y = yScale.getPixelForValue(t.value);
+        if (isFinite(y)) {
+          const el = document.createElement('div');
+          el.className = 'tick';
+          el.style.top = `${y + topOffset - area.top + 5}px`; // leve ajuste (+2)
+          el.style.left = '0';
+          el.style.right = '0';
+          el.style.fontSize = '12px';
+          el.style.color = '#333';
+          el.style.paddingLeft = '6px';
+          el.textContent = t.label ?? String(t.value);
+          gutterEl.appendChild(el);
+        }
+      });
+    } catch (_) { /* no-op */ }
+  }
 
-  // não encolhe abaixo da largura do contentor; só cresce quando precisar
-  canvas.style.width    = '100%';
-  canvas.style.minWidth = Math.max(available, needed) + 'px';
 
-   gFatMensal = new Chart(canvas, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: '123',  data: data123,  backgroundColor: COLORS['123'],  barPercentage: 0.7, categoryPercentage: 0.8 },
-        { label: '1248', data: data1248, backgroundColor: COLORS['1248'],  barPercentage: 0.7, categoryPercentage: 0.8 },
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      resizeDelay: 0,
-      layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } },
-      plugins: {
-       legend: { position: 'bottom' },
-        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${euroInt(c.parsed.y)}` } }
-     },
-      scales: {
-        x: {
-          grid: { display: false },
-          ticks: {
-            autoSkip: false,
-            maxRotation: 0,
-             minRotation: 0,
-            font: { size: 11 },
-          },
-        },
-          y: {
-          beginAtZero: true,
-          ticks: { precision: 0 },
-          grid: { color: 'rgba(0,0,0,0.06)' },
-          border: { display: false },
-       }
-      }
+  // encontrar/forçar wrapper e estrutura do scroller + gutter
+  const outer =
+    canvas.closest('.chart-wrap') ||
+    canvas.closest('.chart-wrap-480') ||
+    canvas.closest('.chart-wrapper') ||
+    canvas.parentElement;
+
+  let scroller = null;
+  let ylock = null;
+
+  if (outer) {
+    if (!outer.classList.contains('has-y-lock')) {
+      outer.classList.add('has-y-lock');
+
+      ylock = document.createElement('div');
+      ylock.className = 'y-lock';
+      // fallback mínimo de estilos se o CSS ainda não estiver carregado
+      ylock.style.position = 'absolute';
+      ylock.style.left = '0';
+      ylock.style.top = '0';
+      ylock.style.bottom = '0';
+      ylock.style.width = '56px';
+      ylock.style.borderRight = '1px solid #e7e7e7';
+      ylock.style.background = '#fff';
+      ylock.style.pointerEvents = 'none';
+
+      scroller = document.createElement('div');
+      scroller.className = 'scroller';
+      scroller.style.overflowX = 'auto';
+      scroller.style.overflowY = 'hidden';
+      scroller.style.height = '100%';
+      scroller.style.marginLeft = '56px';
+      scroller.style.webkitOverflowScrolling = 'touch';
+
+      // inserir estrutura e mover canvas
+      outer.insertBefore(ylock, canvas);
+      outer.insertBefore(scroller, canvas);
+      scroller.appendChild(canvas);
+    } else {
+      scroller = outer.querySelector('.scroller') || outer;
+      ylock = outer.querySelector('.y-lock');
     }
 
-  });
+    // garantir scroll no contentor
+    outer.style.position = 'relative';
+    scroller.style.overflowX = 'auto';
+    scroller.style.overflowY = 'hidden';
+  }
+
+  // largura mínima por mês, ativando scroll quando necessário
+  /* garante que não há largura forçada */
+  canvas.style.width = '100%';
+  canvas.style.minWidth = '0';
+
+  const pxPerLabel = 48; // afina entre 40–56
+  const container = scroller || outer || canvas.parentElement;
+  const available = (container && container.clientWidth) ? container.clientWidth : 0;
+  const needed = (labels.length * pxPerLabel);
+
+  // não encolhe abaixo da largura do contentor; só cresce quando precisar
+  canvas.style.width = '100%';
+  canvas.style.minWidth = Math.max(available, needed) + 'px';
+
+  // datasets e options
+  const data = {
+    labels,
+    datasets: [
+      { label: '123',  data: data123,  backgroundColor: COLORS['123'],  barPercentage: 0.7, categoryPercentage: 0.8 },
+      { label: '1248', data: data1248, backgroundColor: COLORS['1248'], barPercentage: 0.7, categoryPercentage: 0.8 },
+    ]
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    resizeDelay: 0,
+    layout: { padding: { left: 0, right: 0, top: 12, bottom: 0 } },
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${euroInt(c.parsed.y)}` } }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          autoSkip: false,
+          maxRotation: 0,
+          minRotation: 0,
+          font: { size: 11 },
+        },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { display: false, precision: 0 }, // escondemos os valores aqui (vão no gutter fixo)
+        grid: { color: 'rgba(0,0,0,0.06)' },
+        border: { display: false },
+      }
+    },
+    animation: {}
+  };
+
+  // criar chart e ligar “Y fixo”
+  const ctx = canvas.getContext('2d');
+  gFatMensal = new Chart(ctx, { type: 'bar', data, options });
+
+  const Y_LOCK_OFFSET = 1; // afina entre 1–4 px para alinhar à vista
+
+  const redrawY = () => {
+    if (ylock) lockYAxisLocal(gFatMensal, ylock);
+  };
+
+  // redesenha valores Y ao terminar a animação
+  gFatMensal.options.animation.onComplete = redrawY;
+
+  // override update para voltar a desenhar o gutter depois de cada update
+  const _update = gFatMensal.update.bind(gFatMensal);
+  gFatMensal.update = (...args) => { const rv = _update(...args); redrawY(); return rv; };
+
+  // redesenhar no resize
+  window.addEventListener('resize', () => { redrawY(); }, { passive: true });
+
+  // primeira renderização + gutter
+  gFatMensal.update();
 }
+
+
+
 
 // ------------------------ Tabela comparativa (anos x apt) -----------------------------
 // Ordem por ano: 123 Média | 1248 Média | 123 Total | 1248 Total
@@ -219,7 +348,7 @@ function renderTabelaFaturacaoMensal(faturas, targetId) {
     };
   });
 
-  const yearBg = ['#fbfbff', '#f9fffb', '#fffaf5', '#f8f9ff', '#f9f7ff'];
+  const yearBg = ['#fbfbff', '#e9ffebff', '#fffaf5', '#f8f9ff', '#f9f7ff'];
 
   // helper para célula de diferença
   const diffCell = (v123, v1248, bg) => {
@@ -567,7 +696,7 @@ function renderGraficoCheckinsDOW(faturas){
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      layout: { padding: { bottom: 18, left: 4, right: 4, top: 4 } }, // evita cortar labels
+      layout: { padding: { bottom: 50, left: 4, right: 4, top: 4 } }, // evita cortar labels
       plugins: {
         legend: { 
           position: 'bottom',

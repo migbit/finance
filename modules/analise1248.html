@@ -73,9 +73,35 @@
     </div>
 
     <div class="viz-card">
-      <h4>Barras de Progresso</h4>
-      <div id="progresso-anos" class="mt-4"></div>
+  <h4 id="progress-title">Progresso</h4>
+
+  <div class="donut-grid">
+    <div class="donut-card">
+      <canvas id="donut-parcial"></canvas>
+      <div class="donut-meta">
+        <strong id="label-parcial"></strong>
+        <span id="donut-parcial-text"></span>
+      </div>
     </div>
+
+    <div class="donut-card">
+      <canvas id="donut-ateset"></canvas>
+      <div class="donut-meta">
+        <strong id="label-ateset"></strong>
+        <span id="donut-ateset-text"></span>
+      </div>
+    </div>
+
+    <div class="donut-card">
+      <canvas id="donut-vs"></canvas>
+      <div class="donut-meta">
+        <strong id="label-vs"></strong>
+        <span id="donut-vs-text"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
 
     <div class="viz-card">
       <h4>Heatmap: Variação % vs. Ano Anterior</h4>
