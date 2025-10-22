@@ -360,13 +360,13 @@ class CryptoPortfolioApp {
       const realizedEUR = (t.eur || 0) - investedEUR;
       const realizedUSD = (t.usdt || 0) - investedUSD;
 
-      // principais
+      // Totais principais
       const kEUR = document.getElementById('kpiTotalEUR');
       const kUSD = document.getElementById('kpiTotalUSDT');
       if (kEUR) kEUR.textContent = FORMATTERS.eur.format(t.eur || 0);
       if (kUSD) kUSD.textContent = `$${FORMATTERS.usd.format(t.usdt || 0)}`;
 
-      // sublinhas (Realizado)
+      // Realizado sublinhas
       const subE = document.getElementById('kpiRealizedEUR');
       const subU = document.getElementById('kpiRealizedUSD');
       if (subE){
@@ -382,22 +382,18 @@ class CryptoPortfolioApp {
         subU.classList.toggle('neg', realizedUSD < 0);
       }
 
-      // Investido (mostra na moeda selecionada)
-      const kINV = document.getElementById('kpiInvested');
-      if (kINV){
-        if (this.state.currency === 'EUR') {
-          kINV.textContent = FORMATTERS.eur.format(investedEUR);
-        } else {
-          kINV.textContent = `$${FORMATTERS.usd.format(investedUSD)}`;
-        }
-      }
+      // Investido: EUR na linha principal, USD por baixo
+      const kINV  = document.getElementById('kpiInvested');
+      const kINVs = document.getElementById('kpiInvestedSub');
+      if (kINV)  kINV.textContent  = FORMATTERS.eur.format(investedEUR);
+      if (kINVs) kINVs.textContent = `$${FORMATTERS.usd.format(investedUSD)}`;
 
-      // Carimbo
-      const stamp = document.getElementById('kpiStamp');
-      if (generatedAt && stamp){
-        stamp.textContent = new Date(generatedAt).toLocaleString('pt-PT');
+      // (se ainda tiveres o carimbo, ele agora fica ao pé da tabela; mantemos por compat)
+      if (generatedAt && document.getElementById('kpiStamp')){
+        document.getElementById('kpiStamp').textContent = new Date(generatedAt).toLocaleString('pt-PT');
       }
     }
+
 
 
   /* ================== TABLE ================== */
@@ -456,20 +452,36 @@ class CryptoPortfolioApp {
           const totalUSD = rows.reduce((s,x)=>s+(x.valueUSDT||0),0);
           const totalEUR = rows.reduce((s,x)=>s+(x.valueEUR||0),0);
 
-          html += `
-            <tr class="subtotal-row" data-asset="${esc(asset)}" data-subtotal="1">
-              <td>Total ${esc(asset)}</td>
-              <td class="col-qty">${FORMATTERS.quantity.format(totalQty)}</td>
-              <td class="col-usd">$${FORMATTERS.usd.format(totalUSD)}</td>
-              <td class="col-eur">${FORMATTERS.eur.format(totalEUR)}</td>
-              <td class="col-loc">Total</td>
-              <td></td>
-            </tr>
-          `;
+        html += `
+          <tr class="subtotal-row" data-asset="${esc(asset)}" data-subtotal="1">
+            <td>Total ${esc(asset)}</td>
+            <td class="col-qty">${FORMATTERS.quantity.format(totalQty)}</td>
+            <td class="col-usd">$${FORMATTERS.usd.format(totalUSD)}</td>
+            <td class="col-eur">${FORMATTERS.eur.format(totalEUR)}</td>
+            <td class="col-loc"></td>
+            <td></td>
+          </tr>
+        `;
         }
       }
 
       tbody.innerHTML = html;
+
+      // === Mostrar data de geração ===
+      const stampDivId = 'table-stamp';
+      let stampDiv = document.getElementById(stampDivId);
+      if (!stampDiv) {
+        stampDiv = document.createElement('div');
+        stampDiv.id = stampDivId;
+        stampDiv.className = 'table-stamp';
+        tbody.parentElement.insertAdjacentElement('afterend', stampDiv);
+      }
+      if (this.state.generatedAt) {
+        const d = new Date(this.state.generatedAt);
+        stampDiv.textContent = `Gerado em: ${d.toLocaleString('pt-PT')}`;
+      }
+
+
       this.bindTableEvents();
       this.applyCurrencyMode();
     }

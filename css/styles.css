@@ -1311,3 +1311,11 @@ body[data-page="dca"] .juro-card { max-width: 680px; margin: 10px 0 0 0; }
 @media (max-width: 800px){
   .kpis-grid{ grid-template-columns:1fr 1fr; }
 }
+
+.table-stamp {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: #6b7280;
+  text-align: left;
+  padding-left: 4px;
+}
