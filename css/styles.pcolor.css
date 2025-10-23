@@ -101,7 +101,7 @@ header h1{
   padding: var(--space-5) var(--space-4);
   text-align:center;
   background: rgba(255,255,255,.03);
-  border-bottom:1px solid rgba(255,255,255,.08);
+  border-bottom: none;
 }
 
 #menu-icon,.menu-icon{
@@ -155,7 +155,7 @@ nav{flex:1; padding: var(--space-3) 0}
 
 #nav-menu .login-block a:hover,
 #nav-menu .login-block #user-name:hover {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 #nav-menu .menu-title {
@@ -235,7 +235,7 @@ table{
 th,td{
   padding: 14px 12px;
   text-align: center;
-  border-bottom:1px solid var(--divider);
+  border-bottom: none;
   color: var(--text);
 }
 th{
@@ -415,7 +415,7 @@ body[data-page="dca"] .page-title { margin-bottom: 1.2rem }
 .table-dca th, .table-dca td{ 
   padding: 10px 12px; 
   text-align: center; 
-  border-bottom: 1px solid var(--divider); 
+  border-bottom: none; 
   color: var(--text); 
   vertical-align: middle;
   white-space: nowrap; /* prevent text wrapping in cells */
@@ -529,7 +529,7 @@ body[data-page="dca"] .page-title { margin-bottom: 1.2rem }
   font-size: 1.3rem;
   margin-bottom: var(--space-3);
   padding-top: var(--space-4);
-  border-bottom: 2px solid var(--p3);
+  border-bottom: none;
   padding-bottom: var(--space-2);
   display: flex;
   align-items: center;

@@ -592,7 +592,7 @@ if (a > BASE_YEAR) {
   });
   html += `</tr>`;
 
-  html += `</tbody></table><hr class="divider">`;
+  html += `</tbody></table>`;
   el.innerHTML = html;
 }
 
@@ -943,7 +943,7 @@ function renderTabelaLimpeza1231248(faturas, targetId) {
   });
   html += `</tr>`;
 
-  html += `</tbody></table><hr class="divider">`;
+  html += `</tbody></table>`;
   el.innerHTML = html;
 }
 
@@ -1054,7 +1054,7 @@ function renderTabelaNoites1231248(faturas, targetId) {
     `;
   });
 
-  html += `</tbody></table><hr class="divider">`;
+  html += `</tbody></table>`;
   el.innerHTML = html;
 }
 
@@ -1198,7 +1198,7 @@ function renderTabelaHospedes1231248(faturas, targetId) {
     </tr>`;
   });
 
-  html += `</tbody></table><hr class="divider">`;
+  html += `</tbody></table>`;
   el.innerHTML = html;
 }
 

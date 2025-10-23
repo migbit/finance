@@ -603,7 +603,7 @@ if (a > BASE_YEAR) {
   });
   html += `</tr>`;
 
-  html += `</tbody></table><hr class="divider">`;
+  html += `</tbody></table>`;
   el.innerHTML = html;
 }
 
@@ -1028,7 +1028,7 @@ function renderTabelaNoites123(faturas, targetId) {
     `;
   });
 
-  html += `</tbody></table><hr class="divider">`;
+  html += `</tbody></table>`;
 
   el.innerHTML = html;
 }
@@ -1168,7 +1168,7 @@ function renderTabelaHospedes123(faturas, targetId) {
     </tr>`;
   });
 
-  html += `</tbody></table><hr class="divider">`;
+  html += `</tbody></table>`;
   el.innerHTML = html;
 }
 
