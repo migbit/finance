@@ -3,19 +3,6 @@
 import { db } from './script.js';
 import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-// Dados manuais (mantém só se precisares de mock). Podes remover entradas do 123 para reduzir ruído.
-const manualFaturasEstatica = [
-  { ano: 2024, mes: 1, apartamento: '1248', valorTransferencia: 3851,    taxaAirbnb: 0 },
-  { ano: 2024, mes: 2, apartamento: '1248', valorTransferencia: 1454,    taxaAirbnb: 0 },
-  { ano: 2024, mes: 3, apartamento: '1248', valorTransferencia: 2678,    taxaAirbnb: 0 },
-  { ano: 2024, mes: 4, apartamento: '1248', valorTransferencia: 6323,    taxaAirbnb: 0 },
-  { ano: 2024, mes: 5, apartamento: '1248', valorTransferencia: 4806.61, taxaAirbnb: 0 },
-  { ano: 2024, mes: 6, apartamento: '1248', valorTransferencia: 6206,    taxaAirbnb: 0 },
-  { ano: 2024, mes: 7, apartamento: '1248', valorTransferencia: 6015.30, taxaAirbnb: 0 },
-  { ano: 2024, mes: 8, apartamento: '1248', valorTransferencia: 7777,    taxaAirbnb: 0 },
-  { ano: 2024, mes: 9, apartamento: '1248', valorTransferencia: 6780.52, taxaAirbnb: 0 },
-];
-
 let chartTotal1248 = null;
 let chartOcupacao1248 = null;
 
@@ -26,8 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function carregarTodosRelatorios1248() {
   const firebaseFaturas = await carregarFaturas1248();
   const currentYear = new Date().getFullYear();
-  const faturas = firebaseFaturas
-    .concat(manualFaturasEstatica)
+  const faturas = consolidarFaturas(firebaseFaturas)
     .filter(f => Number(f.ano) === 2024 || Number(f.ano) === currentYear);
 
   gerarAnaliseFaturacao1248(faturas);         // gráfico + barras (só 1248)
@@ -40,6 +26,32 @@ async function carregarTodosRelatorios1248() {
   renderTabelaHospedes1248(faturas, 'tabela-hospedes-1248'); // <h3 class="center">, sem "(Apt 1248)"
   renderCheckinsPorDiaSemana1248(faturas);
 }
+
+
+// Evita duplos: se houver reservas detalhadas (checkIn/noites/tipo='reserva')
+// para (ano,mes,apartamento), ignora o registo mensal desse mês/apt.
+function consolidarFaturas(arr) {
+  const buckets = new Map();
+  for (const f of arr) {
+    const key = `${f.ano}-${f.mes}-${String(f.apartamento)}`;
+    const isDetailed =
+      (typeof f.checkIn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.checkIn)) ||
+      Number(f.noites || 0) > 0 ||
+      f.tipo === 'reserva';
+
+    if (!buckets.has(key)) buckets.set(key, { detailed: [], manual: [] });
+    const b = buckets.get(key);
+    (isDetailed ? b.detailed : b.manual).push(f);
+  }
+
+  const out = [];
+  for (const { detailed, manual } of buckets.values()) {
+    if (detailed.length) out.push(...detailed);
+    else out.push(...manual);
+  }
+  return out;
+}
+
 
 async function carregarFaturas1248() {
   try {
