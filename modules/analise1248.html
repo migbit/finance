@@ -35,6 +35,7 @@
           <li><a href="analise1248.html" class="active">🏠 1248</a></li>
           <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
           <li><a href="caixa.html">💰 Caixa</a></li>
+          <li><a href="tmt.html">🧳 Taxa Turística</a></li>
           <li><a href="diversos.html">📋 Diversos</a></li>
 
           <li class="separator"></li>
@@ -48,8 +49,10 @@
     </header>
 
 <main>
+
+  <h2 class="center">Análise 1248</h2>
+
   <section class="report-section">
-    <h2 class="center">Análise 1248</h2>
 
     <div class="viz-card">
       <h4>Faturação</h4>
@@ -58,81 +61,94 @@
       </div>
       <div id="tabela-comparativa-anos-1248" class="mt-2"></div>
     </div>
+  </section>
 
+  <section class="report-section">
     <div class="viz-card">
       <h4>Valor médio/noite por reserva</h4>
       <div class="chart-wrapper" style="height:260px">
         <canvas id="chart-vm-reservas-1248"></canvas>
       </div>
     </div>
+  </section>
 
+  <section class="report-section">
     <div class="viz-card">
       <h4>Taxa de Ocupação</h4>
       <div class="chart-wrapper" style="height:260px">
         <canvas id="chart-ocupacao-1248"></canvas>
       </div>
     </div>
+  </section>
 
+  <section class="report-section">
     <div class="viz-card">
-  <h4 id="progress-title">Progresso</h4>
-
-  <div class="donut-grid">
-    <div class="donut-card">
-      <canvas id="donut-parcial"></canvas>
-      <div class="donut-meta">
-        <strong id="label-parcial"></strong>
-        <span id="donut-parcial-text"></span>
+      <h4 id="progress-title">Progresso</h4>
+      <div class="donut-grid">
+        <div class="donut-card">
+          <canvas id="donut-parcial"></canvas>
+          <div class="donut-meta">
+            <strong id="label-parcial"></strong>
+            <span id="donut-parcial-text"></span>
+          </div>
+        </div>
+        <div class="donut-card">
+          <canvas id="donut-ateset"></canvas>
+          <div class="donut-meta">
+            <strong id="label-ateset"></strong>
+            <span id="donut-ateset-text"></span>
+          </div>
+        </div>
+        <div class="donut-card">
+          <canvas id="donut-vs"></canvas>
+          <div class="donut-meta">
+            <strong id="label-vs"></strong>
+            <span id="donut-vs-text"></span>
+          </div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <div class="donut-card">
-      <canvas id="donut-ateset"></canvas>
-      <div class="donut-meta">
-        <strong id="label-ateset"></strong>
-        <span id="donut-ateset-text"></span>
-      </div>
-    </div>
-
-    <div class="donut-card">
-      <canvas id="donut-vs"></canvas>
-      <div class="donut-meta">
-        <strong id="label-vs"></strong>
-        <span id="donut-vs-text"></span>
-      </div>
-    </div>
-  </div>
-</div>
-
-
+  <section class="report-section">
     <div class="viz-card">
       <h4>Heatmap: Variação % vs. Ano Anterior</h4>
       <div id="heatmap-variacao"></div>
     </div>
+  </section>
 
+  <section class="report-section">
     <div class="viz-card">
       <h4>Taxa de Limpeza</h4>
       <div id="tabela-limpeza-1248"></div>
     </div>
+  </section>
 
+  <section class="report-section">
     <div class="viz-card">
       <h4>Noites</h4>
       <div id="tabela-noites-1248"></div>
     </div>
+  </section>
 
+  <section class="report-section">
     <div class="viz-card">
       <h4>Hóspedes</h4>
       <div id="tabela-hospedes-1248"></div>
     </div>
+  </section>
 
+  <section class="report-section">
     <div class="viz-card">
       <h4>Dias da Semana – Check-ins</h4>
       <div class="chart-wrapper" style="height:280px">
         <canvas id="chart-checkins-dia-semana"></canvas>
       </div>
     </div>
-
   </section>
+
 </main>
+
 
 <!-- Load Chart.js BEFORE your module -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

@@ -659,19 +659,23 @@ function renderTabelaComparativaAnos1248(faturas, targetId) {
   });
   html += `</tr>`;
 
-  // Média mensal (Total/12) — sem Δ nesta linha
-html += `<tr><td><strong>Média mensal</strong></td>`;
-anos.forEach((a, idx) => {
-  const bg = yearBg[idx % yearBg.length];
-  const totalAno = totals[a].reduce((s, v) => s + v, 0);
-  const mediaMensal = totalAno / 12;
+      // Média mensal (Total/12) + Δ
+    html += `<tr><td><strong>Média mensal</strong></td>`;
+    anos.forEach((a, idx) => {
+      const bg = yearBg[idx % yearBg.length];
+      const totalAno = totals[a].reduce((s, v) => s + v, 0);
+      const mediaMensal = totalAno / 12;
 
-  if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">—</td>`;
-  html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(mediaMensal)}</strong></td>`;
+      if (mostraMedia[a]) html += `<td style="background:${bg}; text-align:center">—</td>`;
+      html += `<td style="background:${bg}; text-align:center"><strong>${euroInt(mediaMensal)}</strong></td>`;
 
-  // Se quiseres mesmo um Δ anual médio, colocamos na linha "Total", não aqui.
-});
-html += `</tr>`;
+      if (a > BASE_YEAR) {
+        const totalPrev = totals[a - 1]?.reduce?.((s, v) => s + v, 0) ?? 0;
+        const mediaMensalPrev = totalPrev / 12;
+        html += yoyCell(mediaMensal, mediaMensalPrev, bg);
+      }
+    });
+    html += `</tr>`;
 
 
   html += `</tbody></table>`;

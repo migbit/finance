@@ -190,7 +190,7 @@ main{
   max-width: 100%;
   overflow: visible; /* allow dropdowns to overflow */
 }
-.page-title,h2,h3,h4{ color:var(--text); font-weight:700 }
+.page-title,h2,h3,h4{ color:var(--text); font-weight:700;text-align: center; margin-bottom: 1rem; }
 
 /* ---- Inputs & Buttons ---- */
 label{display:block; margin-bottom:6px; font-size:.9rem; color: var(--text-dim)}
@@ -757,60 +757,6 @@ body[data-page="analise123vs1248"] main {
   padding: var(--space-6) var(--space-6);
 }
 
-/* Section structure and spacing */
-body[data-page="analise123vs1248"] .report-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  width: 100%;
-  max-width: 98vw;
-  margin: 0 auto;
-}
-
-/* Titles */
-body[data-page="analise123vs1248"] h2.center {
-  text-align: center;
-  font-size: 1.6rem;
-  font-weight: 700;
-  color: var(--p1);
-  margin-bottom: 1rem;
-}
-
-body[data-page="analise123vs1248"] h3.center {
-  text-align: center;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--text);
-  margin: 1.2rem 0 0.8rem;
-}
-
-/* Chart containers */
-body[data-page="analise123vs1248"] .viz-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow-1);
-  padding: var(--space-4);
-  width: 100%;
-  max-width: 98vw;
-  margin: 0 auto;
-}
-
-/* Make the charts responsive and consistent */
-body[data-page="analise123vs1248"] canvas {
-  width: 100% !important;
-  height: auto !important;
-}
-
-/* Let the sections and chart containers breathe full width */
-body[data-page="analise123vs1248"] .report-section,
-body[data-page="analise123vs1248"] .chart-wrapper,
-body[data-page="analise123vs1248"] .chart-and-table {
-  width: 100%;
-  max-width: none;
-  margin: 0 auto;
-}
-
 /* Cards and canvases */
 body[data-page="analise123vs1248"] .viz-card {
   background: var(--card);
@@ -967,4 +913,5 @@ body[data-page="analise123vs1248"] .chart-wrap.has-y-lock .scroller::-webkit-scr
 body[data-page="analise123vs1248"] .chart-wrap.has-y-lock .scroller::-webkit-scrollbar-thumb {
   background: rgba(0,0,0,.18);
   border-radius: 8px;
+
 }

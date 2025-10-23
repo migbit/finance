@@ -35,6 +35,7 @@
           <li><a href="analise1248.html">🏠 1248</a></li>
           <li><a href="analise123vs1248.html" class="active">⚖️ 123 vs 1248</a></li>
           <li><a href="caixa.html">💰 Caixa</a></li>
+          <li><a href="tmt.html">🧳 Taxa Turística</a></li>
           <li><a href="diversos.html">📋 Diversos</a></li>
 
           <li class="separator"></li>
@@ -48,9 +49,11 @@
     </header>
 
 <main class="report-wide">
+
+  <h2 class="center">Comparativo lado a lado</h2>
+
   <section class="report-section">
-    <section class="relatorio-container" id="analise-123vs1248">
-      <h2 class="center">Comparativo lado a lado</h2>
+    <div class="relatorio-container" id="analise-123vs1248">
 
       <h3 class="center">Faturação mensal</h3>
       <div class="chart-and-table">
@@ -60,23 +63,32 @@
         <div id="tabela-fat-mensal" class="mt-2 viz-card"></div>
       </div>
 
-      <h3 class="center">Valor médio por noite (€/noite)</h3>
-      <div class="chart-wrapper viz-card" style="height:260px">
-        <canvas id="chart-media-noite"></canvas>
-      </div>
-
-      <h3 class="center">Taxa de ocupação (%)</h3>
-      <div class="chart-wrapper viz-card" style="height:260px">
-        <canvas id="chart-ocupacao"></canvas>
-      </div>
-
-      <h3 class="center">Check-ins por dia da semana</h3>
-      <div class="chart-wrapper viz-card" style="height:260px">
-        <canvas id="chart-checkins-dow"></canvas>
-      </div>
-    </section>
+    </div>
   </section>
+
+  <section class="report-section">
+    <h3 class="center">Valor médio por noite (€/noite)</h3>
+    <div class="chart-wrapper viz-card" style="height:260px">
+      <canvas id="chart-media-noite"></canvas>
+    </div>
+  </section>
+
+  <section class="report-section">
+    <h3 class="center">Taxa de ocupação (%)</h3>
+    <div class="chart-wrapper viz-card" style="height:260px">
+      <canvas id="chart-ocupacao"></canvas>
+    </div>
+  </section>
+
+  <section class="report-section">
+    <h3 class="center">Check-ins por dia da semana</h3>
+    <div class="chart-wrapper viz-card" style="height:260px">
+      <canvas id="chart-checkins-dow"></canvas>
+    </div>
+  </section>
+
 </main>
+
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="../js/script.js"></script>

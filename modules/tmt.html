@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Relatório Taxa Municipal Turística</title>
+  <link rel="stylesheet" href="/css/styles.pcolor.css">
+  <link rel="stylesheet" href="/css/mobile.css">
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+</head>
+<body>
+  
+  <header>
+      <nav id="nav-menu">
+        <ul>
+          <!-- Login/User section at top -->
+          <li id="login-section" class="login-block">
+            <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+            <span id="user-info" class="user-visible" style="display:none;">
+              <a href="#" id="user-name">👤 Username</a>
+            </span>
+          </li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Apartamentos -->
+          <li class="menu-title">Apartamentos</li>
+          <li><a href="faturas.html">📄 Faturas</a></li>
+          <li><a href="analise.html">📊 Análise</a></li>
+          <li><a href="analise123.html">🏠 123</a></li>
+          <li><a href="analise1248.html">🏠 1248</a></li>
+          <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+          <li><a href="caixa.html">💰 Caixa</a></li>
+          <li><a href="tmt.html" class="active">🧳 Taxa Turística</a></li>
+          <li><a href="diversos.html">📋 Diversos</a></li>
+
+          <li class="separator"></li>
+
+          <!-- Secção: Investimentos -->
+          <li class="menu-title">Investimentos</li>
+          <li><a href="dca.html">📈 DCA</a></li>
+          <li><a href="crypto.html">🚀 Cripto</a></li>
+        </ul>
+      </nav>
+    </header>
+
+<main>
+  <h2 class="center">Relatório Trimestral da Taxa Municipal Turística</h2>
+
+  <!-- Apt 123 -->
+  <section class="report-section">
+    <div class="viz-card">
+      <h3 class="center">Apartamento 123 - T.M.T</h3>
+      <div id="tmt-123"></div>
+    </div>
+  </section>
+
+  <!-- Apt 1248 -->
+  <section class="report-section">
+    <div class="viz-card">
+      <h3 class="center">Apartamento 1248 - T.M.T</h3>
+      <div id="tmt-1248"></div>
+    </div>
+  </section>
+</main>
+
+
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/tmt.js"></script>
+
+  <script>
+    const menuIcon = document.getElementById('menu-icon');
+    const navMenu = document.getElementById('nav-menu');
+    menuIcon.addEventListener('click', () => navMenu.classList.toggle('active'));
+  </script>
+</body>
+</html>
