@@ -5,10 +5,10 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Crypto Portfolio</title>
-
-  <!-- Site-wide styles -->
   <link rel="stylesheet" href="/css/styles.pcolor.css">
+  <link rel="stylesheet" href="/css/mobile.css">
   <link rel="icon" href="../favicon.ico" type="image/x-icon">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   </head>
 <body>
@@ -53,19 +53,23 @@
         <section class="report-section">
       <div class="kpis-grid">
         <div class="kpi-card">
-          <div class="kpi-label">Total (EUR)</div>
+          <div class="kpi-label">Total</div>
           <div id="kpiTotalEUR" class="kpi-value">—</div>
-          <div id="kpiRealizedEUR" class="kpi-sub">—</div>
+          <div id="kpiTotalUSD" class="kpi-sub">—</div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-label">Total ($)</div>
-          <div id="kpiTotalUSDT" class="kpi-value">—</div>
+          <div class="kpi-label">Realizado</div>
+          <div id="kpiRealizedEUR" class="kpi-value">—</div>
           <div id="kpiRealizedUSD" class="kpi-sub">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Investido</div>
           <div id="kpiInvested" class="kpi-value">—</div>
           <div id="kpiInvestedSub" class="kpi-sub">—</div>
+        </div>
+        <div class="kpi-card kpi-card-chart" id="kpi-trend-card">
+          <div class="kpi-label">Tendência Mensal</div>
+          <canvas id="kpi-trend-chart"></canvas>
         </div>
       </div>
     </section>
@@ -74,7 +78,6 @@
     <section class="report-section">
        <div class="toolbar">
         <button id="btn-add" class="btn">+ Adicionar Crypto</button>
-        <button id="btn-invested" class="btn">Investido</button>
         <button id="btn-pdf" class="btn">Exportar PDF</button>
         <button id="btn-eur" class="btn btn-toggle active">EUR</button>
         <button id="btn-usd" class="btn btn-toggle">USD</button>
@@ -119,7 +122,7 @@
     </section>
   </main>
 
-  <!-- Modal (no price field anymore) -->
+  <!-- Modal (enhanced with cost field) -->
   <div id="modal-backdrop" class="modal-backdrop" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <h3 id="modal-title">Add asset</h3>
@@ -130,6 +133,17 @@
       <div class="field">
         <label for="m-qty">Quantity</label>
         <input id="m-qty" type="number" step="any" placeholder="0.0" />
+      </div>
+      <div class="field">
+        <label for="m-cost">Cost (0 for airdrops)</label>
+        <input id="m-cost" type="number" step="any" placeholder="0.0" />
+      </div>
+      <div class="field">
+        <label>Currency</label>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" id="m-curr-eur" class="btn btn-toggle active">EUR</button>
+          <button type="button" id="m-curr-usd" class="btn btn-toggle">USD</button>
+        </div>
       </div>
       <div class="field">
         <label for="m-loc">Location</label>
@@ -178,6 +192,45 @@
 
       <div class="modal-actions">
         <button id="inv-close" class="btn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sell Modal -->
+  <div id="sell-modal-backdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>Vender <span id="sell-asset-name"></span></h3>
+      <div class="field">
+        <label for="sell-location">Localização</label>
+        <select id="sell-location"></select>
+      </div>
+      <div class="field">
+        <label for="sell-qty">Quantidade a vender</label>
+        <input id="sell-qty" type="number" step="any" placeholder="0.0" />
+        <small id="sell-max-qty" style="color: #6b7280;"></small>
+      </div>
+      <div class="modal-actions">
+        <button id="sell-cancel" class="btn">Cancel</button>
+        <button id="sell-confirm" class="btn primary">Vender</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expanded Chart Modal -->
+  <div id="chart-modal-backdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" style="max-width: 900px;">
+      <h3>Tendência de Realizado Mensal</h3>
+      <div class="toolbar" style="justify-content: center; margin-bottom: 16px;">
+        <button class="btn btn-toggle" data-range="3m">3M</button>
+        <button class="btn btn-toggle active" data-range="6m">6M</button>
+        <button class="btn btn-toggle" data-range="1y">1Y</button>
+        <button class="btn btn-toggle" data-range="all">All</button>
+      </div>
+      <div style="position: relative; height: 400px;">
+        <canvas id="chart-modal-canvas"></canvas>
+      </div>
+      <div class="modal-actions" style="margin-top: 16px;">
+        <button id="chart-modal-close" class="btn">Fechar</button>
       </div>
     </div>
   </div>

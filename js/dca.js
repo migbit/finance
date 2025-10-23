@@ -580,7 +580,25 @@ async function boot(skipParamUI){
   renderTable(rows);
   bindGlobalButtons();
   applyYearVisibility(); // aplica regra ao arranque
+  
+  // Add scroll indicators to table wrappers
+  requestAnimationFrame(addScrollIndicators);
 }
+
+// Add visual indicators for scrollable tables
+function addScrollIndicators() {
+  document.querySelectorAll('.table-wrap').forEach(wrap => {
+    const hasScroll = wrap.scrollWidth > wrap.clientWidth;
+    if (hasScroll) {
+      wrap.classList.add('has-scroll');
+    } else {
+      wrap.classList.remove('has-scroll');
+    }
+  });
+}
+
+// Update scroll indicators on window resize
+window.addEventListener('resize', addScrollIndicators);
 
 boot();
 

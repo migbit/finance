@@ -24,7 +24,8 @@ const CONFIG = {
   },
   META_COLLECTION: 'cryptoportfolio_meta',
   META_DOC: 'invested', // stores investedUSD, investedEUR
-  INVESTMENTS_COLLECTION: 'cryptoportfolio_investments' // stores individual investments
+  INVESTMENTS_COLLECTION: 'cryptoportfolio_investments', // stores individual investments
+  MONTHLY_REALIZED_COLLECTION: 'cryptoportfolio_monthly_realized' // stores monthly realized values
 };
 
 CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
@@ -199,6 +200,16 @@ class AppState {
     
     // Individual investments per asset { assetSymbol: [{amount, currency, date, id}, ...] }
     this.investments = new Map();
+    
+    // Monthly realized data for chart
+    this.monthlyRealized = [];
+    
+    // Chart instances
+    this.trendChart = null;
+    this.expandedChart = null;
+    
+    // Modal currency for add crypto
+    this.modalCurrency = 'EUR';
   }
 
   get visibleRows(){
@@ -232,7 +243,8 @@ class CryptoPortfolioApp {
         this.loadSavedLocations(),
         this.loadManualAssets(),
         this.loadInvested(),
-        this.loadInvestments()
+        this.loadInvestments(),
+        this.loadMonthlyRealized()
       ]);
       const api = await ApiService.fetchPortfolio();
       this.state.binanceRows = this.normalizeBinance(api);
@@ -251,6 +263,7 @@ class CryptoPortfolioApp {
 
       await this.renderAll(api.generatedAt);
       this.setupEvents();
+      this.checkAndSaveMonthlyRealized();
       this.initialized = true;
     } catch (e) {
       this.showError(e.message || String(e));
@@ -298,6 +311,36 @@ class CryptoPortfolioApp {
         originalAmount: Number(inv.originalAmount || 0)
       });
     }
+  }
+
+  async loadMonthlyRealized(){
+    const data = await FirebaseService.getCollection(CONFIG.MONTHLY_REALIZED_COLLECTION);
+    this.state.monthlyRealized = data
+      .map(d => ({
+        month: d.month,
+        realizedEUR: Number(d.realizedEUR || 0),
+        realizedUSD: Number(d.realizedUSD || 0),
+        timestamp: new Date(d.month + '-01').getTime()
+      }))
+      .sort((a, b) => a.timestamp - b.timestamp);
+  }
+
+  async checkAndSaveMonthlyRealized(){
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    
+    const t = this.state.totals;
+    const totalInv = this.getTotalInvestedAmounts();
+    const realizedEUR = (t.eur || 0) - totalInv.eur;
+    const realizedUSD = (t.usdt || 0) - totalInv.usd;
+    
+    await FirebaseService.setDocument(CONFIG.MONTHLY_REALIZED_COLLECTION, currentMonth, {
+      month: currentMonth,
+      realizedEUR,
+      realizedUSD
+    });
+    
+    await this.loadMonthlyRealized();
   }
 
   getAssetInvestedAmounts(asset) {
@@ -409,40 +452,85 @@ class CryptoPortfolioApp {
       const realizedEUR = (t.eur || 0) - investedEUR;
       const realizedUSD = (t.usdt || 0) - investedUSD;
 
-      // Totais principais
+      // 1st KPI: Total (EUR primary, USD underneath)
       const kEUR = document.getElementById('kpiTotalEUR');
-      const kUSD = document.getElementById('kpiTotalUSDT');
+      const kUSD = document.getElementById('kpiTotalUSD');
       if (kEUR) kEUR.textContent = FORMATTERS.eur.format(t.eur || 0);
       if (kUSD) kUSD.textContent = `$${FORMATTERS.usd.format(t.usdt || 0)}`;
 
-      // Realizado sublinhas
-      const subE = document.getElementById('kpiRealizedEUR');
-      const subU = document.getElementById('kpiRealizedUSD');
-      if (subE){
+      // 2nd KPI: Realizado (EUR primary, USD underneath, with colors)
+      const kRealEUR = document.getElementById('kpiRealizedEUR');
+      const kRealUSD = document.getElementById('kpiRealizedUSD');
+      if (kRealEUR){
         const sign = realizedEUR >= 0 ? '+' : '−';
-        subE.textContent = `${sign}${FORMATTERS.eur.format(Math.abs(realizedEUR))}`;
-        subE.classList.toggle('pos', realizedEUR >= 0);
-        subE.classList.toggle('neg', realizedEUR < 0);
+        kRealEUR.textContent = `${sign}${FORMATTERS.eur.format(Math.abs(realizedEUR))}`;
+        kRealEUR.classList.toggle('pos', realizedEUR >= 0);
+        kRealEUR.classList.toggle('neg', realizedEUR < 0);
       }
-      if (subU){
+      if (kRealUSD){
         const sign = realizedUSD >= 0 ? '+' : '−';
-        subU.textContent = `${sign}$${FORMATTERS.usd.format(Math.abs(realizedUSD))}`;
-        subU.classList.toggle('pos', realizedUSD >= 0);
-        subU.classList.toggle('neg', realizedUSD < 0);
+        kRealUSD.textContent = `${sign}$${FORMATTERS.usd.format(Math.abs(realizedUSD))}`;
+        kRealUSD.classList.toggle('pos', realizedUSD >= 0);
+        kRealUSD.classList.toggle('neg', realizedUSD < 0);
       }
 
-      // Investido: EUR na linha principal, USD por baixo
+      // 3rd KPI: Investido (EUR primary, USD underneath)
       const kINV  = document.getElementById('kpiInvested');
       const kINVs = document.getElementById('kpiInvestedSub');
       if (kINV)  kINV.textContent  = FORMATTERS.eur.format(investedEUR);
       if (kINVs) kINVs.textContent = `$${FORMATTERS.usd.format(investedUSD)}`;
 
-      // (se ainda tiveres o carimbo, ele agora fica ao pé da tabela; mantemos por compat)
-      if (generatedAt && document.getElementById('kpiStamp')){
-        document.getElementById('kpiStamp').textContent = new Date(generatedAt).toLocaleString('pt-PT');
-      }
+      // 4th KPI: Trend chart
+      this.renderTrendChart();
     }
 
+
+
+  renderTrendChart(){
+    const canvas = document.getElementById('kpi-trend-chart');
+    if (!canvas) return;
+
+    // Get last 12 months of data
+    const last12 = this.state.monthlyRealized.slice(-12);
+    const labels = last12.map(d => {
+      const [year, month] = d.month.split('-');
+      return new Date(year, month - 1).toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
+    });
+    const dataEUR = last12.map(d => d.realizedEUR);
+
+    if (this.trendChart) {
+      this.trendChart.destroy();
+    }
+
+    this.trendChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: dataEUR,
+          borderColor: '#526D82',
+          backgroundColor: 'rgba(82, 109, 130, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false }
+        },
+        scales: {
+          x: { display: false },
+          y: { display: false }
+        }
+      }
+    });
+  }
 
 
   /* ================== TABLE ================== */
@@ -481,10 +569,12 @@ class CryptoPortfolioApp {
         // linhas individuais
         for (const r of rows){
           const actions = r.source==='manual'
-            ? `<button class="btn btn-invest" data-invest="${esc(r.asset)}">Investimento</button>
+            ? `<button class="btn btn-invest" data-invest="${esc(r.asset)}">+</button>
+              <button class="btn btn-sell" data-sell="${esc(r.asset)}" data-location="${esc(r.location)}">Vender</button>
               <button class="btn btn-edit" data-edit="${esc(r.asset)}">Edit</button>
               <button class="btn btn-del" data-del="${esc(r.asset)}">Delete</button>`
-            : `<button class="btn btn-invest" data-invest="${esc(r.asset)}">Investimento</button>
+            : `<button class="btn btn-invest" data-invest="${esc(r.asset)}">+</button>
+              <button class="btn btn-sell" data-sell="${esc(r.asset)}" data-location="${esc(r.location)}">Vender</button>
               <span class="status" id="status-${esc(r.asset)}"></span>`;
           const sel = this.renderLocationSelect(r.asset, r.location);
 
@@ -622,6 +712,12 @@ class CryptoPortfolioApp {
     
     // Investment modal
     this.setupInvestmentModal();
+    
+    // Sell modal
+    this.setupSellModal();
+    
+    // Chart modal
+    this.setupChartModal();
 
     // PDF
     this.setupPdf();
@@ -642,30 +738,7 @@ class CryptoPortfolioApp {
         this.applyCurrencyMode();
       });
     }
-
-      // Investido (somar ao existente)
-      const btnINV = DOM.$('#btn-invested');
-      if (btnINV){
-        btnINV.addEventListener('click', async ()=>{
-          try {
-            const mode = this.state.currency;
-            const current = mode==='EUR' ? (this.state.investedEUR||0) : (this.state.investedUSD||0);
-            const label = mode==='EUR' ? 'Adicionar ao Investido (EUR) — pode ser negativo' 
-                                      : 'Adicionar ao Investido ($) — pode ser negativo';
-            const inp = prompt(`${label}\nAtual: ${mode==='EUR' ? FORMATTERS.eur.format(current) : '$'+FORMATTERS.usd.format(current)}\n\nValor a adicionar:`, '0');
-            if (inp === null) return;
-            const delta = Number(inp);
-            if (!isFinite(delta)) { alert('Valor inválido'); return; }
-
-            await this.addInvestedDelta(delta, mode);
-            this.renderKPIs();
-          } catch (e){
-            alert('Falha ao atualizar investido');
-            console.error(e);
-          }
-        });
-      }
-    }
+  }
 
   /* ===== Modal Add/Edit manual asset ===== */
   setupModal(){
@@ -674,6 +747,23 @@ class CryptoPortfolioApp {
     if (locSelect){
       locSelect.innerHTML = CONFIG.LOCATION_CHOICES.map(l=>`<option value="${this.escapeHtml(l)}">${this.escapeHtml(l)}</option>`).join('');
     }
+    
+    // Currency toggle
+    const btnEUR = DOM.$('#m-curr-eur');
+    const btnUSD = DOM.$('#m-curr-usd');
+    if (btnEUR && btnUSD) {
+      btnEUR.addEventListener('click', () => {
+        this.modalCurrency = 'EUR';
+        btnEUR.classList.add('active');
+        btnUSD.classList.remove('active');
+      });
+      btnUSD.addEventListener('click', () => {
+        this.modalCurrency = 'USD';
+        btnUSD.classList.add('active');
+        btnEUR.classList.remove('active');
+      });
+    }
+    
     DOM.$('#btn-add')?.addEventListener('click', ()=>this.openAddModal());
     DOM.$('#m-cancel')?.addEventListener('click', ()=>this.closeModal());
     DOM.$('#m-save')?.addEventListener('click', ()=>this.saveModal());
@@ -822,7 +912,11 @@ class CryptoPortfolioApp {
     DOM.$('#modal-title').textContent = 'Add asset';
     DOM.$('#m-asset').value = '';
     DOM.$('#m-qty').value = '';
+    DOM.$('#m-cost').value = '0';
     DOM.$('#m-loc').value = 'Other';
+    this.modalCurrency = 'EUR';
+    DOM.$('#m-curr-eur').classList.add('active');
+    DOM.$('#m-curr-usd').classList.remove('active');
     DOM.enable(DOM.$('#m-asset'));
     DOM.show(DOM.$('#modal-backdrop'));
     DOM.$('#m-asset').focus();
@@ -833,18 +927,61 @@ class CryptoPortfolioApp {
     DOM.$('#m-asset').value = row?.asset || asset;
     DOM.disable(DOM.$('#m-asset'));
     DOM.$('#m-qty').value = row?.quantity || '';
+    DOM.$('#m-cost').value = '0';
     DOM.$('#m-loc').value = row?.location || 'Other';
     DOM.show(DOM.$('#modal-backdrop'));
   }
-  closeModal(){ DOM.hide(DOM.$('#modal-backdrop')); DOM.enable(DOM.$('#m-asset')); }
+  closeModal(){ 
+    DOM.hide(DOM.$('#modal-backdrop')); 
+    DOM.enable(DOM.$('#m-asset')); 
+  }
 
   async saveModal(){
     const asset = DOM.$('#m-asset').value.trim().toUpperCase();
     const qty = Number(DOM.$('#m-qty').value || 0);
+    const cost = Number(DOM.$('#m-cost').value || 0);
     const loc = DOM.$('#m-loc').value;
-    if (!asset || !isFinite(qty) || qty<=0){ alert('Asset/quantidade inválidos'); return; }
-    await FirebaseService.setDocument('cryptoportfolio_manual', asset, { asset, quantity: qty, location: loc });
+    
+    if (!asset || !isFinite(qty) || qty<=0){ 
+      alert('Asset/quantidade inválidos'); 
+      return; 
+    }
+    
+    // Save the asset
+    await FirebaseService.setDocument('cryptoportfolio_manual', asset, { 
+      asset, 
+      quantity: qty, 
+      location: loc 
+    });
+    
+    // If cost > 0, add as investment
+    if (cost > 0) {
+      const rate = this.state.usdtToEurRate || 1;
+      let amountUSD, amountEUR;
+      
+      if (this.modalCurrency === 'EUR') {
+        amountEUR = cost;
+        amountUSD = rate > 0 ? cost / rate : 0;
+      } else {
+        amountUSD = cost;
+        amountEUR = rate > 0 ? cost * rate : 0;
+      }
+      
+      const investmentData = {
+        asset: asset,
+        amountUSD,
+        amountEUR,
+        currency: this.modalCurrency,
+        originalAmount: cost,
+        date: new Date().toISOString().split('T')[0]
+      };
+      
+      const id = `${asset}_${Date.now()}`;
+      await FirebaseService.setDocument(CONFIG.INVESTMENTS_COLLECTION, id, investmentData);
+    }
+    
     await this.loadManualAssets();
+    await this.loadInvestments();
     this.closeModal();
     await this.renderAll();
   }
@@ -876,6 +1013,223 @@ class CryptoPortfolioApp {
     }));
     // investment
     DOM.$$('.btn-invest').forEach(b=>b.addEventListener('click', ()=>this.openInvestmentModal(b.getAttribute('data-invest'))));
+    // sell
+    DOM.$$('.btn-sell').forEach(b=>b.addEventListener('click', ()=>{
+      const asset = b.getAttribute('data-sell');
+      const location = b.getAttribute('data-location');
+      this.openSellModal(asset, location);
+    }));
+  }
+
+  /* ===== Sell Modal ===== */
+  setupSellModal(){
+    const modal = DOM.$('#sell-modal-backdrop');
+    DOM.$('#sell-cancel')?.addEventListener('click', ()=>this.closeSellModal());
+    DOM.$('#sell-confirm')?.addEventListener('click', ()=>this.confirmSell());
+    modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeSellModal(); });
+  }
+
+  openSellModal(asset, location){
+    this.currentSellAsset = asset.toUpperCase();
+    this.currentSellLocation = location;
+    
+    DOM.$('#sell-asset-name').textContent = this.currentSellAsset;
+    
+    // Populate location dropdown with available locations for this asset
+    const assetRows = this.state.currentRows.filter(r => r.asset === this.currentSellAsset);
+    const locSelect = DOM.$('#sell-location');
+    if (locSelect) {
+      locSelect.innerHTML = assetRows
+        .map(r => `<option value="${this.escapeHtml(r.location)}" ${r.location === location ? 'selected' : ''}>${this.escapeHtml(r.location)}</option>`)
+        .join('');
+      
+      // Update max quantity when location changes
+      locSelect.addEventListener('change', (e) => {
+        const selectedLoc = e.target.value;
+        const row = assetRows.find(r => r.location === selectedLoc);
+        const maxQty = DOM.$('#sell-max-qty');
+        if (maxQty && row) {
+          maxQty.textContent = `Máximo: ${FORMATTERS.quantity.format(row.quantity)}`;
+        }
+      });
+    }
+    
+    // Set initial max quantity
+    const row = assetRows.find(r => r.location === location);
+    const maxQty = DOM.$('#sell-max-qty');
+    if (maxQty && row) {
+      maxQty.textContent = `Máximo: ${FORMATTERS.quantity.format(row.quantity)}`;
+    }
+    
+    DOM.$('#sell-qty').value = '';
+    DOM.show(DOM.$('#sell-modal-backdrop'));
+  }
+
+  closeSellModal(){
+    DOM.hide(DOM.$('#sell-modal-backdrop'));
+    this.currentSellAsset = null;
+    this.currentSellLocation = null;
+  }
+
+  async confirmSell(){
+    try {
+      const sellQty = parseFloat(DOM.$('#sell-qty').value);
+      const location = DOM.$('#sell-location').value;
+      
+      if (!isFinite(sellQty) || sellQty <= 0) {
+        alert('Por favor, insira uma quantidade válida');
+        return;
+      }
+      
+      // Find the asset row
+      const row = this.state.currentRows.find(r => 
+        r.asset === this.currentSellAsset && r.location === location
+      );
+      
+      if (!row) {
+        alert('Ativo não encontrado');
+        return;
+      }
+      
+      if (sellQty > row.quantity) {
+        alert('Quantidade excede o disponível');
+        return;
+      }
+      
+      const newQty = row.quantity - sellQty;
+      
+      if (row.source === 'manual') {
+        if (newQty <= 0) {
+          // Delete the asset if quantity reaches zero
+          await FirebaseService.deleteDocument('cryptoportfolio_manual', this.currentSellAsset);
+        } else {
+          // Update the quantity
+          await FirebaseService.setDocument('cryptoportfolio_manual', this.currentSellAsset, {
+            asset: this.currentSellAsset,
+            quantity: newQty,
+            location: location
+          });
+        }
+        
+        await this.loadManualAssets();
+        await this.renderAll();
+      } else {
+        alert('Não é possível vender ativos do Binance diretamente');
+      }
+      
+      this.closeSellModal();
+    } catch (e) {
+      alert('Erro ao vender ativo');
+      console.error(e);
+    }
+  }
+
+  /* ===== Chart Modal ===== */
+  setupChartModal(){
+    const modal = DOM.$('#chart-modal-backdrop');
+    const card = DOM.$('#kpi-trend-card');
+    
+    if (card) {
+      card.addEventListener('click', ()=>this.openChartModal());
+    }
+    
+    DOM.$('#chart-modal-close')?.addEventListener('click', ()=>this.closeChartModal());
+    modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeChartModal(); });
+    
+    // Range buttons
+    DOM.$$('#chart-modal-backdrop .btn-toggle').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        DOM.$$('#chart-modal-backdrop .btn-toggle').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        const range = e.target.getAttribute('data-range');
+        this.renderExpandedChart(range);
+      });
+    });
+  }
+
+  openChartModal(){
+    DOM.show(DOM.$('#chart-modal-backdrop'));
+    this.renderExpandedChart('6m');
+  }
+
+  closeChartModal(){
+    DOM.hide(DOM.$('#chart-modal-backdrop'));
+    if (this.expandedChart) {
+      this.expandedChart.destroy();
+      this.expandedChart = null;
+    }
+  }
+
+  renderExpandedChart(range){
+    const canvas = document.getElementById('chart-modal-canvas');
+    if (!canvas) return;
+
+    let data = [];
+    const now = new Date();
+    
+    switch(range) {
+      case '3m':
+        data = this.state.monthlyRealized.slice(-3);
+        break;
+      case '6m':
+        data = this.state.monthlyRealized.slice(-6);
+        break;
+      case '1y':
+        data = this.state.monthlyRealized.slice(-12);
+        break;
+      case 'all':
+      default:
+        data = this.state.monthlyRealized;
+        break;
+    }
+
+    const labels = data.map(d => {
+      const [year, month] = d.month.split('-');
+      return new Date(year, month - 1).toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' });
+    });
+    const dataEUR = data.map(d => d.realizedEUR);
+
+    if (this.expandedChart) {
+      this.expandedChart.destroy();
+    }
+
+    this.expandedChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Realizado (EUR)',
+          data: dataEUR,
+          borderColor: '#526D82',
+          backgroundColor: 'rgba(82, 109, 130, 0.1)',
+          borderWidth: 3,
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true },
+          tooltip: { 
+            enabled: true,
+            callbacks: {
+              label: (context) => {
+                return `Realizado: ${FORMATTERS.eur.format(context.parsed.y)}`;
+              }
+            }
+          }
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback: (value) => FORMATTERS.eur.format(value)
+            }
+          }
+        }
+      }
+    });
   }
 
   /* ================== PDF ================== */

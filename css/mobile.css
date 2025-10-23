@@ -1,0 +1,223 @@
+/* Mobile-specific styles */
+
+/* Main mobile layout */
+@media (max-width: 1024px){
+  header{ transform: translateX(-100%) }
+  header.active{ transform: translateX(0) }
+  #menu-icon,.menu-icon{ display:flex }
+  main{ margin-left:0; max-width:100%; padding:72px var(--space-4) var(--space-5) }
+}
+
+/* Page-specific mobile layouts */
+@media (max-width: 1024px) {
+  body[data-page="dca"] main,
+  body[data-page="caixa"] main,
+  body[data-page="analise123vs1248"] main {
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 72px var(--space-4) var(--space-5);
+  }
+}
+
+/* KPI grid mobile */
+@media (max-width: 900px){ 
+  .kpis-grid { grid-template-columns:1fr } 
+}
+
+/* Donut grid mobile */
+@media (max-width: 900px) {
+  .donut-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Caixa form mobile */
+@media (max-width: 700px) {
+  #caixa-form .form-inline {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  #caixa-form select,
+  #caixa-form input[type="number"] {
+    width: 100%;
+  }
+  #caixa-form button[type="submit"] {
+    width: 100%;
+  }
+}
+
+/* Faturas form responsive */
+@media (max-width:1100px){
+  body[data-page="faturas"] .form-row.row-5{ grid-template-columns: repeat(3, auto); }
+}
+@media (max-width:800px){
+  body[data-page="faturas"] .form-row.row-4,
+  body[data-page="faturas"] .form-row.row-5{ grid-template-columns: repeat(2, auto); }
+  body[data-page="faturas"] .form-row.row-3{ grid-template-columns: repeat(2, auto); }
+}
+@media (max-width:520px){
+  body[data-page="faturas"] .form-row{ grid-template-columns: 1fr; }
+}
+
+/* Mobile and responsive styles */
+
+/* Tablets and smaller */
+@media (max-width: 1024px) {
+  :root {
+    --sidebar-w: 220px;
+  }
+
+  body[data-page="dca"] main {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .table-dca th, .table-dca td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+
+  .table-dca input.cell {
+    width: 8ch;
+    min-width: 60px;
+    font-size: 0.85rem;
+  }
+
+  .dca-page .viz-card {
+    padding: var(--space-3);
+  }
+}
+
+/* Mobile devices */
+@media (max-width: 768px) {
+  :root {
+    --sidebar-w: 0;
+  }
+
+  header {
+    transform: translateX(-100%);
+    width: 260px;
+  }
+
+  header.active {
+    transform: translateX(0);
+  }
+
+  main, 
+  body[data-page="dca"] main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .page-title {
+    font-size: 1.3rem;
+  }
+
+  /* Better table handling on mobile */
+  .table-wrap {
+    margin: 0 -var(--space-2); /* extend to edges */
+    padding: 0 var(--space-2);
+  }
+
+  .table-dca {
+    font-size: 0.85rem;
+  }
+
+  .table-dca th, .table-dca td {
+    padding: 6px 8px;
+  }
+
+  .table-dca input.cell {
+    width: 7ch;
+    min-width: 55px;
+    height: 30px;
+    font-size: 0.8rem;
+  }
+
+  .table-dca .btn-save {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  #toggle-others {
+    width: 100%;
+    height: 44px;
+    font-size: 0.9rem;
+  }
+
+  /* Cards */
+  .dca-page .viz-card,
+  .report-section {
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  /* Params table - stack on mobile */
+  .dca-page .params-table input[type="month"],
+  .dca-page .params-table input[type="number"] {
+    height: 40px;
+    font-size: 0.9rem;
+  }
+
+  /* Year groups */
+  .year-group h3 {
+    font-size: 1.1rem;
+  }
+
+  /* Hide percentage details on very small screens */
+  @media (max-width: 480px) {
+    .table-dca small {
+      display: none;
+    }
+  }
+}
+
+/* Landscape mobile optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+  body[data-page="dca"] main {
+    padding: var(--space-2);
+  }
+
+  .page-title {
+    margin-bottom: 0.5rem;
+  }
+
+  .viz-card h3, .viz-card h4 {
+    margin-bottom: 0.3rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  header {
+    display: none;
+  }
+
+  main,
+  body[data-page="dca"] main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .btn-save,
+  #toggle-others,
+  button {
+    display: none;
+  }
+
+  .table-wrap {
+    overflow: visible;
+  }
+
+  .table-dca {
+    page-break-inside: avoid;
+  }
+
+  .year-group {
+    page-break-inside: avoid;
+  }
+}
