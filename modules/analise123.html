@@ -5,8 +5,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Análise 123</title>
-    <link rel="stylesheet" href="/css/styles.pcolor.css">
-    <link rel="stylesheet" href="/css/mobile.css">
+    <link rel="stylesheet" href="./css/styles.pcolor.css">
+    <link rel="stylesheet" href="./css/mobile.css">
     <link rel="icon" href="../favicon.ico" sizes="any">
     <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
     <link rel="manifest" href="../manifest.json">
@@ -14,6 +14,7 @@
 
 </head>
 <body>
+<body data-page="analise123">
     <header>
       <nav id="nav-menu">
         <ul>
@@ -25,25 +26,26 @@
             </span>
           </li>
 
-          <li class="separator"></li>
-
           <!-- Secção: Apartamentos -->
           <li class="menu-title">Apartamentos</li>
-          <li><a href="faturas.html">📄 Faturas</a></li>
-          <li><a href="analise.html">📊 Análise</a></li>
-          <li><a href="analise123.html" class="active">🏠 123</a></li>
-          <li><a href="analise1248.html">🏠 1248</a></li>
-          <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
-          <li><a href="caixa.html">💰 Caixa</a></li>
-          <li><a href="diversos.html">📋 Diversos</a></li>
+          <li><a href="faturas.html" data-page="faturas">📄 Faturas</a></li>
+          <li><a href="analise.html" data-page="analise">📊 Análise</a></li>
+          <li><a href="analise123.html" data-page="analise123" class="active">🏠 123</a></li>
+          <li><a href="analise1248.html" data-page="analise1248">🏠 1248</a></li>
+          <li><a href="analise123vs1248.html" data-page="analise123vs1248">⚖️ 123 vs 1248</a></li>
+          <li><a href="caixa.html" data-page="caixa">💰 Caixa</a></li>
+          <li><a href="tmt.html" data-page="tmt">🧳 Taxa Turística</a></li>
+          <li><a href="diversos.html" data-page="diversos">📋 Diversos</a></li>
 
           <li class="separator"></li>
 
           <!-- Secção: Investimentos -->
           <li class="menu-title">Investimentos</li>
-          <li><a href="dca.html">📈 DCA</a></li>
-          <li><a href="crypto.html">🚀 Cripto</a></li>
+          <li><a href="dca.html" data-page="dca">📈 DCA</a></li>
+          <li><a href="crypto.html" data-page="crypto">🚀 Cripto</a></li>
         </ul>
+        <li class="sidebar-sep"></li>
+        <li id="sidebar-auth"></li>
       </nav>
     </header>
 
@@ -158,6 +160,16 @@
 <script type="module" src="../js/script.js"></script>
 <script type="module" src="../js/analise123.js"></script>
 
+
+<script type="module">
+  import { protectPage, mountSidebarAuth } from '/js/simpleAuth.js';
+
+  // Protege a página pelo data-page do <body>
+  protectPage({ loginUrl: '/login.html' });
+
+  // Monta o botão de login leve no fundo da sidebar
+  mountSidebarAuth('#sidebar-auth', { loginUrl: '/login.html' });
+</script>
 
 
 </body>
