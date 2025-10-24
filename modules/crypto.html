@@ -98,7 +98,7 @@
         <th class="col-invested-eur">Investido (EUR)</th>
         <th class="col-realized">Realizado</th>
         <th class="col-loc">Localização</th>
-        <th>Ações</th>
+        <th>Editar</th>
       </tr>
     </thead>
 
@@ -123,36 +123,37 @@
     </section>
   </main>
 
-  <!-- Modal (enhanced with cost field) -->
-  <div id="modal-backdrop" class="modal-backdrop" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-      <h3 id="modal-title">Add asset</h3>
+        <!-- Modal (enhanced with cost field) -->
+        <div id="modal-backdrop" class="modal-backdrop" aria-hidden="true">
+          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <h3 id="modal-title">Adicionar</h3>
+            <div class="field">
+              <label for="m-asset">Ticker</label>
+              <input id="m-asset" type="text" placeholder="e.g. BTC" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="m-qty">Quantidade</label>
+              <input id="m-qty" type="number" step="any" placeholder="0.0" />
+            </div>
+              
       <div class="field">
-        <label for="m-asset">Ticker</label>
-        <input id="m-asset" type="text" placeholder="e.g. BTC" autocomplete="off" />
-      </div>
-      <div class="field">
-        <label for="m-qty">Quantity</label>
-        <input id="m-qty" type="number" step="any" placeholder="0.0" />
-      </div>
-      <div class="field">
-        <label for="m-cost">Cost (0 for airdrops)</label>
+        <label for="m-cost">Custo (0 para airdrops)</label>
         <input id="m-cost" type="number" step="any" placeholder="0.0" />
       </div>
       <div class="field">
-        <label>Currency</label>
+        <label>Moeda</label>
         <div style="display: flex; gap: 8px;">
           <button type="button" id="m-curr-eur" class="btn btn-toggle active">EUR</button>
           <button type="button" id="m-curr-usd" class="btn btn-toggle">USD</button>
         </div>
       </div>
       <div class="field">
-        <label for="m-loc">Location</label>
+        <label for="m-loc">Localização</label>
         <select id="m-loc"></select>
       </div>
       <div class="modal-actions">
-        <button id="m-cancel" class="btn">Cancel</button>
-        <button id="m-save" class="btn">Save</button>
+        <button id="m-cancel" class="btn">Cancelar</button>
+        <button id="m-save" class="btn">Gravar</button>
       </div>
     </div>
   </div>
@@ -180,6 +181,15 @@
           <label for="inv-date">Data</label>
           <input id="inv-date" type="date" />
         </div>
+        <!-- Quantidade (apenas para MANUAL) -->
+      <div class="field" id="inv-qty2-wrap" style="display:none;">
+        <label for="inv-qty2">Quantidade (apenas para Manual)</label>
+        <input id="inv-qty2" type="number" step="any" min="0" placeholder="e.g. 0.015" />
+        <small style="color:#6b7280">
+          Para ativos <b>Manuais</b>, esta quantidade será somada à atual. Para Binance, a quantidade vem da API.
+        </small>
+      </div>
+
         <button id="inv-add-btn" class="btn" style="width: 100%; margin-top: 8px;">Adicionar</button>
       </div>
 
@@ -192,10 +202,11 @@
       </div>
 
       <div class="modal-actions">
-        <button id="inv-close" class="btn">Fechar</button>
-      </div>
+      <button id="inv-close" class="btn">Fechar</button>
+      <button id="inv-remove-asset" class="btn" style="display:none; background:#fee2e2; border:1px solid #ef4444; color:#991b1b;">
+        Remover Ticker
+      </button>
     </div>
-  </div>
 
   <!-- Sell Modal -->
   <div id="sell-modal-backdrop" class="modal-backdrop" aria-hidden="true">

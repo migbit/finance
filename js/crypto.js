@@ -574,14 +574,17 @@ class CryptoPortfolioApp {
         for (const r of rows){
         const invested = this.getAssetInvestedAmounts(r.asset, r.location);
 
-        const actions = r.source==='manual'
-          ? `<button class="btn btn-invest" data-invest="${esc(r.asset)}" data-location="${esc(r.location)}">+</button>
-              <button class="btn btn-sell" data-sell="${esc(r.asset)}" data-location="${esc(r.location)}">-</button>
-              <button class="btn btn-edit" data-edit="${esc(r.asset)}">Edit</button>
-              <button class="btn btn-del" data-del="${esc(r.asset)}">Delete</button>`
-          : `<button class="btn btn-invest" data-invest="${esc(r.asset)}" data-location="${esc(r.location)}">+</button>
-              <button class="btn btn-sell" data-sell="${esc(r.asset)}" data-location="${esc(r.location)}">-</button>
-              <span class="status" id="status-${esc(r.asset)}"></span>`;
+        const actions = `
+        <button class="btn btn-edit btn-icon"
+                title="Editar"
+                aria-label="Editar"
+                data-edit="${esc(r.asset)}"
+                data-location="${esc(r.location)}"
+                data-source="${esc(r.source||'binance')}">
+          ✎
+        </button>
+      `;
+
 
         const sel = this.renderLocationSelect(r.asset, r.location);
 
@@ -785,25 +788,83 @@ class CryptoPortfolioApp {
 
   /* ===== Investment Modal ===== */
   setupInvestmentModal(){
-    const modal = DOM.$('#investment-modal-backdrop');
-    DOM.$('#inv-close')?.addEventListener('click', ()=>this.closeInvestmentModal());
-    DOM.$('#inv-add-btn')?.addEventListener('click', ()=>this.addInvestment());
-    modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeInvestmentModal(); });
-    
-    // Set default date to today
-    const dateInput = DOM.$('#inv-date');
-    if (dateInput) {
-      dateInput.value = new Date().toISOString().split('T')[0];
-    }
-  }
+      const modal = DOM.$('#investment-modal-backdrop');
+      DOM.$('#inv-close')?.addEventListener('click', ()=>this.closeInvestmentModal());
+      DOM.$('#inv-add-btn')?.addEventListener('click', ()=>this.addInvestment());
+      modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeInvestmentModal(); });
 
-  openInvestmentModal(asset, location){
-  this.currentInvestmentAsset = asset.toUpperCase();
-  this.currentInvestmentLocation = (location || 'Other');
-  DOM.$('#inv-asset-name').textContent = `${this.currentInvestmentAsset} — ${this.currentInvestmentLocation}`;
-  this.renderInvestmentList();
-  DOM.show(DOM.$('#investment-modal-backdrop'));
-  }
+      // default date
+      const dateInput = DOM.$('#inv-date');
+      if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
+
+      // remover ticker (apenas manual)
+      const btnRemove = DOM.$('#inv-remove-asset');
+      if (btnRemove){
+        btnRemove.addEventListener('click', async () => {
+          const asset = (this.currentInvestmentAsset||'').toUpperCase();
+          const location = this.currentInvestmentLocation || 'Other';
+          if (!asset) return;
+          if (!confirm(`Remover o ticker ${asset} (${location}) e respetivos investimentos desta localização?`)) return;
+          await this.deleteManualAssetAndInvestments(asset, location);
+          this.closeInvestmentModal();
+          await this.loadManualAssets();
+          await this.loadInvestments();
+          await this.renderAll();
+          this.renderKPIs();
+        });
+      }
+    }
+
+    openEditWindow(asset, location, source){
+      // Estado atual do contexto
+      this.currentInvestmentAsset   = (asset || '').toUpperCase();
+      this.currentInvestmentLocation = location || 'Other';
+      this.currentInvestmentSource   = source || 'binance';
+
+      // Escopo: modal de investimentos
+      const modal      = document.querySelector('#investment-modal-backdrop');
+      const titleSpan  = modal?.querySelector('#inv-asset-name');
+      const qtyWrap    = modal?.querySelector('#inv-qty2-wrap');
+      const qtyInput   = modal?.querySelector('#inv-qty2');
+      const btnRemove  = modal?.querySelector('#inv-remove-asset');
+
+      // Título
+      if (titleSpan) {
+        titleSpan.textContent = `${this.currentInvestmentAsset} — ${this.currentInvestmentLocation}`;
+      }
+
+      // Mostrar/ocultar campo Quantidade e botão Remover apenas para MANUAL
+      const isManual = (this.currentInvestmentSource === 'manual');
+      if (qtyWrap)   qtyWrap.style.display = isManual ? 'block' : 'none';
+      if (btnRemove) btnRemove.style.display = isManual ? '' : 'none';
+
+      // Limpar quantidade sempre que abrimos o modal
+      if (qtyInput)  qtyInput.value = '';
+
+      // Render do histórico e abrir modal
+      this.renderInvestmentList();
+      if (modal) modal.style.display = 'flex';
+    }
+
+
+
+    async deleteManualAssetAndInvestments(asset, location){
+      // 1) apagar doc manual (doc id = asset)
+      await FirebaseService.deleteDocument('cryptoportfolio_manual', asset);
+
+      // 2) apagar investimentos desta combinação asset+location
+      const key = `${asset.toUpperCase()}_${(location||'Other').toUpperCase()}`;
+      const list = this.state.investments.get(key) || [];
+      for (const inv of list){
+        if (inv?.id) {
+          await FirebaseService.deleteDocument(CONFIG.INVESTMENTS_COLLECTION, inv.id);
+        }
+      }
+
+      // limpar cache local
+      this.state.investments.delete(key);
+      this.state.manualAssets = this.state.manualAssets.filter(r => !(r.asset===asset && (r.location||'Other')===location));
+    }
 
 
   closeInvestmentModal(){
@@ -853,59 +914,78 @@ class CryptoPortfolioApp {
     });
   }
 
-  async addInvestment(){
-  try {
-    const amount = parseFloat(DOM.$('#inv-amount').value);
-    const currency = DOM.$('#inv-currency').value;  // 'EUR' | 'USD'
-    const date = DOM.$('#inv-date').value;
+    async addInvestment(){
+      try {
+        // --- read fields ---
+        const amount = parseFloat(DOM.$('#inv-amount')?.value ?? '');
+        const currency = DOM.$('#inv-currency')?.value || 'EUR';
+        const date = DOM.$('#inv-date')?.value || '';
 
-    const asset = (this.currentInvestmentAsset || '').toUpperCase();
-    const location = this.currentInvestmentLocation || 'Other';
+        const asset = (this.currentInvestmentAsset || '').toUpperCase();
+        const location = this.currentInvestmentLocation || 'Other';
+        const source = this.currentInvestmentSource || 'binance';
 
-    if (!isFinite(amount) || amount < 0) {
-      alert('Por favor, insira um valor válido (≥ 0)');
-      return;
+        // Quantity only applies to MANUAL rows
+        const qtyToAdd = (source === 'manual')
+        ? parseFloat(document.querySelector('#investment-modal-backdrop #inv-qty2')?.value ?? '0')
+        : 0;
+
+        // --- validate ---
+        if (!isFinite(amount) || amount < 0) {
+          alert('Por favor, insira um valor válido (≥ 0)');
+          return;
+        }
+        if (!date) {
+          alert('Por favor, selecione uma data');
+          return;
+        }
+
+        // --- compute EUR/USD ---
+        const rate = this.state.usdtToEurRate || 1;
+        const amountUSD = (currency === 'EUR') ? (rate > 0 ? amount / rate : 0) : amount;
+        const amountEUR = (currency === 'EUR') ? amount : (rate > 0 ? amount * rate : 0);
+
+        // --- save investment (per asset + location) ---
+        const id = `${asset}_${location}_${Date.now()}`;
+        await FirebaseService.setDocument(CONFIG.INVESTMENTS_COLLECTION, id, {
+          asset, location, amountUSD, amountEUR, currency,
+          originalAmount: amount, date
+        });
+
+        // --- if MANUAL and qty provided, bump manual quantity (or create manual row) ---
+        if (source === 'manual' && qtyToAdd > 0) {
+          // look up existing manual doc in local state
+          const manualRow = this.state.manualAssets.find(
+            r => r.asset === asset && (r.location || 'Other') === location
+          );
+          const newQty = (manualRow?.quantity || 0) + qtyToAdd;
+
+          await FirebaseService.setDocument('cryptoportfolio_manual', asset, {
+            asset,
+            quantity: newQty,
+            location
+          });
+        }
+
+        // --- refresh UI/state ---
+        await this.loadManualAssets();
+        await this.loadInvestments();
+        await this.renderAll();
+        this.renderKPIs();
+
+        // --- clear modal fields ---
+        const amt = DOM.$('#inv-amount'); if (amt) amt.value = '';
+        const dt  = DOM.$('#inv-date');   if (dt)  dt.value = new Date().toISOString().split('T')[0];
+        const qi  = DOM.$('#inv-qty2');   if (qi)  qi.value = '';
+
+      } catch (e) {
+        alert('Erro ao adicionar investimento');
+        console.error(e);
+      }
     }
-    if (!date) {
-      alert('Por favor, selecione uma data');
-      return;
-    }
 
-    const rate = this.state.usdtToEurRate || 1;
 
-    // Convert to both currencies
-    const amountUSD = (currency === 'EUR') ? (rate > 0 ? amount / rate : 0) : amount;
-    const amountEUR = (currency === 'EUR') ? amount : (rate > 0 ? amount * rate : 0);
 
-    const investmentData = {
-      asset,
-      location,
-      amountUSD,
-      amountEUR,
-      currency,
-      originalAmount: amount,
-      date
-    };
-
-    // Unique ID includes asset + location
-    const id = `${asset}_${location}_${Date.now()}`;
-    await FirebaseService.setDocument(CONFIG.INVESTMENTS_COLLECTION, id, investmentData);
-
-    // Refresh UI
-    await this.loadInvestments();
-    this.renderInvestmentList();
-    this.renderTable();
-    this.renderKPIs();
-
-    // Clear form
-    DOM.$('#inv-amount').value = '';
-    DOM.$('#inv-date').value = new Date().toISOString().split('T')[0];
-
-  } catch (e) {
-    alert('Erro ao adicionar investimento');
-    console.error(e);
-  }
-}
 
 
   async deleteInvestment(invId){
@@ -1004,44 +1084,33 @@ class CryptoPortfolioApp {
   }
 
   bindTableEvents(){
-    // location changes
-    DOM.$$('select[data-asset]').forEach(sel=>{
-      sel.addEventListener('change', async (e)=>{
-        const asset = e.target.getAttribute('data-asset');
-        const loc = e.target.value;
-        const row = e.target.closest('tr');
-        const source = row?.getAttribute('data-source') || 'binance';
-        if (source==='manual'){
-          await FirebaseService.setDocument('cryptoportfolio_manual', asset, { location: loc });
-          await this.loadManualAssets();
-        } else {
-          await FirebaseService.setDocument('cryptoportfolio', asset, { asset, location: loc });
-        }
-      });
+  // handle location dropdown
+  DOM.$$('select[data-asset]').forEach(sel => {
+    sel.addEventListener('change', async (e) => {
+      const asset = e.target.getAttribute('data-asset');
+      const loc = e.target.value;
+      const row = e.target.closest('tr');
+      const source = row?.getAttribute('data-source') || 'binance';
+      if (source === 'manual') {
+        await FirebaseService.setDocument('cryptoportfolio_manual', asset, { location: loc });
+        await this.loadManualAssets();
+      } else {
+        await FirebaseService.setDocument('cryptoportfolio', asset, { asset, location: loc });
+      }
     });
-    // edit/delete
-    DOM.$$('.btn-edit').forEach(b=>b.addEventListener('click', ()=>this.openEditModal(b.getAttribute('data-edit'))));
-    DOM.$$('.btn-del').forEach(b=>b.addEventListener('click', async ()=>{
-      const asset = b.getAttribute('data-del');
-      if (!confirm(`Delete ${asset}?`)) return;
-      await FirebaseService.deleteDocument('cryptoportfolio_manual', asset);
-      await this.loadManualAssets();
-      await this.renderAll();
-    }));
-    // investment
-        DOM.$$('.btn-invest').forEach(b=>b.addEventListener('click', ()=>{
-          const asset = b.getAttribute('data-invest');
-          const location = b.getAttribute('data-location') || '';
-          this.openInvestmentModal(asset, location);
-       }));
+  });
 
-    // sell
-    DOM.$$('.btn-sell').forEach(b=>b.addEventListener('click', ()=>{
-      const asset = b.getAttribute('data-sell');
-      const location = b.getAttribute('data-location');
-      this.openSellModal(asset, location);
-    }));
-  }
+  // single EDITAR button — opens unified investment modal
+  DOM.$$('.btn-edit').forEach(b =>
+    b.addEventListener('click', () => {
+      const asset = b.getAttribute('data-edit');
+      const location = b.getAttribute('data-location') || 'Other';
+      const source = b.getAttribute('data-source') || 'binance';
+      this.openEditWindow(asset, location, source);
+    })
+  );
+}
+
 
   /* ===== Sell Modal ===== */
   setupSellModal(){

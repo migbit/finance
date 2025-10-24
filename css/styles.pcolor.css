@@ -915,3 +915,13 @@ body[data-page="analise123vs1248"] .chart-wrap.has-y-lock .scroller::-webkit-scr
   border-radius: 8px;
 
 }
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  line-height: 30px;
+  text-align: center;
+  border-radius: 6px;
+  font-size: 16px;
+}
