@@ -914,7 +914,7 @@ class CryptoPortfolioApp {
     });
   }
 
-    async addInvestment(){
+      async addInvestment(){
       try {
         // --- read fields ---
         const amount = parseFloat(DOM.$('#inv-amount')?.value ?? '');
@@ -925,20 +925,14 @@ class CryptoPortfolioApp {
         const location = this.currentInvestmentLocation || 'Other';
         const source = this.currentInvestmentSource || 'binance';
 
-        // Quantity only applies to MANUAL rows
+        // Quantity only for MANUAL rows (scoped to investment modal)
         const qtyToAdd = (source === 'manual')
-        ? parseFloat(document.querySelector('#investment-modal-backdrop #inv-qty2')?.value ?? '0')
-        : 0;
+          ? parseFloat(document.querySelector('#investment-modal-backdrop #inv-qty2')?.value ?? '0')
+          : 0;
 
         // --- validate ---
-        if (!isFinite(amount) || amount < 0) {
-          alert('Por favor, insira um valor válido (≥ 0)');
-          return;
-        }
-        if (!date) {
-          alert('Por favor, selecione uma data');
-          return;
-        }
+        if (!isFinite(amount) || amount < 0) { alert('Por favor, insira um valor válido (≥ 0)'); return; }
+        if (!date) { alert('Por favor, selecione uma data'); return; }
 
         // --- compute EUR/USD ---
         const rate = this.state.usdtToEurRate || 1;
@@ -954,18 +948,17 @@ class CryptoPortfolioApp {
 
         // --- if MANUAL and qty provided, bump manual quantity (or create manual row) ---
         if (source === 'manual' && qtyToAdd > 0) {
-          // look up existing manual doc in local state
           const manualRow = this.state.manualAssets.find(
             r => r.asset === asset && (r.location || 'Other') === location
           );
           const newQty = (manualRow?.quantity || 0) + qtyToAdd;
-
           await FirebaseService.setDocument('cryptoportfolio_manual', asset, {
-            asset,
-            quantity: newQty,
-            location
+            asset, quantity: newQty, location
           });
         }
+
+        // ✅ fecha imediatamente o modal de investimento
+        this.closeInvestmentModal();
 
         // --- refresh UI/state ---
         await this.loadManualAssets();
@@ -973,7 +966,7 @@ class CryptoPortfolioApp {
         await this.renderAll();
         this.renderKPIs();
 
-        // --- clear modal fields ---
+        // --- clear modal fields (seguro mesmo que já esteja fechado) ---
         const amt = DOM.$('#inv-amount'); if (amt) amt.value = '';
         const dt  = DOM.$('#inv-date');   if (dt)  dt.value = new Date().toISOString().split('T')[0];
         const qi  = DOM.$('#inv-qty2');   if (qi)  qi.value = '';
