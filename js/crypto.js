@@ -14,7 +14,7 @@ const CONFIG = {
     'Binance Staking',
     'Binance Earn',
     'Ledger',
-    'Other'
+    'Ledger staking.chain.link'
   ],
   COINGECKO: {
     PRICE_TTL_MS: 1000 * 60 * 60, // 1 hour
