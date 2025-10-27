@@ -65,8 +65,29 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderTabelaFaturacaoMensal(faturas, 'tabela-fat-mensal');
   renderGraficoMediaNoite(faturas, Y);
   renderGraficoOcupacao(faturas);
+  renderTabelaLimpezaComparativa(faturas, 'tabela-limpeza-123vs1248');
   renderGraficoCheckinsDOW(faturas);
 });
+
+// analise123vs1248.js
+window.addEventListener('DOMContentLoaded', async () => {
+  const all = await carregarFaturas();
+  const Y = new Date().getFullYear();
+  const lbl = document.getElementById('label-ano'); if (lbl) lbl.textContent = `(${Y})`;
+
+  const faturas = consolidarFaturas(all)
+    .filter(f => Number(f.ano) === 2024 || Number(f.ano) === Y);
+
+  renderGraficoFaturacaoMensal(faturas, Y);
+  renderTabelaFaturacaoMensal(faturas, 'tabela-fat-mensal');
+  renderGraficoMediaNoite(faturas, Y);
+  renderGraficoOcupacao(faturas);
+  renderGraficoCheckinsDOW(faturas);
+
+  // ✅ add this:
+  renderTabelaLimpezaComparativa(faturas, 'tabela-limpeza-123vs1248');
+});
+
 
 async function carregarFaturas(){
   try{
@@ -333,8 +354,94 @@ function renderGraficoFaturacaoMensal(faturas, ano /* compat */) {
 
 
 
-// ------------------------ Tabela comparativa (anos x apt) -----------------------------
-// Ordem por ano: 123 Média | 1248 Média | 123 Total | 1248 Total
+// ------------------------ Tabela comparativa Taxa Limpeza -----------------------------
+
+function renderTabelaLimpezaComparativa(faturas, targetId) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+
+  const BASE_YEAR = 2025;
+  const CURR_YEAR = new Date().getFullYear();
+  const anos = [];
+  for (let y = BASE_YEAR; y <= CURR_YEAR; y++) anos.push(y);
+
+  const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // limpeza[apt][ano][mes] = { count, total }
+  const limpeza = { '123': {}, '1248': {} };
+  ['123','1248'].forEach(apt => {
+    anos.forEach(ano => {
+      limpeza[apt][ano] = Array.from({ length: 12 }, () => ({ count: 0, total: 0 }));
+    });
+  });
+
+  faturas.forEach(f => {
+    const apt = String(f.apartamento);
+    if (apt !== '123' && apt !== '1248') return;
+    const ano = Number(f.ano), mes = Number(f.mes);
+    if (!anos.includes(ano) || !mes) return;
+    const v = Number(f.taxaLimpeza || 0);
+    limpeza[apt][ano][mes - 1].count += 1;
+    limpeza[apt][ano][mes - 1].total += v;
+  });
+
+  // Tabela: por ano mostramos 4 colunas: 123 N. | 123 Total | 1248 N. | 1248 Total
+  let html = `
+    <table class="media-faturacao">
+      <thead>
+        <tr>
+          <th rowspan="2">Mês</th>
+          ${anos.map(a => `<th colspan="4">${a}</th>`).join('')}
+        </tr>
+        <tr>
+          ${anos.map(() => `
+            <th style="text-align:center" class="apt-123">123 N.</th>
+            <th style="text-align:center" class="apt-123">123 Total</th>
+            <th style="text-align:center" class="apt-1248">1248 N.</th>
+            <th style="text-align:center" class="apt-1248">1248 Total</th>
+          `).join('')}
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  meses.forEach((nome, i) => {
+    html += `<tr><td>${nome}</td>`;
+    anos.forEach(ano => {
+      const c123 = limpeza['123'][ano][i].count;
+      const t123 = limpeza['123'][ano][i].total;
+      const c1248 = limpeza['1248'][ano][i].count;
+      const t1248 = limpeza['1248'][ano][i].total;
+      html += `
+        <td style="text-align:center">${c123}</td>
+        <td style="text-align:center">${euroInt(t123)}</td>
+        <td style="text-align:center">${c1248}</td>
+        <td style="text-align:center">${euroInt(t1248)}</td>
+      `;
+    });
+    html += `</tr>`;
+  });
+
+  // Totais por ano
+  html += `<tr><td><strong>Total</strong></td>`;
+  anos.forEach(ano => {
+    const totC123 = limpeza['123'][ano].reduce((s, m) => s + m.count, 0);
+    const totT123 = limpeza['123'][ano].reduce((s, m) => s + m.total, 0);
+    const totC1248 = limpeza['1248'][ano].reduce((s, m) => s + m.count, 0);
+    const totT1248 = limpeza['1248'][ano].reduce((s, m) => s + m.total, 0);
+    html += `
+      <td style="text-align:center"><strong>${totC123}</strong></td>
+      <td style="text-align:center"><strong>${euroInt(totT123)}</strong></td>
+      <td style="text-align:center"><strong>${totC1248}</strong></td>
+      <td style="text-align:center"><strong>${euroInt(totT1248)}</strong></td>
+    `;
+  });
+  html += `</tr>`;
+
+  html += `</tbody></table>`;
+  el.innerHTML = html;
+}
+
 
 // ------------------------ Tabela comparativa (anos x apt) -----------------------------
 // Ordem por ano: 123 Média | 1248 Média | 123 Total | 1248 Total | Dif.

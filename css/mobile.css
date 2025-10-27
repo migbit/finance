@@ -664,3 +664,10 @@
     flex: 0 0 55px;
   }
 }
+
+/* ===== Hide fixed tab navigation on mobile ===== */
+@media (max-width: 768px) {
+  .tab-navigation {
+    display: none !important;
+  }
+}

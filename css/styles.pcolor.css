@@ -925,3 +925,208 @@ body[data-page="analise123vs1248"] .chart-wrap.has-y-lock .scroller::-webkit-scr
   border-radius: 6px;
   font-size: 16px;
 }
+
+/* ===== A) Ajustes de alinhamento (Desktop) Para página Diversos ===== */
+
+/* ===== Ajustes finos de alinhamento (Desktop) ===== */
+
+/* 1) MENSAGENS – tudo centrado, mas dropdowns com largura limitada */
+#tab-mensagens .viz-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  text-align: center;
+}
+#tab-mensagens label {
+  text-align: center;
+}
+#tab-mensagens select {
+  width: 100%;
+  max-width: 280px; /* reduz largura exagerada */
+  margin: 0.3rem auto;
+  text-align: left;
+}
+#tab-mensagens input,
+#tab-mensagens textarea {
+  max-width: 600px;
+  width: 100%;
+  margin: 0.3rem auto;
+}
+
+/* 2) COMPRAS – espaçamento entre botões e melhor vertical alignment */
+#tab-compras .viz-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+}
+#tab-compras .search-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 640px;
+}
+#tab-compras #compras-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem; /* espaço vertical entre grupos */
+  width: 100%;
+  max-width: 980px;
+}
+#tab-compras button {
+  margin: 0.3rem 0.4rem;
+}
+#tab-compras #btn-requisitar,
+#tab-compras #btn-enviar-email {
+  display: inline-block;
+  margin-top: 0.6rem;
+}
+
+/* 3) REPARAÇÕES – centrar formulário e botão “Registrar Reparação” */
+#tab-reparacoes .viz-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+}
+#reparacoes-form {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.8rem;
+}
+#reparacoes-form .form-group {
+  width: 100%;
+  text-align: center;
+}
+#reparacoes-form select,
+#reparacoes-form textarea {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+#reparacoes-form button,
+#btn-registrar-reparacao {
+  align-self: center;
+  margin-top: 0.5rem;
+}
+
+/* ===== Mensagens ===== */
+/* Keep the card centered but force the message text to align left */
+#tab-mensagens .viz-card { text-align: center; }
+#tab-mensagens #mensagem-secao { max-width: 800px; margin: 0 auto; }
+#tab-mensagens #mensagem-container {
+  text-align: left;          /* final message aligned left */
+  line-height: 1.5;
+  border-radius: 10px;
+}
+/* keep dropdowns controlled, not huge */
+#tab-mensagens select { max-width: 280px; width: 100%; }
+
+/* ===== Compras ===== */
+/* contain the whole list and give each row structure */
+#tab-compras #compras-form {
+  max-width: 780px;          /* contains each line */
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;                 /* vertical breathing between rows */
+}
+#tab-compras .item-compra {
+  display: grid;
+  grid-template-columns: 1fr auto;  /* name/qty | controls */
+  align-items: center;
+  gap: 12px;
+  padding: 6px 4px;
+}
+#tab-compras .item-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#tab-compras .item-nome { white-space: normal; }
+#tab-compras .item-quantidade {
+  width: 56px; height: 36px; text-align: center;
+  border-radius: 10px;
+}
+#tab-compras .item-controles {
+  display: inline-flex;
+  gap: 6px;                  /* buttons not glued */
+  flex-wrap: nowrap;
+}
+#tab-compras .item-controles button {
+  min-width: 36px; height: 36px;
+  border-radius: 10px; padding: 0 .5rem;
+}
+/* search bar and clear button centered nicely */
+#tab-compras .search-container {
+  max-width: 640px; margin: 0 auto 1rem auto;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+
+/* ===== Reparações ===== */
+/* center the submit button too */
+#tab-reparacoes #reparacoes-form { max-width: 560px; margin: 0 auto; }
+#tab-reparacoes #reparacoes-form button[type="submit"] {
+  display: block; margin: 8px auto 0 auto;    /* centered */
+}
+
+/* ===== Truly sticky in-page menu (aligned with content, not page) ===== */
+.tab-navigation {
+  position: fixed;
+  top: 0px; /* moves it below the title/header */
+  left: var(--sidebar-width, 260px); /* aligns with content area after sidebar */
+  right: 0;
+  z-index: 90;
+  display: flex;
+  justify-content: center; /* aligns with main content instead of page center */
+  flex-wrap: wrap;
+  background: var(--card, #fff);
+  padding: 0.7rem 1.2rem;
+  border-bottom: 2px solid var(--border);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  transition: all 0.2s ease;
+}
+
+/* optional blur effect for polish */
+@supports (backdrop-filter: blur(6px)) {
+  .tab-navigation {
+    backdrop-filter: blur(6px);
+  }
+}
+
+/* tidy buttons */
+.tab-navigation .tab-btn {
+  white-space: nowrap;
+  margin: 0 0.3rem;
+}
+
+/* spacing below nav-bar and first card */
+.tab-navigation + .report-section,
+.tab-navigation + section {
+  margin-top: 100px; /* prevents overlay on title */
+}
+
+/* ensure parents don't break layout */
+main, .report-section, #tab-compras, #tab-mensagens, #tab-reparacoes {
+  overflow: visible !important;
+  position: static !important;
+}
+
+/* add breathing space under the fixed nav-bar only in Diversos page */
+body#diversos-page main,
+body#analise-page main,
+body#analise123-page main,
+body#analise1248-page main,
+body#analise123vs1248-page main {
+  padding-top: 80px;
+}
