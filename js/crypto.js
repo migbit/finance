@@ -1317,145 +1317,140 @@ class CryptoPortfolioApp {
   }
 
   /* ================== PDF ================== */
-  setupPdf(){
-    DOM.$('#btn-pdf')?.addEventListener('click', (e)=>{
-      e.preventDefault();
-      this.exportToPdf();
-    });
+
+/* ================== PDF ================== */
+setupPdf(){
+  const btn = DOM.$('#btn-pdf');
+  if (!btn) return;
+  btn.addEventListener('click', (e) => {
+    e.preventDefault();
+    this.exportToPdf();
+  });
+}
+
+
+exportToPdf(){
+  if (!window.jspdf){ alert('PDF library not loaded.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  const now = new Date();
+  const month = now.toLocaleString('pt-PT', { month:'long' });
+  const title = `Portefólio Cripto - ${month.charAt(0).toUpperCase()+month.slice(1)} ${now.getFullYear()}`;
+  doc.setFont('helvetica','bold'); doc.setFontSize(18);
+  doc.text(title, pageWidth/2, 40, { align:'center' });
+
+  const rows = this.state.visibleRows;
+  if (!rows.length){ alert('Sem dados para exportar.'); return; }
+
+  // Build table for selected currency (NO "Localização")
+  const mode = this.state.currency; // 'EUR'|'USD'
+  const head = (mode === 'EUR')
+    ? [['Ativo','Quantidade','Valor (EUR)']]
+    : [['Ativo','Quantidade','Valor ($)']];
+
+  const body = rows.map(r => (
+    mode === 'EUR'
+      ? [ r.asset, FORMATTERS.quantity.format(r.quantity), FORMATTERS.eur.format(r.valueEUR||0) ]
+      : [ r.asset, FORMATTERS.quantity.format(r.quantity), `$${FORMATTERS.usd.format(r.valueUSDT||0)}` ]
+  ));
+
+  // Column widths: Ativo | Quantidade | Valor
+  const widths = [110, 95, 120];
+
+  // Center the table on the page
+  const totalTableWidth = widths.reduce((a,b)=>a+b,0);
+  const marginLeft = Math.max(20, Math.floor((pageWidth - totalTableWidth) / 2));
+  const margin = { left: marginLeft, right: marginLeft };
+
+  if (typeof doc.autoTable !== 'function'){
+    alert('PDF table plugin (autoTable) not loaded.');
+    return;
   }
 
-  exportToPdf(){
-    if (!window.jspdf){ alert('PDF library not loaded.'); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
+  doc.autoTable({
+    startY: 70,
+    head,
+    body,
+    theme: 'grid',
+    styles: {
+      font: 'helvetica',
+      fontSize: 9,
+      cellPadding: 3,
+      lineColor: [200, 200, 200],
+      lineWidth: 0.2,
+      halign: 'center'
+    },
+    headStyles: {
+      fillColor: [245, 245, 245],
+      textColor: 30,
+      fontStyle: 'bold',
+      halign: 'center'
+    },
+    margin,
+    tableWidth: 'wrap',
+    columnStyles: {
+      0: { cellWidth: widths[0] },                  // Ativo
+      1: { cellWidth: widths[1], halign: 'center' },// Quantidade
+      2: { cellWidth: widths[2], halign: 'center' } // Valor
+    }
+  });
 
-    const now = new Date();
-    const month = now.toLocaleString('pt-PT', { month:'long' });
-    const title = `Portefólio Cripto - ${month.charAt(0).toUpperCase()+month.slice(1)} ${now.getFullYear()}`;
-    doc.setFont('helvetica','bold'); doc.setFontSize(18);
-    doc.text(title, pageWidth/2, 40, { align:'center' });
+  // Totais abaixo da tabela
+  const t = this.state.totals;
+  const totalInv = this.getTotalInvestedAmounts();
+  const invEUR = totalInv.eur;
+  const invUSD = totalInv.usd;
+  const realEUR = (t.eur || 0) - invEUR;
+  const realUSD = (t.usdt || 0) - invUSD;
 
-    const rows = this.state.visibleRows;
-    if (!rows.length){ alert('Sem dados para exportar.'); return; }
+  let y = (doc.lastAutoTable?.finalY || 70) + 25;
+  const leftX = (typeof marginLeft !== 'undefined')
+    ? marginLeft
+    : (doc.lastAutoTable?.settings?.margin?.left ?? 40);
 
-    // Build table for selected currency
-    const mode = this.state.currency; // 'EUR'|'USD'
-    const head = (mode==='EUR')
-      ? [['Ativo','Quantidade','Valor (EUR)','Localização']]
-      : [['Ativo','Quantidade','Valor ($)','Localização']];
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
 
-    const body = rows.map(r=>{
-      return (mode==='EUR')
-        ? [ r.asset, FORMATTERS.quantity.format(r.quantity), FORMATTERS.eur.format(r.valueEUR||0), r.location||'' ]
-        : [ r.asset, FORMATTERS.quantity.format(r.quantity), `$${FORMATTERS.usd.format(r.valueUSDT||0)}`, r.location||'' ];
-    });
+  if (mode === 'EUR') {
+    const part1 = `Total: ${FORMATTERS.eur.format(t.eur || 0)}   `;
+    const part2 = `Investido: ${FORMATTERS.eur.format(invEUR)}   `;
+    const sign = realEUR >= 0 ? '+' : '−';
+    const part3 = `Realizado: ${sign}${FORMATTERS.eur.format(Math.abs(realEUR))}`;
 
-    // ----- construir head/body como já fazes acima -----
+    doc.setTextColor(0, 0, 0);
+    doc.text(part1, leftX, y);
 
-      // 1) Larguras por modo (mais estreitas para Ativo / Valor / Localização)
-      const widths = (mode === 'EUR')
-        // Ativo | Quantidade | Valor(€) | Localização
-        ? [70, 95, 85, 150]
-        // Ativo | Quantidade | Valor($) | Localização
-        : [70, 95, 80, 155];
+    let x2 = leftX + doc.getTextWidth(part1);
+    doc.text(part2, x2, y);
 
-      // 2) Centragem: margem simétrica com base na soma das colunas
-      const totalTableWidth = widths.reduce((a, b) => a + b, 0);
-      const marginLeft = Math.max(20, Math.floor((pageWidth - totalTableWidth) / 2));
-      const margin = { left: marginLeft, right: marginLeft };
+    let x3 = x2 + doc.getTextWidth(part2);
+    doc.setTextColor(realEUR >= 0 ? 22 : 220, realEUR >= 0 ? 163 : 38, realEUR >= 0 ? 74 : 38);
+    doc.text(part3, x3, y);
+  } else {
+    const part1 = `Total: $${FORMATTERS.usd.format(t.usdt || 0)}   `;
+    const part2 = `Investido: $${FORMATTERS.usd.format(invUSD)}   `;
+    const sign = realUSD >= 0 ? '+' : '−';
+    const part3 = `Realizado: ${sign}$${FORMATTERS.usd.format(Math.abs(realUSD))}`;
 
-      // 3) Tabela
-      doc.autoTable({
-        startY: 70,
-        head,
-        body,
-        theme: 'grid',
-        styles: {
-          font: 'helvetica',
-          fontSize: 9,
-          cellPadding: 3,
-          lineColor: [200, 200, 200],
-          lineWidth: 0.2,
-          halign: 'center' // centra texto das células
-        },
-        headStyles: {
-          fillColor: [245, 245, 245],
-          textColor: 30,
-          fontStyle: 'bold',
-          halign: 'center'
-        },
-        margin,
-        tableWidth: 'wrap',
-        // colunas: usamos as larguras calculadas acima
-        columnStyles: {
-          0: { cellWidth: widths[0] },                  // Ativo
-          1: { cellWidth: widths[1], halign: 'center' }, // Quantidade
-          2: { cellWidth: widths[2], halign: 'center' }, // Valor
-          3: { cellWidth: widths[3] }                   // Localização
-        }
-      });
+    doc.setTextColor(0, 0, 0);
+    doc.text(part1, leftX, y);
 
-      // === Totais imediatamente abaixo da tabela, alinhados à esquerda da tabela ===
-        const t = this.state.totals;
-        const totalInv = this.getTotalInvestedAmounts();
-        const invEUR = totalInv.eur;
-        const invUSD = totalInv.usd;
-        const realEUR = (t.eur || 0) - invEUR;
-        const realUSD = (t.usdt || 0) - invUSD;
+    let x2 = leftX + doc.getTextWidth(part1);
+    doc.text(part2, x2, y);
 
-        let y = (doc.lastAutoTable?.finalY || 70) + 25;
-        // usa a mesma margem esquerda da tabela; fallback para 40 px
-        const leftX = (typeof marginLeft !== 'undefined')
-          ? marginLeft
-          : (doc.lastAutoTable?.settings?.margin?.left ?? 40);
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-
-        if (mode === 'EUR') {
-          const part1 = `Total: ${FORMATTERS.eur.format(t.eur || 0)}   `;
-          const part2 = `Investido: ${FORMATTERS.eur.format(invEUR)}   `;
-          const sign = realEUR >= 0 ? '+' : '−';
-          const part3 = `Realizado: ${sign}${FORMATTERS.eur.format(Math.abs(realEUR))}`;
-
-          // texto 1 (preto)
-          doc.setTextColor(0, 0, 0);
-          doc.text(part1, leftX, y);
-
-          // texto 2 (preto), encostado a seguir ao 1
-          let x2 = leftX + doc.getTextWidth(part1);
-          doc.text(part2, x2, y);
-
-          // texto 3 (verde/vermelho), encostado a seguir ao 2
-          let x3 = x2 + doc.getTextWidth(part2);
-          doc.setTextColor(realEUR >= 0 ? 22 : 220, realEUR >= 0 ? 163 : 38, realEUR >= 0 ? 74 : 38);
-          doc.text(part3, x3, y);
-        } else {
-          const part1 = `Total: $${FORMATTERS.usd.format(t.usdt || 0)}   `;
-          const part2 = `Investido: $${FORMATTERS.usd.format(invUSD)}   `;
-          const sign = realUSD >= 0 ? '+' : '−';
-          const part3 = `Realizado: ${sign}$${FORMATTERS.usd.format(Math.abs(realUSD))}`;
-
-          doc.setTextColor(0, 0, 0);
-          doc.text(part1, leftX, y);
-
-          let x2 = leftX + doc.getTextWidth(part1);
-          doc.text(part2, x2, y);
-
-          let x3 = x2 + doc.getTextWidth(part2);
-          doc.setTextColor(realUSD >= 0 ? 22 : 220, realUSD >= 0 ? 163 : 38, realUSD >= 0 ? 74 : 38);
-          doc.text(part3, x3, y);
-        }
-
-        // reset cor para o que vier depois
-        doc.setTextColor(0, 0, 0);
-
-
-
-    const filename = `Crypto_Portfolio_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
-    doc.save(filename);
+    let x3 = x2 + doc.getTextWidth(part2);
+    doc.setTextColor(realUSD >= 0 ? 22 : 220, realUSD >= 0 ? 163 : 38, realUSD >= 0 ? 74 : 38);
+    doc.text(part3, x3, y);
   }
+
+  doc.setTextColor(0, 0, 0);
+
+  const filename = `Crypto_Portfolio_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
+  doc.save(filename);
+}
+
 
   /* ================== MISC ================== */
   showError(msg){
@@ -1469,5 +1464,4 @@ class CryptoPortfolioApp {
 const app = new CryptoPortfolioApp();
 document.addEventListener('DOMContentLoaded', ()=> app.init() );
 
-// expose for console debug
 window.cryptoApp = app;
