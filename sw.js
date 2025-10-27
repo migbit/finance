@@ -7,6 +7,7 @@ const CORE = [
   './css/styles.css',
   './js/script.js',
   './manifest.json',
+  './offline.html'
 ];
 
 self.addEventListener('install', (event) => {
@@ -35,15 +36,15 @@ self.addEventListener('fetch', (event) => {
 
     try {
       const fresh = await fetch(req);
-      // Optionally cache simple GETs from same origin
       if (new URL(req.url).origin === location.origin) {
         const cache = await caches.open(CACHE);
         cache.put(req, fresh.clone());
       }
       return fresh;
     } catch (err) {
-      // Fallback to offline page later if added
-      return cached || Response.error();
+      // 👇 fallback for offline mode
+      return (await caches.match('./offline.html')) || Response.error();
     }
   })());
 });
+
