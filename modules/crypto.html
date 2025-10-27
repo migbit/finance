@@ -12,6 +12,8 @@
 
   </head>
 <body>
+  <!-- Hamburger icon (always visible on mobile) -->
+  <button id="menu-icon" aria-label="Open menu">☰</button>
   <!-- Header / Nav -->
     <header>
       <nav id="nav-menu">
@@ -46,13 +48,12 @@
         </ul>
       </nav>
     </header>
-  
-  <div class="menu-icon" id="menu-icon">&#9776;</div>
 
   <main>
     <!-- KPIs -->
-        <section class="report-section">
-      <div class="kpis-grid">
+       <section class="report-section">
+      <div class="viz-card">
+        <div class="kpis-grid">
         <div class="kpi-card">
           <div class="kpi-label">Total</div>
           <div id="kpiTotalEUR" class="kpi-value">—</div>
@@ -75,52 +76,50 @@
       </div>
     </section>
 
-
     <section class="report-section">
-       <div class="toolbar">
-        <button id="btn-add" class="btn">+ Adicionar Crypto</button>
-        <button id="btn-pdf" class="btn">Exportar PDF</button>
-        <button id="btn-eur" class="btn btn-toggle active">EUR</button>
-        <button id="btn-usd" class="btn btn-toggle">USD</button>
+      <div class="viz-card">
+        <div class="toolbar">
+          <button id="btn-add" class="btn">+ Adicionar</button>
+          <button id="btn-pdf" class="btn">Exportar PDF</button>
+          <button id="btn-eur" class="btn btn-toggle active">EUR</button>
+          <button id="btn-usd" class="btn btn-toggle">USD</button>
+        </div>
+
+        <div class="table-wrap">
+          <table id="crypto-table">
+            <thead>
+              <tr>
+                <th>Ativo</th>
+                <th class="col-qty">Quantidade</th>
+                <th class="col-usd">Valor ($)</th>
+                <th class="col-eur">Valor (EUR)</th>
+                <th class="col-invested-usd">Investido ($)</th>
+                <th class="col-invested-eur">Investido (EUR)</th>
+                <th class="col-realized">Realizado</th>
+                <th class="col-loc">Localização</th>
+                <th>Editar</th>
+              </tr>
+            </thead>
+            <tbody id="rows">
+              <tr><td colspan="9" class="text-muted">Loading…</td></tr>
+            </tbody>
+          </table>
+
+          <div id="loading" class="loading" style="display: none;">
+            <p>Loading portfolio data...</p>
+          </div>
+        </div>
+
+        <div class="toolbar" style="justify-content:flex-end; margin-top:8px;">
+          <button id="btn-toggle-small" class="btn">Mostrar valores &lt; $5</button>
+        </div>
+        <p id="small-note" class="text-muted" style="text-align:right; margin-top:6px;"></p>
+        <p id="stamp" class="text-muted" style="margin-top:8px;"></p>
       </div>
-
-
-
-<div class="table-wrap">
-  <table id="crypto-table">
-    <thead>
-        <tr>
-        <th>Ativo</th>
-        <th class="col-qty">Quantidade</th>
-        <th class="col-usd">Valor ($)</th>
-        <th class="col-eur">Valor (EUR)</th>
-        <th class="col-invested-usd">Investido ($)</th>
-        <th class="col-invested-eur">Investido (EUR)</th>
-        <th class="col-realized">Realizado</th>
-        <th class="col-loc">Localização</th>
-        <th>Editar</th>
-      </tr>
-    </thead>
-
-    <tbody id="rows">
-      <tr><td colspan="9" class="text-muted">Loading…</td></tr>
-    </tbody>
-
-  </table>
-  <div id="loading" class="loading" style="display: none;">
-  <p>Loading portfolio data...</p>
-</div>
-
-</div>
-
-    <div class="toolbar" style="justify-content:flex-end; margin-top:8px;">
-     <button id="btn-toggle-small" class="btn">Mostrar valores &lt; $5</button>
-    </div>
-    <p id="small-note" class="text-muted" style="text-align:right; margin-top:6px;"></p>
-
-
-      <p id="stamp" class="text-muted" style="margin-top:8px;"></p>
     </section>
+
+
+
   </main>
 
         <!-- Modal (enhanced with cost field) -->

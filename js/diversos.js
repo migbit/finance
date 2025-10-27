@@ -2,6 +2,26 @@
 import { db } from '../js/script.js';
 import { collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
+// ---------- MOBILE MENU TOGGLE ----------
+document.addEventListener('DOMContentLoaded', () => {
+  const header = document.querySelector('header');
+  const menuBtn = document.getElementById('menu-icon');
+  const navMenu = document.getElementById('nav-menu');
+
+  if (menuBtn && header) {
+    menuBtn.addEventListener('click', () => {
+      header.classList.toggle('active');
+    });
+  }
+
+  // Close menu when a nav link is clicked
+  if (navMenu && header) {
+    navMenu.addEventListener('click', (e) => {
+      if (e.target.closest('a')) header.classList.remove('active');
+    });
+  }
+});
+
 // ---- Formatação € (padrão PT) ----
 function euroInt(v) {
   const num = Math.round(Number(v) || 0);

@@ -13,6 +13,8 @@
     <meta name="theme-color" content="#000000">
 </head>
 <body>
+            <!-- Hamburger icon (always visible on mobile) -->
+          <button id="menu-icon" aria-label="Open menu">☰</button>
 <body data-page="analise123">
     <header>
       <nav id="nav-menu">
@@ -53,13 +55,15 @@
   <h2 class="center">Análise 123</h2>
 
   <section class="report-section">
-    
     <div class="viz-card">
       <h4>Faturação</h4>
       <div class="chart-wrap" style="height:320px">
         <canvas id="chart-total"></canvas>
       </div>
-      <div id="tabela-comparativa-anos-123" class="mt-2"></div>
+
+      <div class="table-wrap">
+        <div id="tabela-comparativa-anos-123" class="mt-2"></div>
+      </div>
     </div>
   </section>
 
@@ -123,21 +127,27 @@
   <section class="report-section">
     <div class="viz-card">
       <h4>Taxa de Limpeza</h4>
-      <div id="tabela-limpeza-123"></div>
+      <div class="table-wrap">
+        <div id="tabela-limpeza-123"></div>
+      </div>
     </div>
   </section>
 
   <section class="report-section">
     <div class="viz-card">
       <h4>Noites</h4>
-      <div id="tabela-noites-123"></div>
+      <div class="table-wrap">
+        <div id="tabela-noites-123"></div>
+      </div>
     </div>
   </section>
 
   <section class="report-section">
     <div class="viz-card">
       <h4>Hóspedes</h4>
-      <div id="tabela-hospedes-123"></div>
+      <div class="table-wrap">
+        <div id="tabela-hospedes-123"></div>
+      </div>
     </div>
   </section>
 

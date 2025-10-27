@@ -11,6 +11,8 @@
 </head>
 
 <body data-page="dca">
+          <!-- Hamburger icon (always visible on mobile) -->
+          <button id="menu-icon" aria-label="Open menu">☰</button>
   <!-- Header / Nav -->
     <header>
       <nav id="nav-menu">
@@ -47,10 +49,10 @@
     </header>
 
   <main class="dca-page">
-    <!-- Título da página -->
+    <!-- === Título === -->
     <h2 class="page-title center">DCA – Trade Republic</h2>
 
-    <!-- Parâmetros -->
+    <!-- === Parâmetros === -->
     <section class="report-section">
       <div class="viz-card params-card">
         <h4>Parâmetros</h4>
@@ -88,7 +90,7 @@
       </div>
     </section>
 
-    <!-- Juro -->
+    <!-- === Juro === -->
     <section class="report-section">
       <div class="viz-card juro-card">
         <h4>Juro</h4>
@@ -124,15 +126,19 @@
       </div>
     </section>
 
-    <!-- Registo Mensal -->
-    <section class="report-section">
-      <div class="viz-card">
-        <h4>Registo Mensal</h4>
-        <div id="dca-table-wrap"></div>
+    <!-- === Registo Mensal === -->
+  <section class="report-section">
+    <div class="viz-card">
+      <h4>Registo Mensal</h4>
+      <div class="table-wrap" id="dca-table-wrap"><!-- tabela via JS --></div>
+      <div class="center" style="margin-top: 1rem;">
         <button id="toggle-others" type="button">Expandir anos</button>
       </div>
-    </section>
+    </div>
+  </section>
+
   </main>
+
 
   <!-- Keep original JS for now (no code changes in this step) -->
   <script type="module" src="../js/dca.js"></script>

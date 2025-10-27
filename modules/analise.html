@@ -13,6 +13,9 @@
     <meta name="theme-color" content="#000000">
 </head>
 <body>
+          <!-- Hamburger icon (always visible on mobile) -->
+          <button id="menu-icon" aria-label="Open menu">☰</button>
+        
     <header>
       <nav id="nav-menu">
         <ul>
@@ -56,9 +59,11 @@
       <h4>Faturação</h4>
       <div class="chart-wrap" style="height:320px">
         <canvas id="chart-total"></canvas>
-      </div>
+        </div>
+      <div class="table-wrap">
       <div id="tabela-comparativa-anos-1231248" class="mt-2"></div>
-    </div>
+      </div>
+      </div>
   </section>
 
   <section class="report-section">
@@ -127,14 +132,18 @@
   <section class="report-section">
     <div class="viz-card">
       <h4>Noites</h4>
-      <div id="tabela-noites-1231248"></div>
+      <div class="table-wrap">
+        <div id="tabela-noites-1231248"></div>
+      </div>
     </div>
   </section>
 
   <section class="report-section">
     <div class="viz-card">
       <h4>Hóspedes</h4>
-      <div id="tabela-hospedes-1231248"></div>
+      <div class="table-wrap">
+        <div id="tabela-hospedes-1231248"></div>
+      </div>
     </div>
   </section>
 

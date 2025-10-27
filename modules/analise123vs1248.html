@@ -14,6 +14,8 @@
 
 </head>
 <body data-page="analise123vs1248">
+          <!-- Hamburger icon (always visible on mobile) -->
+          <button id="menu-icon" aria-label="Open menu">☰</button>
     <header>
       <nav id="nav-menu">
         <ul>
@@ -52,19 +54,20 @@
 
   <h2 class="center">Comparativo lado a lado</h2>
 
-  <section class="report-section">
-    <div class="relatorio-container" id="analise-123vs1248">
-
+    <section class="report-section">
+    <div class="viz-card">
       <h3 class="center">Faturação mensal</h3>
-      <div class="chart-and-table">
-        <div class="chart-wrap viz-card" style="height:320px">
-          <canvas id="chart-fat-mensal"></canvas>
-        </div>
-        <div id="tabela-fat-mensal" class="mt-2 viz-card"></div>
+
+      <div class="chart-wrap" style="height:320px">
+        <canvas id="chart-fat-mensal"></canvas>
       </div>
 
+      <div class="table-wrap">
+        <div id="tabela-fat-mensal" class="mt-2"></div>
+      </div>
     </div>
   </section>
+
 
   <section class="report-section">
     <h3 class="center">Valor médio por noite (€/noite)</h3>

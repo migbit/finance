@@ -10,6 +10,8 @@
     <link rel="icon" href="../favicon.ico" type="image/x-icon">
 </head>
 <body>
+           <!-- Hamburger icon (always visible on mobile) -->
+          <button id="menu-icon" aria-label="Open menu">☰</button>
     <header>
       <nav id="nav-menu">
         <ul>
@@ -44,12 +46,13 @@
       </nav>
     </header>
     
-    <main>
+   <main>
+  <!-- === Carlos – Faturas Pendentes === -->
   <section class="report-section">
     <div class="viz-card">
       <h4>Carlos – Faturas Pendentes</h4>
 
-      <!-- 1. Formulário de Fatura -->
+      <!-- 1) Formulário de Fatura -->
       <form id="carlos-invoice-form" class="form-inline mb-3" style="margin-bottom: 1rem;">
         <input type="text" id="invoice-number" placeholder="Nº Fatura (ex: 2023/15)" required>
         <input type="date" id="invoice-date" required>
@@ -57,7 +60,7 @@
         <button type="submit" class="btn btn-success ml-2">Adicionar Fatura</button>
       </form>
 
-      <!-- 2. Tabela de Faturas + Pagamentos -->
+      <!-- 2) Tabela de Faturas + Pagamentos -->
       <div class="table-wrap">
         <table id="carlos-invoices-table" class="table table-striped">
           <thead>
@@ -70,15 +73,13 @@
               <th>Ações</th>
             </tr>
           </thead>
-          <tbody id="carlos-invoices-body">
-            <!-- preenchido via JS -->
-          </tbody>
+          <tbody id="carlos-invoices-body"><!-- via JS --></tbody>
         </table>
       </div>
     </div>
   </section>
 
-    <!-- === IVA Estrangeiro === -->
+  <!-- === IVA Estrangeiro === -->
   <section class="report-section">
     <div class="viz-card">
       <h4>IVA Estrangeiro</h4>
@@ -90,7 +91,7 @@
         <button type="submit" class="btn">Adicionar</button>
       </form>
 
-      <!-- Tabela principal (mostra ~5/6 linhas) -->
+      <!-- Tabela principal -->
       <div class="table-wrap">
         <table class="table" id="iva-estrangeiro-table">
           <thead>
@@ -105,30 +106,32 @@
         </table>
       </div>
 
-      <div class="center">
+      <div class="center" style="margin-top: 1rem;">
         <button id="iva-more-btn" class="btn" style="display:none;">Mostrar mais</button>
       </div>
 
-      <!-- Resumo por trimestre -->
+      <!-- Resumo por Trimestre -->
       <div class="subcard" style="margin-top: 18px;">
         <h4>Resumo por Trimestre</h4>
-        <table class="table" id="iva-estrangeiro-tri">
-          <thead>
-            <tr>
-              <th>Ano</th>
-              <th>Trimestre</th>
-              <th>Valor (€)</th>
-              <th>IVA (€)</th>
-              <th>Total (€)</th>
-            </tr>
-          </thead>
-          <tbody id="iva-estrangeiro-tri-body"><!-- via JS --></tbody>
-        </table>
+        <div class="table-wrap">
+          <table class="table" id="iva-estrangeiro-tri">
+            <thead>
+              <tr>
+                <th>Ano</th>
+                <th>Trimestre</th>
+                <th>Valor (€)</th>
+                <th>IVA (€)</th>
+                <th>Total (€)</th>
+              </tr>
+            </thead>
+            <tbody id="iva-estrangeiro-tri-body"><!-- via JS --></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>
-
 </main>
+
                
     <!-- Required Scripts -->
     <script type="module" src="../js/diversos.js"></script>

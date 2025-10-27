@@ -4,8 +4,62 @@ import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/fir
 
 let chartTotal = null;
 
+const mqMobile = window.matchMedia('(max-width:1024px)');
+
+/**
+ * Toggle x-axis label rotation + bar tightness per breakpoint, per chart instance.
+ * Call this once right after you create a chart, and it will also react to resizes.
+ */
+function attachMobileXAxisRotation(chart, { rotateOnMobile = true, tightenBarsOnMobile = true } = {}) {
+  function apply() {
+    const isMobile = mqMobile.matches;
+
+    // Safeguards
+    const x = chart.options?.scales?.x || (chart.options.scales.x = {});
+    const xTicks = x.ticks || (x.ticks = {});
+    const datasets = chart.options.datasets || (chart.options.datasets = {});
+    const bar = datasets.bar || (datasets.bar = {});
+
+    // Rotation only on mobile (desktop stays horizontal)
+    if (rotateOnMobile) {
+      xTicks.autoSkip = !isMobile;              // don't skip on mobile so all months show
+      xTicks.maxRotation = isMobile ? 90 : 0;
+      xTicks.minRotation = isMobile ? 90 : 0;
+      xTicks.padding = 4;
+    }
+
+    // Slightly tighter bars on mobile so labels have room
+    if (tightenBarsOnMobile) {
+      bar.barPercentage = isMobile ? 0.7 : 0.85;
+      bar.categoryPercentage = isMobile ? 0.8 : 0.9;
+    }
+
+    chart.update('none');
+  }
+
+  // Initial apply + react to breakpoint change
+  apply();
+  // Modern browsers (fallback to addListener if needed)
+  mqMobile.addEventListener?.('change', apply);
+  mqMobile.addListener?.(apply);
+}
+
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
+  // Mobile menu toggle
+  const header = document.querySelector('header');
+  const menuBtn = document.getElementById('menu-icon') || document.querySelector('.menu-icon');
+
+  if (header && menuBtn) {
+    menuBtn.addEventListener('click', () => header.classList.toggle('active'));
+  }
+
+  // Optional: close menu when a nav link is clicked
+  document.getElementById('nav-menu')?.addEventListener('click', (e) => {
+    if (e.target.closest('a')) header?.classList.remove('active');
+  });
+
+  // Carregar relatórios
   carregarTodosRelatorios();
 });
 
@@ -178,6 +232,9 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
     }
   }
 });
+
+attachMobileXAxisRotation(chartTotal, { rotateOnMobile: true, tightenBarsOnMobile: true });
+
   
 // ----------------------------------------------------------------------------> BARRAS DE PROGRESSO (DOUGHNUTS)
 
@@ -704,8 +761,9 @@ function renderGraficoValorMedioReservasAno1231248(faturas) {
       }
     }
   });
-}
+  attachMobileXAxisRotation(chartVmReservas1231248, { rotateOnMobile: true, tightenBarsOnMobile: false });
 
+}
 
 // ---------------------------------------------------------------> Taxa ocupação
 
@@ -795,38 +853,45 @@ function renderGraficoOcupacaoMensal1231248(faturas) {
     };
   });
 
-  // Plugin local para escrever % dentro das barras
-  const inBarLabels = {
-    id: 'inbar-labels',
-    afterDatasetsDraw(chart) {
-      const { ctx } = chart;
-      ctx.save();
-      ctx.font = '600 11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
+// Plugin local para escrever % dentro das barras
+const inBarLabels = {
+  id: 'inbar-labels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save();
+    ctx.font = '600 11px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
-      chart.data.datasets.forEach((ds, dsIndex) => {
-        const meta = chart.getDatasetMeta(dsIndex);
-        meta.data.forEach((bar, i) => {
-          const val = ds.data[i];
-          if (val == null || val === 0) return;
-          const x = bar.x;
-          const y = bar.y + (bar.base - bar.y) / 2; // centro vertical
-          // cor do texto (branco se a barra for escura)
-          let fill = '#333';
-          const m = String(ds.backgroundColor).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-          if (m) {
-            const r = +m[1], g = +m[2], b = +m[3];
-            const L = 0.299*r + 0.587*g + 0.114*b;
-            fill = (L < 140) ? '#fff' : '#333';
-          }
-          ctx.fillStyle = fill;
-          ctx.fillText(`${val}%`, x, y);
-        });
+    chart.data.datasets.forEach((ds, dsIndex) => {
+      const meta = chart.getDatasetMeta(dsIndex);
+      meta.data.forEach((bar, i) => {
+        const val = ds.data[i];
+        if (val == null || val === 0) return;
+
+        const x = bar.x;
+        const y = bar.y + (bar.base - bar.y) / 2; // centro vertical
+
+        // cor do texto (branco se a barra for escura)
+        let fill = '#333';
+        const m = String(ds.backgroundColor).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (m) {
+          const r = +m[1], g = +m[2], b = +m[3];
+          const L = 0.299 * r + 0.587 * g + 0.114 * b;
+          fill = (L < 140) ? '#fff' : '#333';
+        }
+        ctx.fillStyle = fill;
+
+        // escreve número sem '%' no mobile
+        const isMobile = window.matchMedia('(max-width:1024px)').matches;
+        ctx.fillText(isMobile ? `${val}` : `${val}%`, x, y);
       });
-      ctx.restore();
-    }
-  };
+    });
+
+    ctx.restore();
+  }
+};
+
 
   const ctx = document.getElementById('chart-ocupacao-1231248');
   if (!ctx) return;
@@ -857,6 +922,8 @@ function renderGraficoOcupacaoMensal1231248(faturas) {
       }
     }
   });
+  attachMobileXAxisRotation(chartOcupacao1231248, { rotateOnMobile: true, tightenBarsOnMobile: true });
+
 }
 
 

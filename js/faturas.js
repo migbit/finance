@@ -2,6 +2,26 @@
 import { db } from './script.js';
 import { collection, addDoc, getDocs, query, orderBy, limit, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
+// ---------- MOBILE MENU TOGGLE ----------
+document.addEventListener('DOMContentLoaded', () => {
+  const header = document.querySelector('header');
+  const menuBtn = document.getElementById('menu-icon');
+  const navMenu = document.getElementById('nav-menu');
+
+  if (menuBtn && header) {
+    menuBtn.addEventListener('click', () => {
+      header.classList.toggle('active');
+    });
+  }
+
+  // Close menu when a nav link is clicked
+  if (navMenu && header) {
+    navMenu.addEventListener('click', (e) => {
+      if (e.target.closest('a')) header.classList.remove('active');
+    });
+  }
+});
+
 // Dados manuais de faturação (substitua X e Y pelos valores reais que me fornecer)
 const manualFaturasEstatica = [
       { ano: 2024, mes: 1, apartamento: '123', valorTransferencia: 1915.11, taxaAirbnb: 0 },
@@ -192,27 +212,33 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 
-async function definirValoresPadrao() {
-         const hoje = new Date();
-         document.getElementById('ano').value = hoje.getFullYear();
-         document.getElementById('mes').value = hoje.getMonth() + 1;
-    
-         // buscar a última fatura (por timestamp) e calcular próximo número
-         const q = query(collection(db, "faturas"), orderBy("timestamp", "desc"), limit(1));
-         const snap = await getDocs(q);
-         let proximo = "M1";
-         if (!snap.empty) {
-             const ultima = snap.docs[0].data().numeroFatura;           // ex: "M593"
-             const num = parseInt(ultima.replace(/\D/g, ""), 10) + 1;   // 593 → 594
-             proximo = `M${num}`;
-         }
-         document.getElementById('numero-fatura').value = proximo;
-         // Taxa de limpeza por defeito (KISS)
-          const aptSel = document.getElementById('apartamento')?.value || '';
-          const taxaDef = aptSel === '1248' ? 65 : aptSel === '123' ? 60 : '';
-          const taxaInp = document.getElementById('taxa-limpeza');
-          if (taxaInp && (taxaInp.value === '' || taxaInp.value == null)) taxaInp.value = taxaDef;
-        }
+  async function definirValoresPadrao() {
+    const hoje = new Date();
+    document.getElementById('ano').value = hoje.getFullYear();
+    document.getElementById('mes').value = hoje.getMonth() + 1;
+
+    // buscar a última fatura (por timestamp) e calcular próximo número
+    const q = query(collection(db, "faturas"), orderBy("timestamp", "desc"), limit(1));
+    const snap = await getDocs(q);
+    let proximo = "M1";
+
+    if (!snap.empty) {
+      const ultima = snap.docs[0].data()?.numeroFatura || "";
+      if (typeof ultima === "string" && ultima.trim() !== "") {
+        const num = parseInt(ultima.replace(/\D/g, ""), 10);
+        if (!isNaN(num)) proximo = `M${num + 1}`;
+      }
+    }
+
+    document.getElementById("numero-fatura").value = proximo;
+
+    // Taxa de limpeza por defeito (KISS)
+    const aptSel = document.getElementById("apartamento")?.value || "";
+    const taxaDef = aptSel === "1248" ? 65 : aptSel === "123" ? 60 : "";
+    const taxaInp = document.getElementById("taxa-limpeza");
+    if (taxaInp && (taxaInp.value === "" || taxaInp.value == null)) taxaInp.value = taxaDef;
+  }
+
 
 // Event Listeners
 faturaForm.addEventListener('submit', async (e) => {
