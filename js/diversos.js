@@ -3,6 +3,10 @@
 // ========================================
 // IMPORTS
 // ========================================
+
+if (window.__diversosInit) { /* já correu */ }
+else { window.__diversosInit = true; /* segue init */ }
+
 import { db, enviarEmailUrgencia } from './script.js';
 import { 
     collection, 
@@ -320,7 +324,7 @@ function initCompras() {
             "Limpeza Potente", "Limpeza Placas", "Vinagre", "Álcool"
         ],
         "Roupa": [
-            "Detergente Roupa", "Amaciador", "Lixívia Roupa Branca", "Tira Nódoas",
+            "Detergente Roupa", "Detergente Roupa Pastilhas", "Amaciador", "Lixívia Roupa Branca", "Tira Nódoas",
             "Tira Gorduras", "Oxi Active", "Branqueador", "Perfumador"
         ],
         "WC": [

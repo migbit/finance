@@ -671,3 +671,197 @@
     display: none !important;
   }
 }
+
+/* Diversos – mobile tab bar as a multi-row grid (no horizontal scroll) */
+@media (max-width: 768px){
+  body#diversos-page .tab-navigation{
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)); /* two columns on phones */
+    gap: 8px;
+    padding: 8px 0 12px;
+    margin-bottom: 12px;
+
+    /* keep it under the hamburger */
+    position: sticky;
+    top: calc(var(--mobile-header-height) + 8px);
+    z-index: 900;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+
+  body#diversos-page main{
+    /* make sure content doesn't hide behind sticky tabs */
+    padding-top: calc(var(--mobile-header-height) + 64px);
+  }
+
+  body#diversos-page .tab-navigation .tab-btn{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;           /* good touch target */
+    padding: 10px 12px;
+    font-size: 14px;
+    line-height: 1.2;
+    border-radius: 10px;        /* card-like buttons on mobile */
+    white-space: normal;        /* allow wrapping text */
+    text-align: center;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text-dim);
+  }
+
+  body#diversos-page .tab-navigation .tab-btn.active{
+    background: var(--p2);
+    color: #fff;
+    border-color: var(--p2);
+  }
+}
+
+/* OPTIONAL: three columns for slightly wider small screens */
+@media (min-width: 560px) and (max-width: 768px){
+  body#diversos-page .tab-navigation{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+
+@media (max-width: 420px){
+  #tab-select-wrap { display: block !important; }
+  body#diversos-page .tab-navigation { display: none !important; }
+}
+
+
+/* Diversos: keep the tab bar visible on mobile */
+@media (max-width:1024px){
+  /* Make the tabs stick below the hamburger */
+  .tab-navigation{
+    position: sticky;
+    top: calc(var(--mobile-header-height) + 8px); /* below the ☰ */
+    z-index: 900;
+    background: #fff;
+    padding-top: 8px;
+    margin-top: -8px; /* cancels the added padding so layout doesn’t jump */
+  }
+
+  /* Give a bit more space at the top so tabs never hide under the icon */
+  #diversos-page main{
+    padding-top: calc(var(--mobile-header-height) + 64px);
+  }
+
+  /* Keep tab buttons compact and on one/two lines if needed */
+  .tab-navigation{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-navigation .tab-btn{
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.2;
+    border-radius: 8px 8px 0 0;
+    white-space: nowrap;
+    flex: 0 0 auto; /* don’t stretch */
+  }
+}
+
+/* === COMPRAS — consistent, compact buttons across all categories === */
+/* Reset any global mobile button styles inside Compras only */
+@media (max-width: 1024px){
+  #compras-form button {
+    min-height: 0 !important;     /* beat the global 44px */
+    font-size: 13px !important;    /* beat global 16px */
+    line-height: 1 !important;
+    padding: 0 !important;
+    width: auto !important;        /* beat the global 100% at <=480px */
+    box-sizing: border-box;
+  }
+}
+
+/* Final layout: name + quantity on first line, + - 0 C on the line below */
+@media (max-width: 768px){
+  #compras-form .item-compra {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  /* First line: item text + quantity (right side) */
+  #compras-form .item-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* center group horizontally */
+  gap: 6px;                  /* small space between name and box */
+  width: 100%;
+  text-align: center;
+}
+
+#compras-form .item-nome,
+#compras-form .item-nome-custom {
+  flex: 0 1 auto;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text, #333);
+}
+
+#compras-form .item-quantidade {
+  width: 40px;
+  height: 30px;
+  text-align: center;
+  font-size: 14px;
+  border-radius: 6px;
+  padding: 0;
+  margin-left: 4px;
+  box-sizing: border-box;
+}
+
+  /* Second line: + - 0 C (all equal size, one row) */
+  #compras-form .item-controles {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: 100%;
+  }
+  #compras-form .item-controles button {
+    flex: 1 1 22%;
+    min-width: 36px;
+    height: 30px;
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  /* Soft color cues */
+  #compras-form .item-controles .btn-aumentar { background: #d9f2dc; }     /* + */
+  #compras-form .item-controles .btn-diminuir { background: #f8d7da; }     /* - */
+  #compras-form .item-controles .btn-zero     { background: #fff3cd; }     /* 0 */
+  #compras-form .item-controles .btn-local-c.active { background: #cce5ff; } /* C */
+}
+
+/* Tiny phones refine */
+@media (max-width: 480px){
+  #compras-form .item-controles button {
+    flex: 1 1 23%;
+    height: 28px;
+    font-size: 12px !important;
+  }
+}
+
+#compras-form .item-compra.item-comprado {
+  background: #fff8c2;            /* soft yellow highlight */
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+/* Keep text readable on yellow background */
+#compras-form .item-compra.item-comprado .item-nome,
+#compras-form .item-compra.item-comprado .item-nome-custom {
+  color: #333;
+  font-weight: 600;
+}
+
+/* Optional: give a bit of visual separation */
+#compras-form .item-compra.item-comprado + .item-compra {
+  margin-top: 2px;
+}

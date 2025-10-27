@@ -56,7 +56,7 @@
         }
     </style>
 </head>
-<body id="diversos-page">
+<body id="diversos-page" data-page="diversos-page">
     <!-- Hamburger icon (always visible on mobile) -->
     <button id="menu-icon" aria-label="Open menu">☰</button>
     
@@ -95,6 +95,20 @@
     </header>
     
     <main>
+        <!-- Mobile tab dropdown (shown only on very small screens) -->
+        <div id="tab-select-wrap" class="mobile-only" style="display:none; margin-bottom:8px;">
+        <label for="tab-select" class="sr-only">Selecionar separador</label>
+        <select id="tab-select">
+            <option value="mensagens">📨 Mensagens</option>
+            <option value="ficheiros">📁 Ficheiros</option>
+            <option value="compras">🛒 Compras</option>
+            <option value="hospedes">👥 Hóspedes</option>
+            <option value="reparacoes">🔧 Reparações</option>
+            <option value="iva">📑 IVA Estrangeiro</option>
+            <option value="carlos">💼 Carlos – Faturas</option>
+        </select>
+        </div>
+
         <!-- Tab Navigation -->
         <div class="tab-navigation">
             <button class="tab-btn active" data-tab="mensagens">📨 Mensagens</button>
@@ -401,12 +415,7 @@
     </main>
 
     <!-- Required Scripts -->
-    <script src="../js/ical.min.js"></script>
     <script type="module" src="../js/diversos.js"></script>
-    <script type="module" src="../js/mensagens.js"></script>
-    <script type="module" src="../js/compras.js"></script>
-    <script type="module" src="../js/hospedes.js"></script>
-    <script type="module" src="../js/reparações.js"></script>
     <script type="module" src="../js/script.js"></script>
 
     <!-- EmailJS -->
@@ -434,13 +443,77 @@
             });
         });
 
-        // Mobile Menu Toggle Script
-        const menuIcon = document.getElementById('menu-icon');
-        const navMenu = document.getElementById('nav-menu');
+    // Mobile Menu Toggle Script (consistent with all pages)
+document.addEventListener('DOMContentLoaded', () => {
+  const header  = document.querySelector('header');
+  const menuBtn = document.getElementById('menu-icon');
+  const navMenu = document.getElementById('nav-menu');
 
-        menuIcon.addEventListener('click', function() {
-            navMenu.classList.toggle('active');
-        });
+  if (menuBtn && header) {
+    menuBtn.addEventListener('click', () => {
+      header.classList.toggle('active');
+    });
+  }
+
+  if (navMenu && header) {
+    navMenu.addEventListener('click', e => {
+      if (e.target.closest('a')) header.classList.remove('active');
+    });
+  }
+});
+
     </script>
+    <script>
+(function () {
+  function bindMenu() {
+    const header  = document.querySelector('header');
+    const btn     = document.getElementById('menu-icon');
+    const nav     = document.getElementById('nav-menu');
+    if (!header || !btn) return;
+
+    // Prevent double-binding
+    if (!btn.dataset.bound) {
+      btn.addEventListener('click', () => header.classList.toggle('active'));
+      btn.dataset.bound = '1';
+    }
+    if (nav && !nav.dataset.bound) {
+      nav.addEventListener('click', (e) => {
+        if (e.target.closest('a')) header.classList.remove('active');
+      });
+      nav.dataset.bound = '1';
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindMenu);
+  } else {
+    bindMenu();
+  }
+})();
+</script>
+
+<script>
+  // existing tab click code is already present …
+  // Add sync with select:
+  (function () {
+    const select = document.getElementById('tab-select');
+    if (!select) return;
+
+    // When user changes the select, activate that tab
+    select.addEventListener('change', () => {
+      const val = select.value; // e.g., "compras"
+      const btn = document.querySelector('.tab-btn[data-tab="'+ val +'"]');
+      if (btn) btn.click();
+    });
+
+    // Keep select in sync when user taps a tab button
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.getAttribute('data-tab');
+        if (val && select.value !== val) select.value = val;
+      });
+    });
+  })();
+</script>
 </body>
 </html>
