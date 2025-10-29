@@ -1,10 +1,13 @@
 // Análise 1248 — JS final
+// Charts globais (acessíveis em todo o ficheiro)
+window.chartTotal1248 = null;
+window.chartOcupacao1248 = null;
+window.chartVmReservas1248 = null;
+window.chartCheckinsDiasSemana1248 = null;
+
 // Importações Firebase
 import { db } from './script.js';
 import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
-
-let chartTotal1248 = null;
-let chartOcupacao1248 = null;
 
 // ---------- MOBILE MENU TOGGLE ----------
 document.addEventListener('DOMContentLoaded', () => {
@@ -33,18 +36,35 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function carregarTodosRelatorios1248() {
   const firebaseFaturas = await carregarFaturas1248();
   const currentYear = new Date().getFullYear();
+
   const faturas = consolidarFaturas(firebaseFaturas)
     .filter(f => Number(f.ano) === 2024 || Number(f.ano) === currentYear);
 
+  // define anos antes dos renders
+  const anos = Array.from(new Set([2024, currentYear])).sort((a, b) => a - b);
+  const ultimoAno = anos[anos.length - 1];
+  const penultimoAno = anos.length > 1 ? anos[0] : 2024;
+
+  // ✅ atualiza o título "Progresso vs ..."
+  updateProgressTitle1248(penultimoAno);
+
+  // ---- render em ordem ----
   gerarAnaliseFaturacao1248(faturas);         // gráfico + barras (só 1248)
   gerarHeatmapVariacao1248(faturas);          // heatmap sem legenda (só 1248)
   renderGraficoValorMedioReservasAno1248(faturas);
   renderTabelaComparativaAnos1248(faturas, 'tabela-comparativa-anos-1248');
   renderGraficoOcupacaoMensal1248(faturas);
-  renderTabelaLimpeza1248(faturas, 'tabela-limpeza-1248');   // só a tabela, sem <h3> e sem <hr>
-  renderTabelaNoites1248(faturas, 'tabela-noites-1248');     // <h3 class="center"> gerado aqui
-  renderTabelaHospedes1248(faturas, 'tabela-hospedes-1248'); // <h3 class="center">, sem "(Apt 1248)"
+  renderTabelaLimpeza1248(faturas, 'tabela-limpeza-1248');
+  renderTabelaNoites1248(faturas, 'tabela-noites-1248');
+  renderTabelaHospedes1248(faturas, 'tabela-hospedes-1248');
   renderCheckinsPorDiaSemana1248(faturas);
+  updateDonuts1248(faturas, ultimoAno, penultimoAno);
+}
+
+
+function updateProgressTitle1248(penultimoAno) {
+  const titleEl = document.getElementById('progress-title');
+  if (titleEl) titleEl.textContent = `Progresso vs ${penultimoAno}`;
 }
 
 
@@ -105,7 +125,8 @@ const euroInt = (v) => {
 const _vm_totalReserva = f =>
   Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0);
 
-// --------------------------- Gráfico + Barras (Apt 1248)
+
+// --------------------------- Gráfico (Apt 1248)
 function gerarAnaliseFaturacao1248(faturas) {
   if (chartTotal1248) {
     chartTotal1248.destroy();
@@ -113,66 +134,89 @@ function gerarAnaliseFaturacao1248(faturas) {
   }
 
   const currentYear = new Date().getFullYear();
-  const anos = Array.from(new Set([2024, currentYear])).sort((a,b)=>a-b);
+  const anos = Array.from(new Set([2024, currentYear])).sort((a, b) => a - b);
   const ultimoAno = anos[anos.length - 1];
   const temAnterior = anos.length > 1;
   const penultimoAno = temAnterior ? anos[0] : 2024;
 
   function somaPor(ano, mes, apt) {
-  return faturas
-    .filter(f =>
-      Number(f.ano) === Number(ano) &&
-      Number(f.mes) === Number(mes) &&
-      String(f.apartamento) === String(apt)
-    )
-    .reduce((s, f) => s + _vm_totalReserva(f), 0);
+    return faturas
+      .filter(f =>
+        Number(f.ano) === Number(ano) &&
+        Number(f.mes) === Number(mes) &&
+        String(f.apartamento) === String(apt)
+      )
+      .reduce((s, f) => s + _vm_totalReserva(f), 0);
   }
-
 
   const labels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
   const datasetsLine = [];
   if (temAnterior) {
     datasetsLine.push({
-      label: `${anos[0]}`,
+      label: `${anos[0]}`, // ano anterior
       data: labels.map((_, i) => somaPor(penultimoAno, i + 1, '1248')),
-      borderDash: [2, 2],
+      borderDash: [4, 4],
       borderWidth: 1.5,
-      borderColor: '#352209ff',
-      backgroundColor: '#352209ff',
+      borderColor: 'rgba(120,120,120,1)',
+      backgroundColor: 'rgba(120,120,120,0.1)',
+      pointRadius: 2,
+      pointHoverRadius: 4
     });
   }
+
   datasetsLine.push({
-    label: `${ultimoAno}`,
-    data: labels.map((_, i) => somaPor(ultimoAno, i + 1, '1248')), borderColor: '#EF8725', backgroundColor: '#EF8725',
+    label: `${ultimoAno}`, // ano atual
+    data: labels.map((_, i) => somaPor(ultimoAno, i + 1, '1248')),
+    borderColor: '#EF8725',
+    backgroundColor: 'rgba(239,135,37,0.15)',
+    borderWidth: 2,
+    pointRadius: 2,
+    pointHoverRadius: 4
   });
 
-chartTotal1248 = new Chart(document.getElementById('chart-total'), {
-  type: 'line',
-  data: { labels, datasets: datasetsLine },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          precision: 0,
-          stepSize: 100   // 👈 increments de 1000 em 1000
+  // Estilo igual ao 123: curva sem overshoot e segmentos a 0 sem curva
+  datasetsLine.forEach(ds => Object.assign(ds, {
+    cubicInterpolationMode: 'monotone',
+    tension: 0.25,
+    segment: {
+      tension: ctx => (ctx.p0.parsed.y === 0 || ctx.p1.parsed.y === 0) ? 0 : 0.25
+    }
+  }));
+
+  chartTotal1248 = new Chart(document.getElementById('chart-total'), {
+    type: 'line',
+    data: { labels, datasets: datasetsLine },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          type: 'linear',
+          beginAtZero: true,
+          min: 0,
+          max: 9000,
+          ticks: { precision: 0, stepSize: 500 },
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          border: { display: false }
         },
-        suggestedMax: 9000 // ou usa grace: '12%' se preferires automático
+        x: {
+          grid: { display: false },
+          border: { display: true }
+        }
+      },
+      plugins: {
+        legend: { display: true }
       }
     }
-  }
-});
+  });
+ 
+  updateProgressTitle1248(penultimoAno);
+}
+
+
 
 // --------------- Donuts de Progresso (Apt 1248)
-
-// helpers
-const APT = '1248';
-const somaAno = (ano, apt = APT) => faturas
-  .filter(f => Number(f.ano) === Number(ano) && String(f.apartamento) === String(apt))
-  .reduce((s,f) => s + _vm_totalReserva(f), 0);
 
 // css var
 const cssVar = (name, fallback) =>
@@ -237,12 +281,11 @@ function makeDonut(canvas, percentSigned) {
   return chart;
 }
 
-// Título
-{
-  const titleEl = document.getElementById('progress-title');
-  if (titleEl) titleEl.textContent = `Progresso vs ${penultimoAno}`;
-}
-
+function updateDonuts1248(faturas, ultimoAno, penultimoAno) {
+  const APT = '1248';
+  const somaAno = (ano, apt = APT) => faturas
+    .filter(f => Number(f.ano) === Number(ano) && String(f.apartamento) === String(apt))
+    .reduce((s, f) => s + _vm_totalReserva(f), 0);
 // 1) Parcial do mês atual (Apt 1248)
 {
   const mesAtual = new Date().getMonth() + 1;
@@ -717,8 +760,6 @@ function renderTabelaComparativaAnos1248(faturas, targetId) {
 
 // ------------------------------------------------> Gráfico valor médio noite.
 
-let chartVmReservas1248 = null;
-
 function renderGraficoValorMedioReservasAno1248(faturas) {
   const APT = '1248';
   const Y = new Date().getFullYear();
@@ -1121,7 +1162,6 @@ function renderTabelaHospedes1248(faturas, targetId) {
 
 
 // --------------------------- Check-ins por dia da semana (Apt 1248)
-let chartCheckinsDiasSemana1248 = null;
 
 function renderCheckinsPorDiaSemana1248(faturas) {
   const Y = new Date().getFullYear();

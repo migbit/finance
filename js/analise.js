@@ -2,47 +2,48 @@
 import { db } from './script.js';
 import { collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
-let chartTotal = null;
 
 const mqMobile = window.matchMedia('(max-width:1024px)');
+
+window.chartTotal = null;     // chart visível na consola
+let buildingChart = false;    // evita concorrência
 
 /**
  * Toggle x-axis label rotation + bar tightness per breakpoint, per chart instance.
  * Call this once right after you create a chart, and it will also react to resizes.
  */
-function attachMobileXAxisRotation(chart, { rotateOnMobile = true, tightenBarsOnMobile = true } = {}) {
-  function apply() {
-    const isMobile = mqMobile.matches;
+    function attachMobileXAxisRotation(chart, { rotateOnMobile = true, tightenBarsOnMobile = true } = {}) {
+      if (!chart) return;
 
-    // Safeguards
-    const x = chart.options?.scales?.x || (chart.options.scales.x = {});
-    const xTicks = x.ticks || (x.ticks = {});
-    const datasets = chart.options.datasets || (chart.options.datasets = {});
-    const bar = datasets.bar || (datasets.bar = {});
+      function apply() {
+        if (!chart || !chart.options) return;
+        const isMobile = mqMobile.matches;
 
-    // Rotation only on mobile (desktop stays horizontal)
-    if (rotateOnMobile) {
-      xTicks.autoSkip = !isMobile;              // don't skip on mobile so all months show
-      xTicks.maxRotation = isMobile ? 90 : 0;
-      xTicks.minRotation = isMobile ? 90 : 0;
-      xTicks.padding = 4;
+        const x = chart.options.scales?.x || (chart.options.scales.x = {});
+        const xTicks = x.ticks || (x.ticks = {});
+        const datasets = chart.options.datasets || (chart.options.datasets = {});
+        const bar = datasets.bar || (datasets.bar = {});
+
+        if (rotateOnMobile) {
+          xTicks.autoSkip = !isMobile;
+          xTicks.maxRotation = isMobile ? 90 : 0;
+          xTicks.minRotation = isMobile ? 90 : 0;
+          xTicks.padding = 4;
+        }
+
+        if (tightenBarsOnMobile) {
+          bar.barPercentage = isMobile ? 0.7 : 0.85;
+          bar.categoryPercentage = isMobile ? 0.8 : 0.9;
+        }
+
+        chart.update('none');
+      }
+
+      apply();
+      mqMobile.addEventListener?.('change', apply);
+      mqMobile.addListener?.(apply); // fallback
     }
 
-    // Slightly tighter bars on mobile so labels have room
-    if (tightenBarsOnMobile) {
-      bar.barPercentage = isMobile ? 0.7 : 0.85;
-      bar.categoryPercentage = isMobile ? 0.8 : 0.9;
-    }
-
-    chart.update('none');
-  }
-
-  // Initial apply + react to breakpoint change
-  apply();
-  // Modern browsers (fallback to addListener if needed)
-  mqMobile.addEventListener?.('change', apply);
-  mqMobile.addListener?.(apply);
-}
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
@@ -137,119 +138,195 @@ function obterNomeMes(numeroMes) {
 
 
 function gerarAnaliseFaturacao(faturas) {
+  if (buildingChart) return;    // ignora segunda chamada enquanto constrói
+  buildingChart = true;
 
-    // destruir gráficos antigos antes de recriar
-  if (chartTotal) {
-    chartTotal.destroy();
-    chartTotal = null;
-  }
+  try {
+    // destruir gráfico antigo
+    if (window.chartTotal) {
+      window.chartTotal.destroy();
+      window.chartTotal = null;
+    }
 
-    // 1) Prepara dados: meses 1-12, anos disponíveis (até ano atual)
+    // 1) Anos / helpers
     const currentYear = new Date().getFullYear();
     const anos = Array.from(new Set([2024, currentYear])).sort((a,b)=>a-b);
     const ultimoAno = anos[anos.length - 1];
     const temAnterior = anos.length > 1;
-    const penultimoAno = temAnterior ? anos[0] : 2024; // nunca 2023
+    const penultimoAno = temAnterior ? anos[0] : 2024;
 
-  
-    // função auxiliar para somar valores por (ano, mes, apt)
     function somaPor(ano, mes, apt) {
-    return faturas
-    .filter(f =>
-      Number(f.ano) === Number(ano) &&
-      Number(f.mes) === Number(mes) &&
-      String(f.apartamento) === String(apt)
-    )
-    .reduce((s, f) =>
-      s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0))
-    , 0);
+      return faturas
+        .filter(f =>
+          Number(f.ano) === Number(ano) &&
+          Number(f.mes) === Number(mes) &&
+          String(f.apartamento) === String(apt)
+        )
+        .reduce((s, f) =>
+          s + (Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0))
+        , 0);
     }
 
-  
-    // 2) construir arrays mensais
+    // 2) Dados
     const labels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
     const data123   = labels.map((_, i) => somaPor(ultimoAno, i+1, '123'));
     const data1248  = labels.map((_, i) => somaPor(ultimoAno, i+1, '1248'));
     const dataTotal = labels.map((_, i) => data123[i] + data1248[i]);
-    // ── Novo: calculamos também o ano anterior ──
-    const data123Prev  = labels.map((_, i) => somaPor(penultimoAno, i+1, '123'));
-    const data1248Prev = labels.map((_, i) => somaPor(penultimoAno, i+1, '1248'));
+
+    const data123Prev   = labels.map((_, i) => somaPor(penultimoAno, i+1, '123'));
+    const data1248Prev  = labels.map((_, i) => somaPor(penultimoAno, i+1, '1248'));
     const dataTotalPrev = labels.map((_, i) => data123Prev[i] + data1248Prev[i]);
 
-   // comparativo Apt 123 e 1248: ano anterior (transparente) vs ano atual (sólido)
- const datasetsBar = [];
-if (temAnterior) {
-  datasetsBar.push(
-    { label: `${anos[0]}`,  data: data123Prev,  backgroundColor: 'rgba(54,162,235,0.4)' },
-  );
-}
-datasetsBar.push(
-  { label: `${ultimoAno}`,  data: data123,  backgroundColor: 'rgba(54,162,235,1)' },
-);
-
-const datasetsLine = [];
-
-if (temAnterior) {
-  datasetsLine.push({
-    label: `${anos[0]}`,           // ano anterior
-    data: dataTotalPrev,           // total 123+1248 (ano anterior)
-    borderDash: [4, 4],
-    borderWidth: 1.5,
-    borderColor: 'rgba(90,90,90,1)',      // 👈 cinza mais escuro
-    backgroundColor: 'rgba(90,90,90,0.1)',
-    tension: 0.25
-  });
-}
-
-datasetsLine.push({
-  label: `${ultimoAno}`,           // ano atual
-  data: dataTotal,                 // total 123+1248 (ano atual)
-  borderColor: 'rgb(20, 78, 3)',          // 👈 verde escuro combinado
-  backgroundColor: 'rgba(20, 78, 3, 0.15)',
-  borderWidth: 2,
-  tension: 0.25,
-  pointRadius: 2,
-  pointHoverRadius: 4
-});
-
-
-// ... mantém datasetsLine como já tens ...
-// GARANTE que todos os datasets de linha usam a escala 'y_total'
-// Garante que TODOS os datasets da linha usam a escala 'y_total'
-datasetsLine.forEach(ds => Object.assign(ds, {
-  yAxisID: 'y_total',
-  cubicInterpolationMode: 'monotone', // evita overshoot
-  tension: 0.25                        // podes 0–0.3; 0 elimina curvas
-}));
-
-chartTotal = new Chart(document.getElementById('chart-total'), {
-  type: 'line',
-  data: { labels, datasets: datasetsLine },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y_total: {
-        type: 'linear',
-        beginAtZero: true,
-        min: 0,
-        max: 17500,          // teto rígido
-        ticks: { stepSize: 500, precision: 0 },
-        grid: { color: 'rgba(0,0,0,0.06)' },
-        border: { display: false }
-      },
-      x: {
-        grid: { display: false },
-        border: { display: true }
-      }
+    // 3) Datasets (linha total: ano anterior tracejado + ano atual sólido)
+    const datasetsLine = [];
+    if (temAnterior) {
+      datasetsLine.push({
+        label: `${anos[0]}`,
+        data: dataTotalPrev,
+        borderDash: [4, 4],
+        borderWidth: 1.5,
+        borderColor: 'rgba(120,120,120,1)',
+        backgroundColor: 'rgba(120,120,120,0.1)'
+      });
     }
+    datasetsLine.push({
+      label: `${ultimoAno}`,
+      data: dataTotal,
+      borderColor: 'rgb(20, 78, 3)',
+      backgroundColor: 'rgba(20, 78, 3, 0.15)',
+      borderWidth: 2
+    });
+
+    // 4) Estilo igual ao 123 + anti-overshoot + mesma escala
+    datasetsLine.forEach(ds => Object.assign(ds, {
+      yAxisID: 'y_total',
+      cubicInterpolationMode: 'monotone',
+      tension: 0.25,
+      pointRadius: 2,
+      pointHoverRadius: 4,
+      segment: { tension: ctx => (ctx.p0.parsed.y === 0 || ctx.p1.parsed.y === 0) ? 0 : 0.25 }
+    }));
+
+    // 5) Criar gráfico com teto rígido
+    window.chartTotal = new Chart(document.getElementById('chart-total'), {
+      type: 'line',
+      data: { labels, datasets: datasetsLine },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 0 },
+        scales: {
+          y_total: {
+            type: 'linear',
+            beginAtZero: true,
+            bounds: 'ticks',
+            min: 0,
+            max: 17500,
+            grace: 0,
+            ticks: { stepSize: 500, precision: 0 },
+            grid: { color: 'rgba(0,0,0,0.06)' },
+            border: { display: false }
+          },
+          x: { grid: { display: false }, border: { display: true } }
+        }
+      }
+    });
+
+    // 6) Ajustes mobile (só se o gráfico existe)
+    if (window.chartTotal) {
+      attachMobileXAxisRotation(window.chartTotal, { rotateOnMobile: true, tightenBarsOnMobile: true });
+    }
+
+    // --- Progresso & Donuts (agora com acesso a faturas, ultimoAno, penultimoAno) ---
+
+    // título “Progresso vs …”
+    {
+      const titleEl = document.getElementById('progress-title');
+      if (titleEl) titleEl.textContent = `Progresso vs ${penultimoAno}`;
+    }
+
+    const APTS = ['123', '1248'];
+
+    // 1) Parcial do mês atual
+    {
+      const mesAtual = new Date().getMonth() + 1;
+
+      const cur = faturas
+        .filter(f => Number(f.ano) === ultimoAno && Number(f.mes) === mesAtual && APTS.includes(String(f.apartamento)))
+        .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
+
+      const ant = faturas
+        .filter(f => Number(f.ano) === penultimoAno && Number(f.mes) === mesAtual && APTS.includes(String(f.apartamento)))
+        .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
+
+      const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
+      const diff = cur - ant; // positivo = melhor
+      const pct  = (diff / base) * 100;
+
+      const lblEl = document.getElementById('label-parcial');
+      if (lblEl) lblEl.textContent = `Parcial ${obterNomeMes(mesAtual)}`;
+
+      const txtEl = document.getElementById('donut-parcial-text');
+      if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${formatEuro(diff)}` : `Faltam ${formatEuro(-diff)}`;
+
+      makeDonut(document.getElementById('donut-parcial'), pct);
+    }
+
+    // 2) Até mês anterior (acumulado)
+    {
+      const currentMonth = new Date().getMonth() + 1;
+
+      const cur = faturas
+        .filter(f => Number(f.ano) === ultimoAno && APTS.includes(String(f.apartamento)) && Number(f.mes) < currentMonth)
+        .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
+
+      const ant = faturas
+        .filter(f => Number(f.ano) === penultimoAno && APTS.includes(String(f.apartamento)) && Number(f.mes) < currentMonth)
+        .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
+
+      const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
+      const diff = cur - ant;
+      const pct  = (diff / base) * 100;
+
+      const prevMonth = Math.max(1, currentMonth - 1);
+
+      const lblEl = document.getElementById('label-ateset');
+      if (lblEl) lblEl.textContent = `Até ${obterNomeMes(prevMonth)}`;
+
+      const txtEl = document.getElementById('donut-ateset-text');
+      if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${formatEuro(diff)}` : `Faltam ${formatEuro(-diff)}`;
+
+      makeDonut(document.getElementById('donut-ateset'), pct);
+    }
+
+    // 3) Ano atual vs anterior (total até agora)
+    {
+      const atual = faturas
+        .filter(f => Number(f.ano) === ultimoAno && APTS.includes(String(f.apartamento)))
+        .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
+
+      const antes = faturas
+        .filter(f => Number(f.ano) === penultimoAno && APTS.includes(String(f.apartamento)))
+        .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
+
+      const base  = antes === 0 ? (atual === 0 ? 1 : atual) : antes;
+      const diff  = atual - antes;
+      const pct   = (diff / base) * 100;
+
+      const lblEl = document.getElementById('label-vs');
+      if (lblEl) lblEl.textContent = `${ultimoAno} vs ${penultimoAno}`;
+
+      const txtEl = document.getElementById('donut-vs-text');
+      if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${formatEuro(diff)}` : `Faltam ${formatEuro(-diff)}`;
+
+      makeDonut(document.getElementById('donut-vs'), pct);
+    }
+
+
+  } finally {
+    buildingChart = false;
   }
-});
-
-
-
-attachMobileXAxisRotation(chartTotal, { rotateOnMobile: true, tightenBarsOnMobile: true });
-
+}
   
 // ----------------------------------------------------------------------------> BARRAS DE PROGRESSO (DOUGHNUTS)
 
@@ -338,84 +415,6 @@ function makeDonut(canvas, percentSigned) {
   return chart;
 }
 
-
-// set main title
-{
-  const titleEl = document.getElementById('progress-title');
-  if (titleEl) titleEl.textContent = `Progresso vs ${penultimoAno}`;
-}
-
-// === calculate values and render into existing canvases ===
-
-// 1) Parcial do mês atual
-{
-  const mesAtual = new Date().getMonth() + 1;
-
-  const cur = faturas
-    .filter(f => Number(f.ano) === ultimoAno && Number(f.mes) === mesAtual && APTS.includes(String(f.apartamento)))
-    .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
-
-  const ant = faturas
-    .filter(f => Number(f.ano) === penultimoAno && Number(f.mes) === mesAtual && APTS.includes(String(f.apartamento)))
-    .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
-
-  const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
-  const diff = cur - ant; // positivo = melhor
-  const pct  = (diff / base) * 100;
-
-  const lblEl = document.getElementById('label-parcial');
-  if (lblEl) lblEl.textContent = `Parcial ${obterNomeMes(mesAtual)}`;
-
-  const txtEl = document.getElementById('donut-parcial-text');
-  if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${formatEuro(diff)}` : `Faltam ${formatEuro(-diff)}`;
-
-  makeDonut(document.getElementById('donut-parcial'), pct);
-}
-
-// 2) Até mês anterior (acumulado)
-{
-  const currentMonth = new Date().getMonth() + 1;
-
-  const cur = faturas
-    .filter(f => Number(f.ano) === ultimoAno && APTS.includes(String(f.apartamento)) && Number(f.mes) < currentMonth)
-    .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
-
-  const ant = faturas
-    .filter(f => Number(f.ano) === penultimoAno && APTS.includes(String(f.apartamento)) && Number(f.mes) < currentMonth)
-    .reduce((s, f) => s + (Number(f.valorTransferencia||0) + Number(f.taxaAirbnb||0)), 0);
-
-  const base = ant === 0 ? (cur === 0 ? 1 : cur) : ant;
-  const diff = cur - ant;
-  const pct  = (diff / base) * 100;
-
-  const prevMonth = Math.max(1, currentMonth - 1);
-
-  const lblEl = document.getElementById('label-ateset');
-  if (lblEl) lblEl.textContent = `Até ${obterNomeMes(prevMonth)}`;
-
-  const txtEl = document.getElementById('donut-ateset-text');
-  if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${formatEuro(diff)}` : `Faltam ${formatEuro(-diff)}`;
-
-  makeDonut(document.getElementById('donut-ateset'), pct);
-}
-
-// 3) Ano atual vs anterior (total até agora)
-{
-  const atual = somaAnoApts(ultimoAno, APTS);
-  const antes = somaAnoApts(penultimoAno, APTS);
-  const base  = antes === 0 ? (atual === 0 ? 1 : atual) : antes;
-  const diff  = atual - antes;
-  const pct   = (diff / base) * 100;
-
-  const lblEl = document.getElementById('label-vs');
-  if (lblEl) lblEl.textContent = `${ultimoAno} vs ${penultimoAno}`;
-
-  const txtEl = document.getElementById('donut-vs-text');
-  if (txtEl) txtEl.textContent = diff >= 0 ? `Excedeu ${formatEuro(diff)}` : `Faltam ${formatEuro(-diff)}`;
-
-  makeDonut(document.getElementById('donut-vs'), pct);
-}
-}
 
 // --------------------------------------------------------------> HeatMap
 function gerarHeatmapVariacao1231248(faturas) {

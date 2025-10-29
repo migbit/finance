@@ -227,16 +227,6 @@
 <script type="module" src="../js/analise123.js"></script>
 
 
-<script type="module">
-  import { protectPage, mountSidebarAuth } from '/js/simpleAuth.js';
-
-  // Protege a página pelo data-page do <body>
-  protectPage({ loginUrl: '/login.html' });
-
-  // Monta o botão de login leve no fundo da sidebar
-  mountSidebarAuth('#sidebar-auth', { loginUrl: '/login.html' });
-</script>
-
 <script>
 document.querySelectorAll('.tab-navigation .tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
