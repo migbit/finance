@@ -372,6 +372,35 @@ class CryptoPortfolioApp {
     return { usd: totalUSD, eur: totalEUR };
   }
 
+    listActiveInvestments() {
+    const all = [];
+    for (const [key, investments] of this.state.investments) {
+      for (const inv of investments) {
+        if ((inv.amountUSD || 0) > 0 || (inv.amountEUR || 0) > 0) {
+          const asset = key.split('_')[0];  // extract asset from map key
+          all.push({
+            asset,
+            location: inv.location,
+            amountUSD: inv.amountUSD,
+            amountEUR: inv.amountEUR,
+            date: inv.date
+          });
+        }
+      }
+    }
+
+    if (all.length === 0) {
+      console.log('✅ No active investments found.');
+      return [];
+    }
+
+    const assets = [...new Set(all.map(i => i.asset))];
+    console.log('✅ Assets with active investments:', assets);
+    console.table(all);
+    return all;
+  }
+
+
   async saveInvested(value, currency){
     const v = Number(value || 0);
     if (!isFinite(v) || v<0) throw new Error('Valor inválido');
@@ -446,6 +475,7 @@ class CryptoPortfolioApp {
     this.renderKPIs(generatedAt);
     this.renderTable();
     this.updateSmallNote();
+    this.listActiveInvestments();
   }
 
   /* ================== KPIs ================== */
@@ -543,6 +573,28 @@ class CryptoPortfolioApp {
     renderTable(){
       const tbody = DOM.$('#rows');
       if (!tbody) return;
+
+      //Mostra os valor a 0 para poder apagar o investimento
+      // === Include investment-only assets (quantidade = 0) ===
+      const investedOnly = [];
+      for (const [key, invs] of this.state.investments) {
+        const asset = key.split('_')[0];
+        const alreadyInTable = this.state.currentRows?.some(r => r.asset === asset);
+        if (!alreadyInTable) {
+          investedOnly.push({
+            asset,
+            quantity: 0,
+            valueUSDT: 0,
+            valueEUR: 0,
+            location: key.split('_')[1] || 'Other',
+            source: 'investments'
+          });
+        }
+      }
+      // append them to currentRows so they are visible in table
+      this.state.currentRows = [...(this.state.currentRows || []), ...investedOnly];
+
+
 
       const vis = this.state.visibleRows;
       if (!vis.length){
