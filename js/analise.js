@@ -219,7 +219,7 @@ datasetsLine.push({
 datasetsLine.forEach(ds => Object.assign(ds, {
   yAxisID: 'y_total',
   cubicInterpolationMode: 'monotone', // evita overshoot
-  tension: 0                        // podes 0–0.3; 0 elimina curvas
+  tension: 0.25                        // podes 0–0.3; 0 elimina curvas
 }));
 
 chartTotal = new Chart(document.getElementById('chart-total'), {
