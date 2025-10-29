@@ -213,6 +213,14 @@ datasetsLine.push({
 });
 
 
+// ... mantém datasetsLine como já tens ...
+// GARANTE que todos os datasets de linha usam a escala 'y_total'
+// Garante que TODOS os datasets da linha usam a escala 'y_total'
+datasetsLine.forEach(ds => Object.assign(ds, {
+  yAxisID: 'y_total',
+  cubicInterpolationMode: 'monotone', // evita overshoot
+  tension: 0                        // podes 0–0.3; 0 elimina curvas
+}));
 
 chartTotal = new Chart(document.getElementById('chart-total'), {
   type: 'line',
@@ -221,17 +229,24 @@ chartTotal = new Chart(document.getElementById('chart-total'), {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
-      y: {
+      y_total: {
+        type: 'linear',
         beginAtZero: true,
-        ticks: {
-          precision: 0,
-          stepSize: 100   
-        },
-        suggestedMax: 16000 // ou usa grace: '12%' se preferires automático
+        min: 0,
+        max: 17500,          // teto rígido
+        ticks: { stepSize: 500, precision: 0 },
+        grid: { color: 'rgba(0,0,0,0.06)' },
+        border: { display: false }
+      },
+      x: {
+        grid: { display: false },
+        border: { display: true }
       }
     }
   }
 });
+
+
 
 attachMobileXAxisRotation(chartTotal, { rotateOnMobile: true, tightenBarsOnMobile: true });
 
