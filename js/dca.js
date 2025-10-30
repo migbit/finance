@@ -2,6 +2,7 @@
 
 // Integração com Firebase conforme restante webapp
 import { db } from '../js/script.js';
+import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 import {
   collection, doc, getDoc, getDocs, setDoc, updateDoc,
   query, orderBy
@@ -225,6 +226,46 @@ async function bindJuroModule() {
 
 
 
+
+// ---------- Auth gating for first KPI (kpi-inv) ----------
+let __isAuthed = false;
+
+function setKpiInvVisibility(visible){
+  const canvas = document.getElementById('kpi-inv');
+  const card = canvas ? canvas.closest('.kpi-item') : null;
+  if (card){
+    card.style.display = visible ? '' : 'none';
+  }
+}
+
+function handleAuthChange(user){
+  __isAuthed = !!user;
+  // Toggle visibility immediately
+  setKpiInvVisibility(__isAuthed);
+  // If became authed, (re)render KPI; if not, destroy it
+  if (__isAuthed){
+    // Defer to next tick to ensure module finished initializing (state declared)
+    setTimeout(() => { try { renderKpiInv(state.params); } catch(e){} }, 0);
+  } else {
+    try { destroyChart(kpiInvChart); } catch(e){}
+  }
+}
+
+// Bind auth listener early
+try {
+  const auth = getAuth();
+  onAuthStateChanged(auth, handleAuthChange);
+} catch(e) {
+  // If auth is not available for any reason, default to hiding KPI
+  handleAuthChange(null);
+}
+
+// Ensure hidden by default until auth state resolves
+if (document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', () => setKpiInvVisibility(false), { once: true });
+} else {
+  setKpiInvVisibility(false);
+}
 
 // ---------- Parâmetros default ----------
 const START_YM = { y: 2025, m: 9 }; // set 2025 fixo
@@ -604,8 +645,8 @@ async function boot(skipParamUI){
   // Add scroll indicators to table wrappers
   requestAnimationFrame(addScrollIndicators);
 
-  // Update KPI doughnut (INV vs Total)
-  renderKpiInv(state.params);
+  // Update KPI doughnut (INV vs Total) only if authenticated
+  if (__isAuthed) renderKpiInv(state.params);
 
   // Update scenario KPIs using last inputed row (most recent with actuals)
   const latest = (() => {
@@ -717,6 +758,7 @@ function ymMax(a, b){
 
 function renderKpiInv(params){
   const canvas = document.getElementById('kpi-inv');
+  if (!__isAuthed) { try { destroyChart(kpiInvChart); } catch(e){} return; }
   if (!canvas || !window.Chart) return;
 
   // Total alvo = nº de meses de START_YM até endYM (incl.) x 100€
@@ -833,7 +875,7 @@ function renderScenarioKpi(canvasId, atualValue, scenarioValue, scenarioLabel){
 
 // Try to render KPI once boot has parameters ready
 (function(){
-  const tryRender = () => renderKpiInv(state.params);
+  const tryRender = () => { if (__isAuthed) renderKpiInv(state.params); };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', tryRender, { once: true });
   } else {
