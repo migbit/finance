@@ -334,7 +334,7 @@ function initCompras() {
             "Sabonete Líquido"
         ],
         "Cozinha": [
-            "Água 1.5l", "Água 5l", "Café", "Rolo de Cozinha", "Guardanapos", "Bolachas",
+            "Água 1l","Água 1,5l", "Água 5l", "Café", "Rolo de Cozinha", "Guardanapos", "Bolachas",
             "Chá", "Lava-Loiça", "Esfregões Verdes", "Esfregões Bravo",
             "Película Transparente", "Papel Alumínio", "Papel Vegetal", "Sacos congelação"
         ],
