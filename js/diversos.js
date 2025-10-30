@@ -336,7 +336,7 @@ function initCompras() {
         "Cozinha": [
             "Água 1.5l", "Água 5l", "Café", "Rolo de Cozinha", "Guardanapos", "Bolachas",
             "Chá", "Lava-Loiça", "Esfregões Verdes", "Esfregões Bravo",
-            "Película Transparente", "Papel Alumínio", "Sacos congelação"
+            "Película Transparente", "Papel Alumínio", "Papel Vegetal", "Sacos congelação"
         ],
         "Diversos": ["Varetas Difusoras (Ambientador)", "Limpa Óculos"]
     };

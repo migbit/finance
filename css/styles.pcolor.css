@@ -328,6 +328,22 @@ body[data-page="dca"] .page-title { margin-bottom: 1.2rem }
   border: 1px solid var(--border);
   border-radius: 8px;
 }
+/* Suffix euro for saldo input and wider width */
+.dca-page .juro-card .input-euro { position: relative; display: inline-block; }
+.dca-page .juro-card .input-euro::after {
+  content: '€';
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-dim);
+  font-weight: 700;
+  pointer-events: none;
+}
+.dca-page .juro-card .input-euro input.cell {
+  padding-right: 1.6em; /* room for € */
+  width: 14ch; /* allow more digits */
+}
 
 /* DCA table containers - with proper overflow handling */
 #dca-table-wrap{ 
