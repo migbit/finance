@@ -350,6 +350,57 @@ body[data-page="dca"] .page-title { margin-bottom: 1.2rem }
   font-style: italic;
 }
 
+/* ===== DCA – KPI grid (INV vs Total + scenarios) ===== */
+body[data-page="dca"] .kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+body[data-page="dca"] .kpi-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 8px 4px 10px;
+}
+body[data-page="dca"] .kpi-caption {
+  margin-top: 6px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+/* Values text under each KPI */
+body[data-page="dca"] .kpi-values {
+  margin-top: 6px;
+  text-align: center;
+  font-weight: 700;
+}
+body[data-page="dca"] .kpi-values .sub {
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+/* Make donut charts use full card column proportionally (square) */
+body[data-page="dca"] .donut-card .donut-canvas {
+  width: 50%;
+  aspect-ratio: 1 / 1;
+  position: relative;
+  margin: 0 auto;
+  margin-bottom: 8px;
+}
+body[data-page="dca"] .donut-card .donut-canvas canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+@media (max-width: 860px) {
+  body[data-page="dca"] .kpi-grid { grid-template-columns: 1fr; }
+  body[data-page="dca"] .donut-card .donut-canvas { width: 70%; }
+}
+
 /* Table wrapper for scroll */
 .table-wrap {
   overflow-x: auto;
@@ -1130,4 +1181,3 @@ body#analise1248-page main,
 body#analise123vs1248-page main {
   padding-top: 80px;
 }
-

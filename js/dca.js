@@ -603,6 +603,26 @@ async function boot(skipParamUI){
   
   // Add scroll indicators to table wrappers
   requestAnimationFrame(addScrollIndicators);
+
+  // Update KPI doughnut (INV vs Total)
+  renderKpiInv(state.params);
+
+  // Update scenario KPIs using last inputed row (most recent with actuals)
+  const latest = (() => {
+    for (let i = rows.length - 1; i >= 0; i--){
+      const r = rows[i];
+      const hasAny = (r.swdaNow != null) || (r.agghNow != null) || (r.cash_interest != null);
+      if (hasAny) return r;
+    }
+    return rows.length ? rows[rows.length - 1] : null;
+  })();
+
+  if (latest){
+    destroyChart(kpiPesChart); destroyChart(kpiRealChart); destroyChart(kpiOtChart);
+    kpiPesChart  = renderScenarioKpi('kpi-pes',  latest.totalNow, latest.pes,  'Pes.');
+    kpiRealChart = renderScenarioKpi('kpi-real', latest.totalNow, latest.real, 'Real.');
+    kpiOtChart   = renderScenarioKpi('kpi-ot',   latest.totalNow, latest.otim, 'Ot.');
+  }
 }
 
 // Add visual indicators for scrollable tables
@@ -625,3 +645,198 @@ boot();
 // garante bind mesmo se o DOM já estiver carregado
 if (document.readyState !== 'loading') bindJuroModule();
 else document.addEventListener('DOMContentLoaded', bindJuroModule);
+
+// ====== KPI: INV (mês atual) vs Total alvo ======
+let kpiInvChart;
+let kpiPesChart, kpiRealChart, kpiOtChart;
+
+// Simple plugin to draw center text and label on first arc
+const kpiLabelsPlugin = {
+  id: 'kpiLabels',
+  afterDatasetsDraw(chart, args, pluginOptions){
+    const opts = chart?.options?.plugins?.kpiLabels;
+    if (!opts) return;
+    const { center, arc } = opts;
+    const { ctx, chartArea } = chart;
+    const meta = chart.getDatasetMeta(0);
+    if (!meta || !meta.data || !meta.data.length) return;
+
+    ctx.save();
+    // Center text
+    if (center){
+      ctx.font = '600 13px Montserrat, Arial, sans-serif';
+      ctx.fillStyle = '#0f172a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const cx = (chartArea.left + chartArea.right) / 2;
+      const cy = (chartArea.top + chartArea.bottom) / 2;
+      ctx.fillText(center, cx, cy);
+    }
+
+    // Arc label for the first slice (Atual/Investido)
+    if (arc){
+      const a0 = meta.data[0];
+      if (a0 && a0.getCenterPoint){
+        // Compute midpoint between radii and angles
+        const start = a0.startAngle || a0.angle - a0.circumference/2;
+        const end   = a0.endAngle   || a0.angle + a0.circumference/2;
+        const angle = (start + end) / 2;
+        const inner = a0.innerRadius || 0;
+        const outer = a0.outerRadius || 0;
+        const r = inner + (outer - inner) * 0.7; // push out towards the arc
+        const x = a0.x + Math.cos(angle) * r;
+        const y = a0.y + Math.sin(angle) * r;
+
+        ctx.font = '700 12px Montserrat, Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#27374D'; // deep blue (--p1)
+        ctx.fillText(arc, x, y);
+      }
+    }
+    ctx.restore();
+  }
+};
+
+if (window.Chart && window.Chart.register){
+  try { window.Chart.register(kpiLabelsPlugin); } catch(e){}
+}
+
+function ymCompare(a, b){
+  if (a.y !== b.y) return a.y - b.y;
+  return a.m - b.m;
+}
+
+function ymMin(a, b){
+  return ymCompare(a,b) <= 0 ? a : b;
+}
+
+function ymMax(a, b){
+  return ymCompare(a,b) >= 0 ? a : b;
+}
+
+function renderKpiInv(params){
+  const canvas = document.getElementById('kpi-inv');
+  if (!canvas || !window.Chart) return;
+
+  // Total alvo = nº de meses de START_YM até endYM (incl.) x 100€
+  const totalMonths = monthsBetween(START_YM, params.endYM).length;
+  const totalTarget = totalMonths * 100;
+
+  // Investido até ao mês atual (incl.), limitado por [START_YM, endYM]
+  const now = new Date();
+  const nowYM = { y: now.getFullYear(), m: now.getMonth() + 1 };
+  const clampedEnd = ymMin(params.endYM, nowYM);
+
+  let invested = 0;
+  if (ymCompare(nowYM, START_YM) >= 0){
+    const investedMonths = monthsBetween(START_YM, clampedEnd).length;
+    invested = investedMonths * 100;
+  }
+
+  const remaining = Math.max(0, totalTarget - invested);
+
+  // Recreate chart safely
+  if (kpiInvChart){
+    try { kpiInvChart.destroy(); } catch(e) { /* ignore */ }
+    kpiInvChart = null;
+  }
+
+  const ctx = canvas.getContext('2d');
+  kpiInvChart = new window.Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Investido', 'Por investir'],
+      datasets: [{
+        data: [invested, remaining],
+        backgroundColor: ['#1a8f5d', '#e0e0e0'],
+        borderWidth: 0,
+        hoverOffset: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
+      plugins: {
+        legend: { display: false },
+        kpiLabels: {
+          center: toEUR(totalTarget),
+          arc: `${toEUR(invested)} (${totalTarget>0 ? Math.round((invested/totalTarget)*100) : 0}%)`
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = Number(ctx.parsed) || 0;
+              return `${ctx.label}: ${toEUR(v)}`;
+            }
+          }
+        }
+      },
+      cutout: '65%'
+    }
+  });
+}
+
+function destroyChart(ch){ try { ch && ch.destroy && ch.destroy(); } catch(e){} }
+
+function renderScenarioKpi(canvasId, atualValue, scenarioValue, scenarioLabel){
+  const canvas = document.getElementById(canvasId);
+  if (!canvas || !window.Chart) return;
+
+  const a = Math.max(0, Number(atualValue) || 0);
+  const s = Math.max(0, Number(scenarioValue) || 0);
+
+  // Show progress of Atual towards Scenario (donut sums to scenario)
+  let sliceAtual = 0, sliceRemain = 0;
+  if (s > 0) {
+    if (a >= s) { sliceAtual = s; sliceRemain = 0; }
+    else { sliceAtual = a; sliceRemain = s - a; }
+  }
+
+  const ctx = canvas.getContext('2d');
+  const data = [sliceAtual, sliceRemain];
+  const labels = ['Atual', scenarioLabel];
+
+  const chart = new window.Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: ['#1a8f5d', '#e0e0e0'],
+        borderWidth: 0,
+        hoverOffset: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
+      plugins: {
+        legend: { display: false },
+        kpiLabels: {
+          center: toEUR(s),
+          arc: `${toEUR(a)} (${s>0 ? Math.round((a/s)*100) : 0}%)`
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${toEUR(ctx.parsed)}`
+          }
+        }
+      },
+      cutout: '65%'
+    }
+  });
+  return chart;
+}
+
+// Try to render KPI once boot has parameters ready
+(function(){
+  const tryRender = () => renderKpiInv(state.params);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryRender, { once: true });
+  } else {
+    tryRender();
+  }
+})();

@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="../css/mobile.css">
   <link rel="icon" href="../favicon.ico" type="image/x-icon" />
   <link rel="manifest" href="../manifest.json">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 
 <body data-page="dca">
@@ -87,6 +88,31 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- === KPIs – Doughnuts === -->
+    <section class="report-section">
+      <div class="viz-card" id="kpi-cenarios-card">
+        <h4 style="margin-bottom: .5rem;">KPIs</h4>
+        <div class="kpi-grid">
+          <div class="kpi-item donut-card">
+            <div class="donut-canvas"><canvas id="kpi-inv"></canvas></div>
+            <div class="kpi-caption">Investido</div>
+          </div>
+          <div class="kpi-item donut-card">
+            <div class="donut-canvas"><canvas id="kpi-pes"></canvas></div>
+            <div class="kpi-caption">Cenário Pessimista</div>
+          </div>
+          <div class="kpi-item donut-card">
+            <div class="donut-canvas"><canvas id="kpi-real"></canvas></div>
+            <div class="kpi-caption">Cenário Realista</div>
+          </div>
+          <div class="kpi-item donut-card">
+            <div class="donut-canvas"><canvas id="kpi-ot"></canvas></div>
+            <div class="kpi-caption">Cenário Otimista</div>
+          </div>
         </div>
       </div>
     </section>

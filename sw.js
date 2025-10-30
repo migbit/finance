@@ -1,5 +1,5 @@
 /* Migbit Finance – Service Worker (DEV safe) */
-const CACHE = 'finance-static-v6'; 
+const CACHE = 'finance-static-v7'; // ⬅️ bump this on each deploy
 
 const CORE = [
   './',
@@ -32,33 +32,49 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
-  // Só trata pedidos da mesma origem; ignora CDNs (Firebase, etc.)
-  const sameOrigin = new URL(req.url).origin === self.location.origin;
-  if (!sameOrigin) return;
+  const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
+  if (!sameOrigin) return; // ignore CDNs
 
-  event.respondWith((async () => {
-    // 1) cache-first
-    const cached = await caches.match(req);
-    if (cached) return cached;
+  // Treat HTML/documents as network-first so new markup (like your KPI card)
+  // shows up on the first reload after a deploy.
+  const isHTML =
+    req.mode === 'navigate' ||
+    (req.headers.get('accept') || '').includes('text/html');
 
-    try {
-      // 2) rede
-      const fresh = await fetch(req);
-      if (fresh && fresh.ok) {
+  if (isHTML) {
+    event.respondWith((async () => {
+      try {
+        // no-store to avoid intermediate caches
+        const fresh = await fetch(req, { cache: 'no-store' });
+        // optional: keep a copy in cache for offline
         const cache = await caches.open(CACHE);
         cache.put(req, fresh.clone());
-      }
-      return fresh;
-    } catch (err) {
-      // 3) fallback suave só para navegação
-      if (req.mode === 'navigate') {
-        return new Response(
+        return fresh;
+      } catch {
+        // fallback to cache if offline
+        const cache = await caches.open(CACHE);
+        const cached = await cache.match(req, { ignoreSearch: true });
+        return cached || new Response(
           '<h1>Offline</h1><p>Tenta novamente quando tiveres ligação.</p>',
           { headers: { 'Content-Type': 'text/html; charset=UTF-8' } }
         );
       }
-      // deixa a falha propagar (útil em dev)
-      throw err;
-    }
+    })());
+    return;
+  }
+
+  // Static assets: cache-first with background fill
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+
+    // Try cache first (ignoreSearch lets you use ?v=26 busting)
+    const cached = await cache.match(req, { ignoreSearch: true });
+    if (cached) return cached;
+
+    // Otherwise go to network and cache it
+    const fresh = await fetch(req);
+    if (fresh && fresh.ok) cache.put(req, fresh.clone());
+    return fresh;
   })());
 });
