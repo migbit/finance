@@ -97,12 +97,13 @@
                 <th class="col-invested-usd">Investido ($)</th>
                 <th class="col-invested-eur">Investido (EUR)</th>
                 <th class="col-realized">Realizado</th>
+                <th class="col-apy">APY</th>
                 <th class="col-loc">Localização</th>
                 <th>Editar</th>
               </tr>
             </thead>
             <tbody id="rows">
-              <tr><td colspan="9" class="text-muted">Loading…</td></tr>
+              <tr><td colspan="10" class="text-muted">Loading…</td></tr>
             </tbody>
           </table>
 
@@ -193,6 +194,20 @@
         <button id="inv-add-btn" class="btn" style="width: 100%; margin-top: 8px;">Adicionar</button>
       </div>
 
+      <!-- APY editor -->
+      <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 16px; background: #f0fdf4;">
+        <h4 style="margin: 0 0 8px; font-size: 0.95rem;">APY (%)</h4>
+        <div class="field">
+          <label for="inv-apy">Taxa APY</label>
+          <input id="inv-apy" type="number" step="0.01" placeholder="0.00" />
+        </div>
+        <div class="field" style="margin-top: 8px;">
+          <button id="inv-save-apy" class="btn" style="width: 100%;">Gravar APY</button>
+        </div>
+        <small style="display:block; margin-top: 6px; color:#047857;">
+          Deixe em branco para remover o APY.
+        </small>
+      </div>
       <!-- List of investments -->
       <div style="max-height: 300px; overflow-y: auto; margin-bottom: 12px;">
         <h4 style="margin: 0 0 8px; font-size: 0.95rem;">Histórico de Investimentos</h4>
@@ -276,3 +291,4 @@
   </script>
 </body>
 </html>
+

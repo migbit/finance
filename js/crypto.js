@@ -25,7 +25,8 @@ const CONFIG = {
   META_COLLECTION: 'cryptoportfolio_meta',
   META_DOC: 'invested', // stores investedUSD, investedEUR
   INVESTMENTS_COLLECTION: 'cryptoportfolio_investments', // stores individual investments
-  MONTHLY_REALIZED_COLLECTION: 'cryptoportfolio_monthly_realized' // stores monthly realized values
+  MONTHLY_REALIZED_COLLECTION: 'cryptoportfolio_monthly_realized', // stores monthly realized values
+  APY_COLLECTION: 'cryptoportfolio_apy' // stores manually entered APY per asset/location
 };
 
 CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
@@ -34,7 +35,8 @@ CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
 const FORMATTERS = {
   quantity: new Intl.NumberFormat('en-PT', { maximumFractionDigits: 8 }),
   eur: new Intl.NumberFormat('en-PT', { style: 'currency', currency: 'EUR' }),
-  usd: new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  usd: new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  percent: new Intl.NumberFormat('en-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 };
 
 /* ================== DOM UTILS ================== */
@@ -189,6 +191,7 @@ class AppState {
     this.binanceRows = [];
     this.binancePriceMap = new Map();
     this.usdtToEurRate = 0;
+    this.apyValues = new Map(); // asset|location -> apy
 
     this.hideSmall = true;
     this.currentRows = [];
@@ -234,6 +237,35 @@ class CryptoPortfolioApp {
     this.initialized = false;
   }
 
+  makeApyKey(asset, location=''){
+    const a = String(asset || '').trim().toUpperCase();
+    const l = String(location || '').trim().toUpperCase();
+    return `${a}|${l}`;
+  }
+
+  makeApyDocId(asset, location=''){
+    const sanitize = (value, fallback='DEFAULT') => {
+      const v = String(value || '').trim();
+      const upper = v ? v.toUpperCase() : fallback;
+      return upper.replace(/[^A-Z0-9_.-]/g, '_');
+    };
+    return `${sanitize(asset)}__${sanitize(location, 'GLOBAL')}`;
+  }
+
+  getApyValue(asset, location=''){
+    const key = this.makeApyKey(asset, location);
+    if (this.state.apyValues.has(key)) return this.state.apyValues.get(key);
+    const fallbackKey = this.makeApyKey(asset, '');
+    return this.state.apyValues.has(fallbackKey)
+      ? this.state.apyValues.get(fallbackKey)
+      : null;
+  }
+
+  formatApy(value){
+    if (value === null || value === undefined || !isFinite(value)) return '--';
+    return `${FORMATTERS.percent.format(value)}%`;
+  }
+
   async init(){
     if (this.initialized) return;
     CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
@@ -244,6 +276,7 @@ class CryptoPortfolioApp {
         this.loadManualAssets(),
         this.loadInvested(),
         this.loadInvestments(),
+        this.loadApyValues(),
         this.loadMonthlyRealized()
       ]);
       const api = await ApiService.fetchPortfolio();
@@ -293,7 +326,7 @@ class CryptoPortfolioApp {
     }
   }
 
-      async loadInvestments(){
+  async loadInvestments(){
       const investments = await FirebaseService.getCollection(CONFIG.INVESTMENTS_COLLECTION);
       this.state.investments.clear();
 
@@ -315,6 +348,22 @@ class CryptoPortfolioApp {
           });
           }
       }
+
+  async loadApyValues(){
+    const docs = await FirebaseService.getCollection(CONFIG.APY_COLLECTION);
+    const map = new Map();
+    for (const entry of docs){
+      const asset = String(entry.asset || entry.id || '').trim().toUpperCase();
+      const locationRaw = entry.hasOwnProperty('location') ? entry.location : '';
+      const location = String(locationRaw || '').trim().toUpperCase();
+      if (!asset) continue;
+      const num = Number(entry.apy);
+      if (!isFinite(num)) continue;
+      const key = this.makeApyKey(asset, location);
+      map.set(key, num);
+    }
+    this.state.apyValues = map;
+  }
 
 
   async loadMonthlyRealized(){
@@ -463,12 +512,17 @@ class CryptoPortfolioApp {
       const { price } = await this.priceResolver.getUSD(m.asset);
       const vUSDT = price>0 ? price * m.quantity : 0;
       const vEUR = (this.state.usdtToEurRate||0) ? vUSDT * this.state.usdtToEurRate : 0;
-      return { ...m, valueUSDT: vUSDT, valueEUR: vEUR, priceUSDT: price, priceSource: 'coingecko' };
+      const apy = this.getApyValue(m.asset, m.location);
+      return { ...m, valueUSDT: vUSDT, valueEUR: vEUR, priceUSDT: price, priceSource: 'coingecko', apy };
     }));
 
     // merge
     this.state.currentRows = [
-      ...this.state.binanceRows.map(r=>({ ...r, location: this.state.savedLocations.get(r.asset)||'' })),
+      ...this.state.binanceRows.map(r=>{
+        const location = this.state.savedLocations.get(r.asset) || '';
+        const apy = this.getApyValue(r.asset, location);
+        return { ...r, location, apy };
+      }),
       ...manualVal
     ].sort((a,b)=>(b.valueEUR||0)-(a.valueEUR||0));
 
@@ -581,13 +635,15 @@ class CryptoPortfolioApp {
         const asset = key.split('_')[0];
         const alreadyInTable = this.state.currentRows?.some(r => r.asset === asset);
         if (!alreadyInTable) {
+          const locKey = key.split('_')[1] || 'Other';
           investedOnly.push({
             asset,
             quantity: 0,
             valueUSDT: 0,
             valueEUR: 0,
-            location: key.split('_')[1] || 'Other',
-            source: 'investments'
+            location: locKey,
+            source: 'investments',
+            apy: this.getApyValue(asset, locKey)
           });
         }
       }
@@ -598,7 +654,7 @@ class CryptoPortfolioApp {
 
       const vis = this.state.visibleRows;
       if (!vis.length){
-        tbody.innerHTML = '<tr><td colspan="9" class="text-muted">No data to display</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="text-muted">No data to display</td></tr>';
         this.applyCurrencyMode();
         return;
       }
@@ -625,6 +681,8 @@ class CryptoPortfolioApp {
         // linhas individuais
         for (const r of rows){
         const invested = this.getAssetInvestedAmounts(r.asset, r.location);
+        const apyValue = this.getApyValue(r.asset, r.location);
+        const apyDisplay = this.formatApy(apyValue);
 
         const actions = `
         <button class="btn btn-edit btn-icon"
@@ -650,7 +708,7 @@ class CryptoPortfolioApp {
           : `${realizedSign}$${FORMATTERS.usd.format(realizedUSD)}`;
 
         html += `
-          <tr data-asset="${esc(r.asset)}" data-source="${esc(r.source||'')}">
+          <tr data-asset="${esc(r.asset)}" data-source="${esc(r.source||'')}" data-location="${esc(r.location)}">
             <td><b>${esc(r.asset)}</b></td>
             <td class="col-qty">${FORMATTERS.quantity.format(r.quantity)}</td>
             <td class="col-usd">$${FORMATTERS.usd.format(r.valueUSDT||0)}</td>
@@ -658,6 +716,7 @@ class CryptoPortfolioApp {
             <td class="col-invested-usd">$${FORMATTERS.usd.format(invested.usd)}</td>
             <td class="col-invested-eur">${FORMATTERS.eur.format(invested.eur)}</td>
             <td class="col-realized" style="color: ${realizedColor}; font-weight: 600;">${realizedValue}</td>
+            <td class="col-apy">${apyDisplay}</td>
             <td class="col-loc">${sel}</td>
             <td>${actions}</td>
           </tr>
@@ -693,6 +752,7 @@ class CryptoPortfolioApp {
             <td class="col-invested-usd">$${FORMATTERS.usd.format(investedSubtotal.usd)}</td>
             <td class="col-invested-eur">${FORMATTERS.eur.format(investedSubtotal.eur)}</td>
             <td class="col-realized" style="color: ${realizedColor}; font-weight: 600;">${realizedValue}</td>
+            <td class="col-apy">-</td>
             <td class="col-loc"></td>
             <td></td>
           </tr>
@@ -843,6 +903,7 @@ class CryptoPortfolioApp {
       const modal = DOM.$('#investment-modal-backdrop');
       DOM.$('#inv-close')?.addEventListener('click', ()=>this.closeInvestmentModal());
       DOM.$('#inv-add-btn')?.addEventListener('click', ()=>this.addInvestment());
+      DOM.$('#inv-save-apy')?.addEventListener('click', ()=>this.saveApy());
       modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeInvestmentModal(); });
 
       // default date
@@ -878,6 +939,7 @@ class CryptoPortfolioApp {
       const titleSpan  = modal?.querySelector('#inv-asset-name');
       const qtyWrap    = modal?.querySelector('#inv-qty2-wrap');
       const qtyInput   = modal?.querySelector('#inv-qty2');
+      const apyInput   = modal?.querySelector('#inv-apy');
       const btnRemove  = modal?.querySelector('#inv-remove-asset');
 
       // Título
@@ -892,6 +954,10 @@ class CryptoPortfolioApp {
 
       // Limpar quantidade sempre que abrimos o modal
       if (qtyInput)  qtyInput.value = '';
+      if (apyInput) {
+        const apyVal = this.getApyValue(this.currentInvestmentAsset, this.currentInvestmentLocation);
+        apyInput.value = (apyVal !== null && apyVal !== undefined) ? String(apyVal) : '';
+      }
 
       // Render do histórico e abrir modal
       this.renderInvestmentList();
@@ -913,6 +979,13 @@ class CryptoPortfolioApp {
         }
       }
 
+      // 3) remover APY manual associado
+      try {
+        await FirebaseService.deleteDocument(CONFIG.APY_COLLECTION, this.makeApyDocId(asset, location));
+      } catch (err) {
+        console.warn('Falha ao remover APY manual', err);
+      }
+      this.state.apyValues.delete(this.makeApyKey(asset, location));
       // limpar cache local
       this.state.investments.delete(key);
       this.state.manualAssets = this.state.manualAssets.filter(r => !(r.asset===asset && (r.location||'Other')===location));
@@ -922,6 +995,10 @@ class CryptoPortfolioApp {
   closeInvestmentModal(){
     DOM.hide(DOM.$('#investment-modal-backdrop'));
     this.currentInvestmentAsset = null;
+    this.currentInvestmentLocation = null;
+    this.currentInvestmentSource = null;
+    const apyInput = DOM.$('#inv-apy');
+    if (apyInput) apyInput.value = '';
   }
 
   renderInvestmentList(){
@@ -1029,6 +1106,44 @@ class CryptoPortfolioApp {
       }
     }
 
+  async saveApy(){
+    const asset = (this.currentInvestmentAsset || '').toUpperCase();
+    const location = this.currentInvestmentLocation || '';
+    const input = DOM.$('#inv-apy');
+    if (!asset || !input) {
+      alert('Selecione um ativo para definir o APY');
+      return;
+    }
+
+    const raw = input.value.trim();
+    const key = this.makeApyKey(asset, location);
+    try {
+      if (raw === '') {
+        const docId = this.makeApyDocId(asset, location);
+        await FirebaseService.deleteDocument(CONFIG.APY_COLLECTION, docId);
+        this.state.apyValues.delete(key);
+        input.value = '';
+      } else {
+        const value = Number(raw);
+        if (!isFinite(value)) {
+          alert('Valor APY inválido');
+          return;
+        }
+        const docId = this.makeApyDocId(asset, location);
+        await FirebaseService.setDocument(CONFIG.APY_COLLECTION, docId, {
+          asset,
+          location,
+          apy: value
+        });
+        this.state.apyValues.set(key, value);
+      }
+      await this.renderAll();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao guardar APY');
+    }
+  }
+
 
 
 
@@ -1135,13 +1250,27 @@ class CryptoPortfolioApp {
       const asset = e.target.getAttribute('data-asset');
       const loc = e.target.value;
       const row = e.target.closest('tr');
+      const previousLoc = row?.getAttribute('data-location') || '';
       const source = row?.getAttribute('data-source') || 'binance';
       if (source === 'manual') {
         await FirebaseService.setDocument('cryptoportfolio_manual', asset, { location: loc });
         await this.loadManualAssets();
       } else {
+        const assetUpper = String(asset || '').toUpperCase();
         await FirebaseService.setDocument('cryptoportfolio', asset, { asset, location: loc });
+        this.state.savedLocations.set(assetUpper, loc);
       }
+      if (row) {
+        row.setAttribute('data-location', loc);
+        const editBtn = row.querySelector('.btn-edit');
+        if (editBtn) editBtn.setAttribute('data-location', loc);
+      }
+      const assetUpperKey = String(asset || '').toUpperCase();
+      const currentRow = this.state.currentRows.find(r =>
+        r.asset === assetUpperKey && (r.location || '') === previousLoc
+      );
+      if (currentRow) currentRow.location = loc;
+      await this.renderAll();
     });
   });
 
@@ -1508,7 +1637,7 @@ exportToPdf(){
   showError(msg){
     console.error(msg);
     const tb = DOM.$('#rows');
-    if (tb) tb.innerHTML = `<tr><td colspan="6" class="text-muted">Error: ${msg}</td></tr>`;
+    if (tb) tb.innerHTML = `<tr><td colspan="10" class="text-muted">Error: ${msg}</td></tr>`;
   }
 }
 
