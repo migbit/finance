@@ -278,7 +278,7 @@ tbody tr:last-child td{ border-bottom: none }
 
 /* ---- Modals ---- */
 .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:50 }
-.modal { width:100%; max-width:520px; background:#fff; border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow: var(--shadow-2) }
+.modal { width:100%; max-width:520px; max-height:90vh; overflow-y:auto; background:#fff; border:1px solid var(--border); border-radius:16px; padding:24px; box-shadow: var(--shadow-2) }
 .modal h3 { margin:0 0 12px }
 .field { display:grid; gap:6px; margin-bottom:10px; text-align:left }
 .field label { font-size:.9rem; color:var(--text-dim) }
