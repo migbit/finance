@@ -10,8 +10,89 @@
   <link rel="icon" href="../favicon.ico" type="image/x-icon">
   <link rel="manifest" href="../manifest.json">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-  </head>
+  <style>
+    /* Toast notifications */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+      z-index: 2000;
+      font-weight: 600;
+      min-width: 200px;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toast-success {
+      background: #10b981;
+      color: white;
+    }
+    .toast-error {
+      background: #ef4444;
+      color: white;
+    }
+    .toast-info {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    /* Sortable table headers */
+    #crypto-table th.sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    #crypto-table th.sortable:hover {
+      background: #e5e9ed;
+    }
+    #crypto-table th.sortable::after {
+      content: '⇅';
+      position: absolute;
+      right: 8px;
+      opacity: 0.3;
+      font-size: 0.8em;
+    }
+    #crypto-table th.sortable.sort-asc::after {
+      content: '↑';
+      opacity: 1;
+    }
+    #crypto-table th.sortable.sort-desc::after {
+      content: '↓';
+      opacity: 1;
+    }
+    
+    /* Performance badges */
+    .perf-badge {
+      font-size: 1.1rem;
+      margin-left: 4px;
+      display: inline-block;
+    }
+    
+    /* ROI styling */
+    .roi-positive {
+      color: var(--ok);
+      font-weight: 700;
+    }
+    .roi-negative {
+      color: var(--bad);
+      font-weight: 700;
+    }
+    
+    /* Allocation chart container */
+    .allocation-chart-container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+  </style>
+</head>
 <body id="crypto-page" data-page="crypto">
   <!-- Hamburger icon (always visible on mobile) -->
   <button id="menu-icon" aria-label="Open menu">☰</button>
@@ -21,7 +102,7 @@
         <ul>
           <!-- Login/User section at top -->
           <li id="login-section" class="login-block">
-            <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+            <a href="#" id="login-btn" class="login-visible">🔒 Login</a>
             <span id="user-info" class="user-visible" style="display:none;">
               <a href="#" id="user-name">👤 Username</a>
             </span>
@@ -52,27 +133,43 @@
 
   <main>
     <!-- KPIs -->
-       <section class="report-section">
+    <section class="report-section">
       <div class="viz-card">
-        <div class="kpis-grid">
-        <div class="kpi-card">
-          <div class="kpi-label">Total</div>
-          <div id="kpiTotalEUR" class="kpi-value">—</div>
-          <div id="kpiTotalUSD" class="kpi-sub">—</div>
+        <div class="kpis-grid" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
+          <div class="kpi-card">
+            <div class="kpi-label">Total</div>
+            <div id="kpiTotalEUR" class="kpi-value">—</div>
+            <div id="kpiTotalUSD" class="kpi-sub">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Realizado</div>
+            <div id="kpiRealizedEUR" class="kpi-value">—</div>
+            <div id="kpiRealizedUSD" class="kpi-sub">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Investido</div>
+            <div id="kpiInvested" class="kpi-value">—</div>
+            <div id="kpiInvestedSub" class="kpi-sub">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">24h Change</div>
+            <div id="kpi24h" class="kpi-value">—</div>
+            <div id="kpi24hPercent" class="kpi-sub">—</div>
+          </div>
+          <div class="kpi-card kpi-card-chart" id="kpi-trend-card">
+            <div class="kpi-label">Tendência Mensal</div>
+            <canvas id="kpi-trend-chart"></canvas>
+          </div>
         </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Realizado</div>
-          <div id="kpiRealizedEUR" class="kpi-value">—</div>
-          <div id="kpiRealizedUSD" class="kpi-sub">—</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-label">Investido</div>
-          <div id="kpiInvested" class="kpi-value">—</div>
-          <div id="kpiInvestedSub" class="kpi-sub">—</div>
-        </div>
-        <div class="kpi-card kpi-card-chart" id="kpi-trend-card">
-          <div class="kpi-label">Tendência Mensal</div>
-          <canvas id="kpi-trend-chart"></canvas>
+      </div>
+    </section>
+
+    <!-- Allocation Chart -->
+    <section class="report-section">
+      <div class="viz-card">
+        <h3>Alocação de Portfolio</h3>
+        <div class="allocation-chart-container">
+          <canvas id="allocation-chart"></canvas>
         </div>
       </div>
     </section>
@@ -90,20 +187,21 @@
           <table id="crypto-table">
             <thead>
               <tr>
-                <th>Ativo</th>
-                <th class="col-qty">Quantidade</th>
-                <th class="col-usd">Valor ($)</th>
-                <th class="col-eur">Valor (EUR)</th>
-                <th class="col-invested-usd">Investido ($)</th>
-                <th class="col-invested-eur">Investido (EUR)</th>
-                <th class="col-realized">Realizado</th>
-                <th class="col-apy">APY</th>
+                <th class="sortable" data-sort="asset">Ativo</th>
+                <th class="sortable col-qty" data-sort="quantity">Quantidade</th>
+                <th class="sortable col-usd" data-sort="valueUSDT">Valor ($)</th>
+                <th class="sortable col-eur" data-sort="valueEUR">Valor (EUR)</th>
+                <th class="sortable col-invested-usd" data-sort="investedUSD">Investido ($)</th>
+                <th class="sortable col-invested-eur" data-sort="investedEUR">Investido (EUR)</th>
+                <th class="sortable col-realized" data-sort="realized">Realizado</th>
+                <th class="sortable col-roi" data-sort="roi">ROI %</th>
+                <th class="sortable col-apy" data-sort="apy">APY</th>
                 <th class="col-loc">Localização</th>
                 <th>Editar</th>
               </tr>
             </thead>
             <tbody id="rows">
-              <tr><td colspan="10" class="text-muted">Loading…</td></tr>
+              <tr><td colspan="11" class="text-muted">Loading…</td></tr>
             </tbody>
           </table>
 
@@ -119,24 +217,21 @@
         <p id="stamp" class="text-muted" style="margin-top:8px;"></p>
       </div>
     </section>
-
-
-
   </main>
 
-        <!-- Modal (enhanced with cost field) -->
-        <div id="modal-backdrop" class="modal-backdrop" aria-hidden="true">
-          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-            <h3 id="modal-title">Adicionar</h3>
-            <div class="field">
-              <label for="m-asset">Ticker</label>
-              <input id="m-asset" type="text" placeholder="e.g. BTC" autocomplete="off" />
-            </div>
-            <div class="field">
-              <label for="m-qty">Quantidade</label>
-              <input id="m-qty" type="number" step="any" placeholder="0.0" />
-            </div>
-              
+  <!-- Modal (enhanced with cost field) -->
+  <div id="modal-backdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h3 id="modal-title">Adicionar</h3>
+      <div class="field">
+        <label for="m-asset">Ticker</label>
+        <input id="m-asset" type="text" placeholder="e.g. BTC" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label for="m-qty">Quantidade</label>
+        <input id="m-qty" type="number" step="any" placeholder="0.0" />
+      </div>
+        
       <div class="field">
         <label for="m-cost">Custo (0 para airdrops)</label>
         <input id="m-cost" type="number" step="any" placeholder="0.0" />
@@ -183,13 +278,13 @@
           <input id="inv-date" type="date" />
         </div>
         <!-- Quantidade (apenas para MANUAL) -->
-      <div class="field" id="inv-qty2-wrap" style="display:none;">
-        <label for="inv-qty2">Quantidade (apenas para Manual)</label>
-        <input id="inv-qty2" type="number" step="any" min="0" placeholder="e.g. 0.015" />
-        <small style="color:#6b7280">
-          Para ativos <b>Manuais</b>, esta quantidade será somada à atual. Para Binance, a quantidade vem da API.
-        </small>
-      </div>
+        <div class="field" id="inv-qty2-wrap" style="display:none;">
+          <label for="inv-qty2">Quantidade (apenas para Manual)</label>
+          <input id="inv-qty2" type="number" step="any" min="0" placeholder="e.g. 0.015" />
+          <small style="color:#6b7280">
+            Para ativos <b>Manuais</b>, esta quantidade será somada à atual. Para Binance, a quantidade vem da API.
+          </small>
+        </div>
 
         <button id="inv-add-btn" class="btn" style="width: 100%; margin-top: 8px;">Adicionar</button>
       </div>
@@ -217,11 +312,13 @@
       </div>
 
       <div class="modal-actions">
-      <button id="inv-remove-asset" class="btn" style="display:none; background:#fee2e2; border:1px solid #ef4444; color:#991b1b;">
-        Remover Ativo
-      </button>
-      <button id="inv-close" class="btn">Fechar</button>
+        <button id="inv-remove-asset" class="btn" style="display:none; background:#fee2e2; border:1px solid #ef4444; color:#991b1b;">
+          Remover Ativo
+        </button>
+        <button id="inv-close" class="btn">Fechar</button>
+      </div>
     </div>
+  </div>
 
   <!-- Sell Modal -->
   <div id="sell-modal-backdrop" class="modal-backdrop" aria-hidden="true">
@@ -265,9 +362,9 @@
   <div id="error-message" class="error-message" style="display: none;"></div>
 
   <!-- Page script -->
-   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
-   <script type="module" src="../js/crypto.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
+  <script type="module" src="../js/crypto.js"></script>
 
   <!-- Mobile nav toggle -->
   <script>
@@ -291,4 +388,3 @@
   </script>
 </body>
 </html>
-
