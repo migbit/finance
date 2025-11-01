@@ -85,11 +85,77 @@
       font-weight: 700;
     }
     
-    /* Allocation chart container */
-    .allocation-chart-container {
-      max-width: 500px;
-      margin: 0 auto;
-      padding: 20px;
+    /* Allocation split layout */
+    .allocation-split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .allocation-split {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Top assets list */
+    .top-assets-list {
+      padding: 10px;
+    }
+    
+    .asset-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+    
+    .asset-name {
+      min-width: 60px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    
+    .asset-bar-container {
+      flex: 1;
+      height: 24px;
+      background: #e5e7eb;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .asset-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #526D82, #9DB2BF);
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 8px;
+    }
+    
+    .asset-percent {
+      color: white;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    /* Monthly chart container */
+    .monthly-chart-container {
+      padding: 10px;
+      height: 350px;
+    }
+    
+    /* Reduced KPI height */
+    .kpis-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+    
+    .kpi-card {
+      padding: 16px !important;
     }
   </style>
 </head>
@@ -135,7 +201,7 @@
     <!-- KPIs -->
     <section class="report-section">
       <div class="viz-card">
-        <div class="kpis-grid" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
+        <div class="kpis-grid">
           <div class="kpi-card">
             <div class="kpi-label">Total</div>
             <div id="kpiTotalEUR" class="kpi-value">—</div>
@@ -152,24 +218,34 @@
             <div id="kpiInvestedSub" class="kpi-sub">—</div>
           </div>
           <div class="kpi-card">
-            <div class="kpi-label">24h Change</div>
-            <div id="kpi24h" class="kpi-value">—</div>
-            <div id="kpi24hPercent" class="kpi-sub">—</div>
-          </div>
-          <div class="kpi-card kpi-card-chart" id="kpi-trend-card">
-            <div class="kpi-label">Tendência Mensal</div>
-            <canvas id="kpi-trend-chart"></canvas>
+            <div class="kpi-label">Total Mensal</div>
+            <div id="kpiMonthlyTotal" class="kpi-value">—</div>
+            <div id="kpiMonthlyTotalUSD" class="kpi-sub">—</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Allocation Chart -->
+    <!-- Allocation & Monthly Totals -->
     <section class="report-section">
       <div class="viz-card">
-        <h3>Alocação de Portfolio</h3>
-        <div class="allocation-chart-container">
-          <canvas id="allocation-chart"></canvas>
+        <h3>Alocação de Portfolio & Evolução Mensal</h3>
+        <div class="allocation-split">
+          <!-- Left: Top 12 Assets -->
+          <div>
+            <h4 style="margin: 0 0 16px; font-size: 1rem; color: #526D82;">Top 12 Ativos (%)</h4>
+            <div class="top-assets-list" id="top-assets-list">
+              <!-- Will be populated by JS -->
+            </div>
+          </div>
+          
+          <!-- Right: Monthly Totals Chart -->
+          <div>
+            <h4 style="margin: 0 0 16px; font-size: 1rem; color: #526D82;">Total Mensal (2025+)</h4>
+            <div class="monthly-chart-container">
+              <canvas id="monthly-totals-chart"></canvas>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -336,25 +412,6 @@
       <div class="modal-actions">
         <button id="sell-cancel" class="btn">Cancel</button>
         <button id="sell-confirm" class="btn primary">Vender</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Expanded Chart Modal -->
-  <div id="chart-modal-backdrop" class="modal-backdrop" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" style="max-width: 900px;">
-      <h3>Tendência de Realizado Mensal</h3>
-      <div class="toolbar" style="justify-content: center; margin-bottom: 16px;">
-        <button class="btn btn-toggle" data-range="3m">3M</button>
-        <button class="btn btn-toggle active" data-range="6m">6M</button>
-        <button class="btn btn-toggle" data-range="1y">1Y</button>
-        <button class="btn btn-toggle" data-range="all">All</button>
-      </div>
-      <div style="position: relative; height: 400px;">
-        <canvas id="chart-modal-canvas"></canvas>
-      </div>
-      <div class="modal-actions" style="margin-top: 16px;">
-        <button id="chart-modal-close" class="btn">Fechar</button>
       </div>
     </div>
   </div>
