@@ -1,13 +1,16 @@
-// js/crypto.js  – KISS version with global Investido + Realizado = Total - Investido
+// js/crypto.js – Updated version with monthly totals tracking
 
 /* ================== CONSTANTS & CONFIG ================== */
 const CONFIG = {
   HOST: location.hostname,
   ON_FIREBASE: /\.web\.app$/.test(location.hostname) || /firebaseapp\.com$/.test(location.hostname),
   CF_URL: 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio',
-  API_URL: null, // set in init
+  API_URL: null,
   SMALL_USD_THRESHOLD: 5,
   HIDE_SYMBOLS: new Set(['NEBL','ETHW']),
+  SYMBOL_ALIASES: {
+    'O': 'LDO'
+  },
   LOCATION_CHOICES: [
     'Binance Spot',
     'Binance Earn Flexible',
@@ -17,17 +20,17 @@ const CONFIG = {
     'Ledger staking.chain.link'
   ],
   COINGECKO: {
-    PRICE_TTL_MS: 1000 * 60 * 60, // 1 hour
+    PRICE_TTL_MS: 1000 * 60 * 60,
     BATCH_SIZE: 25,
     RETRY_DELAYS: [0, 500, 1000],
     RATE_LIMIT_DELAY: 1200
   },
   META_COLLECTION: 'cryptoportfolio_meta',
-  META_DOC: 'invested', // stores investedUSD, investedEUR
-  INVESTMENTS_COLLECTION: 'cryptoportfolio_investments', // stores individual investments
-  MONTHLY_REALIZED_COLLECTION: 'cryptoportfolio_monthly_realized', // stores monthly realized values
-  APY_COLLECTION: 'cryptoportfolio_apy', // stores manually entered APY per asset/location
-  SNAPSHOTS_COLLECTION: 'crypto_snapshots' // stores daily snapshots for 24h change
+  META_DOC: 'invested',
+  INVESTMENTS_COLLECTION: 'cryptoportfolio_investments',
+  MONTHLY_TOTALS_COLLECTION: 'cryptoportfolio_monthly_totals',
+  APY_COLLECTION: 'cryptoportfolio_apy',
+  MONTHLY_ASSETS_COLLECTION: 'cryptoportfolio_monthly_assets'
 };
 
 CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
@@ -50,7 +53,7 @@ const DOM = {
   disable: (el) => el && (el.disabled = true)
 };
 
-/* ================== STORAGE (for CoinGecko cache) ================== */
+/* ================== STORAGE ================== */
 const Storage = {
   PREFIXES: { PRICE: 'price_usd_', COINGECKO_ID: 'cg_id_' },
   get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
@@ -117,14 +120,12 @@ class Coingecko {
       const cached = Storage.getJSON(Storage.PREFIXES.PRICE + up);
       if (!this.isFresh(cached)) toFetch.push(up);
     }
-    // resolve ids
     const pairs = [];
     for (const s of toFetch){
       const id = await this.resolveId(s);
       if (id) pairs.push([s,id]);
       await new Promise(r=>setTimeout(r, CONFIG.COINGECKO.RATE_LIMIT_DELAY));
     }
-    // batch prices
     const ids = pairs.map(p=>p[1]);
     for (let i=0;i<ids.length;i+=CONFIG.COINGECKO.BATCH_SIZE){
       const batch = ids.slice(i,i+CONFIG.COINGECKO.BATCH_SIZE);
@@ -207,41 +208,27 @@ class ToastService {
 /* ================== APP STATE ================== */
 class AppState {
   constructor(){
-    this.savedLocations = new Map(); // Binance positions -> location
+    this.savedLocations = new Map();
     this.manualAssets = [];
     this.binanceRows = [];
     this.binancePriceMap = new Map();
     this.usdtToEurRate = 0;
-    this.apyValues = new Map(); // asset|location -> apy
-
+    this.apyValues = new Map();
     this.hideSmall = true;
     this.currentRows = [];
     this.currency = 'EUR';
-
-    // Invested (global)
     this.investedUSD = 0;
     this.investedEUR = 0;
-    
-    // Individual investments per asset { assetSymbol: [{amount, currency, date, id}, ...] }
     this.investments = new Map();
-    
-    // Monthly realized data for chart
-    this.monthlyRealized = [];
-    
-    // Chart instances
-    this.trendChart = null;
-    this.expandedChart = null;
-    this.allocationChart = null;
-    
-    // Modal currency for add crypto
+    this.monthlyTotals = [];
+    this.monthlyChart = null;
+    this.topAssetsChart = null;
+    this.monthlyAssetSnapshots = [];
+    this.baselineAssetMonth = null;
     this.modalCurrency = 'EUR';
-    
-    // 24h change tracking
-    this.previousDayTotal = { eur: 0, usd: 0 };
-    
-    // Sorting state
     this.sortColumn = null;
     this.sortDirection = null;
+    this.generatedAt = null;
   }
 
   get visibleRows(){
@@ -281,8 +268,47 @@ class CryptoPortfolioApp {
     return `${sanitize(asset)}__${sanitize(location, 'GLOBAL')}`;
   }
 
+  normalizeLocation(value){
+    return String(value || 'Other').trim().toUpperCase();
+  }
+
+  canonicalizeLocation(value){
+    const trimmed = String(value || 'Other').trim();
+    if (!trimmed) return 'Other';
+    const match = CONFIG.LOCATION_CHOICES.find(loc => loc.toUpperCase() === trimmed.toUpperCase());
+    return match || trimmed;
+  }
+
+  normalizeSymbol(symbol){
+    const trimmed = String(symbol || '').trim().toUpperCase();
+    if (!trimmed) return trimmed;
+    const alias = CONFIG.SYMBOL_ALIASES[trimmed];
+    return alias ? alias.toUpperCase() : trimmed;
+  }
+
+  makeManualDocId(asset, location='Other'){
+    const sanitize = (value, fallback = 'VALUE') => {
+      const input = String(value || '').trim();
+      const upper = input ? input.toUpperCase() : fallback;
+      return upper.replace(/[^A-Z0-9_.-]/g, '_');
+    };
+    const base = `${sanitize(asset, 'ASSET')}__${sanitize(location, 'OTHER')}`;
+    const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
+    return `MAN_${base}__${suffix}`;
+  }
+
+  findManualAsset(asset, location='Other'){
+    const normalizedAsset = this.normalizeSymbol(asset || '');
+    const normalizedLocation = this.normalizeLocation(location);
+    return this.state.manualAssets.find(row =>
+      row.asset === normalizedAsset &&
+      this.normalizeLocation(row.location) === normalizedLocation
+    ) || null;
+  }
+
   getApyValue(asset, location=''){
-    const key = this.makeApyKey(asset, location);
+    const canonicalLocation = this.canonicalizeLocation(location || '');
+    const key = this.makeApyKey(asset, canonicalLocation);
     if (this.state.apyValues.has(key)) return this.state.apyValues.get(key);
     const fallbackKey = this.makeApyKey(asset, '');
     return this.state.apyValues.has(fallbackKey)
@@ -306,28 +332,39 @@ class CryptoPortfolioApp {
         this.loadInvested(),
         this.loadInvestments(),
         this.loadApyValues(),
-        this.loadMonthlyRealized(),
-        this.load24hSnapshot()
+        this.loadMonthlyTotals(),
+        this.loadMonthlyAssetSnapshots()
       ]);
       const api = await ApiService.fetchPortfolio();
       this.state.binanceRows = this.normalizeBinance(api);
 
-      // FX
       const eur = this.state.binanceRows.reduce((s,r)=>s+(r.valueEUR||0),0);
       const usd = this.state.binanceRows.reduce((s,r)=>s+(r.valueUSDT||0),0);
       this.state.usdtToEurRate = usd>0 ? eur/usd : 0;
 
-      // Prices for manual
       this.priceResolver = new PriceResolver(this.state.binancePriceMap);
-      const missing = this.state.manualAssets
+      const manualMissing = this.state.manualAssets
         .map(a=>a.asset)
         .filter(sym=>!this.state.binancePriceMap.has(sym));
-      if (missing.length) await Coingecko.prefetch(missing);
+      const binanceMissing = this.state.binanceRows
+        .filter(r => (r.quantity || 0) > 0 && !(r.priceUSDT > 0))
+        .map(r => r.asset);
+      const toPrefetch = [...new Set([...manualMissing, ...binanceMissing])];
+      if (toPrefetch.length) await Coingecko.prefetch(toPrefetch);
+
+      await this.hydrateBinanceRows();
+      const eurHydrated = this.state.binanceRows.reduce((s,r)=>s+(r.valueEUR||0),0);
+      const usdHydrated = this.state.binanceRows.reduce((s,r)=>s+(r.valueUSDT||0),0);
+      if (usdHydrated > 0) {
+        this.state.usdtToEurRate = eurHydrated / usdHydrated;
+      }
 
       await this.renderAll(api.generatedAt);
+      await this.ensureMonthlyAssetSnapshot();
+      await this.loadMonthlyAssetSnapshots();
+      this.renderAssetSnapshotsTable();
       this.setupEvents();
-      this.checkAndSaveMonthlyRealized();
-      this.saveDailySnapshot();
+      this.saveMonthlyTotal();
       this.initialized = true;
     } catch (e) {
       this.showError(e.message || String(e));
@@ -337,17 +374,27 @@ class CryptoPortfolioApp {
 
   async loadSavedLocations(){
     const locs = await FirebaseService.getCollection('cryptoportfolio');
-    this.state.savedLocations = new Map(locs.map(x=>[String(x.id).toUpperCase(), x.location || '']));
+    this.state.savedLocations = new Map(locs.map(x=>{
+      const asset = this.normalizeSymbol(x.id);
+      const location = this.canonicalizeLocation(x.location || '');
+      return [asset, location];
+    }));
   }
 
   async loadManualAssets(){
     const rows = await FirebaseService.getCollection('cryptoportfolio_manual');
-    this.state.manualAssets = rows.map(x=>({
-      asset: String(x.asset || x.id || '').toUpperCase(),
-      quantity: Number(x.quantity || 0),
-      location: x.location || 'Other',
-      source: 'manual'
-    }));
+    this.state.manualAssets = rows.map(x=>{
+      const asset = this.normalizeSymbol(x.asset || x.id || '');
+      const rawLocation = String(x.location || 'Other').trim();
+      const location = this.canonicalizeLocation(rawLocation || 'Other');
+      return {
+        id: x.id || asset,
+        asset,
+        quantity: Number(x.quantity || 0),
+        location,
+        source: 'manual'
+      };
+    });
   }
 
   async loadInvested(){
@@ -363,15 +410,16 @@ class CryptoPortfolioApp {
     this.state.investments.clear();
 
     for (const inv of investments) {
-      const asset = String(inv.asset || '').toUpperCase();
-      const loc = String(inv.location || 'Other').toUpperCase();
-      const key = `${asset}_${loc}`;
+      const asset = this.normalizeSymbol(inv.asset || '');
+      const canonicalLocation = this.canonicalizeLocation(inv.location || 'Other');
+      const locKey = this.normalizeLocation(canonicalLocation);
+      const key = `${asset}_${locKey}`;
       if (!this.state.investments.has(key)) {
         this.state.investments.set(key, []);
       }
       this.state.investments.get(key).push({
         id: inv.id,
-        location: inv.location || 'Other',
+        location: canonicalLocation,
         amountUSD: Number(inv.amountUSD || 0),
         amountEUR: Number(inv.amountEUR || 0),
         currency: inv.currency || 'USD',
@@ -385,75 +433,230 @@ class CryptoPortfolioApp {
     const docs = await FirebaseService.getCollection(CONFIG.APY_COLLECTION);
     const map = new Map();
     for (const entry of docs){
-      const asset = String(entry.asset || entry.id || '').trim().toUpperCase();
+      const asset = this.normalizeSymbol(entry.asset || entry.id || '');
       const locationRaw = entry.hasOwnProperty('location') ? entry.location : '';
-      const location = String(locationRaw || '').trim().toUpperCase();
+      const canonicalLocation = this.canonicalizeLocation(locationRaw || '');
       if (!asset) continue;
       const num = Number(entry.apy);
       if (!isFinite(num)) continue;
-      const key = this.makeApyKey(asset, location);
+      const key = this.makeApyKey(asset, canonicalLocation);
       map.set(key, num);
     }
     this.state.apyValues = map;
   }
 
-  async loadMonthlyRealized(){
-    const data = await FirebaseService.getCollection(CONFIG.MONTHLY_REALIZED_COLLECTION);
-    this.state.monthlyRealized = data
+  async loadMonthlyTotals(){
+    const data = await FirebaseService.getCollection(CONFIG.MONTHLY_TOTALS_COLLECTION);
+    this.state.monthlyTotals = data
       .map(d => ({
         month: d.month,
-        realizedEUR: Number(d.realizedEUR || 0),
-        realizedUSD: Number(d.realizedUSD || 0),
+        totalEUR: Number(d.totalEUR || 0),
+        totalUSD: Number(d.totalUSD || 0),
         timestamp: new Date(d.month + '-01').getTime()
       }))
+      .filter(d => {
+        const year = parseInt(d.month.split('-')[0]);
+        return year >= 2025;
+      })
       .sort((a, b) => a.timestamp - b.timestamp);
   }
 
-  async load24hSnapshot(){
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const key = yesterday.toISOString().split('T')[0];
-    
-    const snapshot = await FirebaseService.getDocument(CONFIG.SNAPSHOTS_COLLECTION, key);
-    if (snapshot) {
-      this.state.previousDayTotal = {
-        eur: Number(snapshot.totalEUR || 0),
-        usd: Number(snapshot.totalUSD || 0)
-      };
-    }
-  }
-
-  async saveDailySnapshot(){
-    const today = new Date().toISOString().split('T')[0];
-    const t = this.state.totals;
-    
-    await FirebaseService.setDocument(CONFIG.SNAPSHOTS_COLLECTION, today, {
-      date: today,
-      totalEUR: t.eur,
-      totalUSD: t.usdt
-    });
-  }
-
-  async checkAndSaveMonthlyRealized(){
+  async saveMonthlyTotal(){
     const now = new Date();
     const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     
     const t = this.state.totals;
-    const totalInv = this.getTotalInvestedAmounts();
-    const realizedEUR = (t.eur || 0) - totalInv.eur;
-    const realizedUSD = (t.usdt || 0) - totalInv.usd;
     
-    await FirebaseService.setDocument(CONFIG.MONTHLY_REALIZED_COLLECTION, currentMonth, {
+    await FirebaseService.setDocument(CONFIG.MONTHLY_TOTALS_COLLECTION, currentMonth, {
       month: currentMonth,
-      realizedEUR,
-      realizedUSD
+      totalEUR: t.eur || 0,
+      totalUSD: t.usdt || 0
     });
     
-    await this.loadMonthlyRealized();
+    await this.loadMonthlyTotals();
+  }
+
+  async loadMonthlyAssetSnapshots(){
+    const data = await FirebaseService.getCollection(CONFIG.MONTHLY_ASSETS_COLLECTION);
+    const snapshots = data
+      .map(d => {
+        const month = d.month || d.id || '';
+        if (!month) return null;
+        const assetsRaw = d.assets || {};
+        const assets = {};
+        for (const [assetKey, assetData] of Object.entries(assetsRaw)){
+          assets[assetKey] = {
+            quantity: Number(assetData?.quantity || 0),
+            valueEUR: Number(assetData?.valueEUR || 0),
+            valueUSD: Number(assetData?.valueUSD || assetData?.valueUSDT || 0)
+          };
+        }
+        return { month, assets };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    this.state.monthlyAssetSnapshots = snapshots;
+    this.state.baselineAssetMonth = snapshots.length ? snapshots[0].month : null;
+  }
+
+  getAggregatedAssets(){
+    const map = new Map();
+    for (const row of this.state.currentRows){
+      const asset = row.asset;
+      if (!asset) continue;
+      if (!map.has(asset)){
+        map.set(asset, { quantity: 0, valueEUR: 0, valueUSD: 0 });
+      }
+      const entry = map.get(asset);
+      entry.quantity += Number(row.quantity || 0);
+      entry.valueEUR += Number(row.valueEUR || 0);
+      entry.valueUSD += Number(row.valueUSDT || 0);
+    }
+    return map;
+  }
+
+  async ensureMonthlyAssetSnapshot(){
+    const now = new Date();
+    if (now.getDate() !== 1) return;
+
+    const monthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const alreadyCaptured = this.state.monthlyAssetSnapshots.some(s => s.month === monthId);
+    if (alreadyCaptured) return;
+
+    const aggregates = this.getAggregatedAssets();
+    if (!aggregates.size) return;
+
+    const assets = {};
+    for (const [asset, info] of aggregates.entries()){
+      assets[asset] = {
+        quantity: Number(info.quantity.toFixed(8)),
+        valueEUR: Number(info.valueEUR.toFixed(2)),
+        valueUSD: Number(info.valueUSD.toFixed(2))
+      };
+    }
+
+    await FirebaseService.setDocument(CONFIG.MONTHLY_ASSETS_COLLECTION, monthId, {
+      month: monthId,
+      assets,
+      capturedAt: new Date()
+    });
+  }
+
+  formatMonthLabel(monthId){
+    try {
+      const [yearStr, monthStr] = monthId.split('-');
+      const year = Number(yearStr);
+      const month = Number(monthStr) - 1;
+      const date = new Date(year, month, 1);
+      const monthName = date.toLocaleString('pt-PT', { month: 'long' });
+      const capitalized = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+      return `${capitalized} ${year}`;
+    } catch {
+      return monthId;
+    }
+  }
+
+  formatSignedQuantity(value){
+    if (!isFinite(value) || value === 0) return FORMATTERS.quantity.format(0);
+    const sign = value > 0 ? '+' : '−';
+    return `${sign}${FORMATTERS.quantity.format(Math.abs(value))}`;
+  }
+
+  formatSignedCurrency(value){
+    if (!isFinite(value) || value === 0) return FORMATTERS.eur.format(0);
+    const sign = value > 0 ? '+' : '−';
+    const formatted = FORMATTERS.eur.format(Math.abs(value));
+    return `${sign}${formatted}`;
+  }
+
+  renderAssetSnapshotsTable(){
+    const table = DOM.$('#monthly-assets-table');
+    const head = DOM.$('#monthly-assets-head');
+    const body = DOM.$('#monthly-assets-body');
+    if (!table || !head || !body) return;
+
+    const snapshots = this.state.monthlyAssetSnapshots || [];
+    if (!snapshots.length){
+      head.innerHTML = '';
+      body.innerHTML = `<tr><td class="text-muted" style="text-align:center; padding:16px;">Sem dados</td></tr>`;
+      return;
+    }
+
+    const months = snapshots.map(s => s.month);
+    const baselineAssets = snapshots[0]?.assets || {};
+    const assetsSet = new Set();
+    snapshots.forEach(s => {
+      Object.keys(s.assets || {}).forEach(asset => assetsSet.add(asset));
+    });
+
+    if (!assetsSet.size){
+      head.innerHTML = '';
+      body.innerHTML = `<tr><td class="text-muted" style="text-align:center; padding:16px;">Sem dados</td></tr>`;
+      return;
+    }
+
+    const headerRow1 = ['<tr><th rowspan="2">Ativo</th>'];
+    const headerRow2 = ['<tr>'];
+    months.forEach(month => {
+      headerRow1.push(`<th colspan="4" style="text-align:center;">${this.formatMonthLabel(month)}</th>`);
+      headerRow2.push('<th>Qtd</th><th>Valor</th><th>&Delta;Qtd</th><th>&Delta;Valor</th>');
+    });
+    headerRow1.push('</tr>');
+    headerRow2.push('</tr>');
+    head.innerHTML = headerRow1.join('') + headerRow2.join('');
+
+    const snapshotMap = new Map(snapshots.map(s => [s.month, s]));
+    const latestMonth = months[months.length - 1];
+    const rowsHtml = Array.from(assetsSet)
+      .map(asset => ({
+        asset,
+        latestValue: snapshotMap.get(latestMonth)?.assets?.[asset]?.valueEUR || 0
+      }))
+      .sort((a, b) => (b.latestValue || 0) - (a.latestValue || 0))
+      .map(asset => {
+        const baseline = baselineAssets[asset.asset] || { quantity: 0, valueEUR: 0 };
+        const baselineQty = Number(baseline.quantity || 0);
+        const baselineValue = Number(baseline.valueEUR || 0);
+
+        const cells = months.map((month, idx) => {
+          const snapshot = snapshotMap.get(month);
+          const data = snapshot?.assets?.[asset.asset];
+          if (!data){
+            return '<td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>';
+          }
+          const qty = Number(data.quantity || 0);
+          const value = Number(data.valueEUR || 0);
+          if (idx === 0){
+            return `
+              <td>${FORMATTERS.quantity.format(qty)}</td>
+              <td>${FORMATTERS.eur.format(value)}</td>
+              <td>&mdash;</td>
+              <td>&mdash;</td>
+            `;
+          }
+          const deltaQty = qty - baselineQty;
+          const deltaValue = value - baselineValue;
+          const qtyClass = deltaQty > 0 ? 'pos' : deltaQty < 0 ? 'neg' : '';
+          const valueClass = deltaValue > 0 ? 'pos' : deltaValue < 0 ? 'neg' : '';
+          return `
+            <td>${FORMATTERS.quantity.format(qty)}</td>
+            <td>${FORMATTERS.eur.format(value)}</td>
+            <td class="${qtyClass}">${this.formatSignedQuantity(deltaQty)}</td>
+            <td class="${valueClass}">${this.formatSignedCurrency(deltaValue)}</td>
+          `;
+        }).join('');
+
+        return `<tr><td><b>${this.escape(asset.asset)}</b></td>${cells}</tr>`;
+      }).join('');
+
+    body.innerHTML = rowsHtml;
   }
 
   getAssetInvestedAmounts(asset, location) {
-    const key = `${asset.toUpperCase()}_${(location || 'Other').toUpperCase()}`;
+    const canonicalAsset = this.normalizeSymbol(asset);
+    const canonicalLocation = this.canonicalizeLocation(location || 'Other');
+    const key = `${canonicalAsset}_${this.normalizeLocation(canonicalLocation)}`;
     const investments = this.state.investments.get(key) || [];
     return investments.reduce(
       (acc, inv) => ({
@@ -504,46 +707,12 @@ class CryptoPortfolioApp {
     return all;
   }
 
-  async saveInvested(value, currency){
-    const v = Number(value || 0);
-    if (!isFinite(v) || v<0) throw new Error('Valor inválido');
-    const rate = this.state.usdtToEurRate || 0;
-
-    if (currency === 'EUR') {
-      this.state.investedEUR = v;
-      this.state.investedUSD = rate>0 ? v / rate : 0;
-    } else {
-      this.state.investedUSD = v;
-      this.state.investedEUR = rate>0 ? v * rate : 0;
-    }
-    await FirebaseService.setDocument(CONFIG.META_COLLECTION, CONFIG.META_DOC, {
-      investedUSD: this.state.investedUSD,
-      investedEUR: this.state.investedEUR
-    });
-  }
-
-  async addInvestedDelta(delta, currency){
-    const rate = this.state.usdtToEurRate || 0;
-
-    if (currency === 'EUR') {
-      this.state.investedEUR = (this.state.investedEUR || 0) + delta;
-      this.state.investedUSD = rate > 0 ? this.state.investedEUR / rate : 0;
-    } else {
-      this.state.investedUSD = (this.state.investedUSD || 0) + delta;
-      this.state.investedEUR = rate > 0 ? this.state.investedUSD * rate : 0;
-    }
-
-    await FirebaseService.setDocument('cryptoportfolio_meta', 'invested', {
-      investedUSD: this.state.investedUSD,
-      investedEUR: this.state.investedEUR
-    });
-  }
-
   normalizeBinance(api){
     const pos = Array.isArray(api?.positions)? api.positions : [];
+    this.state.binancePriceMap.clear();
     return pos
       .map(p=>{
-        const asset = String(p.asset||'').toUpperCase();
+        const asset = this.normalizeSymbol(p.asset || '');
         const qty = Number(p.quantity||0);
         let priceUSDT = Number(p.priceUSDT||0);
         const vUSDT = Number(p.valueUSDT||0);
@@ -553,19 +722,43 @@ class CryptoPortfolioApp {
         return { asset, quantity:qty, valueUSDT:vUSDT, valueEUR:vEUR, priceUSDT, source:'binance' };
       })
       .filter(r=>!CONFIG.HIDE_SYMBOLS.has(r.asset))
-      .filter(r=>(r.valueEUR||r.valueUSDT||0)>0)
+      .filter(r=>(r.quantity||0)>0 || (r.valueEUR||r.valueUSDT||0)>0)
       .sort((a,b)=>(b.valueEUR||0)-(a.valueEUR||0));
   }
 
+  async hydrateBinanceRows(){
+    for (const row of this.state.binanceRows){
+      if ((row.quantity || 0) <= 0) continue;
+      const needsPrice = !(row.priceUSDT > 0);
+      const needsValue = !(row.valueUSDT > 0);
+      if (!needsPrice && !needsValue) continue;
+      try {
+        const { price } = await this.priceResolver.getUSD(row.asset);
+        if (price > 0){
+          row.priceUSDT = price;
+          row.valueUSDT = price * row.quantity;
+          if (this.state.usdtToEurRate > 0){
+            row.valueEUR = row.valueUSDT * this.state.usdtToEurRate;
+          }
+          this.state.binancePriceMap.set(row.asset, price);
+        }
+      } catch (err) {
+        console.warn('Unable to hydrate price for', row.asset, err);
+      }
+    }
+    this.state.binanceRows.sort((a,b)=>(b.valueEUR||0)-(a.valueEUR||0));
+  }
+
   getPerformanceBadge(roi) {
-    if (roi >= 50) return '🔥'; // Hot performer
-    if (roi >= 20) return '📈'; // Good
-    if (roi < -20) return '📉'; // Underperforming
+    if (roi >= 50) return '🔥';
+    if (roi >= 20) return '📈';
+    if (roi < -20) return '📉';
     return '';
   }
 
   async renderAll(generatedAt){
-    // compute manual values
+    this.state.generatedAt = generatedAt;
+    
     const manualVal = await Promise.all(this.state.manualAssets.map(async m=>{
       const { price } = await this.priceResolver.getUSD(m.asset);
       const vUSDT = price>0 ? price * m.quantity : 0;
@@ -574,7 +767,6 @@ class CryptoPortfolioApp {
       return { ...m, valueUSDT: vUSDT, valueEUR: vEUR, priceUSDT: price, priceSource: 'coingecko', apy };
     }));
 
-    // merge
     this.state.currentRows = [
       ...this.state.binanceRows.map(r=>{
         const location = this.state.savedLocations.get(r.asset) || '';
@@ -586,12 +778,13 @@ class CryptoPortfolioApp {
 
     this.renderKPIs(generatedAt);
     this.renderTable();
-    this.renderAllocationChart();
+    this.renderTopAssets();
+    this.renderMonthlyChart();
     this.updateSmallNote();
     this.listActiveInvestments();
+    this.renderAssetSnapshotsTable();
   }
 
-  /* ================== KPIs ================== */
   renderKPIs(generatedAt){
     const t = this.state.totals;
     const totalInv = this.getTotalInvestedAmounts();
@@ -601,13 +794,11 @@ class CryptoPortfolioApp {
     const realizedEUR = (t.eur || 0) - investedEUR;
     const realizedUSD = (t.usdt || 0) - investedUSD;
 
-    // 1st KPI: Total (EUR primary, USD underneath)
     const kEUR = document.getElementById('kpiTotalEUR');
     const kUSD = document.getElementById('kpiTotalUSD');
     if (kEUR) kEUR.textContent = FORMATTERS.eur.format(t.eur || 0);
     if (kUSD) kUSD.textContent = `$${FORMATTERS.usd.format(t.usdt || 0)}`;
 
-    // 2nd KPI: Realizado (EUR primary, USD underneath, with colors)
     const kRealEUR = document.getElementById('kpiRealizedEUR');
     const kRealUSD = document.getElementById('kpiRealizedUSD');
     if (kRealEUR){
@@ -623,135 +814,173 @@ class CryptoPortfolioApp {
       kRealUSD.classList.toggle('neg', realizedUSD < 0);
     }
 
-    // 3rd KPI: Investido (EUR primary, USD underneath)
     const kINV  = document.getElementById('kpiInvested');
     const kINVs = document.getElementById('kpiInvestedSub');
     if (kINV)  kINV.textContent  = FORMATTERS.eur.format(investedEUR);
     if (kINVs) kINVs.textContent = `$${FORMATTERS.usd.format(investedUSD)}`;
 
-    // 4th KPI: 24h Change
-    const k24h = document.getElementById('kpi24h');
-    const k24hPercent = document.getElementById('kpi24hPercent');
-    if (k24h && k24hPercent) {
-      const currentEUR = t.eur || 0;
-      const prevEUR = this.state.previousDayTotal.eur || 0;
-      const changeEUR = currentEUR - prevEUR;
-      const changePercent = prevEUR > 0 ? (changeEUR / prevEUR) * 100 : 0;
-      
-      const sign = changeEUR >= 0 ? '+' : '−';
-      k24h.textContent = `${sign}${FORMATTERS.eur.format(Math.abs(changeEUR))}`;
-      k24h.classList.toggle('pos', changeEUR >= 0);
-      k24h.classList.toggle('neg', changeEUR < 0);
-      
-      k24hPercent.textContent = `${sign}${FORMATTERS.percent.format(Math.abs(changePercent))}%`;
-      k24hPercent.classList.toggle('pos', changeEUR >= 0);
-      k24hPercent.classList.toggle('neg', changeEUR < 0);
+    const kMonthly = document.getElementById('kpiMonthlyTotal');
+    const kMonthlyUSD = document.getElementById('kpiMonthlyTotalUSD');
+    if (kMonthly && kMonthlyUSD) {
+      kMonthly.textContent = FORMATTERS.eur.format(t.eur || 0);
+      kMonthlyUSD.textContent = `$${FORMATTERS.usd.format(t.usdt || 0)}`;
     }
-
-    // 5th KPI: Trend chart
-    this.renderTrendChart();
   }
 
-  renderTrendChart(){
-    const canvas = document.getElementById('kpi-trend-chart');
+  renderTopAssets(){
+    const canvas = document.getElementById('top-assets-chart');
+    const emptyState = document.getElementById('top-assets-empty');
     if (!canvas) return;
 
-    const last12 = this.state.monthlyRealized.slice(-12);
-    const labels = last12.map(d => {
-      const [year, month] = d.month.split('-');
-      return new Date(year, month - 1).toLocaleDateString('pt-PT', { month: 'short', year: '2-digit' });
-    });
-    const dataEUR = last12.map(d => d.realizedEUR);
+    const total = this.state.totals.eur || 0;
+    const aggregates = new Map();
+    for (const row of this.state.currentRows){
+      const value = row.valueEUR || 0;
+      if (value <= 0) continue;
+      const key = row.asset;
+      aggregates.set(key, (aggregates.get(key) || 0) + value);
+    }
+    const topRows = Array.from(aggregates.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
 
-    if (this.trendChart) {
-      this.trendChart.destroy();
+    if (!topRows.length || total === 0) {
+      if (this.state.topAssetsChart) {
+        this.state.topAssetsChart.destroy();
+        this.state.topAssetsChart = null;
+      }
+      if (emptyState) emptyState.style.display = 'block';
+      canvas.style.display = 'none';
+      return;
     }
 
-    this.trendChart = new Chart(canvas, {
+    canvas.style.display = 'block';
+    if (emptyState) emptyState.style.display = 'none';
+
+    const labels = topRows.map(([asset]) => asset);
+    const values = topRows.map(([, value]) => value);
+    const palette = [
+      '#365314','#1D4ED8','#9333EA','#0EA5E9','#F97316',
+      '#16A34A','#EF4444','#7C3AED','#6366F1','#f59e0b'
+    ];
+    const colors = labels.map((_, idx) => palette[idx % palette.length]);
+    const ctx = canvas.getContext('2d');
+    const tooltipFormatter = (context) => {
+      const rawValue = context.raw || 0;
+      const percent = total > 0 ? (rawValue / total) * 100 : 0;
+      return `${context.label}: ${FORMATTERS.percent.format(percent)}%`;
+    };
+
+    if (this.state.topAssetsChart) {
+      const chart = this.state.topAssetsChart;
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = values;
+      chart.data.datasets[0].backgroundColor = colors;
+      chart.options.plugins.tooltip.callbacks.label = tooltipFormatter;
+      chart.update();
+    } else {
+      this.state.topAssetsChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data: values,
+            backgroundColor: colors,
+            borderColor: '#ffffff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '60%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 14 }
+            },
+            tooltip: {
+              callbacks: {
+                label: tooltipFormatter
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+
+  renderMonthlyChart(){
+    const canvas = document.getElementById('monthly-totals-chart');
+    if (!canvas) return;
+
+    const data = this.state.monthlyTotals;
+    
+    if (data.length === 0) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = '14px helvetica';
+      ctx.fillStyle = '#6b7280';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sem dados de 2025', canvas.width / 2, canvas.height / 2);
+      return;
+    }
+
+    const labels = data.map(d => {
+      const [year, month] = d.month.split('-');
+      return new Date(year, month - 1).toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' });
+    });
+    const dataEUR = data.map(d => d.totalEUR);
+
+    if (this.state.monthlyChart) {
+      this.state.monthlyChart.destroy();
+    }
+
+    this.state.monthlyChart = new Chart(canvas, {
       type: 'line',
       data: {
         labels,
         datasets: [{
+          label: 'Total (EUR)',
           data: dataEUR,
           borderColor: '#526D82',
           backgroundColor: 'rgba(82, 109, 130, 0.1)',
-          borderWidth: 2,
+          borderWidth: 3,
           fill: true,
           tension: 0.4,
-          pointRadius: 0,
-          pointHoverRadius: 0
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#526D82'
         }]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: false },
-          tooltip: { enabled: false }
-        },
-        scales: {
-          x: { display: false },
-          y: { display: false }
-        }
-      }
-    });
-  }
-
-  /* ================== ALLOCATION CHART ================== */
-  renderAllocationChart(){
-    const canvas = document.getElementById('allocation-chart');
-    if (!canvas) return;
-
-    // Get top 10 assets by value
-    const data = [...this.state.currentRows]
-      .sort((a, b) => (b.valueEUR || 0) - (a.valueEUR || 0))
-      .slice(0, 10);
-
-    const labels = data.map(d => d.asset);
-    const values = data.map(d => d.valueEUR || 0);
-    
-    // Color palette
-    const colors = [
-      '#526D82', '#9DB2BF', '#27374D', '#DDE6ED',
-      '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
-      '#8b5cf6', '#ec4899'
-    ];
-
-    if (this.state.allocationChart) {
-      this.state.allocationChart.destroy();
-    }
-
-    this.state.allocationChart = new Chart(canvas, {
-      type: 'doughnut',
-      data: {
-        labels,
-        datasets: [{
-          data: values,
-          backgroundColor: colors,
-          borderWidth: 2,
-          borderColor: '#ffffff'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: {
-          legend: {
-            position: 'right',
-            labels: {
-              padding: 15,
-              font: { size: 12 }
-            }
+          legend: { 
+            display: true,
+            position: 'top'
           },
-          tooltip: {
+          tooltip: { 
+            enabled: true,
             callbacks: {
               label: (context) => {
-                const label = context.label || '';
-                const value = context.parsed || 0;
-                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                return `${label}: ${FORMATTERS.eur.format(value)} (${percentage}%)`;
+                return `Total: ${FORMATTERS.eur.format(context.parsed.y)}`;
               }
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: false,
+            ticks: {
+              callback: (value) => FORMATTERS.eur.format(value)
+            }
+          },
+          x: {
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45
             }
           }
         }
@@ -759,10 +988,8 @@ class CryptoPortfolioApp {
     });
   }
 
-  /* ================== TABLE WITH SORTING ================== */
   sortTable(column){
     if (this.state.sortColumn === column) {
-      // Toggle direction
       if (this.state.sortDirection === 'asc') {
         this.state.sortDirection = 'desc';
       } else if (this.state.sortDirection === 'desc') {
@@ -816,7 +1043,6 @@ class CryptoPortfolioApp {
         return this.state.sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
       });
     } else {
-      // Reset to default sort (by value)
       this.state.currentRows.sort((a,b)=>(b.valueEUR||0)-(a.valueEUR||0));
     }
 
@@ -866,7 +1092,6 @@ class CryptoPortfolioApp {
 
     const esc = s=>String(s||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[m]));
 
-    // group by asset
     const groups = new Map();
     for (const row of vis){
       const a = (row.asset||'').toUpperCase();
@@ -887,7 +1112,6 @@ class CryptoPortfolioApp {
         const apyValue = this.getApyValue(r.asset, r.location);
         const apyDisplay = this.formatApy(apyValue);
 
-        // Calculate ROI
         const roi = invested.eur > 0 
           ? ((r.valueEUR - invested.eur) / invested.eur * 100)
           : 0;
@@ -908,7 +1132,6 @@ class CryptoPortfolioApp {
 
         const sel = this.renderLocationSelect(r.asset, r.location);
 
-        // Calculate realized (profit/loss) = current value - invested (per location)
         const realizedUSD = (r.valueUSDT || 0) - invested.usd;
         const realizedEUR = (r.valueEUR || 0) - invested.eur;
         const realizedColor = (this.state.currency === 'EUR' ? realizedEUR : realizedUSD) >= 0 ? 'green' : 'red';
@@ -934,7 +1157,6 @@ class CryptoPortfolioApp {
         `;
       }
 
-      // subtotal
       if (rows.length > 1){
         const totalQty = rows.reduce((s,x)=>s+(x.quantity||0),0);
         const totalUSD = rows.reduce((s,x)=>s+(x.valueUSDT||0),0);
@@ -998,21 +1220,21 @@ class CryptoPortfolioApp {
   }
 
   renderLocationSelect(asset, selected){
-    const opts = CONFIG.LOCATION_CHOICES.map(loc =>
-      `<option value="${this.escape(asset, loc)}" ${loc === (selected||'') ? 'selected':''}>${this.escape(asset, loc, true)}</option>`
-    ).join('');
-    return `<select class="location-select" data-asset="${this.escapeHtml(asset)}">${opts}</select>`;
-  }
-  
-  escape(asset, s, textOnly=false){
-    const t = String(s||'');
-    return textOnly ? t.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[m]))
-                    : t.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[m]));
-  }
-  
-  escapeHtml(s){ return this.escape('', s, true); }
+    const current = String(selected ?? '').trim();
+    const options = [...CONFIG.LOCATION_CHOICES];
+    if (current && !options.includes(current)) options.push(current);
 
-  /* ================== UI HELPERS ================== */
+    const opts = options.map(loc =>
+      `<option value="${this.escape(loc)}" ${loc === current ? 'selected':''}>${this.escape(loc)}</option>`
+    ).join('');
+    return `<select class="location-select" data-asset="${this.escape(asset)}">${opts}</select>`;
+  }
+  
+  escape(s){
+    const t = String(s||'');
+    return t.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[m]));
+  }
+
   applyCurrencyMode(){
     const show = (sel,on)=>document.querySelectorAll(sel).forEach(el=>{el.style.display = on?'':'none';});
     const showEUR = this.state.currency==='EUR';
@@ -1026,7 +1248,7 @@ class CryptoPortfolioApp {
     const kINV = DOM.$('#kpiInvested');
     if (kINV){
       if (this.state.currency==='EUR') kINV.textContent = FORMATTERS.eur.format(totalInv.eur);
-      else kINV.textContent = `${FORMATTERS.usd.format(totalInv.usd)}`;
+      else kINV.textContent = `$${FORMATTERS.usd.format(totalInv.usd)}`;
     }
     this.renderKPIs();
   }
@@ -1035,13 +1257,11 @@ class CryptoPortfolioApp {
     const note = DOM.$('#small-note');
     if (!note) return;
     const hidden = this.state.currentRows.filter(r=>(r.valueUSDT||0)<CONFIG.SMALL_USD_THRESHOLD).length;
-    if (this.state.hideSmall && hidden>0) note.textContent = `A ocultar ${hidden} posições com valor < ${CONFIG.SMALL_USD_THRESHOLD}.`;
+    if (this.state.hideSmall && hidden>0) note.textContent = `A ocultar ${hidden} posições com valor < $${CONFIG.SMALL_USD_THRESHOLD}.`;
     else note.textContent = '';
   }
 
-  /* ================== EVENTS ================== */
   setupEvents(){
-    // Toggle small assets
     DOM.$('#btn-toggle-small')?.addEventListener('click', ()=>{
       this.state.hideSmall = !this.state.hideSmall;
       const btn = DOM.$('#btn-toggle-small');
@@ -1050,7 +1270,6 @@ class CryptoPortfolioApp {
       this.updateSmallNote();
     });
 
-    // Sortable headers
     DOM.$$('#crypto-table th.sortable').forEach(th => {
       th.addEventListener('click', () => {
         const column = th.getAttribute('data-sort');
@@ -1058,22 +1277,11 @@ class CryptoPortfolioApp {
       });
     });
 
-    // Add / Edit modal
     this.setupModal();
-    
-    // Investment modal
     this.setupInvestmentModal();
-    
-    // Sell modal
     this.setupSellModal();
-    
-    // Chart modal
-    this.setupChartModal();
-
-    // PDF
     this.setupPdf();
 
-    // Currency toggle
     const btnEUR = DOM.$('#btn-eur');
     const btnUSD = DOM.$('#btn-usd');
     if (btnEUR && btnUSD){
@@ -1091,15 +1299,13 @@ class CryptoPortfolioApp {
     }
   }
 
-  /* ===== Modal Add/Edit manual asset ===== */
   setupModal(){
     const modal = DOM.$('#modal-backdrop');
     const locSelect = DOM.$('#m-loc');
     if (locSelect){
-      locSelect.innerHTML = CONFIG.LOCATION_CHOICES.map(l=>`<option value="${this.escapeHtml(l)}">${this.escapeHtml(l)}</option>`).join('');
+      locSelect.innerHTML = CONFIG.LOCATION_CHOICES.map(l=>`<option value="${this.escape(l)}">${this.escape(l)}</option>`).join('');
     }
     
-    // Currency toggle
     const btnEUR = DOM.$('#m-curr-eur');
     const btnUSD = DOM.$('#m-curr-usd');
     if (btnEUR && btnUSD) {
@@ -1121,24 +1327,22 @@ class CryptoPortfolioApp {
     modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeModal(); });
   }
 
-  /* ===== Investment Modal ===== */
   setupInvestmentModal(){
     const modal = DOM.$('#investment-modal-backdrop');
     DOM.$('#inv-close')?.addEventListener('click', ()=>this.closeInvestmentModal());
     DOM.$('#inv-add-btn')?.addEventListener('click', ()=>this.addInvestment());
+    DOM.$('#inv-save-qty')?.addEventListener('click', ()=>this.saveManualQuantity());
     DOM.$('#inv-save-apy')?.addEventListener('click', ()=>this.saveApy());
     modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeInvestmentModal(); });
 
-    // default date
     const dateInput = DOM.$('#inv-date');
     if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
 
-    // remover ticker (apenas manual)
     const btnRemove = DOM.$('#inv-remove-asset');
     if (btnRemove){
       btnRemove.addEventListener('click', async () => {
-        const asset = (this.currentInvestmentAsset||'').toUpperCase();
-        const location = this.currentInvestmentLocation || 'Other';
+        const asset = this.normalizeSymbol(this.currentInvestmentAsset || '');
+        const location = this.canonicalizeLocation(this.currentInvestmentLocation || 'Other');
         if (!asset) return;
         if (!confirm(`Remover o ticker ${asset} (${location}) e respetivos investimentos desta localização?`)) return;
         await this.deleteManualAssetAndInvestments(asset, location);
@@ -1153,8 +1357,8 @@ class CryptoPortfolioApp {
   }
 
   openEditWindow(asset, location, source){
-    this.currentInvestmentAsset   = (asset || '').toUpperCase();
-    this.currentInvestmentLocation = location || 'Other';
+    this.currentInvestmentAsset   = this.normalizeSymbol(asset || '');
+    this.currentInvestmentLocation = this.canonicalizeLocation(location || 'Other');
     this.currentInvestmentSource   = source || 'binance';
 
     const modal      = document.querySelector('#investment-modal-backdrop');
@@ -1163,6 +1367,7 @@ class CryptoPortfolioApp {
     const qtyInput   = modal?.querySelector('#inv-qty2');
     const apyInput   = modal?.querySelector('#inv-apy');
     const btnRemove  = modal?.querySelector('#inv-remove-asset');
+    const btnSaveQty = modal?.querySelector('#inv-save-qty');
 
     if (titleSpan) {
       titleSpan.textContent = `${this.currentInvestmentAsset} – ${this.currentInvestmentLocation}`;
@@ -1170,9 +1375,24 @@ class CryptoPortfolioApp {
 
     const isManual = (this.currentInvestmentSource === 'manual');
     if (qtyWrap)   qtyWrap.style.display = isManual ? 'block' : 'none';
+    if (btnSaveQty) btnSaveQty.style.display = isManual ? '' : 'none';
     if (btnRemove) btnRemove.style.display = isManual ? '' : 'none';
 
-    if (qtyInput)  qtyInput.value = '';
+    if (qtyInput)  {
+      if (isManual) {
+        const manualRow = this.findManualAsset(this.currentInvestmentAsset, this.currentInvestmentLocation);
+        const currentQty = manualRow?.quantity ?? null;
+        qtyInput.value = currentQty !== null ? String(currentQty) : '';
+        if (currentQty !== null) {
+          qtyInput.setAttribute('placeholder', `Atual: ${FORMATTERS.quantity.format(currentQty)}`);
+        } else {
+          qtyInput.setAttribute('placeholder', 'e.g. 0.015');
+        }
+      } else {
+        qtyInput.value = '';
+        qtyInput.setAttribute('placeholder', 'e.g. 0.015');
+      }
+    }
     if (apyInput) {
       const apyVal = this.getApyValue(this.currentInvestmentAsset, this.currentInvestmentLocation);
       apyInput.value = (apyVal !== null && apyVal !== undefined) ? String(apyVal) : '';
@@ -1183,9 +1403,18 @@ class CryptoPortfolioApp {
   }
 
   async deleteManualAssetAndInvestments(asset, location){
-    await FirebaseService.deleteDocument('cryptoportfolio_manual', asset);
+    const normalizedAsset = this.normalizeSymbol(asset || '');
+    const targetLocation = this.canonicalizeLocation(location || 'Other');
+    const manualRow = this.findManualAsset(normalizedAsset, targetLocation);
+    const manualDocId = manualRow?.id || normalizedAsset;
 
-    const key = `${asset.toUpperCase()}_${(location||'Other').toUpperCase()}`;
+    try {
+      await FirebaseService.deleteDocument('cryptoportfolio_manual', manualDocId);
+    } catch (err) {
+      console.warn('Falha ao remover ativo manual', err);
+    }
+
+    const key = `${normalizedAsset}_${this.normalizeLocation(targetLocation)}`;
     const list = this.state.investments.get(key) || [];
     for (const inv of list){
       if (inv?.id) {
@@ -1194,13 +1423,15 @@ class CryptoPortfolioApp {
     }
 
     try {
-      await FirebaseService.deleteDocument(CONFIG.APY_COLLECTION, this.makeApyDocId(asset, location));
+      await FirebaseService.deleteDocument(CONFIG.APY_COLLECTION, this.makeApyDocId(normalizedAsset, targetLocation));
     } catch (err) {
       console.warn('Falha ao remover APY manual', err);
     }
-    this.state.apyValues.delete(this.makeApyKey(asset, location));
+    this.state.apyValues.delete(this.makeApyKey(normalizedAsset, targetLocation));
     this.state.investments.delete(key);
-    this.state.manualAssets = this.state.manualAssets.filter(r => !(r.asset===asset && (r.location||'Other')===location));
+    this.state.manualAssets = this.state.manualAssets.filter(r =>
+      !(r.asset === normalizedAsset && this.normalizeLocation(r.location) === this.normalizeLocation(targetLocation))
+    );
   }
 
   closeInvestmentModal(){
@@ -1210,13 +1441,24 @@ class CryptoPortfolioApp {
     this.currentInvestmentSource = null;
     const apyInput = DOM.$('#inv-apy');
     if (apyInput) apyInput.value = '';
+    const qtyInput = DOM.$('#inv-qty2');
+    if (qtyInput) {
+      qtyInput.value = '';
+      qtyInput.setAttribute('placeholder', 'e.g. 0.015');
+    }
+    const qtyWrap = DOM.$('#inv-qty2-wrap');
+    if (qtyWrap) qtyWrap.style.display = 'none';
+    const btnSaveQty = DOM.$('#inv-save-qty');
+    if (btnSaveQty) btnSaveQty.style.display = 'none';
   }
 
   renderInvestmentList(){
     const list = DOM.$('#investment-list');
     if (!list) return;
 
-    const key = `${(this.currentInvestmentAsset||'').toUpperCase()}_${(this.currentInvestmentLocation||'Other').toUpperCase()}`;
+    const assetKey = this.normalizeSymbol(this.currentInvestmentAsset || '');
+    const locKey = this.normalizeLocation(this.currentInvestmentLocation || 'Other');
+    const key = `${assetKey}_${locKey}`;
     const investments = this.state.investments.get(key) || [];
 
     if (investments.length === 0) {
@@ -1229,7 +1471,7 @@ class CryptoPortfolioApp {
     list.innerHTML = sorted.map(inv => {
       const displayAmount = inv.currency === 'EUR' 
         ? FORMATTERS.eur.format(inv.originalAmount)
-        : `${FORMATTERS.usd.format(inv.originalAmount)}`;
+        : `$${FORMATTERS.usd.format(inv.originalAmount)}`;
       const date = new Date(inv.date).toLocaleDateString('pt-PT');
       
       return `
@@ -1238,7 +1480,7 @@ class CryptoPortfolioApp {
             <div style="font-weight: 600;">${displayAmount}</div>
             <div style="font-size: 0.85rem; color: #6b7280;">${date}</div>
           </div>
-          <button class="btn btn-del-inv" data-inv-id="${this.escapeHtml(inv.id)}" style="padding: 4px 8px; font-size: 0.85rem;">Remover</button>
+          <button class="btn btn-del-inv" data-inv-id="${this.escape(inv.id)}" style="padding: 4px 8px; font-size: 0.85rem;">Remover</button>
         </div>
       `;
     }).join('');
@@ -1257,13 +1499,21 @@ class CryptoPortfolioApp {
       const currency = DOM.$('#inv-currency')?.value || 'EUR';
       const date = DOM.$('#inv-date')?.value || '';
 
-      const asset = (this.currentInvestmentAsset || '').toUpperCase();
-      const location = this.currentInvestmentLocation || 'Other';
+      const asset = this.normalizeSymbol(this.currentInvestmentAsset || '');
+      const location = this.canonicalizeLocation(this.currentInvestmentLocation || 'Other');
       const source = this.currentInvestmentSource || 'binance';
 
-      const qtyToAdd = (source === 'manual')
-        ? parseFloat(document.querySelector('#investment-modal-backdrop #inv-qty2')?.value ?? '0')
-        : 0;
+      let qtyToAdd = 0;
+      let manualRow = null;
+      if (source === 'manual') {
+        manualRow = this.findManualAsset(asset, location);
+        const rawQty = parseFloat(document.querySelector('#investment-modal-backdrop #inv-qty2')?.value ?? '0');
+        if (Number.isFinite(rawQty) && rawQty >= 0) {
+          const currentQty = manualRow?.quantity || 0;
+          const delta = rawQty - currentQty;
+          qtyToAdd = delta > 0 ? delta : 0;
+        }
+      }
 
       if (!isFinite(amount) || amount < 0) { 
         ToastService.error('Por favor, insira um valor válido (≥ 0)');
@@ -1285,12 +1535,12 @@ class CryptoPortfolioApp {
       });
 
       if (source === 'manual' && qtyToAdd > 0) {
-        const manualRow = this.state.manualAssets.find(
-          r => r.asset === asset && (r.location || 'Other') === location
-        );
         const newQty = (manualRow?.quantity || 0) + qtyToAdd;
-        await FirebaseService.setDocument('cryptoportfolio_manual', asset, {
-          asset, quantity: newQty, location
+        const manualDocId = manualRow?.id || this.makeManualDocId(asset, location);
+        await FirebaseService.setDocument('cryptoportfolio_manual', manualDocId, {
+          asset,
+          quantity: newQty,
+          location
         });
       }
 
@@ -1312,9 +1562,64 @@ class CryptoPortfolioApp {
     }
   }
 
+  async saveManualQuantity(){
+    if (this.currentInvestmentSource !== 'manual') return;
+
+    const qtyInput = DOM.$('#inv-qty2');
+    if (!qtyInput) {
+      ToastService.error('Campo de quantidade nao encontrado');
+      return;
+    }
+
+    const asset = this.normalizeSymbol(this.currentInvestmentAsset || '');
+    const location = this.canonicalizeLocation(this.currentInvestmentLocation || 'Other');
+    if (!asset) {
+      ToastService.error('Selecione um ativo manual valido');
+      return;
+    }
+
+    const raw = qtyInput.value.trim();
+    if (raw === '') {
+      ToastService.error('Introduza uma quantidade valida');
+      return;
+    }
+
+    const quantity = Number(raw);
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      ToastService.error('Quantidade invalida');
+      return;
+    }
+
+    try {
+      const manualRow = this.findManualAsset(asset, location);
+      const docId = manualRow?.id || this.makeManualDocId(asset, location);
+      await FirebaseService.setDocument('cryptoportfolio_manual', docId, {
+        asset,
+        quantity,
+        location
+      });
+
+      await this.loadManualAssets();
+        await this.loadInvestments();
+      await this.renderAll(this.state.generatedAt);
+
+      const updatedRow = this.findManualAsset(asset, location);
+      if (updatedRow) {
+        const value = updatedRow.quantity ?? 0;
+        qtyInput.value = String(value);
+        qtyInput.setAttribute('placeholder', `Atual: ${FORMATTERS.quantity.format(value)}`);
+      }
+
+      ToastService.success('Quantidade atualizada com sucesso');
+    } catch (err) {
+      console.error('Erro ao atualizar quantidade manual', err);
+      ToastService.error('Erro ao atualizar quantidade');
+    }
+  }
+
   async saveApy(){
-    const asset = (this.currentInvestmentAsset || '').toUpperCase();
-    const location = this.currentInvestmentLocation || '';
+    const asset = this.normalizeSymbol(this.currentInvestmentAsset || '');
+    const location = this.canonicalizeLocation(this.currentInvestmentLocation || '');
     const input = DOM.$('#inv-apy');
     if (!asset || !input) {
       ToastService.error('Selecione um ativo para definir o APY');
@@ -1382,34 +1687,29 @@ class CryptoPortfolioApp {
     DOM.$('#m-asset').focus();
   }
 
-  openEditModal(asset){
-    const row = this.state.manualAssets.find(a=>a.asset===asset);
-    DOM.$('#modal-title').textContent = `Edit ${asset}`;
-    DOM.$('#m-asset').value = row?.asset || asset;
-    DOM.disable(DOM.$('#m-asset'));
-    DOM.$('#m-qty').value = row?.quantity || '';
-    DOM.$('#m-cost').value = '0';
-    DOM.$('#m-loc').value = row?.location || 'Other';
-    DOM.show(DOM.$('#modal-backdrop'));
-  }
-
   closeModal(){ 
     DOM.hide(DOM.$('#modal-backdrop')); 
     DOM.enable(DOM.$('#m-asset')); 
   }
 
   async saveModal(){
-    const asset = DOM.$('#m-asset').value.trim().toUpperCase();
+    const assetInput = DOM.$('#m-asset');
+    const asset = this.normalizeSymbol(assetInput?.value || '');
+    if (assetInput) assetInput.value = asset;
     const qty = Number(DOM.$('#m-qty').value || 0);
     const cost = Number(DOM.$('#m-cost').value || 0);
-    const loc = DOM.$('#m-loc').value;
+    const locInput = DOM.$('#m-loc');
+    const loc = this.canonicalizeLocation(locInput?.value || 'Other');
     
     if (!asset || !isFinite(qty) || qty<=0){ 
       ToastService.error('Asset/quantidade inválidos');
       return; 
     }
     
-    await FirebaseService.setDocument('cryptoportfolio_manual', asset, { 
+    const existingManual = this.findManualAsset(asset, loc);
+    const manualDocId = existingManual?.id || this.makeManualDocId(asset, loc);
+
+    await FirebaseService.setDocument('cryptoportfolio_manual', manualDocId, { 
       asset, 
       quantity: qty, 
       location: loc 
@@ -1448,22 +1748,62 @@ class CryptoPortfolioApp {
     ToastService.success('Asset guardado com sucesso');
   }
 
+  async updateManualAssetLocation(asset, previousLocation, newLocation){
+    const normalizedAsset = this.normalizeSymbol(asset || '');
+    const fromLocation = this.canonicalizeLocation(previousLocation || 'Other');
+    const targetLocation = this.canonicalizeLocation(newLocation || 'Other');
+    const manualRow = this.findManualAsset(normalizedAsset, fromLocation);
+
+    if (!manualRow) {
+      console.warn('Manual asset not found for location update', normalizedAsset, previousLocation);
+      return;
+    }
+
+    const existingTarget = this.findManualAsset(normalizedAsset, targetLocation);
+    if (existingTarget && existingTarget.id !== manualRow.id) {
+      const mergedQty = (existingTarget.quantity || 0) + (manualRow.quantity || 0);
+      await FirebaseService.setDocument('cryptoportfolio_manual', existingTarget.id, {
+        asset: normalizedAsset,
+        quantity: mergedQty,
+        location: targetLocation
+      });
+      await FirebaseService.deleteDocument('cryptoportfolio_manual', manualRow.id);
+      return;
+    }
+
+    const docId = manualRow.id || this.makeManualDocId(normalizedAsset, targetLocation);
+    await FirebaseService.setDocument('cryptoportfolio_manual', docId, {
+      asset: normalizedAsset,
+      quantity: manualRow.quantity || 0,
+      location: targetLocation
+    });
+
+    if (!manualRow.id && docId !== normalizedAsset) {
+      try {
+        await FirebaseService.deleteDocument('cryptoportfolio_manual', normalizedAsset);
+      } catch (err) {
+        console.warn('Falha ao remover documento manual legado', err);
+      }
+    }
+  }
+
   bindTableEvents(){
-  DOM.$$('select[data-asset]').forEach(sel => {
+    DOM.$$('select[data-asset]').forEach(sel => {
       sel.addEventListener('change', async (e) => {
         const asset = e.target.getAttribute('data-asset');
-        const loc = e.target.value;
+        const loc = this.canonicalizeLocation(e.target.value || 'Other');
         const row = e.target.closest('tr');
         const previousLoc = row?.getAttribute('data-location') || '';
+        const prevCanonical = this.canonicalizeLocation(previousLoc || 'Other');
         const source = row?.getAttribute('data-source') || 'binance';
         
         if (source === 'manual') {
-          await FirebaseService.setDocument('cryptoportfolio_manual', asset, { location: loc });
+          await this.updateManualAssetLocation(asset, prevCanonical, loc);
           await this.loadManualAssets();
         } else {
-          const assetUpper = String(asset || '').toUpperCase();
-          await FirebaseService.setDocument('cryptoportfolio', asset, { asset, location: loc });
-          this.state.savedLocations.set(assetUpper, loc);
+          const canonicalAsset = this.normalizeSymbol(asset || '');
+          await FirebaseService.setDocument('cryptoportfolio', canonicalAsset, { asset: canonicalAsset, location: loc });
+          this.state.savedLocations.set(canonicalAsset, loc);
         }
         
         if (row) {
@@ -1472,9 +1812,9 @@ class CryptoPortfolioApp {
           if (editBtn) editBtn.setAttribute('data-location', loc);
         }
         
-        const assetUpperKey = String(asset || '').toUpperCase();
+        const assetUpperKey = this.normalizeSymbol(asset || '');
         const currentRow = this.state.currentRows.find(r =>
-          r.asset === assetUpperKey && (r.location || '') === previousLoc
+          r.asset === assetUpperKey && this.canonicalizeLocation(r.location || 'Other') === prevCanonical
         );
         if (currentRow) currentRow.location = loc;
         
@@ -1483,7 +1823,7 @@ class CryptoPortfolioApp {
       });
     });
 
-  DOM.$$('.btn-edit').forEach(b =>
+    DOM.$$('.btn-edit').forEach(b =>
       b.addEventListener('click', () => {
         const asset = b.getAttribute('data-edit');
         const location = b.getAttribute('data-location') || 'Other';
@@ -1493,7 +1833,6 @@ class CryptoPortfolioApp {
     );
   }
 
-  /* ===== Sell Modal ===== */
   setupSellModal(){
     const modal = DOM.$('#sell-modal-backdrop');
     DOM.$('#sell-cancel')?.addEventListener('click', ()=>this.closeSellModal());
@@ -1502,35 +1841,47 @@ class CryptoPortfolioApp {
   }
 
   openSellModal(asset, location){
-    this.currentSellAsset = asset.toUpperCase();
-    this.currentSellLocation = location;
-    
-    DOM.$('#sell-asset-name').textContent = this.currentSellAsset;
-    
+    this.currentSellAsset = this.normalizeSymbol(asset || '');
+    this.currentSellLocation = this.canonicalizeLocation(location || 'Other');
+
+    const nameEl = DOM.$('#sell-asset-name');
+    if (nameEl) nameEl.textContent = this.currentSellAsset;
+
     const assetRows = this.state.currentRows.filter(r => r.asset === this.currentSellAsset);
+
+    const updateMaxQuantity = (canonicalLoc) => {
+      const maxQtyEl = DOM.$('#sell-max-qty');
+      if (!maxQtyEl) return;
+      const row = assetRows.find(r => this.canonicalizeLocation(r.location || 'Other') === canonicalLoc);
+      maxQtyEl.textContent = row
+        ? `Maximo: ${FORMATTERS.quantity.format(row.quantity)}`
+        : '';
+    };
+
     const locSelect = DOM.$('#sell-location');
     if (locSelect) {
-      locSelect.innerHTML = assetRows
-        .map(r => `<option value="${this.escapeHtml(r.location)}" ${r.location === location ? 'selected' : ''}>${this.escapeHtml(r.location)}</option>`)
+      const options = assetRows
+        .map(r => {
+          const canonicalLoc = this.canonicalizeLocation(r.location || 'Other');
+          const displayLoc = r.location || canonicalLoc;
+          const selectedAttr = canonicalLoc === this.currentSellLocation ? 'selected' : '';
+          return `<option value="${this.escape(canonicalLoc)}" ${selectedAttr}>${this.escape(displayLoc)}</option>`;
+        })
         .join('');
-      
-      locSelect.addEventListener('change', (e) => {
-        const selectedLoc = e.target.value;
-        const row = assetRows.find(r => r.location === selectedLoc);
-        const maxQty = DOM.$('#sell-max-qty');
-        if (maxQty && row) {
-          maxQty.textContent = `Máximo: ${FORMATTERS.quantity.format(row.quantity)}`;
-        }
-      });
+      locSelect.innerHTML = options;
+      locSelect.value = this.currentSellLocation;
+      locSelect.onchange = (e) => {
+        const selectedLoc = this.canonicalizeLocation(e.target.value || 'Other');
+        this.currentSellLocation = selectedLoc;
+        updateMaxQuantity(selectedLoc);
+      };
+      updateMaxQuantity(this.currentSellLocation);
+    } else {
+      updateMaxQuantity(this.currentSellLocation);
     }
-    
-    const row = assetRows.find(r => r.location === location);
-    const maxQty = DOM.$('#sell-max-qty');
-    if (maxQty && row) {
-      maxQty.textContent = `Máximo: ${FORMATTERS.quantity.format(row.quantity)}`;
-    }
-    
-    DOM.$('#sell-qty').value = '';
+
+    const qtyInput = DOM.$('#sell-qty');
+    if (qtyInput) qtyInput.value = '';
     DOM.show(DOM.$('#sell-modal-backdrop'));
   }
 
@@ -1542,162 +1893,63 @@ class CryptoPortfolioApp {
 
   async confirmSell(){
     try {
-      const sellQty = parseFloat(DOM.$('#sell-qty').value);
-      const location = DOM.$('#sell-location').value;
-      
+      const qtyInput = DOM.$('#sell-qty');
+      const sellQty = parseFloat(qtyInput?.value ?? '');
+      const locSelect = DOM.$('#sell-location');
+      const location = this.canonicalizeLocation(locSelect?.value || this.currentSellLocation || 'Other');
+
       if (!isFinite(sellQty) || sellQty <= 0) {
-        ToastService.error('Por favor, insira uma quantidade válida');
+        ToastService.error('Por favor, insira uma quantidade valida');
         return;
       }
-      
-      const row = this.state.currentRows.find(r => 
-        r.asset === this.currentSellAsset && r.location === location
+
+      const row = this.state.currentRows.find(r =>
+        r.asset === this.currentSellAsset &&
+        this.canonicalizeLocation(r.location || 'Other') === location
       );
-      
+
       if (!row) {
-        ToastService.error('Ativo não encontrado');
+        ToastService.error('Ativo nao encontrado');
         return;
       }
-      
+
       if (sellQty > row.quantity) {
-        ToastService.error('Quantidade excede o disponível');
+        ToastService.error('Quantidade excede o disponivel');
         return;
       }
-      
+
       const newQty = row.quantity - sellQty;
-      
+
       if (row.source === 'manual') {
+        const manualRow = this.findManualAsset(row.asset, location);
         if (newQty <= 0) {
-          await FirebaseService.deleteDocument('cryptoportfolio_manual', this.currentSellAsset);
+          if (manualRow?.id) {
+            await FirebaseService.deleteDocument('cryptoportfolio_manual', manualRow.id);
+          }
         } else {
-          await FirebaseService.setDocument('cryptoportfolio_manual', this.currentSellAsset, {
-            asset: this.currentSellAsset,
+          const docId = manualRow?.id || this.makeManualDocId(row.asset, location);
+          await FirebaseService.setDocument('cryptoportfolio_manual', docId, {
+            asset: row.asset,
             quantity: newQty,
-            location: location
+            location
           });
         }
-        
+
         await this.loadManualAssets();
-        await this.renderAll();
+        await this.loadInvestments();
+        await this.renderAll(this.state.generatedAt);
         ToastService.success('Venda registrada com sucesso');
       } else {
-        ToastService.error('Não é possível vender ativos do Binance diretamente');
+        ToastService.error('Nao e possivel vender ativos do Binance diretamente');
+        return;
       }
-      
+
       this.closeSellModal();
     } catch (e) {
       ToastService.error('Erro ao vender ativo');
       console.error(e);
     }
   }
-
-  /* ===== Chart Modal ===== */
-  setupChartModal(){
-    const modal = DOM.$('#chart-modal-backdrop');
-    const card = DOM.$('#kpi-trend-card');
-    
-    if (card) {
-      card.addEventListener('click', ()=>this.openChartModal());
-    }
-    
-    DOM.$('#chart-modal-close')?.addEventListener('click', ()=>this.closeChartModal());
-    modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeChartModal(); });
-    
-    DOM.$$('#chart-modal-backdrop .btn-toggle').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        DOM.$$('#chart-modal-backdrop .btn-toggle').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active');
-        const range = e.target.getAttribute('data-range');
-        this.renderExpandedChart(range);
-      });
-    });
-  }
-
-  openChartModal(){
-    DOM.show(DOM.$('#chart-modal-backdrop'));
-    this.renderExpandedChart('6m');
-  }
-
-  closeChartModal(){
-    DOM.hide(DOM.$('#chart-modal-backdrop'));
-    if (this.expandedChart) {
-      this.expandedChart.destroy();
-      this.expandedChart = null;
-    }
-  }
-
-  renderExpandedChart(range){
-    const canvas = document.getElementById('chart-modal-canvas');
-    if (!canvas) return;
-
-    let data = [];
-    
-    switch(range) {
-      case '3m':
-        data = this.state.monthlyRealized.slice(-3);
-        break;
-      case '6m':
-        data = this.state.monthlyRealized.slice(-6);
-        break;
-      case '1y':
-        data = this.state.monthlyRealized.slice(-12);
-        break;
-      case 'all':
-      default:
-        data = this.state.monthlyRealized;
-        break;
-    }
-
-    const labels = data.map(d => {
-      const [year, month] = d.month.split('-');
-      return new Date(year, month - 1).toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' });
-    });
-    const dataEUR = data.map(d => d.realizedEUR);
-
-    if (this.expandedChart) {
-      this.expandedChart.destroy();
-    }
-
-    this.expandedChart = new Chart(canvas, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Realizado (EUR)',
-          data: dataEUR,
-          borderColor: '#526D82',
-          backgroundColor: 'rgba(82, 109, 130, 0.1)',
-          borderWidth: 3,
-          fill: true,
-          tension: 0.4
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true },
-          tooltip: { 
-            enabled: true,
-            callbacks: {
-              label: (context) => {
-                return `Realizado: ${FORMATTERS.eur.format(context.parsed.y)}`;
-              }
-            }
-          }
-        },
-        scales: {
-          y: {
-            ticks: {
-              callback: (value) => FORMATTERS.eur.format(value)
-            }
-          }
-        }
-      }
-    });
-  }
-
-  /* ================== PDF ================== */
   setupPdf(){
     const btn = DOM.$('#btn-pdf');
     if (!btn) return;
@@ -1719,7 +1971,8 @@ class CryptoPortfolioApp {
     const now = new Date();
     const month = now.toLocaleString('pt-PT', { month:'long' });
     const title = `Portfólio Cripto - ${month.charAt(0).toUpperCase()+month.slice(1)} ${now.getFullYear()}`;
-    doc.setFont('helvetica','bold'); doc.setFontSize(18);
+    doc.setFont('helvetica','bold'); 
+    doc.setFontSize(18);
     doc.text(title, pageWidth/2, 40, { align:'center' });
 
     const rows = this.state.visibleRows;
@@ -1736,7 +1989,7 @@ class CryptoPortfolioApp {
     const body = rows.map(r => (
       mode === 'EUR'
         ? [ r.asset, FORMATTERS.quantity.format(r.quantity), FORMATTERS.eur.format(r.valueEUR||0) ]
-        : [ r.asset, FORMATTERS.quantity.format(r.quantity), `${FORMATTERS.usd.format(r.valueUSDT||0)}` ]
+        : [ r.asset, FORMATTERS.quantity.format(r.quantity), `$${FORMATTERS.usd.format(r.valueUSDT||0)}` ]
     ));
 
     const widths = [110, 95, 120];
@@ -1777,7 +2030,6 @@ class CryptoPortfolioApp {
       }
     });
 
-    // Totais abaixo da tabela
     const t = this.state.totals;
     const totalInv = this.getTotalInvestedAmounts();
     const invEUR = totalInv.eur;
@@ -1786,9 +2038,7 @@ class CryptoPortfolioApp {
     const realUSD = (t.usdt || 0) - invUSD;
 
     let y = (doc.lastAutoTable?.finalY || 70) + 25;
-    const leftX = (typeof marginLeft !== 'undefined')
-      ? marginLeft
-      : (doc.lastAutoTable?.settings?.margin?.left ?? 40);
+    const leftX = marginLeft;
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
@@ -1809,10 +2059,10 @@ class CryptoPortfolioApp {
       doc.setTextColor(realEUR >= 0 ? 22 : 220, realEUR >= 0 ? 163 : 38, realEUR >= 0 ? 74 : 38);
       doc.text(part3, x3, y);
     } else {
-      const part1 = `Total: ${FORMATTERS.usd.format(t.usdt || 0)}   `;
-      const part2 = `Investido: ${FORMATTERS.usd.format(invUSD)}   `;
+      const part1 = `Total: $${FORMATTERS.usd.format(t.usdt || 0)}   `;
+      const part2 = `Investido: $${FORMATTERS.usd.format(invUSD)}   `;
       const sign = realUSD >= 0 ? '+' : '−';
-      const part3 = `Realizado: ${sign}${FORMATTERS.usd.format(Math.abs(realUSD))}`;
+      const part3 = `Realizado: ${sign}$${FORMATTERS.usd.format(Math.abs(realUSD))}`;
 
       doc.setTextColor(0, 0, 0);
       doc.text(part1, leftX, y);
@@ -1832,7 +2082,6 @@ class CryptoPortfolioApp {
     ToastService.success('PDF exportado com sucesso');
   }
 
-  /* ================== MISC ================== */
   showError(msg){
     console.error(msg);
     const tb = DOM.$('#rows');

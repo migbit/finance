@@ -99,48 +99,36 @@
       }
     }
     
-    /* Top assets list */
-    .top-assets-list {
+    /* Top assets doughnut */
+    .top-assets-chart-wrap {
+      min-height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
       padding: 10px;
     }
     
-    .asset-item {
-      display: flex;
-      align-items: center;
-      margin-bottom: 12px;
-      gap: 8px;
+    #top-assets-chart {
+      width: 100%;
+      max-width: 320px;
+      max-height: 320px;
     }
     
-    .asset-name {
-      min-width: 60px;
+    .top-assets-empty {
+      display: none;
+      color: #6b7280;
+      text-align: center;
       font-weight: 600;
-      font-size: 0.9rem;
     }
     
-    .asset-bar-container {
-      flex: 1;
-      height: 24px;
-      background: #e5e7eb;
-      border-radius: 4px;
-      overflow: hidden;
-      position: relative;
+    #monthly-assets-table {
+      min-width: max-content;
     }
     
-    .asset-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #526D82, #9DB2BF);
-      transition: width 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      padding-right: 8px;
-    }
-    
-    .asset-percent {
-      color: white;
-      font-weight: 600;
-      font-size: 0.85rem;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    #monthly-assets-table th,
+    #monthly-assets-table td {
+      white-space: nowrap;
     }
     
     /* Monthly chart container */
@@ -233,9 +221,10 @@
         <div class="allocation-split">
           <!-- Left: Top 12 Assets -->
           <div>
-            <h4 style="margin: 0 0 16px; font-size: 1rem; color: #526D82;">Top 12 Ativos (%)</h4>
-            <div class="top-assets-list" id="top-assets-list">
-              <!-- Will be populated by JS -->
+            <h4 style="margin: 0 0 16px; font-size: 1rem; color: #526D82;">Top 10 Ativos (%)</h4>
+            <div class="top-assets-chart-wrap">
+              <canvas id="top-assets-chart"></canvas>
+              <div id="top-assets-empty" class="top-assets-empty">Sem dados</div>
             </div>
           </div>
           
@@ -291,6 +280,20 @@
         </div>
         <p id="small-note" class="text-muted" style="text-align:right; margin-top:6px;"></p>
         <p id="stamp" class="text-muted" style="margin-top:8px;"></p>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="viz-card">
+        <h3 style="margin: 0 0 16px; font-size: 1.05rem; color: #526D82; text-align: center;">Histórico Mensal por Ativo</h3>
+        <div class="table-wrap">
+          <table id="monthly-assets-table" class="table-monthly-assets">
+            <thead id="monthly-assets-head"></thead>
+            <tbody id="monthly-assets-body">
+              <tr><td class="text-muted" style="text-align:center; padding:16px;">Sem dados</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   </main>
@@ -356,9 +359,12 @@
         <!-- Quantidade (apenas para MANUAL) -->
         <div class="field" id="inv-qty2-wrap" style="display:none;">
           <label for="inv-qty2">Quantidade (apenas para Manual)</label>
-          <input id="inv-qty2" type="number" step="any" min="0" placeholder="e.g. 0.015" />
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <input id="inv-qty2" type="number" step="any" min="0" placeholder="e.g. 0.015" style="flex:1 1 140px;" />
+            <button id="inv-save-qty" type="button" class="btn" style="display:none;">Atualizar quantidade</button>
+          </div>
           <small style="color:#6b7280">
-            Para ativos <b>Manuais</b>, esta quantidade será somada à atual. Para Binance, a quantidade vem da API.
+            Use "Atualizar quantidade" para definir o total manual. Ao adicionar um investimento, apenas a diferenca positiva face ao total atual sera somada.
           </small>
         </div>
 
