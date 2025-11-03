@@ -334,6 +334,7 @@
                     <!-- Formulário -->
                     <form id="iva-estrangeiro-form" class="form-inline" style="margin-bottom: 1rem;">
                         <input type="date" id="iva-data" required>
+                        <input type="text" id="iva-descricao" placeholder="Descrição" required>
                         <input type="number" id="iva-valor" placeholder="Valor (sem IVA) €" step="0.01" required>
                         <button type="submit" class="btn">Adicionar</button>
                     </form>
@@ -344,9 +345,11 @@
                             <thead>
                                 <tr>
                                     <th>Data</th>
+                                    <th>Descrição</th>
                                     <th>Valor (€)</th>
                                     <th>IVA 23% (€)</th>
                                     <th>Total (€)</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="iva-estrangeiro-body"><!-- via JS --></tbody>

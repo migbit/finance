@@ -85,6 +85,15 @@ function euroInt(v) {
     }).replace(/\./g, ' ') + ' €';
 }
 
+function euro2(v) {
+    const num = Math.round((Number(v) || 0) * 100) / 100;
+    return num.toLocaleString('pt-PT', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        useGrouping: true
+    }).replace(/\./g, ' ') + ' €';
+}
+
 function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, m => ({
         '&': '&amp;',
@@ -93,6 +102,10 @@ function escapeHtml(s) {
         '"': '&quot;',
         "'": '&#039;'
     }[m]));
+}
+
+function escapeAttr(s) {
+    return escapeHtml(s);
 }
 
 // ========================================
@@ -987,6 +1000,7 @@ function initIvaEstrangeiro() {
     let _ivaRowsAll = [];
     let _ivaVisible = 0;
     const IVA_PAGE = 6;
+    const IVA_COLLECTION = _collection(db, 'ivaEstrangeiro');
 
     ivaForm.addEventListener('submit', onAddIva);
     loadIvaEstrangeiro();
@@ -994,10 +1008,12 @@ function initIvaEstrangeiro() {
     async function onAddIva(e) {
         e.preventDefault();
         const dataStr = document.getElementById('iva-data').value;
+        const descricaoEl = document.getElementById('iva-descricao');
+        const descricao = descricaoEl ? descricaoEl.value.trim() : '';
         const valor = parseFloat(document.getElementById('iva-valor').value);
 
-        if (!dataStr || isNaN(valor)) {
-            alert('Preenche a Data e o Valor (sem IVA).');
+        if (!dataStr || !descricao || isNaN(valor)) {
+            alert('Preenche a Data, a Descrição e o Valor (sem IVA).');
             return;
         }
 
@@ -1005,8 +1021,9 @@ function initIvaEstrangeiro() {
         const total = +(valor * 1.23).toFixed(2);
 
         try {
-            await _addDoc(_collection(db, 'ivaEstrangeiro'), {
+            await _addDoc(IVA_COLLECTION, {
                 data: dataStr,
+                descricao,
                 valor: +valor.toFixed(2),
                 iva,
                 total,
@@ -1020,11 +1037,27 @@ function initIvaEstrangeiro() {
         }
     }
 
+    const round2 = (value) => {
+        if (typeof value === 'number' && isFinite(value)) {
+            return Math.round(value * 100) / 100;
+        }
+        if (typeof value === 'string') {
+            const parsed = parseFloat(value.replace(/\s+/g, '').replace(',', '.'));
+            if (isFinite(parsed)) return Math.round(parsed * 100) / 100;
+        }
+        const fallback = Number(value);
+        return isFinite(fallback) ? Math.round(fallback * 100) / 100 : NaN;
+    };
+    const safeRound2 = (value) => {
+        const num = round2(value);
+        return isNaN(num) ? 0 : num;
+    };
+
     async function loadIvaEstrangeiro() {
-        ivaBody.innerHTML = '<tr><td colspan="4">Carregando…</td></tr>';
+        ivaBody.innerHTML = '<tr><td colspan="6">Carregando…</td></tr>';
 
         try {
-            const snap = await _getDocs(_collection(db, 'ivaEstrangeiro'));
+            const snap = await _getDocs(IVA_COLLECTION);
             const itens = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
             itens.sort((a, b) => {
@@ -1038,7 +1071,11 @@ function initIvaEstrangeiro() {
             _ivaRowsAll = itens;
             _ivaVisible = 0;
             ivaBody.innerHTML = '';
-            renderNextPage();
+            if (_ivaRowsAll.length === 0) {
+                ivaBody.innerHTML = '<tr><td colspan="6">Sem registos</td></tr>';
+            } else {
+                renderNextPage();
+            }
             renderResumoTrimestres(itens);
 
             if (btnIvaMore) {
@@ -1053,27 +1090,112 @@ function initIvaEstrangeiro() {
             }
         } catch (err) {
             console.error(err);
-            ivaBody.innerHTML = '<tr><td colspan="4">Erro ao carregar registos</td></tr>';
+            ivaBody.innerHTML = '<tr><td colspan="6">Erro ao carregar registos</td></tr>';
         }
     }
 
     function renderNextPage() {
+        if (_ivaVisible === 0) {
+            ivaBody.innerHTML = '';
+        }
+
         const slice = _ivaRowsAll.slice(_ivaVisible, _ivaVisible + IVA_PAGE);
+        if (slice.length === 0 && _ivaVisible === 0) {
+            ivaBody.innerHTML = '<tr><td colspan="6">Sem registos</td></tr>';
+            return;
+        }
+
         slice.forEach(r => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${escapeHtml(r.data || '')}</td>
-                <td>${euroInt(r.valor)}</td>
-                <td>${euroInt(r.iva ?? (r.valor * 0.23))}</td>
-                <td>${euroInt(r.total ?? (r.valor * 1.23))}</td>
-            `;
+            tr.dataset.id = r.id;
+            renderIvaRowView(tr, r);
             ivaBody.appendChild(tr);
         });
         _ivaVisible += slice.length;
+    }
 
-        if (_ivaVisible === 0) {
-            ivaBody.innerHTML = '<tr><td colspan="4">Sem registos</td></tr>';
+    function renderIvaRowView(tr, record) {
+        const valor = safeRound2(record.valor ?? 0);
+        const iva = safeRound2(record.iva ?? (valor * 0.23));
+        const total = safeRound2(record.total ?? (valor * 1.23));
+
+        tr.classList.remove('editing');
+        tr.innerHTML = `
+            <td>${escapeHtml(record.data || '')}</td>
+            <td>${escapeHtml(record.descricao || '')}</td>
+            <td>${euro2(valor)}</td>
+            <td>${euro2(iva)}</td>
+            <td>${euro2(total)}</td>
+            <td>
+                <button type="button" class="btn btn-edit" title="Editar" aria-label="Editar" data-id="${record.id}">&#9998;</button>
+            </td>
+        `;
+
+        const editBtn = tr.querySelector('.btn-edit');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => enterEditMode(tr, record));
         }
+    }
+
+    function enterEditMode(tr, record) {
+        if (tr.classList.contains('editing')) return;
+        tr.classList.add('editing');
+
+        const dataValue = record.data || '';
+        const descricaoValue = record.descricao || '';
+        const valorValue = safeRound2(record.valor ?? 0);
+        const ivaValue = safeRound2(record.iva ?? (valorValue * 0.23));
+        const totalValue = safeRound2(record.total ?? (valorValue * 1.23));
+
+        tr.innerHTML = `
+            <td><input type="date" class="iva-edit-data" value="${escapeAttr(dataValue)}" required></td>
+            <td><input type="text" class="iva-edit-descricao" value="${escapeAttr(descricaoValue)}" required></td>
+            <td><input type="number" class="iva-edit-valor" step="0.01" value="${valorValue.toFixed(2)}" required></td>
+            <td><input type="number" class="iva-edit-iva" step="0.01" value="${ivaValue.toFixed(2)}" required></td>
+            <td><input type="number" class="iva-edit-total" step="0.01" value="${totalValue.toFixed(2)}" required></td>
+            <td class="iva-actions">
+                <button type="button" class="btn btn-save">Guardar</button>
+                <button type="button" class="btn btn-cancel">Cancelar</button>
+            </td>
+        `;
+
+        const cancelBtn = tr.querySelector('.btn-cancel');
+        cancelBtn?.addEventListener('click', () => renderIvaRowView(tr, record));
+
+        const saveBtn = tr.querySelector('.btn-save');
+        saveBtn?.addEventListener('click', async () => {
+            const dataInput = tr.querySelector('.iva-edit-data');
+            const descInput = tr.querySelector('.iva-edit-descricao');
+            const valorInput = tr.querySelector('.iva-edit-valor');
+            const ivaInput = tr.querySelector('.iva-edit-iva');
+            const totalInput = tr.querySelector('.iva-edit-total');
+
+            const newData = dataInput?.value || '';
+            const newDesc = descInput?.value.trim() || '';
+            const newValor = round2(valorInput?.value ?? '');
+            const newIva = round2(ivaInput?.value ?? '');
+            const newTotal = round2(totalInput?.value ?? '');
+
+            if (!newData || !newDesc || isNaN(newValor) || isNaN(newIva) || isNaN(newTotal)) {
+                alert('Verifica os valores introduzidos.');
+                return;
+            }
+
+            try {
+                await updateDoc(doc(db, 'ivaEstrangeiro', record.id), {
+                    data: newData,
+                    descricao: newDesc,
+                    valor: newValor,
+                    iva: newIva,
+                    total: newTotal,
+                    ts: record.ts || Date.now()
+                });
+                await loadIvaEstrangeiro();
+            } catch (err) {
+                console.error(err);
+                alert('Erro ao guardar alterações.');
+            }
+        });
     }
 
     function renderResumoTrimestres(items) {
@@ -1089,9 +1211,9 @@ function initIvaEstrangeiro() {
             const key = `${y}-Q${q}`;
 
             if (!acc[key]) acc[key] = { ano: y, tri: q, valor: 0, iva: 0, total: 0 };
-            const valor = +(+r.valor || 0);
-            const iva = +(r.iva ?? (valor * 0.23));
-            const total = +(r.total ?? (valor * 1.23));
+            const valor = safeRound2(r.valor ?? 0);
+            const iva = safeRound2(r.iva ?? (valor * 0.23));
+            const total = safeRound2(r.total ?? (valor * 1.23));
 
             acc[key].valor += valor;
             acc[key].iva += iva;
@@ -1110,9 +1232,9 @@ function initIvaEstrangeiro() {
             tr.innerHTML = `
                 <td>${r.ano}</td>
                 <td>Q${r.tri}</td>
-                <td>${euroInt(r.valor)}</td>
-                <td>${euroInt(r.iva)}</td>
-                <td>${euroInt(r.total)}</td>
+                <td>${euro2(r.valor)}</td>
+                <td>${euro2(r.iva)}</td>
+                <td>${euro2(r.total)}</td>
             `;
             triBody.appendChild(tr);
         });
