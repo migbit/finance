@@ -55,37 +55,80 @@
     <!-- === Título === -->
     <h2 class="page-title center">DCA – Trade Republic</h2>
 
-    <!-- === Parâmetros === -->
+    <!-- === Parâmetros & Juro (collapsible) === -->
     <section class="report-section">
-      <div class="viz-card params-card">
-        <h4>Parâmetros</h4>
-        <div class="table-wrap">
-          <table class="table-dca params-table" id="params-table">
-            <thead>
-              <tr>
-                <th class="num">Data final</th>
-                <th class="num">VWCE %</th>
-                <th class="num">AGGH %</th>
-                <th class="num">ContribuiÃ§Ã£o Mensal</th>
-                <th style="width:140px">AÃ§Ãµes</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td class="num"><input id="end-date" type="month" /></td>
-                <td class="num"><input id="pct-swda" type="number" min="0" max="100" step="0.01" /></td>
-                <td class="num"><input id="pct-aggh" type="number" min="0" max="100" step="0.01" /></td>
-                <td class="num">
-                  <div class="input-euro">
-                    <input id="monthly-contribution" type="number" step="1" value="152" />
-                  </div>
-                </td>
-                <td style="text-align:right">
-                  <button id="btn-save-params" type="button" class="primary">Editar/Gravar</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <div style="text-align: center; margin-bottom: 1rem;">
+        <button id="btn-toggle-params" type="button" class="primary">Mostrar Parâmetros</button>
+      </div>
+      
+      <div id="params-juro-container" style="display: none;">
+        <!-- Parâmetros -->
+        <div class="viz-card params-card">
+          <h4>Parâmetros</h4>
+          <div class="table-wrap">
+            <table class="table-dca params-table" id="params-table">
+              <thead>
+                <tr>
+                  <th class="num">Data final</th>
+                  <th class="num">VWCE %</th>
+                  <th class="num">AGGH %</th>
+                  <th class="num">Contribuição Mensal</th>
+                  <th style="width:140px">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num"><input id="end-date" type="month" /></td>
+                  <td class="num"><input id="pct-swda" type="number" min="0" max="100" step="0.01" /></td>
+                  <td class="num"><input id="pct-aggh" type="number" min="0" max="100" step="0.01" /></td>
+                  <td class="num">
+                    <div class="input-euro">
+                      <input id="monthly-contribution" type="number" step="1" value="152" />
+                    </div>
+                  </td>
+                  <td style="text-align:right">
+                    <button id="btn-save-params" type="button" class="primary">Editar/Gravar</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Juro -->
+        <div class="viz-card juro-card">
+          <h4>Juro</h4>
+          <div class="table-wrap">
+            <table class="table-dca" id="juro-table">
+              <thead>
+                <tr>
+                  <th class="num">Saldo</th>
+                  <th class="num">Taxa de juro</th>
+                  <th class="num">Valor mensal</th>
+                  <th class="num">Valor ganho em Juros</th>
+                  <th style="text-align:center">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="num">
+                    <div class="input-euro">
+                      <input id="juro-saldo" type="number" step="0.01" class="cell" placeholder="0,00" inputmode="decimal" />
+                    </div>
+                  </td>
+                  <td class="num">
+                    <input id="juro-taxa" type="number" step="0.01" class="cell" value="2.00" disabled />
+                  </td>
+                  <td class="num"><span id="juro-mensal">0 €</span></td>
+                  <td class="num"><span id="juro-acumulado">0 €</span></td>
+                  <td style="text-align:center">
+                    <button id="btn-juro-editar" type="button">Editar</button>
+                    <button id="btn-juro-gravar" type="button">Gravar</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -93,7 +136,7 @@
     <!-- === KPIs & Cenários === -->
     <section class="report-section">
       <div class="viz-card" id="kpi-cenarios-card">
-        <h4 style="margin-bottom: .5rem;">KPIs & Cenários</h4>
+        <h4 style="margin-bottom: 1rem;">KPIs & Cenários</h4>
         
         <!-- Current Performance KPIs -->
         <div class="kpi-grid enhanced">
@@ -116,43 +159,63 @@
           </div>
         </div>
 
-        <!-- Investment Progress Doughnut -->
-        <div class="kpi-grid">
-          <div class="kpi-item donut-card">
-            <div class="donut-canvas"><canvas id="kpi-inv"></canvas></div>
-            <div class="kpi-caption">Progresso do Investimento</div>
+        <!-- Investment Progress Bar -->
+        <div class="progress-section" style="margin-top: 1.5rem;">
+          <div class="progress-header" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-weight: 600; color: var(--text-dim);">Progresso do Investimento</span>
+            <span style="font-weight: 700; color: var(--p2);" id="progress-percentage">0%</span>
+          </div>
+          <div class="progress-bar-container" style="height: 32px; background: #e5e7eb; border-radius: 16px; overflow: hidden; position: relative;">
+            <div class="progress-bar-fill" id="progress-bar-fill" style="height: 100%; background: linear-gradient(90deg, #1a8f5d 0%, #16a34a 100%); width: 0%; transition: width 0.6s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 12px;">
+              <span style="color: white; font-weight: 700; font-size: 0.85rem;" id="progress-bar-text"></span>
+            </div>
+          </div>
+          <div class="progress-footer" style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-dim);">
+            <span id="progress-invested">0 €</span>
+            <span id="progress-target">0 €</span>
+          </div>
+        </div>
+
+        <!-- Goal Tracking Indicator -->
+        <div class="goal-tracking" style="margin-top: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 12px; text-align: center;">
+          <div class="goal-status" id="goal-status">
+            <span class="goal-icon" style="font-size: 2rem;">⏳</span>
+            <div class="goal-text" style="margin-top: 0.5rem; font-weight: 600; color: var(--text-dim);" id="goal-text">A calcular...</div>
           </div>
         </div>
 
         <!-- Scenario Comparison -->
         <div class="scenario-comparison" style="margin-top: 1.5rem;">
-          <h5 style="text-align: center; margin-bottom: 1rem; color: var(--text-dim);">Cenários de Retorno Anual</h5>
+          <h5 style="text-align: center; margin-bottom: 1rem; color: var(--text-dim);">Cenários de Crescimento (próximo mês)</h5>
           <div class="scenario-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
             <div class="scenario-card" data-scenario="conservative">
               <div class="scenario-header" style="background: #e8f5e8; padding: 0.75rem; border-radius: 8px 8px 0 0;">
                 <div class="scenario-title" style="font-weight: 700; color: #2e7d32;">Conservador</div>
-                <div class="scenario-rate" style="font-size: 0.9rem; color: #2e7d32;">3% anual</div>
+                <div class="scenario-rate" style="font-size: 0.9rem; color: #2e7d32;">+3% mensal</div>
               </div>
               <div class="scenario-body" style="padding: 0.75rem; background: white; border-radius: 0 0 8px 8px;">
                 <div class="scenario-value" id="scenario-conservative">-</div>
+                <div class="scenario-diff" style="font-size: 0.85rem; margin-top: 0.25rem; font-weight: 600;" id="scenario-conservative-diff">-</div>
               </div>
             </div>
             <div class="scenario-card" data-scenario="moderate">
               <div class="scenario-header" style="background: #e3f2fd; padding: 0.75rem; border-radius: 8px 8px 0 0;">
                 <div class="scenario-title" style="font-weight: 700; color: #1565c0;">Moderado</div>
-                <div class="scenario-rate" style="font-size: 0.9rem; color: #1565c0;">5% anual</div>
+                <div class="scenario-rate" style="font-size: 0.9rem; color: #1565c0;">+5% mensal</div>
               </div>
               <div class="scenario-body" style="padding: 0.75rem; background: white; border-radius: 0 0 8px 8px;">
                 <div class="scenario-value" id="scenario-moderate">-</div>
+                <div class="scenario-diff" style="font-size: 0.85rem; margin-top: 0.25rem; font-weight: 600;" id="scenario-moderate-diff">-</div>
               </div>
             </div>
             <div class="scenario-card" data-scenario="optimistic">
               <div class="scenario-header" style="background: #fff3e0; padding: 0.75rem; border-radius: 8px 8px 0 0;">
                 <div class="scenario-title" style="font-weight: 700; color: #ef6c00;">Otimista</div>
-                <div class="scenario-rate" style="font-size: 0.9rem; color: #ef6c00;">7% anual</div>
+                <div class="scenario-rate" style="font-size: 0.9rem; color: #ef6c00;">+7% mensal</div>
               </div>
               <div class="scenario-body" style="padding: 0.75rem; background: white; border-radius: 0 0 8px 8px;">
                 <div class="scenario-value" id="scenario-optimistic">-</div>
+                <div class="scenario-diff" style="font-size: 0.85rem; margin-top: 0.25rem; font-weight: 600;" id="scenario-optimistic-diff">-</div>
               </div>
             </div>
           </div>
@@ -211,11 +274,6 @@
 
   </main>
 
-  <script type="module" src="../js/dca.js"></script>
-  <script>
-    const menuIcon = document.getElementById('menu-icon');
-    const navMenu  = document.getElementById('nav-menu');
-    if (menuIcon && navMenu) menuIcon.addEventListener('click', () => navMenu.classList.toggle('active'));
-  </script>
+  <script type="module" src="../js/dca-main.js"></script>
 </body>
 </html>

@@ -181,13 +181,25 @@ function bindTableSaveHandler() {
 // ---------- Toggle Years Button ----------
 function bindGlobalButtons() {
   const btn = document.getElementById('toggle-others');
-  if (!btn || btn.__bound) return;
-  btn.__bound = true;
+  if (btn && !btn.__bound) {
+    btn.__bound = true;
+    btn.addEventListener('click', () => {
+      state.showOthers = !state.showOthers;
+      applyYearVisibility(state.showOthers);
+    });
+  }
   
-  btn.addEventListener('click', () => {
-    state.showOthers = !state.showOthers;
-    applyYearVisibility(state.showOthers);
-  });
+  // Toggle Params/Juro button
+  const toggleParamsBtn = document.getElementById('btn-toggle-params');
+  const paramsContainer = document.getElementById('params-juro-container');
+  if (toggleParamsBtn && paramsContainer && !toggleParamsBtn.__bound) {
+    toggleParamsBtn.__bound = true;
+    toggleParamsBtn.addEventListener('click', () => {
+      const isHidden = paramsContainer.style.display === 'none';
+      paramsContainer.style.display = isHidden ? 'block' : 'none';
+      toggleParamsBtn.textContent = isHidden ? 'Ocultar Parâmetros' : 'Mostrar Parâmetros';
+    });
+  }
 }
 
 // ---------- Main Boot ----------
@@ -234,7 +246,7 @@ async function boot(skipParamUI = false) {
 
     // Update scenarios
     if (kpis && kpis.lastFilledRow) {
-      const scenarios = calculateScenarios(kpis.lastFilledRow.totalNow);
+      const scenarios = calculateScenarios(kpis.lastFilledRow, state.params);
       updateScenarios(scenarios);
     }
 
