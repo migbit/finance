@@ -366,12 +366,13 @@ body[data-page="dca"] .page-title { margin-bottom: 1.2rem }
   font-style: italic;
 }
 
-/* ===== DCA – KPI grid (INV vs Total + scenarios) ===== */
+/* ===== DCA – KPI grid (INV vs Total) ===== */
 body[data-page="dca"] .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 16px;
   align-items: start;
+  justify-content: center;
 }
 body[data-page="dca"] .kpi-item {
   display: flex;
@@ -564,6 +565,16 @@ body[data-page="dca"] .donut-card .donut-canvas canvas {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+.table-dca .btn-save.icon-pencil {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  border-radius: 10px;
+}
 
 /* DCA toggle */
 #toggle-others{ 
@@ -634,14 +645,12 @@ body[data-page="dca"] .donut-card .donut-canvas canvas {
 .table-dca .aggh-block {
   background-color: rgba(243, 244, 246, 0.5);
 }
+.table-dca .total-block {
+  background-color: rgba(237, 242, 247, 0.5);
+}
 .table-dca .res-total-block {
   background-color: rgba(239, 246, 255, 0.5);
   font-weight: 600;
-}
-
-/* Cenarios header styling */
-.table-dca .cenarios {
-  background-color: rgba(226, 232, 240, 0.5);
 }
 
 /* Tight, consistent subtitle spacing inside cards */

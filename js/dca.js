@@ -46,6 +46,7 @@ const asNum = (v)=> {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
+const roundMoney = (v)=> Math.round((Number(v) || 0) * 100) / 100;
 
 // ==== Juro – módulo (cálculo + persistência) ====
 const TAXA_ANUAL_FIXA = 0.02; // 2%
@@ -67,19 +68,19 @@ function euroFmt(n) {
   return v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
 
-// Soma a coluna JURO (coluna 14) do “Registo Mensal”
+// Soma a coluna JURO (coluna 11) do “Registo Mensal”
 function somaJuroTabelaDCA() {
   const root = document.querySelector('#dca-table-wrap');
   if (!root) return 0;
   let soma = 0;
 
   // inputs
-  root.querySelectorAll('table.table-dca tbody td:nth-child(14) input').forEach(inp => {
+  root.querySelectorAll('table.table-dca tbody td:nth-child(11) input').forEach(inp => {
     const v = parseFloat((inp.value || '').toString().replace(',', '.'));
     if (!isNaN(v)) soma += v;
   });
   // texto (se não houver input)
-  root.querySelectorAll('table.table-dca tbody td:nth-child(14)').forEach(td => {
+  root.querySelectorAll('table.table-dca tbody td:nth-child(11)').forEach(td => {
     if (td.querySelector('input')) return;
     const txt = (td.textContent || '').replace(/[^\d,.\-]/g, '').replace(',', '.');
     const v = parseFloat(txt);
@@ -269,13 +270,11 @@ if (document.readyState === 'loading'){
 
 // ---------- Parâmetros default ----------
 const START_YM = { y: 2025, m: 9 }; // set 2025 fixo
+const MONTHLY_CONTRIBUTION_EUR = 152; // total contribuição mensal planeada
 const DEFAULTS  = {
   endYM: { y: 2040, m: 9 },
-  pctSWDA: 55,
-  pctAGGH: 45,
-  ratePes: 3.84,   // % a.a.
-  rateReal: 4.64,  // % a.a.
-  rateOtim: 7.00,  // % a.a.
+  pctSWDA: 79.61,  // equivalente a ~121€ por mês em VWCE
+  pctAGGH: 20.39   // equivalente a ~31€ por mês em AGGH
 };
 
 // ---------- Firestore ----------
@@ -309,14 +308,20 @@ async function loadParams(){
   if (snap.exists()){
     const p = snap.data();
     // validações básicas
-    return {
+    const normalized = {
       endYM: p.endYM ?? DEFAULTS.endYM,
       pctSWDA: Number(p.pctSWDA ?? DEFAULTS.pctSWDA),
-      pctAGGH: Number(p.pctAGGH ?? DEFAULTS.pctAGGH),
-      ratePes: Number(p.ratePes ?? DEFAULTS.ratePes),
-      rateReal: Number(p.rateReal ?? DEFAULTS.rateReal),
-      rateOtim: Number(p.rateOtim ?? DEFAULTS.rateOtim)
+      pctAGGH: Number(p.pctAGGH ?? DEFAULTS.pctAGGH)
     };
+    const near = (a,b)=> Math.abs(a - b) < 0.01;
+    const legacy55_45 = near(normalized.pctSWDA, 55) && near(normalized.pctAGGH, 45);
+    const legacy75_25 = near(normalized.pctSWDA, 75) && near(normalized.pctAGGH, 25);
+    if (legacy55_45 || legacy75_25){
+      const upgraded = { ...normalized, pctSWDA: DEFAULTS.pctSWDA, pctAGGH: DEFAULTS.pctAGGH };
+      await saveParams(upgraded); // persiste o novo plano mantendo restante configuração
+      return upgraded;
+    }
+    return normalized;
   }
   // se não existir, cria com defaults
   await setDoc(SETTINGS_D, DEFAULTS);
@@ -350,7 +355,7 @@ function monthsBetween(a, b){
 }
 
 function buildModel(docs, params){
-  const { pctSWDA, pctAGGH, ratePes, rateReal, rateOtim } = params;
+  const { pctSWDA, pctAGGH } = params;
   const rows = [];
 
   let investedCum = 0;
@@ -360,9 +365,22 @@ function buildModel(docs, params){
   const months = docs.sort((a,b)=> a.id.localeCompare(b.id));
 
   for (const d of months){
-    investedCum      += 100; // contribuição fixa
-    investedCumSWDA  += 100 * (pctSWDA/100);
-    investedCumAGGH  += 100 * (pctAGGH/100);
+    let monthlySW    = roundMoney(MONTHLY_CONTRIBUTION_EUR * (pctSWDA/100));
+    let monthlyAG    = roundMoney(MONTHLY_CONTRIBUTION_EUR * (pctAGGH/100));
+    let monthlyTotal = roundMoney(monthlySW + monthlyAG);
+    const adjust = roundMoney(MONTHLY_CONTRIBUTION_EUR - monthlyTotal);
+    if (adjust !== 0){
+      if (Math.abs(monthlySW) >= Math.abs(monthlyAG)){
+        monthlySW = roundMoney(monthlySW + adjust);
+      } else {
+        monthlyAG = roundMoney(monthlyAG + adjust);
+      }
+      monthlyTotal = roundMoney(monthlySW + monthlyAG);
+    }
+
+    investedCum      = roundMoney(investedCum + monthlyTotal);
+    investedCumSWDA  = roundMoney(investedCumSWDA + monthlySW);
+    investedCumAGGH  = roundMoney(investedCumAGGH + monthlyAG);
 
     const swdaNow = asNum(d.swda_value);
     const agghNow = asNum(d.aggh_value);
@@ -370,7 +388,7 @@ function buildModel(docs, params){
 
     const hasAny  = (swdaNow != null) || (agghNow != null) || (cashNow != null);
 
-    // Valor atual total = SWDA + AGGH + Juro (quando houver algum input)
+    // Valor atual total = VWCE + AGGH + Juro (quando houver algum input)
     const totalNow = (swdaNow ?? 0) + (agghNow ?? 0) + (cashNow ?? 0);
 
     // Resultados (€ e %) só quando houver valores
@@ -383,11 +401,6 @@ function buildModel(docs, params){
     const resAGGH    = agghNow != null ? (agghNow - investedCumAGGH) : null;
     const resAGGHPct = agghNow != null && investedCumAGGH > 0 ? (resAGGH / investedCumAGGH * 100) : null;
 
-    // Cenários sobre acumulado, capitalizado a TIR anual
-    const monthsFromStart = ((d.y - START_YM.y) * 12) + (d.m - START_YM.m);
-    const yearsFromStart  = monthsFromStart / 12;
-    const scen = (rate)=> investedCum * Math.pow(1 + rate/100, yearsFromStart);
-
     rows.push({
       id: d.id, y:d.y, m:d.m,
       investedCum, investedCumSWDA, investedCumAGGH,
@@ -395,7 +408,7 @@ function buildModel(docs, params){
       resTotal, resTotalPct,
       resSWDA,  resSWDAPct,
       resAGGH,  resAGGHPct,
-      pes: scen(ratePes), real: scen(rateReal), otim: scen(rateOtim),
+      hasCurrent: hasAny,
       cash_interest: asNum(d.cash_interest),
     });
   }
@@ -430,41 +443,31 @@ function renderTable(rows){
     const table = document.createElement('table');
     table.className = 'table-dca';
 
-    // Cabeçalho agrupado — Cenários (€) começa por "Atual" (valor total = SWDA+AGGH+Juro)
-const theadHTML = `
-  <thead>
-    <tr>
-      <th rowspan="2">Mês</th>
-      <th rowspan="2" class="num">Inv.</th>
+    const theadHTML = `
+      <thead>
+        <tr>
+          <th rowspan="2">Mês</th>
+          <th rowspan="2" class="num">Inv.</th>
+          <th rowspan="2" class="num total-block">Total</th>
+          <th rowspan="2" class="num res-total-block">Res. Total</th>
 
-      <th colspan="3" class="swda-block cenarios">SWDA</th>
-      <th colspan="3" class="aggh-block cenarios">AGGH</th>
+          <th colspan="3" class="swda-block">VWCE</th>
+          <th colspan="3" class="aggh-block">AGGH</th>
 
-      <th rowspan="2" class="num res-total-block">
-        Res.<br>Total<br>(€/%) 
-      </th>
+          <th rowspan="2" class="num">Juro</th>
+          <th rowspan="2">Ações</th>
+        </tr>
+        <tr>
+          <th class="num swda-block">Inv.</th>
+          <th class="num swda-block">Atual</th>
+          <th class="num swda-block">Delta</th>
 
-      <th colspan="4" class="cenarios">Cenários (€)</th>
-
-      <th rowspan="2" class="num">Juro</th>
-      <th rowspan="2">Ações</th>
-    </tr>
-    <tr>
-      <th class="num swda-block">Inv.</th>
-      <th class="num swda-block">Atual</th>
-      <th class="num swda-block">Res.</th>
-
-      <th class="num aggh-block">Inv.</th>
-      <th class="num aggh-block">Atual</th>
-      <th class="num aggh-block">Res.</th>
-
-      <th class="num">Atual</th>
-      <th class="num">Pes.</th>
-      <th class="num">Real.</th>
-      <th class="num">Ot.</th>
-    </tr>
-  </thead>
-`;
+          <th class="num aggh-block">Inv.</th>
+          <th class="num aggh-block">Atual</th>
+          <th class="num aggh-block">Delta</th>
+        </tr>
+      </thead>
+    `;
 
 
 
@@ -483,6 +486,7 @@ const theadHTML = `
       tr.innerHTML = `
         <td>${pad(r.m)}/${String(r.y).slice(-2)}</td>
         <td class="num">${toEUR(r.investedCum)}</td>
+        <td class="num total-block">${r.hasCurrent ? toEUR(r.totalNow) : '-'}</td>
         <td class="num ${clsTotal}">${r.resTotal == null ? '-' : toEUR(r.resTotal)}${fmtPct(r.resTotalPct)}</td>
 
         <td class="num swda-block">${toEUR(r.investedCumSWDA)}</td>
@@ -493,14 +497,8 @@ const theadHTML = `
         <td class="num aggh-block"><input class="cell aggh" type="number" step="0.01" value="${r.agghNow ?? ''}" /></td>
         <td class="num aggh-block ${clsAGGH}">${r.resAGGH == null ? '-' : toEUR(r.resAGGH)}${fmtPct(r.resAGGHPct)}</td>
 
-        <!-- Cenários (€) -->
-        <td class="num">${toEUR(r.totalNow)}</td>   <!-- Atual = SWDA + AGGH + Juro -->
-        <td class="num">${toEUR(r.pes)}</td>
-        <td class="num">${toEUR(r.real)}</td>
-        <td class="num">${toEUR(r.otim)}</td>
-
         <td class="num"><input class="cell cash" type="number" step="0.01" value="${r.cash_interest ?? ''}" /></td>
-        <td><button class="btn-save" type="button">Editar/Gravar</button></td>
+        <td><button class="btn-save icon-pencil" type="button" aria-label="Editar">&#9998;</button></td>
       `;
       tbody.appendChild(tr);
     }
@@ -555,22 +553,15 @@ function readParamsFromUI(){
   const [ey, em] = ($('#end-date')?.value || `${DEFAULTS.endYM.y}-${pad(DEFAULTS.endYM.m)}`).split('-').map(Number);
   const pctS = asNum($('#pct-swda')?.value) ?? DEFAULTS.pctSWDA;
   const pctA = asNum($('#pct-aggh')?.value) ?? DEFAULTS.pctAGGH;
-  const pes  = asNum($('#rate-pes')?.value)  ?? DEFAULTS.ratePes;
-  const real = asNum($('#rate-real')?.value) ?? DEFAULTS.rateReal;
-  const ot   = asNum($('#rate-otim')?.value) ?? DEFAULTS.rateOtim;
   const fix  = (n)=> Math.max(0, Math.min(100, n));
   const pctSumOk = Math.abs((pctS + pctA) - 100) < 0.01;
-  return { endYM:{y:ey,m:em}, pctSWDA:fix(pctS), pctAGGH:fix(pctA),
-           ratePes:pes, rateReal:real, rateOtim:ot, pctSumOk };
+  return { endYM:{y:ey,m:em}, pctSWDA:fix(pctS), pctAGGH:fix(pctA), pctSumOk };
 }
 
 function writeParamsToUI(p){
   const ed = $('#end-date'); if (ed) ed.value = `${p.endYM.y}-${pad(p.endYM.m)}`;
   const sw = $('#pct-swda'); if (sw) sw.value = p.pctSWDA;
   const ag = $('#pct-aggh'); if (ag) ag.value = p.pctAGGH;
-  const rp = $('#rate-pes'); if (rp) rp.value = p.ratePes;
-  const rr = $('#rate-real'); if (rr) rr.value= p.rateReal;
-  const ro = $('#rate-otim'); if (ro) ro.value= p.rateOtim;
 }
 
 function applyYearVisibility(){
@@ -616,11 +607,12 @@ if (document.readyState === 'loading') {
 $('#btn-save-params')?.addEventListener('click', async ()=>{
   const p = readParamsFromUI();
   if (!p.pctSumOk){
-    alert('As percentagens SWDA+AGGH devem somar 100%.');
+    alert('As percentagens VWCE+AGGH devem somar 100%.');
     return;
   }
-  state.params = p;
-  await saveParams(p);   // persiste no Firebase
+  const { pctSumOk, ...params } = p;
+  state.params = params;
+  await saveParams(params);   // persiste no Firebase
   await boot(true);      // refaz meses/tabela com novos parâmetros
 });
 
@@ -648,22 +640,6 @@ async function boot(skipParamUI){
   // Update KPI doughnut (INV vs Total) only if authenticated
   if (__isAuthed) renderKpiInv(state.params);
 
-  // Update scenario KPIs using last inputed row (most recent with actuals)
-  const latest = (() => {
-    for (let i = rows.length - 1; i >= 0; i--){
-      const r = rows[i];
-      const hasAny = (r.swdaNow != null) || (r.agghNow != null) || (r.cash_interest != null);
-      if (hasAny) return r;
-    }
-    return rows.length ? rows[rows.length - 1] : null;
-  })();
-
-  if (latest){
-    destroyChart(kpiPesChart); destroyChart(kpiRealChart); destroyChart(kpiOtChart);
-    kpiPesChart  = renderScenarioKpi('kpi-pes',  latest.totalNow, latest.pes,  'Pes.');
-    kpiRealChart = renderScenarioKpi('kpi-real', latest.totalNow, latest.real, 'Real.');
-    kpiOtChart   = renderScenarioKpi('kpi-ot',   latest.totalNow, latest.otim, 'Ot.');
-  }
 }
 
 // Add visual indicators for scrollable tables
@@ -689,7 +665,6 @@ else document.addEventListener('DOMContentLoaded', bindJuroModule);
 
 // ====== KPI: INV (mês atual) vs Total alvo ======
 let kpiInvChart;
-let kpiPesChart, kpiRealChart, kpiOtChart;
 
 // Simple plugin to draw center text and label on first arc
 const kpiLabelsPlugin = {
@@ -761,9 +736,9 @@ function renderKpiInv(params){
   if (!__isAuthed) { try { destroyChart(kpiInvChart); } catch(e){} return; }
   if (!canvas || !window.Chart) return;
 
-  // Total alvo = nº de meses de START_YM até endYM (incl.) x 100€
+  // Total alvo = nº de meses de START_YM até endYM (incl.) x contribuição mensal
   const totalMonths = monthsBetween(START_YM, params.endYM).length;
-  const totalTarget = totalMonths * 100;
+  const totalTarget = totalMonths * MONTHLY_CONTRIBUTION_EUR;
 
   // Investido até ao mês atual (incl.), limitado por [START_YM, endYM]
   const now = new Date();
@@ -773,7 +748,7 @@ function renderKpiInv(params){
   let invested = 0;
   if (ymCompare(nowYM, START_YM) >= 0){
     const investedMonths = monthsBetween(START_YM, clampedEnd).length;
-    invested = investedMonths * 100;
+    invested = investedMonths * MONTHLY_CONTRIBUTION_EUR;
   }
 
   const remaining = Math.max(0, totalTarget - invested);
@@ -821,57 +796,6 @@ function renderKpiInv(params){
 }
 
 function destroyChart(ch){ try { ch && ch.destroy && ch.destroy(); } catch(e){} }
-
-function renderScenarioKpi(canvasId, atualValue, scenarioValue, scenarioLabel){
-  const canvas = document.getElementById(canvasId);
-  if (!canvas || !window.Chart) return;
-
-  const a = Math.max(0, Number(atualValue) || 0);
-  const s = Math.max(0, Number(scenarioValue) || 0);
-
-  // Show progress of Atual towards Scenario (donut sums to scenario)
-  let sliceAtual = 0, sliceRemain = 0;
-  if (s > 0) {
-    if (a >= s) { sliceAtual = s; sliceRemain = 0; }
-    else { sliceAtual = a; sliceRemain = s - a; }
-  }
-
-  const ctx = canvas.getContext('2d');
-  const data = [sliceAtual, sliceRemain];
-  const labels = ['Atual', scenarioLabel];
-
-  const chart = new window.Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: ['#1a8f5d', '#e0e0e0'],
-        borderWidth: 0,
-        hoverOffset: 4,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: 1,
-      plugins: {
-        legend: { display: false },
-        kpiLabels: {
-          center: toEUR(s),
-          arc: `${toEUR(a)} (${s>0 ? Math.round((a/s)*100) : 0}%)`
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => `${ctx.label}: ${toEUR(ctx.parsed)}`
-          }
-        }
-      },
-      cutout: '65%'
-    }
-  });
-  return chart;
-}
 
 // Try to render KPI once boot has parameters ready
 (function(){
