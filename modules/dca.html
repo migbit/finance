@@ -13,42 +13,43 @@
 </head>
 
 <body data-page="dca">
-          <!-- Hamburger icon (always visible on mobile) -->
-          <button id="menu-icon" aria-label="Open menu">☰</button>
+  <!-- Hamburger icon (always visible on mobile) -->
+  <button id="menu-icon" aria-label="Open menu">☰</button>
+  
   <!-- Header / Nav -->
-    <header>
-      <nav id="nav-menu">
-        <ul>
-          <!-- Login/User section at top -->
-          <li id="login-section" class="login-block">
-            <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
-            <span id="user-info" class="user-visible" style="display:none;">
-              <a href="#" id="user-name">👤 Username</a>
-            </span>
-          </li>
+  <header>
+    <nav id="nav-menu">
+      <ul>
+        <!-- Login/User section at top -->
+        <li id="login-section" class="login-block">
+          <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+          <span id="user-info" class="user-visible" style="display:none;">
+            <a href="#" id="user-name">👤 Username</a>
+          </span>
+        </li>
 
-          <li class="separator"></li>
+        <li class="separator"></li>
 
-          <!-- Secção: Apartamentos -->
-          <li class="menu-title">Apartamentos</li>
-          <li><a href="faturas.html">📄 Faturas</a></li>
-          <li><a href="analise.html">📊 Análise</a></li>
-          <li><a href="analise123.html">🏠 123</a></li>
-          <li><a href="analise1248.html">🏠 1248</a></li>
-          <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
-          <li><a href="caixa.html">💰 Caixa</a></li>
-          <li><a href="tmt.html">🧳 Taxa Turística</a></li>
-          <li><a href="diversos.html">📋 Diversos</a></li>
+        <!-- Secção: Apartamentos -->
+        <li class="menu-title">Apartamentos</li>
+        <li><a href="faturas.html">📄 Faturas</a></li>
+        <li><a href="analise.html">📊 Análise</a></li>
+        <li><a href="analise123.html">🏠 123</a></li>
+        <li><a href="analise1248.html">🏠 1248</a></li>
+        <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+        <li><a href="caixa.html">💰 Caixa</a></li>
+        <li><a href="tmt.html">🧳 Taxa Turística</a></li>
+        <li><a href="diversos.html">📋 Diversos</a></li>
 
-          <li class="separator"></li>
+        <li class="separator"></li>
 
-          <!-- Secção: Investimentos -->
-          <li class="menu-title">Investimentos</li>
-          <li><a href="dca.html" class="active">📈 DCA</a></li>
-          <li><a href="crypto.html">🚀 Cripto</a></li>
-        </ul>
-      </nav>
-    </header>
+        <!-- Secção: Investimentos -->
+        <li class="menu-title">Investimentos</li>
+        <li><a href="dca.html" class="active">📈 DCA</a></li>
+        <li><a href="crypto.html">🚀 Cripto</a></li>
+      </ul>
+    </nav>
+  </header>
 
   <main class="dca-page">
     <!-- === Título === -->
@@ -65,7 +66,8 @@
                 <th class="num">Data final</th>
                 <th class="num">VWCE %</th>
                 <th class="num">AGGH %</th>
-                <th style="width:140px">Ações</th>
+                <th class="num">ContribuiÃ§Ã£o Mensal</th>
+                <th style="width:140px">AÃ§Ãµes</th>
               </tr>
             </thead>
             <tbody>
@@ -73,6 +75,11 @@
                 <td class="num"><input id="end-date" type="month" /></td>
                 <td class="num"><input id="pct-swda" type="number" min="0" max="100" step="0.01" /></td>
                 <td class="num"><input id="pct-aggh" type="number" min="0" max="100" step="0.01" /></td>
+                <td class="num">
+                  <div class="input-euro">
+                    <input id="monthly-contribution" type="number" step="1" value="152" />
+                  </div>
+                </td>
                 <td style="text-align:right">
                   <button id="btn-save-params" type="button" class="primary">Editar/Gravar</button>
                 </td>
@@ -83,14 +90,71 @@
       </div>
     </section>
 
-    <!-- === KPIs – Doughnuts === -->
+    <!-- === KPIs & Cenários === -->
     <section class="report-section">
       <div class="viz-card" id="kpi-cenarios-card">
-        <h4 style="margin-bottom: .5rem;">KPIs</h4>
+        <h4 style="margin-bottom: .5rem;">KPIs & Cenários</h4>
+        
+        <!-- Current Performance KPIs -->
+        <div class="kpi-grid enhanced">
+          <div class="kpi-item enhanced">
+            <div class="kpi-label">Total Investido</div>
+            <div class="kpi-value" id="kpi-total-invested">-</div>
+          </div>
+          <div class="kpi-item enhanced">
+            <div class="kpi-label">Valor Atual</div>
+            <div class="kpi-value" id="kpi-current-value">-</div>
+          </div>
+          <div class="kpi-item enhanced">
+            <div class="kpi-label">Resultado</div>
+            <div class="kpi-value" id="kpi-result">-</div>
+            <div class="kpi-sub" id="kpi-result-pct">-</div>
+          </div>
+          <div class="kpi-item enhanced">
+            <div class="kpi-label">Juros Acum.</div>
+            <div class="kpi-value" id="kpi-total-interest">-</div>
+          </div>
+        </div>
+
+        <!-- Investment Progress Doughnut -->
         <div class="kpi-grid">
           <div class="kpi-item donut-card">
             <div class="donut-canvas"><canvas id="kpi-inv"></canvas></div>
-            <div class="kpi-caption">Investido</div>
+            <div class="kpi-caption">Progresso do Investimento</div>
+          </div>
+        </div>
+
+        <!-- Scenario Comparison -->
+        <div class="scenario-comparison" style="margin-top: 1.5rem;">
+          <h5 style="text-align: center; margin-bottom: 1rem; color: var(--text-dim);">Cenários de Retorno Anual</h5>
+          <div class="scenario-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div class="scenario-card" data-scenario="conservative">
+              <div class="scenario-header" style="background: #e8f5e8; padding: 0.75rem; border-radius: 8px 8px 0 0;">
+                <div class="scenario-title" style="font-weight: 700; color: #2e7d32;">Conservador</div>
+                <div class="scenario-rate" style="font-size: 0.9rem; color: #2e7d32;">3% anual</div>
+              </div>
+              <div class="scenario-body" style="padding: 0.75rem; background: white; border-radius: 0 0 8px 8px;">
+                <div class="scenario-value" id="scenario-conservative">-</div>
+              </div>
+            </div>
+            <div class="scenario-card" data-scenario="moderate">
+              <div class="scenario-header" style="background: #e3f2fd; padding: 0.75rem; border-radius: 8px 8px 0 0;">
+                <div class="scenario-title" style="font-weight: 700; color: #1565c0;">Moderado</div>
+                <div class="scenario-rate" style="font-size: 0.9rem; color: #1565c0;">5% anual</div>
+              </div>
+              <div class="scenario-body" style="padding: 0.75rem; background: white; border-radius: 0 0 8px 8px;">
+                <div class="scenario-value" id="scenario-moderate">-</div>
+              </div>
+            </div>
+            <div class="scenario-card" data-scenario="optimistic">
+              <div class="scenario-header" style="background: #fff3e0; padding: 0.75rem; border-radius: 8px 8px 0 0;">
+                <div class="scenario-title" style="font-weight: 700; color: #ef6c00;">Otimista</div>
+                <div class="scenario-rate" style="font-size: 0.9rem; color: #ef6c00;">7% anual</div>
+              </div>
+              <div class="scenario-body" style="padding: 0.75rem; background: white; border-radius: 0 0 8px 8px;">
+                <div class="scenario-value" id="scenario-optimistic">-</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -135,20 +199,18 @@
     </section>
 
     <!-- === Registo Mensal === -->
-  <section class="report-section">
-    <div class="viz-card">
-      <h4>Registo Mensal</h4>
-      <div class="table-wrap" id="dca-table-wrap"><!-- tabela via JS --></div>
-      <div class="center" style="margin-top: 1rem;">
-        <button id="toggle-others" type="button">Expandir anos</button>
+    <section class="report-section">
+      <div class="viz-card">
+        <h4>Registo Mensal</h4>
+        <div class="table-wrap" id="dca-table-wrap"><!-- tabela via JS --></div>
+        <div class="center" style="margin-top: 1rem;">
+          <button id="toggle-others" type="button">Expandir anos</button>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
 
   </main>
 
-
-  <!-- Keep original JS for now (no code changes in this step) -->
   <script type="module" src="../js/dca.js"></script>
   <script>
     const menuIcon = document.getElementById('menu-icon');

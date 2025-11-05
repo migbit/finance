@@ -12,7 +12,6 @@ const DOM = {
   enable: (el) => el && (el.disabled = false),
   disable: (el) => el && (el.disabled = true)
 };
-
 const LOADING_STATS_KEY = 'crypto_loading_stats';
 /* ================== TOAST NOTIFICATIONS ================== */
 class ToastService {
@@ -79,11 +78,9 @@ class CryptoPortfolioApp {
       investmentModal: null,
       loadingOverlay: null,
       loadingMessage: null,
+      loadingSpinner: null,
       loadingEta: null,
-      dataStatusBanner: null,
-      dataStatusLabel: null,
-      dataStatusStamp: null,
-      dataStatusAge: null
+      errorMessage: null
     };
     this._chartsVisibility = { topAssets: false, monthly: false };
     this._debouncedRender = null;
@@ -94,9 +91,7 @@ class CryptoPortfolioApp {
     this._announceTimer = null;
     this._renderedRowKeys = new Set();
     this._tableRenderTimeout = null;
-    this._loadingStart = null;
-    this._dataStatusTimer = null;
-    this._baseSetupDone = false;
+    this._eventsAttached = false;
   }
 
   initDOMCache(){
@@ -111,11 +106,9 @@ class CryptoPortfolioApp {
     this.cachedElements.investmentModal = DOM.$('#investment-modal-backdrop');
     this.cachedElements.loadingOverlay = DOM.$('#portfolio-loading');
     this.cachedElements.loadingMessage = DOM.$('#portfolio-loading-message');
+    this.cachedElements.loadingSpinner = DOM.$('#portfolio-loading .loading-spinner');
     this.cachedElements.loadingEta = DOM.$('#loading-eta');
-    this.cachedElements.dataStatusBanner = DOM.$('#data-status-banner');
-    this.cachedElements.dataStatusLabel = DOM.$('#data-status-label');
-    this.cachedElements.dataStatusStamp = DOM.$('#data-status-stamp');
-    this.cachedElements.dataStatusAge = DOM.$('#data-status-age');
+    this.cachedElements.errorMessage = DOM.$('#error-message');
   }
 
   getCachedElement(key, selector){
@@ -128,6 +121,111 @@ class CryptoPortfolioApp {
     return this.cachedElements[key];
   }
 
+  setLoadingState({ visible, message, busy = true, eta } = {}){
+    const overlay = this.getCachedElement('loadingOverlay', '#portfolio-loading');
+    if (!overlay) return;
+
+    if (typeof visible === 'boolean') {
+      overlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    }
+    overlay.setAttribute('aria-busy', busy ? 'true' : 'false');
+
+    const spinner = this.getCachedElement('loadingSpinner', '#portfolio-loading .loading-spinner');
+    if (spinner) {
+      spinner.style.display = busy ? '' : 'none';
+    }
+
+    if (typeof message === 'string') {
+      const msgEl = this.getCachedElement('loadingMessage', '#portfolio-loading-message');
+      if (msgEl) msgEl.textContent = message;
+    }
+
+    const etaEl = this.getCachedElement('loadingEta', '#loading-eta');
+    if (etaEl) {
+      if (typeof eta === 'string' && eta.trim()) {
+        etaEl.textContent = eta;
+        etaEl.style.display = '';
+      } else {
+        etaEl.textContent = '';
+        etaEl.style.display = 'none';
+      }
+    }
+  }
+
+  resetAppData(){
+    const currentTopAssetsChart = this.state?.topAssetsChart;
+    if (currentTopAssetsChart?.destroy) {
+      try { currentTopAssetsChart.destroy(); } catch (err) { console.warn('Failed to destroy top assets chart', err); }
+    }
+    const currentMonthlyChart = this.state?.monthlyChart;
+    if (currentMonthlyChart?.destroy) {
+      try { currentMonthlyChart.destroy(); } catch (err) { console.warn('Failed to destroy monthly chart', err); }
+    }
+    this.state = new AppState();
+    this.priceResolver = null;
+    this._chartsVisibility = { topAssets: false, monthly: false };
+    this._renderedRowKeys.clear();
+    if (this._tableRenderTimeout) {
+      window.clearTimeout(this._tableRenderTimeout);
+      this._tableRenderTimeout = null;
+    }
+    this._debouncedRender = null;
+  }
+
+  handleSignedOut(messageOrOptions, optionsMaybe){
+    let message = 'Sessão terminada. Faça login para continuar.';
+    let options = {};
+    if (typeof messageOrOptions === 'string' || messageOrOptions instanceof String) {
+      message = messageOrOptions;
+      if (optionsMaybe && typeof optionsMaybe === 'object') {
+        options = optionsMaybe;
+      }
+    } else if (messageOrOptions && typeof messageOrOptions === 'object') {
+      options = messageOrOptions;
+      if (typeof options.message === 'string') {
+        message = options.message;
+      }
+    }
+    const busy = typeof options.busy === 'boolean' ? options.busy : false;
+    const eta = typeof options.eta === 'string' ? options.eta : undefined;
+
+    this.setLoadingState({ visible: true, busy, message, eta });
+    this.initialized = false;
+    this.resetAppData();
+
+    const rows = this.getCachedElement('rows', '#rows');
+    if (rows) {
+      const safeMessage = this.escape(message || 'Sessão terminada.');
+      rows.innerHTML = `<tr><td colspan="11" class="text-muted">${safeMessage}</td></tr>`;
+    }
+
+    const kpiDefaults = [
+      ['kpiTotalEUR', '—'],
+      ['kpiTotalUSD', '—'],
+      ['kpiRealizedEUR', '—'],
+      ['kpiRealizedUSD', '—'],
+      ['kpiInvested', '—'],
+      ['kpiInvestedSub', '—'],
+      ['kpiMonthlyTotal', '—'],
+      ['kpiMonthlyTotalUSD', '—']
+    ];
+    for (const [key, value] of kpiDefaults) {
+      const el = this.getCachedElement(key, `#${key}`);
+      if (el) el.textContent = value;
+    }
+
+    const errorEl = this.getCachedElement('errorMessage', '#error-message');
+    if (errorEl) {
+      if (message && !busy) {
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+      } else {
+        errorEl.textContent = '';
+        errorEl.style.display = 'none';
+      }
+    }
+  }
+
   setupAccessibility(){
     if (this.announcer) return;
     const existing = document.getElementById('portfolio-live-announcer');
@@ -138,13 +236,6 @@ class CryptoPortfolioApp {
     this.announcer.setAttribute('aria-live', 'polite');
     this.announcer.setAttribute('aria-atomic', 'true');
     if (!existing) document.body.appendChild(this.announcer);
-  }
-
-  ensureBaseSetup(){
-    if (this._baseSetupDone) return;
-    this.initDOMCache();
-    this.setupAccessibility();
-    this._baseSetupDone = true;
   }
 
   announce(message, priority = 'polite'){
@@ -240,140 +331,13 @@ class CryptoPortfolioApp {
     return `${FORMATTERS.percent.format(value)}%`;
   }
 
-  normalizeFiniteNumber(value){
-    const num = Number(value);
-    return Number.isFinite(num) ? num : null;
-  }
-
-  formatSignedPercent(value){
-    if (!Number.isFinite(value) || value === 0) return `${FORMATTERS.percent.format(0)}%`;
-    const sign = value > 0 ? '+' : '-';
-    return `${sign}${FORMATTERS.percent.format(Math.abs(value))}%`;
-  }
-
-  renderApyTrend(previous, current){
-    const prev = this.normalizeFiniteNumber(previous);
-    const curr = this.normalizeFiniteNumber(current);
-    if (prev === null || curr === null) return '';
-    const delta = curr - prev;
-    if (Math.abs(delta) < 0.01) return `<span class="metric-delta neutral">${this.formatSignedPercent(0)}</span>`;
-    const cls = delta > 0 ? 'pos' : 'neg';
-    return `<span class="metric-delta ${cls}">${this.formatSignedPercent(delta)}</span>`;
-  }
-
-  isStakingLocation(location){
-    const normalized = this.canonicalizeLocation(location || '');
-    return /staking|earn/i.test(normalized);
-  }
-
-  formatRelativeTime(timestamp){
-    const ts = Number(timestamp);
-    if (!Number.isFinite(ts) || ts <= 0) return '';
-    const diff = Date.now() - ts;
-    if (!Number.isFinite(diff) || diff < 0) return '';
-    if (diff < 45000) return 'há instantes';
-    const minutes = Math.round(diff / 60000);
-    if (minutes < 60) return `há ${minutes} min`;
-    const hours = Math.round(minutes / 60);
-    if (hours < 24) return `há ${hours} h`;
-    const days = Math.round(hours / 24);
-    if (days < 30) return `há ${days} d`;
-    const months = Math.round(days / 30);
-    if (months < 12) return `há ${months} m`;
-    const years = Math.round(months / 12);
-    return `há ${years} a`;
-  }
-
-  getAverageLoadingMs(){
-    const stats = Storage.getJSON(LOADING_STATS_KEY);
-    const avg = Number(stats?.avgMs);
-    return Number.isFinite(avg) && avg > 0 ? avg : null;
-  }
-
-  updateAverageLoadingMs(durationMs){
-    const duration = Number(durationMs);
-    if (!Number.isFinite(duration) || duration <= 0) return;
-    const stats = Storage.getJSON(LOADING_STATS_KEY) || { avgMs: duration, samples: 0 };
-    const currentAvg = Number(stats.avgMs) || duration;
-    const alpha = 0.3;
-    const nextAvg = currentAvg + alpha * (duration - currentAvg);
-    const samples = Math.min(Number(stats.samples || 0) + 1, 60);
-    Storage.setJSON(LOADING_STATS_KEY, { avgMs: nextAvg, samples });
-  }
-
-  updateDataStatus(source = this.state.dataSource, timestamp = this.state.lastUpdated){
-    const banner = this.getCachedElement('dataStatusBanner', '#data-status-banner');
-    const labelEl = this.getCachedElement('dataStatusLabel', '#data-status-label');
-    const stampEl = this.getCachedElement('dataStatusStamp', '#data-status-stamp');
-    const ageEl = this.getCachedElement('dataStatusAge', '#data-status-age');
-    if (!banner || !labelEl || !stampEl || !ageEl) return;
-
-    if (this._dataStatusTimer) {
-      clearInterval(this._dataStatusTimer);
-      this._dataStatusTimer = null;
-    }
-
-    const isCache = source === 'cache';
-    const isLive = source === 'live';
-    if (!isCache && !isLive){
-      banner.style.display = 'none';
-      labelEl.textContent = 'Sem dados';
-      stampEl.textContent = '';
-      ageEl.textContent = '';
-      if (typeof document !== 'undefined' && document.body) {
-        document.body.removeAttribute('data-source');
-      }
-      return;
-    }
-
-    banner.style.display = 'flex';
-    banner.classList.remove('data-status--live', 'data-status--cached');
-    const normalizedSource = isCache ? 'cache' : 'live';
-    banner.classList.add(normalizedSource === 'cache' ? 'data-status--cached' : 'data-status--live');
-    labelEl.textContent = normalizedSource === 'cache' ? 'Dados em cache' : 'Dados ao vivo';
-
-    const tsNumber = Number(timestamp);
-    const hasTimestamp = Number.isFinite(tsNumber) && tsNumber > 0;
-    const date = hasTimestamp ? new Date(tsNumber) : null;
-    const formatted = date
-      ? date.toLocaleString('pt-PT', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })
-      : 'Sem registo de atualização';
-    stampEl.textContent = formatted;
-
-    const updateAge = () => {
-      const rel = hasTimestamp ? this.formatRelativeTime(tsNumber) : '';
-      ageEl.textContent = rel;
-    };
-
-    updateAge();
-    if (hasTimestamp && typeof window !== 'undefined') {
-      this._dataStatusTimer = window.setInterval(updateAge, 60000);
-    }
-
-    if (typeof document !== 'undefined' && document.body) {
-      document.body.setAttribute('data-source', normalizedSource);
-    }
-  }
-
   restoreCachedPortfolio(cache){
     if (!cache || !Array.isArray(cache.currentRows) || !cache.currentRows.length) return;
     this.state.currentRows = cache.currentRows;
     if (typeof cache.usdtToEurRate === 'number') {
       this.state.usdtToEurRate = cache.usdtToEurRate;
     }
-    const ts = Number(cache.timestamp);
-    const hasTimestamp = Number.isFinite(ts) && ts > 0;
-    this.state.generatedAt = hasTimestamp ? ts : null;
-    this.state.lastUpdated = hasTimestamp ? ts : null;
-    this.state.dataSource = 'cache';
-    this.state.cacheRestoredAt = Date.now();
-    this.updateDataStatus('cache', hasTimestamp ? ts : null);
+    this.state.generatedAt = cache.timestamp || null;
     try {
       this.renderKPIs(cache.timestamp);
       this.renderTable();
@@ -382,44 +346,6 @@ class CryptoPortfolioApp {
     } catch (err) {
       console.warn('Failed to restore cached portfolio', err);
     }
-  }
-
-  toggleLoading(show, message){
-    const overlay = this.getCachedElement('loadingOverlay', '#portfolio-loading');
-    const text = this.getCachedElement('loadingMessage', '#portfolio-loading-message');
-    const etaEl = this.getCachedElement('loadingEta', '#loading-eta');
-    if (!overlay) return;
-    if (message && text) text.textContent = message;
-
-    if (show) {
-      const now = (typeof performance !== 'undefined' && typeof performance.now === 'function')
-        ? performance.now()
-        : Date.now();
-      this._loadingStart = now;
-      if (etaEl) {
-        const avgMs = this.getAverageLoadingMs();
-        if (avgMs && avgMs >= 400) {
-          etaEl.textContent = `tempo estimado: ~${(avgMs / 1000).toFixed(1)}s`;
-          etaEl.style.display = 'block';
-        } else {
-          etaEl.style.display = 'none';
-        }
-      }
-    } else {
-      if (this._loadingStart !== null) {
-        const now = (typeof performance !== 'undefined' && typeof performance.now === 'function')
-          ? performance.now()
-          : Date.now();
-        const duration = now - this._loadingStart;
-        if (duration > 50) this.updateAverageLoadingMs(duration);
-      }
-      this._loadingStart = null;
-      if (etaEl) etaEl.style.display = 'none';
-    }
-
-    overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
-    overlay.setAttribute('aria-busy', show ? 'true' : 'false');
-    overlay.style.display = show ? 'flex' : 'none';
   }
 
   async savePortfolioCache(){
@@ -454,89 +380,17 @@ class CryptoPortfolioApp {
     }
   }
 
-  clearPortfolioCache(){
-    try {
-      localStorage.removeItem(EnhancedStorage.PREFIXES.PORTFOLIO + 'main');
-    } catch (err) {
-      console.warn('clearPortfolioCache failed', err);
-    }
-  }
-
-  handleSignedOut(message = 'Inicie sessao para ver o portfolio'){
-    this.ensureBaseSetup();
-    if (this._dataStatusTimer) {
-      clearInterval(this._dataStatusTimer);
-      this._dataStatusTimer = null;
-    }
-
-    const existingTopChart = this.state?.topAssetsChart;
-    if (existingTopChart && typeof existingTopChart.destroy === 'function') {
-      try { existingTopChart.destroy(); } catch (err) { console.warn('Failed to destroy top assets chart', err); }
-    }
-    const existingMonthlyChart = this.state?.monthlyChart;
-    if (existingMonthlyChart && typeof existingMonthlyChart.destroy === 'function') {
-      try { existingMonthlyChart.destroy(); } catch (err) { console.warn('Failed to destroy monthly chart', err); }
-    }
-
-    this.clearPortfolioCache();
-    this.priceResolver = null;
-    this.initialized = false;
-    this._renderedRowKeys.clear();
-    this._tableRenderTimeout = null;
-    this._chartsVisibility = { topAssets: false, monthly: false };
-    this.state = new AppState();
-    this.state.dataSource = 'unauthenticated';
-    this.state.lastUpdated = null;
-
-    const metrics = [
-      'kpiTotalEUR',
-      'kpiTotalUSD',
-      'kpiRealizedEUR',
-      'kpiRealizedUSD',
-      'kpiInvested',
-      'kpiInvestedSub',
-      'kpiMonthlyTotal',
-      'kpiMonthlyTotalUSD'
-    ];
-    metrics.forEach(id => {
-      const el = this.getCachedElement(id, `#${id}`);
-      if (el) {
-        el.textContent = '--';
-        el.classList.remove('pos', 'neg');
-      }
-    });
-
-    const rows = this.getCachedElement('rows', '#rows');
-    if (rows) {
-      rows.innerHTML = `
-        <tr role="row">
-          <td role="cell" colspan="11" class="text-muted" style="text-align:center; padding:48px 24px;">
-            Inicie sessao para ver o portfolio
-          </td>
-        </tr>
-      `;
-    }
-
-    const banner = this.getCachedElement('dataStatusBanner', '#data-status-banner');
-    if (banner) banner.style.display = 'none';
-    if (typeof document !== 'undefined' && document.body) {
-      document.body.removeAttribute('data-source');
-    }
-
-    this.toggleLoading(true, message);
-    const etaEl = this.getCachedElement('loadingEta', '#loading-eta');
-    if (etaEl) {
-      etaEl.style.display = 'none';
-      etaEl.textContent = '';
-    }
-  }
-
   async init(){
     if (this.initialized) return;
     CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
-    this.ensureBaseSetup();
+    this.initDOMCache();
+    this.setupAccessibility();
+    this.setLoadingState({
+      visible: true,
+      busy: true,
+      message: 'A carregar dados do portfólio...'
+    });
     const cachedPortfolio = await this.loadPortfolioCache();
-    this.toggleLoading(true, cachedPortfolio ? 'A atualizar dados do portfolio...' : 'A carregar dados do portfolio...');
     if (cachedPortfolio) {
       this.restoreCachedPortfolio(cachedPortfolio);
     }
@@ -584,15 +438,26 @@ class CryptoPortfolioApp {
       this.initIntersectionObservers();
       await this.ensureMonthlyAssetSnapshot();
       await this.loadMonthlyAssetSnapshots();
-        this.renderAssetSnapshotsTable();
-        this.setupEvents();
-        this.saveMonthlyTotal();
-        this.initialized = true;
-        this.toggleLoading(false);
-      } catch (e) {
-        ErrorHandler.handle(e, 'init');
-        this.showError(e.message || String(e));
+      this.renderAssetSnapshotsTable();
+      this.setupEvents();
+      this.saveMonthlyTotal();
+      this.setLoadingState({ visible: false, busy: false });
+      const errorEl = this.getCachedElement('errorMessage', '#error-message');
+      if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.style.display = 'none';
       }
+      this.initialized = true;
+    } catch (e) {
+      ErrorHandler.handle(e, 'init');
+      this.showError(e.message || String(e));
+      const friendlyMessage = e?.message ? String(e.message) : 'Erro ao carregar dados. Tente novamente.';
+      this.setLoadingState({
+        visible: true,
+        busy: false,
+        message: friendlyMessage
+      });
+    }
   }
 
   async loadSavedLocations(){
@@ -708,26 +573,10 @@ class CryptoPortfolioApp {
         const assetsRaw = d.assets || {};
         const assets = {};
         for (const [assetKey, assetData] of Object.entries(assetsRaw)){
-          const avgApyRaw = assetData?.avgApy;
-          const avgApy = (avgApyRaw === null || avgApyRaw === undefined)
-            ? null
-            : Number.isFinite(Number(avgApyRaw))
-              ? Number(avgApyRaw)
-              : null;
-          const stakingValueEUR = Number(assetData?.stakingValueEUR || 0);
-          const stakingInvestedEUR = Number(assetData?.stakingInvestedEUR || 0);
-          const hasStakingRewards = assetData?.stakingRewardsEUR !== undefined && assetData?.stakingRewardsEUR !== null;
-          const stakingRewardsEUR = hasStakingRewards
-            ? Number(assetData.stakingRewardsEUR || 0)
-            : Number((stakingValueEUR - stakingInvestedEUR).toFixed(2));
           assets[assetKey] = {
             quantity: Number(assetData?.quantity || 0),
             valueEUR: Number(assetData?.valueEUR || 0),
-            valueUSD: Number(assetData?.valueUSD || assetData?.valueUSDT || 0),
-            avgApy,
-            stakingValueEUR,
-            stakingInvestedEUR,
-            stakingRewardsEUR
+            valueUSD: Number(assetData?.valueUSD || assetData?.valueUSDT || 0)
           };
         }
         return { month, assets };
@@ -763,68 +612,15 @@ class CryptoPortfolioApp {
     const alreadyCaptured = this.state.monthlyAssetSnapshots.some(s => s.month === monthId);
     if (alreadyCaptured) return;
 
-    if (!Array.isArray(this.state.currentRows) || !this.state.currentRows.length) return;
-
-    const assetMap = new Map();
-    const investmentCache = new Map();
-
-    for (const row of this.state.currentRows){
-      const asset = this.normalizeSymbol(row.asset || '');
-      if (!asset) continue;
-
-      const location = this.canonicalizeLocation(row.location || 'Other');
-      const quantity = Number(row.quantity || 0);
-      const valueEUR = Number(row.valueEUR || 0);
-      const valueUSD = Number(row.valueUSDT || 0);
-      const entry = assetMap.get(asset) || {
-        quantity: 0,
-        valueEUR: 0,
-        valueUSD: 0,
-        apyWeightedSum: 0,
-        apyWeight: 0,
-        stakingValueEUR: 0,
-        stakingInvestedEUR: 0
-      };
-
-      if (Number.isFinite(quantity)) entry.quantity += quantity;
-      if (Number.isFinite(valueEUR)) entry.valueEUR += valueEUR;
-      if (Number.isFinite(valueUSD)) entry.valueUSD += valueUSD;
-
-      const apyValue = this.getApyValue(asset, location);
-      const weight = valueEUR > 0 ? valueEUR : quantity > 0 ? quantity : 0;
-      if (apyValue !== null && apyValue !== undefined && isFinite(apyValue) && weight > 0){
-        entry.apyWeightedSum += apyValue * weight;
-        entry.apyWeight += weight;
-      }
-
-      const investmentKey = `${asset}|${this.normalizeLocation(location)}`;
-      let invested = investmentCache.get(investmentKey);
-      if (!invested){
-        invested = this.getAssetInvestedAmounts(asset, location);
-        investmentCache.set(investmentKey, invested);
-      }
-
-      if (this.isStakingLocation(location)){
-        if (Number.isFinite(valueEUR)) entry.stakingValueEUR += valueEUR;
-        if (invested && Number.isFinite(invested.eur)) entry.stakingInvestedEUR += invested.eur;
-      }
-
-      assetMap.set(asset, entry);
-    }
-
-    if (!assetMap.size) return;
+    const aggregates = this.getAggregatedAssets();
+    if (!aggregates.size) return;
 
     const assets = {};
-    for (const [asset, data] of assetMap.entries()){
-      const avgApy = data.apyWeight > 0 ? data.apyWeightedSum / data.apyWeight : null;
+    for (const [asset, info] of aggregates.entries()){
       assets[asset] = {
-        quantity: Number(data.quantity.toFixed(8)),
-        valueEUR: Number(data.valueEUR.toFixed(2)),
-        valueUSD: Number(data.valueUSD.toFixed(2)),
-        avgApy: avgApy !== null ? Number(avgApy.toFixed(2)) : null,
-        stakingValueEUR: Number(data.stakingValueEUR.toFixed(2)),
-        stakingInvestedEUR: Number(data.stakingInvestedEUR.toFixed(2)),
-        stakingRewardsEUR: Number((data.stakingValueEUR - data.stakingInvestedEUR).toFixed(2))
+        quantity: Number(info.quantity.toFixed(8)),
+        valueEUR: Number(info.valueEUR.toFixed(2)),
+        valueUSD: Number(info.valueUSD.toFixed(2))
       };
     }
 
@@ -851,13 +647,13 @@ class CryptoPortfolioApp {
 
   formatSignedQuantity(value){
     if (!isFinite(value) || value === 0) return FORMATTERS.quantity.format(0);
-    const sign = value > 0 ? '+' : '-';
+    const sign = value > 0 ? '+' : 'âˆ’';
     return `${sign}${FORMATTERS.quantity.format(Math.abs(value))}`;
   }
 
   formatSignedCurrency(value){
     if (!isFinite(value) || value === 0) return FORMATTERS.eur.format(0);
-    const sign = value > 0 ? '+' : '-';
+    const sign = value > 0 ? '+' : 'âˆ’';
     const formatted = FORMATTERS.eur.format(Math.abs(value));
     return `${sign}${formatted}`;
   }
@@ -876,7 +672,7 @@ class CryptoPortfolioApp {
     }
 
     const months = snapshots.map(s => s.month);
-    const snapshotMap = new Map(snapshots.map(s => [s.month, s]));
+    const baselineAssets = snapshots[0]?.assets || {};
     const assetsSet = new Set();
     snapshots.forEach(s => {
       Object.keys(s.assets || {}).forEach(asset => assetsSet.add(asset));
@@ -891,13 +687,14 @@ class CryptoPortfolioApp {
     const headerRow1 = ['<tr><th rowspan="2">Ativo</th>'];
     const headerRow2 = ['<tr>'];
     months.forEach(month => {
-      headerRow1.push(`<th colspan="6" style="text-align:center;">${this.formatMonthLabel(month)}</th>`);
-      headerRow2.push('<th>Qtd</th><th>Valor</th><th>APY</th><th>Rewards</th><th>&Delta;Qtd</th><th>&Delta;Valor</th>');
+      headerRow1.push(`<th colspan="4" style="text-align:center;">${this.formatMonthLabel(month)}</th>`);
+      headerRow2.push('<th>Qtd</th><th>Valor</th><th>&Delta;Qtd</th><th>&Delta;Valor</th>');
     });
     headerRow1.push('</tr>');
     headerRow2.push('</tr>');
     head.innerHTML = headerRow1.join('') + headerRow2.join('');
 
+    const snapshotMap = new Map(snapshots.map(s => [s.month, s]));
     const latestMonth = months[months.length - 1];
     const rowsHtml = Array.from(assetsSet)
       .map(asset => ({
@@ -906,62 +703,36 @@ class CryptoPortfolioApp {
       }))
       .sort((a, b) => (b.latestValue || 0) - (a.latestValue || 0))
       .map(asset => {
+        const baseline = baselineAssets[asset.asset] || { quantity: 0, valueEUR: 0 };
+        const baselineQty = Number(baseline.quantity || 0);
+        const baselineValue = Number(baseline.valueEUR || 0);
+
         const cells = months.map((month, idx) => {
           const snapshot = snapshotMap.get(month);
           const data = snapshot?.assets?.[asset.asset];
           if (!data){
-            return Array(6).fill('<td>&mdash;</td>').join('');
+            return '<td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>';
           }
-
           const qty = Number(data.quantity || 0);
           const value = Number(data.valueEUR || 0);
-          const avgApy = this.normalizeFiniteNumber(data.avgApy);
-          const apyDisplay = this.formatApy(avgApy);
-          const stakingRewards = Number(data.stakingRewardsEUR || 0);
-          const stakingValue = Number(data.stakingValueEUR || 0);
-          const stakingValueBadge = stakingValue > 0
-            ? `<span class="metric-delta neutral">Em staking: ${FORMATTERS.eur.format(stakingValue)}</span>`
-            : '';
-
           if (idx === 0){
-            return [
-              `<td>${FORMATTERS.quantity.format(qty)}</td>`,
-              `<td>${FORMATTERS.eur.format(value)}</td>`,
-              `<td>${apyDisplay}</td>`,
-              `<td>${FORMATTERS.eur.format(stakingRewards)}${stakingValueBadge}</td>`,
-              '<td>&mdash;</td>',
-              '<td>&mdash;</td>'
-            ].join('');
+            return `
+              <td>${FORMATTERS.quantity.format(qty)}</td>
+              <td>${FORMATTERS.eur.format(value)}</td>
+              <td>&mdash;</td>
+              <td>&mdash;</td>
+            `;
           }
-
-          const prevSnapshot = snapshotMap.get(months[idx - 1]);
-          const prevData = prevSnapshot?.assets?.[asset.asset] || null;
-          const prevQty = Number(prevData?.quantity || 0);
-          const prevValue = Number(prevData?.valueEUR || 0);
-          const prevRewards = Number(prevData?.stakingRewardsEUR || 0);
-          const prevApy = this.normalizeFiniteNumber(prevData?.avgApy);
-
-          const deltaQty = qty - prevQty;
-          const deltaValue = value - prevValue;
-          const deltaRewards = stakingRewards - prevRewards;
-
+          const deltaQty = qty - baselineQty;
+          const deltaValue = value - baselineValue;
           const qtyClass = deltaQty > 0 ? 'pos' : deltaQty < 0 ? 'neg' : '';
           const valueClass = deltaValue > 0 ? 'pos' : deltaValue < 0 ? 'neg' : '';
-          const rewardClass = deltaRewards > 0 ? 'pos' : deltaRewards < 0 ? 'neg' : 'neutral';
-
-          const apyTrend = this.renderApyTrend(prevApy, avgApy);
-          const rewardDeltaHtml = Math.abs(deltaRewards) >= 0.01
-            ? `<span class="metric-delta ${rewardClass}">${this.formatSignedCurrency(deltaRewards)}</span>`
-            : '';
-
-          return [
-            `<td>${FORMATTERS.quantity.format(qty)}</td>`,
-            `<td>${FORMATTERS.eur.format(value)}</td>`,
-            `<td>${apyDisplay}${apyTrend}</td>`,
-            `<td>${FORMATTERS.eur.format(stakingRewards)}${rewardDeltaHtml}${stakingValueBadge}</td>`,
-            `<td class="${qtyClass}">${this.formatSignedQuantity(deltaQty)}</td>`,
-            `<td class="${valueClass}">${this.formatSignedCurrency(deltaValue)}</td>`
-          ].join('');
+          return `
+            <td>${FORMATTERS.quantity.format(qty)}</td>
+            <td>${FORMATTERS.eur.format(value)}</td>
+            <td class="${qtyClass}">${this.formatSignedQuantity(deltaQty)}</td>
+            <td class="${valueClass}">${this.formatSignedCurrency(deltaValue)}</td>
+          `;
         }).join('');
 
         return `<tr><td><b>${this.escape(asset.asset)}</b></td>${cells}</tr>`;
@@ -1014,12 +785,12 @@ class CryptoPortfolioApp {
     }
 
     if (all.length === 0) {
-      console.log('\u2705 No active investments found.');
+      console.log('✅ No active investments found.');
       return [];
     }
 
     const assets = [...new Set(all.map(i => i.asset))];
-    console.log('\u2139\uFE0F Assets with active investments:', assets);
+    console.log('✅ Assets with active investments:', assets);
     console.table(all);
     return all;
   }
@@ -1164,20 +935,8 @@ class CryptoPortfolioApp {
     return '';
   }
   async renderAll(generatedAt){
-    const tsNumber = Number(generatedAt);
-    const hasTimestamp = generatedAt !== undefined && generatedAt !== null && Number.isFinite(tsNumber);
-    if (hasTimestamp) {
-      this.state.generatedAt = tsNumber;
-      this.state.lastUpdated = tsNumber;
-      this.state.dataSource = 'live';
-    } else if (!Number.isFinite(this.state.lastUpdated)) {
-      if (Number.isFinite(this.state.generatedAt)) {
-        this.state.lastUpdated = this.state.generatedAt;
-      } else {
-        this.state.lastUpdated = Date.now();
-      }
-    }
-
+    this.state.generatedAt = generatedAt;
+    
     const manualVal = await Promise.all(this.state.manualAssets.map(async m=>{
       const { price } = await this.priceResolver.getUSD(m.asset);
       const vUSDT = price>0 ? price * m.quantity : 0;
@@ -1196,8 +955,7 @@ class CryptoPortfolioApp {
     ];
     this.applyCurrentSort();
 
-    const stampForKpi = hasTimestamp ? tsNumber : this.state.lastUpdated;
-    this.renderKPIs(stampForKpi);
+    this.renderKPIs(generatedAt);
     this.renderTable();
     this.updateSortHeaders();
     const shouldRenderTopAssets = this._chartsVisibility.topAssets || this.state.topAssetsChart;
@@ -1248,38 +1006,9 @@ class CryptoPortfolioApp {
     const kMonthly = document.getElementById('kpiMonthlyTotal');
     const kMonthlyUSD = document.getElementById('kpiMonthlyTotalUSD');
     if (kMonthly && kMonthlyUSD) {
-      const history = Array.isArray(this.state.monthlyTotals) ? this.state.monthlyTotals : [];
-      if (history.length >= 2) {
-        const latest = history[history.length - 1];
-        const previous = history[history.length - 2];
-        const deltaEUR = (latest.totalEUR || 0) - (previous.totalEUR || 0);
-        const deltaUSD = (latest.totalUSD || 0) - (previous.totalUSD || 0);
-        kMonthly.textContent = this.formatSignedCurrency(deltaEUR);
-        const signUsd = deltaUSD >= 0 ? '+' : '-';
-        kMonthlyUSD.textContent = `${signUsd}$${FORMATTERS.usd.format(Math.abs(deltaUSD))} vs mês anterior`;
-        kMonthly.classList.toggle('pos', deltaEUR >= 0);
-        kMonthly.classList.toggle('neg', deltaEUR < 0);
-        kMonthlyUSD.classList.toggle('pos', deltaUSD >= 0);
-        kMonthlyUSD.classList.toggle('neg', deltaUSD < 0);
-      } else if (history.length === 1) {
-        const only = history[0];
-        kMonthly.textContent = FORMATTERS.eur.format(only.totalEUR || 0);
-        kMonthlyUSD.textContent = 'Sem histórico anterior';
-        kMonthly.classList.remove('pos', 'neg');
-        kMonthlyUSD.classList.remove('pos', 'neg');
-      } else {
-        kMonthly.textContent = '--';
-        kMonthlyUSD.textContent = 'Sem histórico';
-        kMonthly.classList.remove('pos', 'neg');
-        kMonthlyUSD.classList.remove('pos', 'neg');
-      }
+      kMonthly.textContent = FORMATTERS.eur.format(t.eur || 0);
+      kMonthlyUSD.textContent = `$${FORMATTERS.usd.format(t.usdt || 0)}`;
     }
-
-    const tsNumber = Number(generatedAt);
-    if (generatedAt !== undefined && generatedAt !== null && Number.isFinite(tsNumber)) {
-      this.state.lastUpdated = tsNumber;
-    }
-    this.updateDataStatus(this.state.dataSource, this.state.lastUpdated);
   }
 
   renderTopAssets(){
@@ -1638,9 +1367,9 @@ class CryptoPortfolioApp {
       const columnLabels = {
         asset: 'ativo',
         quantity: 'quantidade',
-        valueUSDT: 'valor em dÃ³lares',
+        valueUSDT: 'valor em dólares',
         valueEUR: 'valor em euros',
-        investedUSD: 'investido em dÃ³lares',
+        investedUSD: 'investido em dólares',
         investedEUR: 'investido em euros',
         realized: 'ganhos realizados',
         roi: 'retorno',
@@ -1702,8 +1431,8 @@ class CryptoPortfolioApp {
               <svg style="width: 64px; height: 64px; margin: 0 auto 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
               </svg>
-              <div style="font-size: 1.1rem; font-weight: 600; color: #6b7280; margin-bottom: 8px;">Sem ativos no portf&oacute;lio</div>
-              <div style="font-size: 0.9rem; color: #9ca3af;">Clique em "+ Adicionar" para come&ccedil;ar</div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: #6b7280; margin-bottom: 8px;">Sem ativos no portfólio</div>
+              <div style="font-size: 0.9rem; color: #9ca3af;">Clique em "+ Adicionar" para começar</div>
             </div>
           </td>
         </tr>
@@ -1968,11 +1697,13 @@ class CryptoPortfolioApp {
     const note = DOM.$('#small-note');
     if (!note) return;
     const hidden = this.state.currentRows.filter(r=>(r.valueUSDT||0)<CONFIG.SMALL_USD_THRESHOLD).length;
-    if (this.state.hideSmall && hidden>0) note.textContent = `A ocultar ${hidden} posi\u00e7\u00f5es com valor < $${CONFIG.SMALL_USD_THRESHOLD}.`;
+    if (this.state.hideSmall && hidden>0) note.textContent = `A ocultar ${hidden} posicoes com valor < $${CONFIG.SMALL_USD_THRESHOLD}.`;
     else note.textContent = '';
   }
 
   setupEvents(){
+    if (this._eventsAttached) return;
+    this._eventsAttached = true;
     DOM.$('#btn-toggle-small')?.addEventListener('click', ()=>{
       this.state.hideSmall = !this.state.hideSmall;
       const btn = DOM.$('#btn-toggle-small');
@@ -2282,13 +2013,13 @@ class CryptoPortfolioApp {
       const amount = ValidationUtils.sanitizeNumber(rawAmount, 2);
 
       if (!ValidationUtils.isValidNumber(amountNumber, 0)) {
-        ToastService.error('Insira um valor v\u00e1lido (>= 0)');
+        ToastService.error('Insira um valor valido (>= 0)');
         amountInput?.focus();
         return;
       }
 
       if (!date || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date)) {
-        ToastService.error('Selecione uma data v\u00e1lida');
+        ToastService.error('Selecione uma data valida');
         dateInput?.focus();
         return;
       }
@@ -2297,7 +2028,7 @@ class CryptoPortfolioApp {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (inputDate > today) {
-        ToastService.error('A data n\u00e3o pode ser no futuro');
+        ToastService.error('A data nao pode ser no futuro');
         dateInput?.focus();
         return;
       }
@@ -2409,26 +2140,26 @@ class CryptoPortfolioApp {
 
     const qtyInput = DOM.$('#inv-qty2');
     if (!qtyInput) {
-      ToastService.error('Campo de quantidade n\u00e3o encontrado');
+      ToastService.error('Campo de quantidade nao encontrado');
       return;
     }
 
     const asset = this.normalizeSymbol(this.currentInvestmentAsset || '');
     const location = this.canonicalizeLocation(this.currentInvestmentLocation || 'Other');
     if (!asset) {
-      ToastService.error('Selecione um ativo manual v\u00e1lido');
+      ToastService.error('Selecione um ativo manual valido');
       return;
     }
 
     const raw = qtyInput.value.trim();
     if (raw === '') {
-      ToastService.error('Introduza uma quantidade v\u00e1lida');
+      ToastService.error('Introduza uma quantidade valida');
       return;
     }
 
     const quantity = Number(raw);
     if (!Number.isFinite(quantity) || quantity < 0) {
-      ToastService.error('Quantidade inv\u00e1lida');
+      ToastService.error('Quantidade invalida');
       return;
     }
 
@@ -2480,7 +2211,7 @@ class CryptoPortfolioApp {
       } else {
         const value = Number(raw);
         if (!isFinite(value)) {
-          ToastService.error('Valor APY inv\u00e1lido');
+          ToastService.error('Valor APY invalido');
           return;
         }
         const docId = this.makeApyDocId(asset, location);
@@ -2640,19 +2371,19 @@ class CryptoPortfolioApp {
     const loc = this.canonicalizeLocation(locInput?.value || 'Other');
 
     if (!ValidationUtils.isValidAssetSymbol(asset)) {
-      ToastService.error('S\u00edmbolo de ativo inv\u00e1lido (2-10 caracteres)');
+      ToastService.error('Simbolo de ativo invalido (2-10 caracteres)');
       assetInput?.focus();
       return;
     }
 
     if (!rawQty || !ValidationUtils.isValidNumber(qtyNumber, 0.00000001)) {
-      ToastService.error('Quantidade inv\u00e1lida (m\u00ednimo 0.00000001)');
+      ToastService.error('Quantidade invalida (minimo 0.00000001)');
       qtyInput?.focus();
       return;
     }
 
     if (!ValidationUtils.isValidNumber(costNumber, 0)) {
-      ToastService.error('Custo inv\u00e1lido');
+      ToastService.error('Custo invalido');
       costInput?.focus();
       return;
     }
@@ -2797,7 +2528,7 @@ class CryptoPortfolioApp {
         if (currentRow) currentRow.location = loc;
         
         await this.renderAll();
-        ToastService.success('LocalizaÃ§Ã£o atualizada');
+        ToastService.success('Localização atualizada');
       });
     });
 
@@ -2877,7 +2608,7 @@ class CryptoPortfolioApp {
       const location = this.canonicalizeLocation(locSelect?.value || this.currentSellLocation || 'Other');
 
       if (!isFinite(sellQty) || sellQty <= 0) {
-        ToastService.error('Por favor, insira uma quantidade v\u00e1lida');
+        ToastService.error('Por favor, insira uma quantidade valida');
         return;
       }
 
@@ -2887,7 +2618,7 @@ class CryptoPortfolioApp {
       );
 
       if (!row) {
-        ToastService.error('Ativo n\u00e3o encontrado');
+        ToastService.error('Ativo nao encontrado');
         return;
       }
 
@@ -2918,7 +2649,7 @@ class CryptoPortfolioApp {
         await this.renderAll(this.state.generatedAt);
         ToastService.success('Venda registrada com sucesso');
       } else {
-        ToastService.error('N\u00e3o \u00e9 poss\u00edvel vender ativos do Binance diretamente');
+        ToastService.error('Nao e possivel vender ativos do Binance diretamente');
         return;
       }
 
@@ -3062,20 +2793,12 @@ class CryptoPortfolioApp {
 
   showError(msg){
     console.error(msg);
-    this.toggleLoading(false);
     const tb = DOM.$('#rows');
     if (tb) tb.innerHTML = `<tr><td colspan="11" class="text-muted">Error: ${msg}</td></tr>`;
   }
 }
 
 export { DOM, ToastService, CryptoPortfolioApp };
-
-
-
-
-
-
-
 
 
 

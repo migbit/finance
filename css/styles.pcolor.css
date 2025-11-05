@@ -1371,3 +1371,214 @@ body#analise123vs1248-page main {
     min-width: 80px;
   }
 }
+
+/* Enhanced KPI and Scenario Styles DCA PAGE*/
+.kpi-grid.enhanced {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.kpi-item.enhanced {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-item.enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+
+.scenario-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.scenario-card:hover {
+  transform: translateY(-2px);
+}
+
+.scenario-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+}
+
+/* Better table styling */
+.table-dca th {
+  position: sticky;
+  top: 0;
+  background: var(--th-bg);
+  z-index: 10;
+}
+
+/* Highlight current month more prominently */
+.table-dca tbody tr.current-month {
+  background: #e8f4ff !important;
+  border-left: 4px solid var(--p2);
+  font-weight: 600;
+}
+
+/* Improve input styling */
+.table-dca input.cell:focus {
+  border-color: var(--p2);
+  box-shadow: 0 0 0 2px rgba(82, 109, 130, 0.1);
+  background: #fff;
+}
+
+/* Auto contribution display */
+.params-table tbody tr:last-child {
+  background: var(--tr-alt);
+}
+
+.params-table tbody tr:last-child td {
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+/* Benchmark comparison */
+.benchmark-comparison {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.benchmark-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.benchmark-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.benchmark-card.outperforming {
+  border-color: var(--ok);
+  background: rgba(22, 163, 74, 0.05);
+}
+
+.benchmark-card.underperforming {
+  border-color: var(--bad);
+  background: rgba(225, 29, 72, 0.05);
+}
+
+.benchmark-name {
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.benchmark-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.benchmark-difference {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.benchmark-difference.pos {
+  color: var(--ok);
+}
+
+.benchmark-difference.neg {
+  color: var(--bad);
+}
+
+/* Enhanced KPI and Scenario Styles DCA PAGE*/
+.kpi-grid.enhanced {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.kpi-item.enhanced {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-item.enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+}
+
+/* Progress Bar Styles */
+.progress-section {
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.progress-bar-container {
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+}
+
+.progress-bar-fill {
+  position: relative;
+  box-shadow: 0 2px 6px rgba(26,143,93,0.3);
+}
+
+/* Goal Tracking */
+.goal-tracking {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.goal-icon {
+  display: block;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Scenario Cards */
+.scenario-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.scenario-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+}
+
+.scenario-diff {
+  font-weight: 600;
+}
+
+.scenario-diff.pos {
+  color: var(--ok);
+}
+
+.scenario-diff.neg {
+  color: var(--bad);
+}

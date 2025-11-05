@@ -26,7 +26,7 @@ function handleAuthState(user){
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  app.handleSignedOut('A verificar sessao...');
+  app.handleSignedOut('A verificar sessao...', { busy: true });
   try {
     const auth = getAuth();
     onAuthStateChanged(auth, handleAuthState);

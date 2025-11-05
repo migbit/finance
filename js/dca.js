@@ -1,4 +1,4 @@
-// js/dca.js  — CORRIGIDO (sem <script> no ficheiro)
+// js/dca.js — CORRIGIDO (sem <script> no ficheiro)
 
 // Integração com Firebase conforme restante webapp
 import { db } from '../js/script.js';
@@ -68,7 +68,7 @@ function euroFmt(n) {
   return v.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
 
-// Soma a coluna JURO (coluna 11) do “Registo Mensal”
+// Soma a coluna JURO (coluna 11) do "Registo Mensal"
 function somaJuroTabelaDCA() {
   const root = document.querySelector('#dca-table-wrap');
   if (!root) return 0;
@@ -125,7 +125,6 @@ async function loadJuroSaldo() {
   }
 }
 
-
 // === Destacar o mês atual no Registo Mensal ===
 function highlightCurrentMonthRow() {
   const wrap = document.getElementById('dca-table-wrap');
@@ -160,7 +159,6 @@ function highlightCurrentMonthRow() {
   if (row) row.classList.add('current-month');
 }
 
-
 // correr ao carregar e após mutações (quando a tabela muda)
 if (document.readyState !== 'loading') highlightCurrentMonthRow();
 else document.addEventListener('DOMContentLoaded', highlightCurrentMonthRow);
@@ -172,7 +170,6 @@ else document.addEventListener('DOMContentLoaded', highlightCurrentMonthRow);
     mo.observe(target, { childList: true, subtree: true });
   }
 })();
-
 
 // Liga eventos e calcula valores (podes chamar isto em qualquer altura)
 async function bindJuroModule() {
@@ -225,9 +222,6 @@ async function bindJuroModule() {
   atualizar();
 }
 
-
-
-
 // ---------- Auth gating for first KPI (kpi-inv) ----------
 let __isAuthed = false;
 
@@ -270,11 +264,11 @@ if (document.readyState === 'loading'){
 
 // ---------- Parâmetros default ----------
 const START_YM = { y: 2025, m: 9 }; // set 2025 fixo
-const MONTHLY_CONTRIBUTION_EUR = 152; // total contribuição mensal planeada
 const DEFAULTS  = {
   endYM: { y: 2040, m: 9 },
   pctSWDA: 79.61,  // equivalente a ~121€ por mês em VWCE
-  pctAGGH: 20.39   // equivalente a ~31€ por mês em AGGH
+  pctAGGH: 20.39,  // equivalente a ~31€ por mês em AGGH
+  monthlyContribution: 152
 };
 
 // ---------- Firestore ----------
@@ -311,7 +305,8 @@ async function loadParams(){
     const normalized = {
       endYM: p.endYM ?? DEFAULTS.endYM,
       pctSWDA: Number(p.pctSWDA ?? DEFAULTS.pctSWDA),
-      pctAGGH: Number(p.pctAGGH ?? DEFAULTS.pctAGGH)
+      pctAGGH: Number(p.pctAGGH ?? DEFAULTS.pctAGGH),
+      monthlyContribution: Number(p.monthlyContribution ?? DEFAULTS.monthlyContribution)
     };
     const near = (a,b)=> Math.abs(a - b) < 0.01;
     const legacy55_45 = near(normalized.pctSWDA, 55) && near(normalized.pctAGGH, 45);
@@ -331,7 +326,6 @@ async function loadParams(){
 async function saveParams(p){
   await setDoc(SETTINGS_D, p, { merge: true });
 }
-
 
 async function loadAllDocs(){
   const q = query(COL, orderBy('id','asc'));
@@ -355,7 +349,7 @@ function monthsBetween(a, b){
 }
 
 function buildModel(docs, params){
-  const { pctSWDA, pctAGGH } = params;
+  const { pctSWDA, pctAGGH, monthlyContribution } = params;
   const rows = [];
 
   let investedCum = 0;
@@ -365,10 +359,10 @@ function buildModel(docs, params){
   const months = docs.sort((a,b)=> a.id.localeCompare(b.id));
 
   for (const d of months){
-    let monthlySW    = roundMoney(MONTHLY_CONTRIBUTION_EUR * (pctSWDA/100));
-    let monthlyAG    = roundMoney(MONTHLY_CONTRIBUTION_EUR * (pctAGGH/100));
+    let monthlySW    = roundMoney(monthlyContribution * (pctSWDA/100));
+    let monthlyAG    = roundMoney(monthlyContribution * (pctAGGH/100));
     let monthlyTotal = roundMoney(monthlySW + monthlyAG);
-    const adjust = roundMoney(MONTHLY_CONTRIBUTION_EUR - monthlyTotal);
+    const adjust = roundMoney(monthlyContribution - monthlyTotal);
     if (adjust !== 0){
       if (Math.abs(monthlySW) >= Math.abs(monthlyAG)){
         monthlySW = roundMoney(monthlySW + adjust);
@@ -414,7 +408,6 @@ function buildModel(docs, params){
   }
   return rows;
 }
-
 
 // ---------- Render ----------
 function yearGroups(rows){
@@ -469,8 +462,6 @@ function renderTable(rows){
       </thead>
     `;
 
-
-
     table.innerHTML = theadHTML + '<tbody></tbody>';
     const tbody = table.querySelector('tbody');
 
@@ -511,8 +502,6 @@ function renderTable(rows){
   }
 }
 
-
-
 // Listener único para guardar linhas (event delegation)
 (() => {
   const wrap = document.getElementById('dca-table-wrap');
@@ -541,27 +530,37 @@ function renderTable(rows){
   });
 })();
 
-
 // ---------- Estado / Boot ----------
 const state = {
   params: { ...DEFAULTS },
   showOthers: false   // anos != ano atual visíveis?
 };
 
-
 function readParamsFromUI(){
   const [ey, em] = ($('#end-date')?.value || `${DEFAULTS.endYM.y}-${pad(DEFAULTS.endYM.m)}`).split('-').map(Number);
   const pctS = asNum($('#pct-swda')?.value) ?? DEFAULTS.pctSWDA;
   const pctA = asNum($('#pct-aggh')?.value) ?? DEFAULTS.pctAGGH;
+  const monthly = asNum($('#monthly-contribution')?.value) ?? DEFAULTS.monthlyContribution;
   const fix  = (n)=> Math.max(0, Math.min(100, n));
   const pctSumOk = Math.abs((pctS + pctA) - 100) < 0.01;
-  return { endYM:{y:ey,m:em}, pctSWDA:fix(pctS), pctAGGH:fix(pctA), pctSumOk };
+  return { endYM:{y:ey,m:em}, pctSWDA:fix(pctS), pctAGGH:fix(pctA), monthlyContribution: monthly, pctSumOk };
 }
 
 function writeParamsToUI(p){
   const ed = $('#end-date'); if (ed) ed.value = `${p.endYM.y}-${pad(p.endYM.m)}`;
   const sw = $('#pct-swda'); if (sw) sw.value = p.pctSWDA;
   const ag = $('#pct-aggh'); if (ag) ag.value = p.pctAGGH;
+  const mc = $('#monthly-contribution'); if (mc) mc.value = p.monthlyContribution;
+  updateAutoContributionDisplay(p);
+}
+
+function updateAutoContributionDisplay(params) {
+  const monthlySW = Math.round(params.monthlyContribution * (params.pctSWDA/100));
+  const monthlyAG = Math.round(params.monthlyContribution * (params.pctAGGH/100));
+  
+  $('#auto-swda').textContent = `${monthlySW} €`;
+  $('#auto-aggh').textContent = `${monthlyAG} €`;
+  $('#auto-total').textContent = `${params.monthlyContribution} €`;
 }
 
 function applyYearVisibility(){
@@ -616,6 +615,153 @@ $('#btn-save-params')?.addEventListener('click', async ()=>{
   await boot(true);      // refaz meses/tabela com novos parâmetros
 });
 
+// Update auto contribution when monthly contribution changes
+$('#monthly-contribution')?.addEventListener('input', () => {
+  const params = readParamsFromUI();
+  updateAutoContributionDisplay(params);
+});
+
+// ---------- Enhanced KPI Functions ----------
+
+// Enhanced KPI calculations
+function calculateEnhancedKPIs(rows) {
+  if (!rows || rows.length === 0) return null;
+  
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentRow = rows.find(row => row.id === currentMonth) || rows[rows.length - 1];
+  
+  if (!currentRow) return null;
+  
+  const totalInvested = currentRow.investedCum;
+  const currentValue = currentRow.totalNow || 0;
+  const totalInterest = somaJuroTabelaDCA();
+  const result = currentValue - totalInvested;
+  const resultPct = totalInvested > 0 ? (result / totalInvested * 100) : 0;
+  
+  return {
+    totalInvested,
+    currentValue,
+    result,
+    resultPct,
+    totalInterest
+  };
+}
+
+// Scenario calculations
+function calculateScenarios(totalInvested, months, currentValue) {
+  const annualRates = {
+    conservative: 0.03,
+    moderate: 0.05,
+    optimistic: 0.07
+  };
+  
+  const scenarios = {};
+  const years = months / 12;
+  
+  for (const [scenario, rate] of Object.entries(annualRates)) {
+    const futureValue = totalInvested * Math.pow(1 + rate, years);
+    scenarios[scenario] = {
+      futureValue: futureValue,
+      difference: futureValue - currentValue
+    };
+  }
+  
+  return scenarios;
+}
+
+// Benchmark calculations
+function calculateBenchmarks(currentValue, totalInvested, months) {
+  const benchmarks = {
+    'Poupança Bancária (1%)': 0.01,
+    'Inflação (2%)': 0.02,
+    'S&P 500 (10%)': 0.10
+  };
+  
+  const years = months / 12;
+  const results = {};
+  
+  for (const [name, rate] of Object.entries(benchmarks)) {
+    const benchmarkValue = totalInvested * Math.pow(1 + rate, years);
+    const difference = currentValue - benchmarkValue;
+    const differencePct = (difference / benchmarkValue) * 100;
+    
+    results[name] = {
+      value: benchmarkValue,
+      difference: difference,
+      differencePct: differencePct,
+      outperforming: difference > 0
+    };
+  }
+  
+  return results;
+}
+
+// Update enhanced KPIs in UI
+function updateEnhancedKPIs(rows, params) {
+  const kpis = calculateEnhancedKPIs(rows);
+  if (!kpis) return;
+  
+  // Update basic KPIs
+  document.getElementById('kpi-total-invested').textContent = toEUR(kpis.totalInvested);
+  document.getElementById('kpi-current-value').textContent = toEUR(kpis.currentValue);
+  document.getElementById('kpi-result').textContent = toEUR(kpis.result);
+  document.getElementById('kpi-result-pct').textContent = `${kpis.resultPct.toFixed(2)}%`;
+  document.getElementById('kpi-result-pct').className = `kpi-sub ${kpis.result >= 0 ? 'pos' : 'neg'}`;
+  document.getElementById('kpi-total-interest').textContent = toEUR(kpis.totalInterest);
+  
+  // Calculate and update scenarios
+  const totalMonths = monthsBetween(START_YM, params.endYM).length;
+  const scenarios = calculateScenarios(kpis.totalInvested, totalMonths, kpis.currentValue);
+  
+  for (const [scenario, data] of Object.entries(scenarios)) {
+    const element = document.getElementById(`scenario-${scenario}`);
+    if (element) {
+      element.textContent = toEUR(data.futureValue);
+    }
+  }
+  
+  // Calculate and update benchmarks
+  const benchmarks = calculateBenchmarks(kpis.currentValue, kpis.totalInvested, totalMonths);
+  updateBenchmarkDisplay(benchmarks);
+}
+
+// Update benchmark comparison in UI
+function updateBenchmarkDisplay(benchmarks) {
+  let benchmarkHTML = '';
+  
+  for (const [name, data] of Object.entries(benchmarks)) {
+    const cardClass = data.outperforming ? 'benchmark-card outperforming' : 'benchmark-card underperforming';
+    const diffClass = data.difference >= 0 ? 'pos' : 'neg';
+    const diffSign = data.difference >= 0 ? '+' : '';
+    
+    benchmarkHTML += `
+      <div class="${cardClass}">
+        <div class="benchmark-name">${name}</div>
+        <div class="benchmark-value">${toEUR(data.value)}</div>
+        <div class="benchmark-difference ${diffClass}">
+          ${diffSign}${toEUR(data.difference)} (${diffSign}${data.differencePct.toFixed(1)}%)
+        </div>
+      </div>
+    `;
+  }
+  
+  // Create or update benchmark section
+  let benchmarkSection = document.querySelector('.benchmark-comparison');
+  if (!benchmarkSection) {
+    benchmarkSection = document.createElement('div');
+    benchmarkSection.className = 'benchmark-comparison';
+    benchmarkSection.innerHTML = `
+      <h5 style="text-align: center; margin-bottom: 1rem; color: var(--text-dim);">Comparação com Benchmarks</h5>
+      <div class="benchmark-grid">
+        ${benchmarkHTML}
+      </div>
+    `;
+    document.querySelector('#kpi-cenarios-card').appendChild(benchmarkSection);
+  } else {
+    benchmarkSection.querySelector('.benchmark-grid').innerHTML = benchmarkHTML;
+  }
+}
+
 // Arranque
 async function boot(skipParamUI){
   if (!skipParamUI){
@@ -639,7 +785,9 @@ async function boot(skipParamUI){
 
   // Update KPI doughnut (INV vs Total) only if authenticated
   if (__isAuthed) renderKpiInv(state.params);
-
+  
+  // NEW: Update enhanced KPIs and scenarios
+  updateEnhancedKPIs(rows, state.params);
 }
 
 // Add visual indicators for scrollable tables
@@ -738,7 +886,7 @@ function renderKpiInv(params){
 
   // Total alvo = nº de meses de START_YM até endYM (incl.) x contribuição mensal
   const totalMonths = monthsBetween(START_YM, params.endYM).length;
-  const totalTarget = totalMonths * MONTHLY_CONTRIBUTION_EUR;
+  const totalTarget = totalMonths * params.monthlyContribution;
 
   // Investido até ao mês atual (incl.), limitado por [START_YM, endYM]
   const now = new Date();
@@ -748,7 +896,7 @@ function renderKpiInv(params){
   let invested = 0;
   if (ymCompare(nowYM, START_YM) >= 0){
     const investedMonths = monthsBetween(START_YM, clampedEnd).length;
-    invested = investedMonths * MONTHLY_CONTRIBUTION_EUR;
+    invested = investedMonths * params.monthlyContribution;
   }
 
   const remaining = Math.max(0, totalTarget - invested);
