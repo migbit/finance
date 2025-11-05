@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initReparacoes();
     initCarlosFaturas();
     initIvaEstrangeiro();
+    initPallco();
 });
 
 // ========================================
@@ -1239,4 +1240,192 @@ function initIvaEstrangeiro() {
             triBody.appendChild(tr);
         });
     }
+}
+
+// ========================================
+// PALLCO MODULE
+// ========================================
+function initPallco() {
+  const form = document.getElementById('pallco-form');
+  const inpData = document.getElementById('pallco-data');
+  const inpDesc = document.getElementById('pallco-descricao');
+  const inpValor = document.getElementById('pallco-valor');
+  const monthsWrap = document.getElementById('pallco-months');
+  const olderWrap = document.getElementById('pallco-older-wrap');
+  const toggleOlderBtn = document.getElementById('pallco-toggle-older');
+
+  if (!form || !monthsWrap) return;
+
+  const COLL = _collection(db, 'pallco');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const dataStr = inpData?.value || '';
+    const descricao = (inpDesc?.value || '').trim();
+    const valor = parseFloat(inpValor?.value || '');
+
+    if (!dataStr || !descricao || isNaN(valor)) {
+      alert('Preenche a Data, a Descrição e o Valor.');
+      return;
+    }
+
+    const monthKey = dataStr.slice(0, 7); // YYYY-MM
+    try {
+      await _addDoc(COLL, {
+        data: dataStr,
+        descricao,
+        valor: Math.round(valor * 100) / 100,
+        month: monthKey,
+        ts: Date.now()
+      });
+      form.reset();
+      await loadPallco();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao adicionar movimento.');
+    }
+  });
+
+  async function loadPallco() {
+    monthsWrap.innerHTML = '<p>Carregando…</p>';
+    try {
+      const snap = await _getDocs(COLL);
+      // Normalizar registos
+      let rows = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .map(r => ({
+          ...r,
+          _order: r.data ? r.data.replaceAll('-', '') : (r.ts || 0) // para ordenar
+        }));
+
+      // Ordenar mais recentes primeiro
+      rows.sort((a, b) => {
+        const aa = typeof a._order === 'string' ? parseInt(a._order, 10) : a._order;
+        const bb = typeof b._order === 'string' ? parseInt(b._order, 10) : b._order;
+        return bb - aa;
+      });
+
+      renderPallco(rows);
+    } catch (err) {
+      console.error(err);
+      monthsWrap.innerHTML = '<p>Erro ao carregar movimentos.</p>';
+    }
+  }
+
+  function renderPallco(rows) {
+    monthsWrap.innerHTML = '';
+
+    if (!rows.length) {
+      monthsWrap.innerHTML = '<p class="pallco-empty">Sem movimentos.</p>';
+      if (olderWrap) olderWrap.style.display = 'none';
+      return;
+    }
+
+    // Mostrar só 10 movimentos; restantes ficam com .pallco-hidden
+    const MAX_VISIBLE = 10;
+    let visibleCount = 0;
+
+    // Agrupar por mês YYYY-MM
+    const byMonth = {};
+    rows.forEach(r => {
+      const mk = r.month || (r.data ? r.data.slice(0,7) : 'Sem Data');
+      if (!byMonth[mk]) byMonth[mk] = [];
+      byMonth[mk].push(r);
+    });
+
+    // Ordenar meses desc
+    const monthKeys = Object.keys(byMonth).sort((a, b) => b.localeCompare(a));
+
+    monthKeys.forEach(mk => {
+      const list = byMonth[mk];
+
+      // Total do mês
+      const totalMonth = list.reduce((s, r) => s + (Number(r.valor) || 0), 0);
+
+      // Card mês
+      const monthDiv = document.createElement('div');
+      monthDiv.className = 'pallco-month';
+
+      const header = document.createElement('div');
+      header.className = 'pallco-month-header';
+      header.innerHTML = `
+        <div class="pallco-month-title">${mk}</div>
+        <div class="pallco-total">${euro2(totalMonth)}</div>
+      `;
+      monthDiv.appendChild(header);
+
+      const tableWrap = document.createElement('div');
+      tableWrap.className = 'table-wrap';
+
+      const table = document.createElement('table');
+      table.className = 'table';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Descrição</th>
+            <th class="right">Valor (€)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+      tableWrap.appendChild(table);
+      monthDiv.appendChild(tableWrap);
+
+      const tbody = table.querySelector('tbody');
+
+      list.forEach((r, idx) => {
+        const tr = document.createElement('tr');
+
+        // Controlar visibilidade global (10 mais recentes no total)
+        const isHidden = visibleCount >= MAX_VISIBLE;
+        if (isHidden) tr.classList.add('pallco-hidden');
+
+        tr.innerHTML = `
+          <td>${escapeHtml(r.data || '')}</td>
+          <td>${escapeHtml(r.descricao || '')}</td>
+          <td class="right">${euro2(r.valor || 0)}</td>
+        `;
+        tbody.appendChild(tr);
+
+        if (!isHidden) visibleCount++;
+      });
+
+      monthsWrap.appendChild(monthDiv);
+    });
+
+    // Botão "Mostrar Movimentos Anteriores"
+    const hasHidden = monthsWrap.querySelector('.pallco-hidden') != null;
+    if (olderWrap && toggleOlderBtn) {
+      if (hasHidden) {
+        olderWrap.style.display = 'block';
+        if (!toggleOlderBtn.dataset.bound) {
+          toggleOlderBtn.addEventListener('click', () => {
+            const hiddenRows = monthsWrap.querySelectorAll('.pallco-hidden');
+            const isShowing = toggleOlderBtn.dataset.state === 'showing';
+            hiddenRows.forEach(el => el.style.display = isShowing ? 'none' : '');
+            toggleOlderBtn.textContent = isShowing
+              ? 'Mostrar Movimentos Anteriores'
+              : 'Esconder Movimentos Anteriores';
+            toggleOlderBtn.dataset.state = isShowing ? '' : 'showing';
+          });
+          // estado inicial: escondidos (display:none)
+          monthsWrap.querySelectorAll('.pallco-hidden').forEach(el => { el.style.display = 'none'; });
+          toggleOlderBtn.dataset.bound = '1';
+          toggleOlderBtn.dataset.state = '';
+          toggleOlderBtn.textContent = 'Mostrar Movimentos Anteriores';
+        } else {
+          // Reaplicar estado atual se já estava ligado
+          const isShowing = toggleOlderBtn.dataset.state === 'showing';
+          monthsWrap.querySelectorAll('.pallco-hidden').forEach(el => {
+            el.style.display = isShowing ? '' : 'none';
+          });
+        }
+      } else {
+        olderWrap.style.display = 'none';
+      }
+    }
+  }
+
+  // primeira carga
+  loadPallco();
 }

@@ -39,6 +39,33 @@
             color: white;
             border-bottom: 2px solid var(--p2);
         }
+        .pallco-month {
+            margin-bottom: 1.5rem;
+        }
+        .pallco-month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.5rem;
+        }
+        .pallco-month-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .pallco-total {
+            font-weight: 600;
+            color: var(--p2);
+        }
+        .pallco-empty {
+            color: var(--text-dim);
+            font-style: italic;
+        }
+        .pallco-hidden {
+            display: none;
+        }
+        .pallco-older-toggle {
+            margin-top: 1rem;
+        }
         .tab-content {
             display: none;
         }
@@ -105,6 +132,7 @@
             <option value="hospedes">👥 Hóspedes</option>
             <option value="reparacoes">🔧 Reparações</option>
             <option value="iva">📑 IVA Estrangeiro</option>
+            <option value="pallco">🏢 PALLCO</option>
             <option value="carlos">💼 Carlos – Faturas</option>
         </select>
         </div>
@@ -117,6 +145,7 @@
             <button class="tab-btn" data-tab="hospedes">👥 Hóspedes</button>
             <button class="tab-btn" data-tab="reparacoes">🔧 Reparações</button>
             <button class="tab-btn" data-tab="iva">📑 IVA Estrangeiro</button>
+            <button class="tab-btn" data-tab="pallco">🏢 PALLCO</button>
             <button class="tab-btn" data-tab="carlos">💼 Carlos – Faturas</button>
         </div>
 
@@ -377,6 +406,36 @@
                                 <tbody id="iva-estrangeiro-tri-body"><!-- via JS --></tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- === PALLCO === -->
+        <div id="tab-pallco" class="tab-content">
+            <section class="report-section">
+                <div class="viz-card">
+                    <h3>PALLCO</h3>
+                    <form id="pallco-form" class="form-inline" style="gap: 10px; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <input type="date" id="pallco-data" required>
+                        <select id="pallco-descricao" required>
+                            <option value="">Descrição</option>
+                            <option value="Mensalidade">Mensalidade</option>
+                            <option value="Roupa">Roupa</option>
+                            <option value="Diversos">Diversos</option>
+                        </select>
+                        <input type="number" id="pallco-valor" placeholder="Valor (€)" step="0.01" required>
+                        <button type="submit" class="btn">Adicionar</button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="report-section">
+                <div class="viz-card">
+                    <h4>Movimentos</h4>
+                    <div id="pallco-months"><!-- via JS --></div>
+                    <div class="pallco-older-toggle" id="pallco-older-wrap" style="display:none;">
+                        <button id="pallco-toggle-older" class="btn">Mostrar Movimentos Anteriores</button>
                     </div>
                 </div>
             </section>
