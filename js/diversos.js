@@ -1290,14 +1290,12 @@ function initPallco() {
     monthsWrap.innerHTML = '<p>Carregando…</p>';
     try {
       const snap = await _getDocs(COLL);
-      // Normalizar registos
       let rows = snap.docs.map(d => ({ id: d.id, ...d.data() }))
         .map(r => ({
           ...r,
-          _order: r.data ? r.data.replaceAll('-', '') : (r.ts || 0) // para ordenar
+          _order: r.data ? r.data.replaceAll('-', '') : (r.ts || 0)
         }));
 
-      // Ordenar mais recentes primeiro
       rows.sort((a, b) => {
         const aa = typeof a._order === 'string' ? parseInt(a._order, 10) : a._order;
         const bb = typeof b._order === 'string' ? parseInt(b._order, 10) : b._order;
@@ -1320,11 +1318,17 @@ function initPallco() {
       return;
     }
 
-    // Mostrar só 10 movimentos; restantes ficam com .pallco-hidden
+    // "Novembro 2025"
+    const formatMonthName = (ym) => {
+      const [year, month] = ym.split('-').map(Number);
+      const d = new Date(year, month - 1, 1);
+      const txt = d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+      return txt.charAt(0).toUpperCase() + txt.slice(1);
+    };
+
     const MAX_VISIBLE = 10;
     let visibleCount = 0;
 
-    // Agrupar por mês YYYY-MM
     const byMonth = {};
     rows.forEach(r => {
       const mk = r.month || (r.data ? r.data.slice(0,7) : 'Sem Data');
@@ -1332,51 +1336,52 @@ function initPallco() {
       byMonth[mk].push(r);
     });
 
-    // Ordenar meses desc
     const monthKeys = Object.keys(byMonth).sort((a, b) => b.localeCompare(a));
 
     monthKeys.forEach(mk => {
       const list = byMonth[mk];
-
-      // Total do mês
       const totalMonth = list.reduce((s, r) => s + (Number(r.valor) || 0), 0);
+      const niceMonth = formatMonthName(mk);
 
-      // Card mês
       const monthDiv = document.createElement('div');
       monthDiv.className = 'pallco-month';
-
-      const header = document.createElement('div');
-      header.className = 'pallco-month-header';
-      header.innerHTML = `
-        <div class="pallco-month-title">${mk}</div>
-        <div class="pallco-total">${euro2(totalMonth)}</div>
-      `;
-      monthDiv.appendChild(header);
 
       const tableWrap = document.createElement('div');
       tableWrap.className = 'table-wrap';
 
       const table = document.createElement('table');
-      table.className = 'table';
+      table.className = 'table pallco-table';
       table.innerHTML = `
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Descrição</th>
-            <th class="right">Valor (€)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      `;
+  <colgroup>
+    <col>
+    <col>
+    <col>
+  </colgroup>
+  <thead>
+    <tr class="pallco-month-header-row">
+      <th colspan="3" class="center">${niceMonth}</th>
+    </tr>
+    <tr>
+      <th>Data</th>
+      <th>Descrição</th>
+      <th class="right">Valor (€)</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+  <tfoot>
+    <tr class="pallco-total-row">
+      <td colspan="2"></td>
+      <td class="right"><strong>${euro2(totalMonth)}</strong></td>
+    </tr>
+  </tfoot>
+`;
       tableWrap.appendChild(table);
       monthDiv.appendChild(tableWrap);
 
       const tbody = table.querySelector('tbody');
 
-      list.forEach((r, idx) => {
+      list.forEach(r => {
         const tr = document.createElement('tr');
-
-        // Controlar visibilidade global (10 mais recentes no total)
         const isHidden = visibleCount >= MAX_VISIBLE;
         if (isHidden) tr.classList.add('pallco-hidden');
 
@@ -1393,7 +1398,7 @@ function initPallco() {
       monthsWrap.appendChild(monthDiv);
     });
 
-    // Botão "Mostrar Movimentos Anteriores"
+    // "Mostrar Movimentos Anteriores"
     const hasHidden = monthsWrap.querySelector('.pallco-hidden') != null;
     if (olderWrap && toggleOlderBtn) {
       if (hasHidden) {
@@ -1408,13 +1413,11 @@ function initPallco() {
               : 'Esconder Movimentos Anteriores';
             toggleOlderBtn.dataset.state = isShowing ? '' : 'showing';
           });
-          // estado inicial: escondidos (display:none)
           monthsWrap.querySelectorAll('.pallco-hidden').forEach(el => { el.style.display = 'none'; });
           toggleOlderBtn.dataset.bound = '1';
           toggleOlderBtn.dataset.state = '';
           toggleOlderBtn.textContent = 'Mostrar Movimentos Anteriores';
         } else {
-          // Reaplicar estado atual se já estava ligado
           const isShowing = toggleOlderBtn.dataset.state === 'showing';
           monthsWrap.querySelectorAll('.pallco-hidden').forEach(el => {
             el.style.display = isShowing ? '' : 'none';
@@ -1429,3 +1432,4 @@ function initPallco() {
   // primeira carga
   loadPallco();
 }
+

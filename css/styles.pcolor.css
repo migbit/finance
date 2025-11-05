@@ -1582,3 +1582,59 @@ body#analise123vs1248-page main {
 .scenario-diff.neg {
   color: var(--bad);
 }
+
+.pallco-total-row td {
+  font-weight: 600;
+  border-top: 1px solid var(--border, #ddd);
+  padding-top: 4px;
+}
+
+.pallco-month-label {
+  opacity: 0.85;
+}
+
+.pallco-month-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 1rem 0 0.25rem;
+  color: #0a1620; /* ou var(--text-color) se tiveres */
+}
+
+.pallco-total-row td {
+  font-weight: 600;
+  border-top: 1px solid #ddd;
+  padding-top: 6px;
+}
+
+.table tfoot td {
+  background: #fff;
+}
+
+.pallco-month {
+  margin-bottom: 1.5rem;
+}
+
+/* ====== PALLCO TABLE HEADER ====== */
+.pallco-month-header-row th.center {
+  text-align: center;
+  font-weight: 700;        /* negrito */
+  font-size: 1.05rem;      /* ligeiramente maior que o resto */
+  padding: 0.4rem 0.2rem;
+  color: #0a1620;          /* tom escuro legível */
+  background-color: #f8f9fa; /* leve contraste com o resto da tabela */
+  border-bottom: 1px solid #ddd;
+}
+
+/* Make columns symmetrical */
+.table { table-layout: fixed; width: 100%; }
+.table colgroup col:nth-child(1) { width: 25%; }
+.table colgroup col:nth-child(2) { width: 50%; }
+.table colgroup col:nth-child(3) { width: 25%; }
+
+/* Keep month header centered and tidy */
+.pallco-month-header-row th.center {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding: 0.5rem 0;
+}
