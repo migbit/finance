@@ -13,7 +13,12 @@ export const DEFAULTS = {
   endYM: { y: 2040, m: 9 },
   pctSWDA: 79.61,
   pctAGGH: 20.39,
-  monthlyContribution: 152
+  monthlyContribution: 152,
+  scenarioRates: {
+    conservative: 3,
+    moderate: 5,
+    optimistic: 7
+  }
 };
 
 export const TAXA_ANUAL_FIXA = 0.02; // 2%
@@ -82,7 +87,12 @@ export async function loadParams() {
         endYM: p.endYM ?? DEFAULTS.endYM,
         pctSWDA: Number(p.pctSWDA ?? DEFAULTS.pctSWDA),
         pctAGGH: Number(p.pctAGGH ?? DEFAULTS.pctAGGH),
-        monthlyContribution: Number(p.monthlyContribution ?? DEFAULTS.monthlyContribution)
+        monthlyContribution: Number(p.monthlyContribution ?? DEFAULTS.monthlyContribution),
+        scenarioRates: {
+          conservative: Number(p?.scenarioRates?.conservative ?? DEFAULTS.scenarioRates.conservative),
+          moderate: Number(p?.scenarioRates?.moderate ?? DEFAULTS.scenarioRates.moderate),
+          optimistic: Number(p?.scenarioRates?.optimistic ?? DEFAULTS.scenarioRates.optimistic)
+        }
       };
       
       // Check for legacy percentages and upgrade

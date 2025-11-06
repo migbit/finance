@@ -1003,11 +1003,53 @@ class CryptoPortfolioApp {
     if (kINV)  kINV.textContent  = FORMATTERS.eur.format(investedEUR);
     if (kINVs) kINVs.textContent = `$${FORMATTERS.usd.format(investedUSD)}`;
 
+    const resolveMonthId = (value) => {
+      if (!value) return null;
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return null;
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return `${date.getFullYear()}-${month}`;
+    };
+
     const kMonthly = document.getElementById('kpiMonthlyTotal');
     const kMonthlyUSD = document.getElementById('kpiMonthlyTotalUSD');
     if (kMonthly && kMonthlyUSD) {
-      kMonthly.textContent = FORMATTERS.eur.format(t.eur || 0);
-      kMonthlyUSD.textContent = `$${FORMATTERS.usd.format(t.usdt || 0)}`;
+      const monthlyTotals = this.state.monthlyTotals || [];
+      const currentMonthId =
+        resolveMonthId(generatedAt) ||
+        resolveMonthId(this.state.generatedAt) ||
+        resolveMonthId(Date.now());
+
+      let previousEntry = null;
+      if (monthlyTotals.length) {
+        let currentIndex = monthlyTotals.findIndex(entry => entry.month === currentMonthId);
+        if (currentIndex === -1) currentIndex = monthlyTotals.length;
+        previousEntry = monthlyTotals[currentIndex - 1] || null;
+      }
+
+      if (!previousEntry) {
+        kMonthly.textContent = '—';
+        kMonthlyUSD.textContent = '—';
+        kMonthly.classList.remove('pos', 'neg');
+        kMonthlyUSD.classList.remove('pos', 'neg');
+      } else {
+        const deltaEUR = (t.eur || 0) - (previousEntry.totalEUR || 0);
+        const deltaUSD = (t.usdt || 0) - (previousEntry.totalUSD || 0);
+        const signEUR = deltaEUR > 0 ? '+' : deltaEUR < 0 ? '-' : '';
+        const signUSD = deltaUSD > 0 ? '+' : deltaUSD < 0 ? '-' : '';
+        const formattedEUR = FORMATTERS.eur.format(Math.abs(deltaEUR));
+        const formattedUSD = FORMATTERS.usd.format(Math.abs(deltaUSD));
+
+        kMonthly.textContent = signEUR ? `${signEUR}${formattedEUR}` : formattedEUR;
+        kMonthlyUSD.textContent = signUSD
+          ? `${signUSD}$${formattedUSD}`
+          : `$${formattedUSD}`;
+
+        kMonthly.classList.toggle('pos', deltaEUR > 0);
+        kMonthly.classList.toggle('neg', deltaEUR < 0);
+        kMonthlyUSD.classList.toggle('pos', deltaUSD > 0);
+        kMonthlyUSD.classList.toggle('neg', deltaUSD < 0);
+      }
     }
   }
 

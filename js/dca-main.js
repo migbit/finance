@@ -6,15 +6,19 @@ import {
   loadJuroSaldo, saveJuroSaldo, isAuthenticated, onAuthChange
 } from './dca-core.js';
 
-import {
+import { 
   buildModel, calculateKPIs, calculateScenarios, calculateProgress,
-  calculateGoalStatus, calculateJuroMensal, somaJuroTabelaDCA, diasNoMes
+  calculateGoalStatus, calculateJuroMensal, somaJuroTabelaDCA, diasNoMes,
+  prepareChartData, calculateAdvancedMetrics, calculateRebalancingSuggestions
 } from './dca-calculations.js';
 
 import {
   renderTable, applyYearVisibility, updateKPIs, updateProgressBar,
   updateGoalStatus, updateScenarios, writeParamsToUI, readParamsFromUI,
-  updateJuroUI, addScrollIndicators, showLoading, showError
+  addScrollIndicators, showLoading, showError,
+  initializeCharts, updatePerformanceChart, exportChartAsImage,
+  updateAdvancedMetrics, updateRebalancingSuggestions,
+  exportToCSV
 } from './dca-ui.js';
 
 // ---------- Mobile Menu ----------
@@ -40,8 +44,79 @@ document.addEventListener('DOMContentLoaded', () => {
 const state = {
   params: { ...DEFAULTS },
   showOthers: false,
-  isLoading: false
+  isLoading: false,
+  rows: [],
+  chartType: 'portfolio-growth',
+  chartRange: null,
+  chartData: null,
+  rebalancingAlertSent: false
 };
+
+const feedbackTimers = new Map();
+
+function showFeedback(targetId, message, tone = 'success', timeout = 3200) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.textContent = message || '';
+  el.className = `form-feedback${tone ? ' ' + tone : ''}`;
+  
+  if (feedbackTimers.has(targetId)) {
+    clearTimeout(feedbackTimers.get(targetId));
+    feedbackTimers.delete(targetId);
+  }
+  
+  if (message) {
+    const timer = setTimeout(() => {
+      el.textContent = '';
+      el.className = 'form-feedback';
+      feedbackTimers.delete(targetId);
+    }, timeout);
+    feedbackTimers.set(targetId, timer);
+  }
+}
+
+function updateChartRangeLabel(totalPoints) {
+  const labelEl = document.getElementById('chart-range-label');
+  if (!labelEl || !state.chartData || !totalPoints) {
+    if (labelEl) labelEl.textContent = '-';
+    return;
+  }
+  if (!state.chartRange || state.chartRange >= totalPoints) {
+    labelEl.textContent = 'Completo';
+  } else {
+    const index = Math.max(Math.min(state.chartRange, totalPoints), 1) - 1;
+    labelEl.textContent = state.chartData.labels[index] || '-';
+  }
+}
+
+function syncChartRangeControl() {
+  const rangeInput = document.getElementById('chart-range-end');
+  if (!rangeInput) return;
+  
+  const totalPoints = state.chartData?.labels?.length ?? 0;
+  if (totalPoints <= 0) {
+    rangeInput.disabled = true;
+    rangeInput.value = 1;
+    updateChartRangeLabel(0);
+    return;
+  }
+  
+  rangeInput.disabled = false;
+  rangeInput.max = totalPoints;
+  
+  if (!state.chartRange || state.chartRange > totalPoints) {
+    state.chartRange = totalPoints;
+  } else if (state.chartRange < 1) {
+    state.chartRange = 1;
+  }
+  
+  rangeInput.value = state.chartRange;
+  updateChartRangeLabel(totalPoints);
+}
+
+function maybeSendRebalancingAlert() {
+  state.rebalancingAlertSent = false;
+}
 
 // ---------- Debounce Helper ----------
 function debounce(func, wait) {
@@ -54,6 +129,38 @@ function debounce(func, wait) {
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
   };
+}
+
+// ---------- Chart Controls ----------
+function initializeChartControls() {
+  const chartTypeSelect = document.getElementById('chart-type');
+  const exportChartBtn = document.getElementById('export-chart');
+  const chartRangeInput = document.getElementById('chart-range-end');
+  
+  if (chartTypeSelect) {
+    chartTypeSelect.value = state.chartType;
+    chartTypeSelect.addEventListener('change', (e) => {
+      state.chartType = e.target.value;
+      if (state.chartData) {
+        updatePerformanceChart(state.chartData, state.chartType, state.chartRange);
+      }
+    });
+  }
+  
+  if (exportChartBtn) {
+    exportChartBtn.addEventListener('click', exportChartAsImage);
+  }
+  
+  if (chartRangeInput) {
+    chartRangeInput.addEventListener('input', (e) => {
+      if (!state.chartData) return;
+      const total = state.chartData.labels.length;
+      const raw = Number(e.target.value);
+      state.chartRange = Math.min(Math.max(Math.round(raw), 1), total);
+      updateChartRangeLabel(total);
+      updatePerformanceChart(state.chartData, state.chartType, state.chartRange);
+    });
+  }
 }
 
 // ---------- Juro Module ----------
@@ -110,21 +217,16 @@ async function initJuroModule() {
   }
 
   // Buttons
-  document.getElementById('btn-juro-editar')?.addEventListener('click', () => {
-    saldoInp.removeAttribute('disabled');
-    saldoInp.focus();
-  });
-
   document.getElementById('btn-juro-gravar')?.addEventListener('click', async () => {
-    saldoInp.setAttribute('disabled', 'disabled');
     try {
       await saveJuroSaldo(saldoInp.value);
       const data = await loadJuroSaldo();
       if (data.saldo != null) {
         saldoInp.value = parseFloat(data.saldo).toFixed(2);
       }
+      showFeedback('juro-feedback', 'Gravado');
     } catch (err) {
-      alert(err.message || 'Erro ao gravar saldo.');
+      showFeedback('juro-feedback', err.message || 'Erro ao gravar saldo.', 'error');
     }
   });
 
@@ -162,7 +264,7 @@ function bindTableSaveHandler() {
 
       b.textContent = '✅';
       setTimeout(() => {
-        b.textContent = '💾';
+        b.textContent = '✓';
         b.disabled = false;
       }, 1000);
 
@@ -172,7 +274,7 @@ function bindTableSaveHandler() {
       b.disabled = false;
       alert(err.message || 'Erro ao gravar. Tente novamente.');
       setTimeout(() => {
-        b.textContent = '💾';
+        b.textContent = '✓';
       }, 2000);
     }
   });
@@ -200,6 +302,18 @@ function bindGlobalButtons() {
       toggleParamsBtn.textContent = isHidden ? 'Ocultar Parâmetros' : 'Mostrar Parâmetros';
     });
   }
+
+  const exportBtn = document.getElementById('export-csv-inline');
+  if (exportBtn && !exportBtn.__bound) {
+    exportBtn.__bound = true;
+    exportBtn.addEventListener('click', () => {
+      if (state.rows && state.rows.length > 0) {
+        exportToCSV(state.rows);
+      } else {
+        alert('Não há dados para exportar.');
+      }
+    });
+  }
 }
 
 // ---------- Main Boot ----------
@@ -214,6 +328,7 @@ async function boot(skipParamUI = false) {
       if (wrapEl) showLoading(wrapEl, 'A carregar dados...');
       state.params = await loadParams();
       writeParamsToUI(state.params);
+      updateScenarios(null, state.params);
     }
 
     await ensureMonthsExist(state.params.endYM);
@@ -222,6 +337,25 @@ async function boot(skipParamUI = false) {
     const limId = `${state.params.endYM.y}-${String(state.params.endYM.m).padStart(2,'0')}`;
     const subset = docs.filter(d => d.id <= limId);
     const rows = buildModel(subset, state.params);
+    state.rows = rows; // Store rows for chart data
+
+    // Initialize charts
+    initializeCharts();
+    
+    // Update charts with data
+    const chartData = prepareChartData(rows, state.params);
+    if (chartData) {
+      state.chartData = chartData;
+      if (!state.chartRange || state.chartRange > chartData.labels.length) {
+        state.chartRange = chartData.labels.length;
+      }
+      syncChartRangeControl();
+      updatePerformanceChart(chartData, state.chartType, state.chartRange);
+    } else {
+      state.chartData = null;
+      state.chartRange = null;
+      syncChartRangeControl();
+    }
 
     // Render table
     if (wrapEl) {
@@ -236,6 +370,15 @@ async function boot(skipParamUI = false) {
     const totalInterest = somaJuroTabelaDCA(obsRoot);
     updateKPIs(kpis, totalInterest);
 
+    // Calculate and update advanced metrics
+    const advancedMetrics = calculateAdvancedMetrics(rows, state.params);
+    updateAdvancedMetrics(advancedMetrics);
+
+    // Calculate rebalancing suggestions
+    const rebalancingData = calculateRebalancingSuggestions(rows);
+    updateRebalancingSuggestions(rebalancingData);
+    maybeSendRebalancingAlert(rebalancingData);
+
     // Update progress bar
     const progress = calculateProgress(state.params);
     updateProgressBar(progress);
@@ -247,7 +390,9 @@ async function boot(skipParamUI = false) {
     // Update scenarios
     if (kpis && kpis.lastFilledRow) {
       const scenarios = calculateScenarios(kpis.lastFilledRow, state.params);
-      updateScenarios(scenarios);
+      updateScenarios(scenarios, state.params);
+    } else {
+      updateScenarios(null, state.params);
     }
 
     // Add scroll indicators
@@ -266,7 +411,7 @@ async function boot(skipParamUI = false) {
 document.getElementById('btn-save-params')?.addEventListener('click', async () => {
   const p = readParamsFromUI(DEFAULTS);
   if (!p.pctSumOk) {
-    alert('As percentagens VWCE+AGGH devem somar 100%.');
+    showFeedback('params-feedback', 'As percentagens VWCE+AGGH devem somar 100%.', 'error');
     return;
   }
   
@@ -276,8 +421,9 @@ document.getElementById('btn-save-params')?.addEventListener('click', async () =
   try {
     await saveParams(params);
     await boot(true);
+    showFeedback('params-feedback', 'Gravado');
   } catch (err) {
-    alert(err.message || 'Erro ao gravar parâmetros.');
+    showFeedback('params-feedback', err.message || 'Erro ao gravar parâmetros.', 'error');
   }
 });
 
@@ -291,10 +437,12 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     bindGlobalButtons();
     initJuroModule();
+    initializeChartControls();
     boot();
   }, { once: true });
 } else {
   bindGlobalButtons();
   initJuroModule();
+  initializeChartControls();
   boot();
 }

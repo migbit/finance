@@ -1,5 +1,5 @@
 /* Migbit Finance – Service Worker (DEV safe) */
-const CACHE = 'finance-static-v9'; // ⬅️ bump this on each deploy
+const CACHE = 'finance-static-v10'; // ⬅️ bump this on each deploy
 
 const CORE = [
   './',
@@ -35,6 +35,24 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   const sameOrigin = url.origin === self.location.origin;
   if (!sameOrigin) return; // ignore CDNs
+
+  const jsModule = sameOrigin && url.pathname.startsWith('/js/');
+  if (jsModule) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(req, { cache: 'no-store' });
+        const cache = await caches.open(CACHE);
+        cache.put(req, fresh.clone());
+        return fresh;
+      } catch {
+        const cache = await caches.open(CACHE);
+        const cached = await cache.match(req, { ignoreSearch: true });
+        if (cached) return cached;
+        return new Response('', { status: 503, statusText: 'Module unavailable' });
+      }
+    })());
+    return;
+  }
 
   // Treat HTML/documents as network-first so new markup (like your KPI card)
   // shows up on the first reload after a deploy.

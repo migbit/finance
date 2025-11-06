@@ -196,22 +196,54 @@ export class Coingecko {
       const cached = Storage.getJSON(Storage.PREFIXES.PRICE + up);
       if (!this.isFresh(cached)) toFetch.push(up);
     }
+    if (!toFetch.length) return;
+
+    const queue = [...new Set(toFetch)];
     const pairs = [];
-    for (const s of toFetch) {
-      const id = await this.resolveId(s);
-      if (id) pairs.push([s, id]);
-      await new Promise(r => setTimeout(r, CONFIG.COINGECKO.RATE_LIMIT_DELAY));
-    }
-    const ids = pairs.map(p => p[1]);
-    for (let i = 0; i < ids.length; i += CONFIG.COINGECKO.BATCH_SIZE) {
-      const batch = ids.slice(i, i + CONFIG.COINGECKO.BATCH_SIZE);
-      const r = await ApiService.fetchWithRetry(`https://api.coingecko.com/api/v3/simple/price?ids=${batch.join(',')}&vs_currencies=usd`);
-      const data = await r.json();
-      for (const [sym, id] of pairs) {
-        const price = Number(data?.[id]?.usd || 0);
-        if (price > 0) Storage.setJSON(Storage.PREFIXES.PRICE + sym, { usd: price, ts: Date.now() });
+    const concurrency = Math.min(4, queue.length);
+    const takeNext = () => queue.pop();
+    const workers = Array.from({ length: concurrency }, () => (async () => {
+      while (true) {
+        const symbol = takeNext();
+        if (!symbol) break;
+        try {
+          const id = await this.resolveId(symbol);
+          if (id) pairs.push([symbol, id]);
+        } catch (error) {
+          console.warn('Coingecko.resolveId failed', symbol, error);
+        } finally {
+          if (queue.length) {
+            const delay = Math.max(150, Math.floor(CONFIG.COINGECKO.RATE_LIMIT_DELAY / 6));
+            await new Promise(r => setTimeout(r, delay));
+          }
+        }
       }
-      await new Promise(r => setTimeout(r, CONFIG.COINGECKO.RATE_LIMIT_DELAY));
+    })());
+    await Promise.all(workers);
+
+    if (!pairs.length) return;
+
+    for (let i = 0; i < pairs.length; i += CONFIG.COINGECKO.BATCH_SIZE) {
+      const batchPairs = pairs.slice(i, i + CONFIG.COINGECKO.BATCH_SIZE);
+      const ids = batchPairs.map(([, id]) => id).filter(Boolean);
+      if (!ids.length) continue;
+      try {
+        const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd`;
+        const response = await ApiService.fetchWithRetry(url);
+        const data = await response.json();
+        const ts = Date.now();
+        for (const [sym, id] of batchPairs) {
+          const price = Number(data?.[id]?.usd || 0);
+          if (price > 0) {
+            Storage.setJSON(Storage.PREFIXES.PRICE + sym, { usd: price, ts });
+          }
+        }
+      } catch (error) {
+        console.warn('Coingecko.priceFetch failed', error);
+      }
+      if (i + CONFIG.COINGECKO.BATCH_SIZE < pairs.length) {
+        await new Promise(r => setTimeout(r, CONFIG.COINGECKO.RATE_LIMIT_DELAY));
+      }
     }
   }
 
