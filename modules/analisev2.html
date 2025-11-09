@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análise V2</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#000000">
+</head>
+<body id="analisev2-page" data-page="analisev2">
+  <button id="menu-icon" aria-label="Open menu">☰</button>
+
+  <header>
+    <nav id="nav-menu">
+      <ul>
+        <li id="login-section" class="login-block">
+          <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+          <span id="user-info" class="user-visible" style="display:none;">
+            <a href="#" id="user-name">👤 Username</a>
+          </span>
+        </li>
+
+        <li class="separator"></li>
+
+        <li class="menu-title">Apartamentos</li>
+        <li><a href="faturas.html">📄 Faturas</a></li>
+        <li><a href="analise.html">📊 Análise</a></li>
+        <li><a href="analisev2.html" class="active">🆕 Análise V2</a></li>
+        <li><a href="analise123.html">🏠 123</a></li>
+        <li><a href="analise1248.html">🏠 1248</a></li>
+        <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+        <li><a href="caixa.html">💰 Caixa</a></li>
+        <li><a href="tmt.html">🧳 Taxa Turística</a></li>
+        <li><a href="diversos.html">📋 Diversos</a></li>
+
+        <li class="separator"></li>
+
+        <li class="menu-title">Investimentos</li>
+        <li><a href="dca.html">📈 DCA</a></li>
+        <li><a href="crypto.html">🚀 Cripto</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <div class="page-intro">
+      <h2>Análise Apartamentos</h2>
+    </div>
+    <p class="page-meta" id="analisev2-updated">Atualizado a —</p>
+
+    <section id="mod-progresso" class="report-section progresso-container" data-module="progresso">
+      <div class="viz-card progress-card">
+        <div class="progress-header">
+          <h4>Progresso</h4>
+        </div>
+
+        <div class="filter-buttons" role="tablist" aria-label="Selecionar vista dos apartamentos">
+          <button class="filter-btn active" data-progress-view="total">Total (123 + 1248)</button>
+          <button class="filter-btn" data-progress-view="123">123</button>
+          <button class="filter-btn" data-progress-view="1248">1248</button>
+        </div>
+
+        <div class="donut-grid">
+          <div class="donut-card">
+            <canvas id="donut-parcial" aria-label="Parcial até ao dia atual" role="img"></canvas>
+            <div class="donut-meta">
+              <strong id="label-parcial">Parcial</strong>
+              <span id="donut-parcial-text">—</span>
+            </div>
+          </div>
+
+          <div class="donut-card">
+            <canvas id="donut-ateset" aria-label="Até mês anterior" role="img"></canvas>
+            <div class="donut-meta">
+              <strong id="label-ateset">Até</strong>
+              <span id="donut-ateset-text">—</span>
+            </div>
+          </div>
+
+          <div class="donut-card">
+            <canvas id="donut-vs" aria-label="Ano atual vs ano anterior" role="img"></canvas>
+            <div class="donut-meta">
+              <strong id="label-vs">Ano vs Ano</strong>
+              <span id="donut-vs-text">—</span>
+            </div>
+          </div>
+
+          <div class="donut-card">
+            <canvas id="donut-avg" aria-label="Ano atual vs média histórica" role="img"></canvas>
+            <div class="donut-meta">
+              <strong id="label-avg">Ano vs Média</strong>
+              <span id="donut-avg-text">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="mod-faturacao" class="report-section" data-module="faturacao">
+      <div class="viz-card chart-and-table">
+        <div class="section-heading">
+          <h4>Faturação</h4>
+        </div>
+
+        <div class="chart-controls">
+          <div class="filter-buttons faturacao-view-switch" role="tablist" aria-label="Selecionar vista de faturação">
+            <button class="filter-btn active" data-faturacao-view="total">Total (123 + 1248)</button>
+            <button class="filter-btn" data-faturacao-view="123">123</button>
+            <button class="filter-btn" data-faturacao-view="1248">1248</button>
+            <button class="filter-btn" data-faturacao-view="compare">1248 vs 123</button>
+          </div>
+
+          <div class="chart-mode-group">
+            <div class="button-chip-group" role="tablist" aria-label="Tipo de gráfico">
+              <button class="chip-btn active" data-chart-type="line">Linhas</button>
+              <button class="chip-btn" data-chart-type="bar">Barras</button>
+            </div>
+            <div class="button-chip-group" role="tablist" aria-label="Granularidade de faturação">
+              <button class="chip-btn active" data-granularity="mes">Por mês</button>
+              <button class="chip-btn" data-granularity="dia">Por dias</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-wrap" style="height:320px">
+          <canvas id="chart-faturacao-v2"></canvas>
+        </div>
+
+        <div class="table-wrap">
+          <div id="tabela-faturacao-v2"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/analisev2-progresso.js"></script>
+  <script type="module" src="../js/analisev2-faturacao.js"></script>
+</body>
+</html>

@@ -923,36 +923,260 @@ body[data-page="faturas"] #valor-tmt,
 body[data-page="faturas"] #noites-extra,
 body[data-page="faturas"] #noites-criancas{ width:120px; }
 
-/* --- Donut progress (Analise) --- */
+/* --- Donut / Progresso shared styles --- */
+.progresso-container {
+  margin-bottom: 2rem;
+}
+
+.progress-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.progress-card .progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  margin-bottom: 0.5rem;
+}
+
+.progress-status {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+}
+
+.filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.filter-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 16px;
+  background: var(--card);
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-btn:hover {
+  border-color: var(--p3);
+  color: var(--p2);
+}
+
+.filter-btn.active {
+  background: var(--p2);
+  color: #fff;
+  border-color: var(--p2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
 .donut-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  align-items: stretch;
 }
 
 .donut-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 12px 8px 16px;
-  min-height: auto;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  text-align: center;
   box-shadow: var(--shadow-1);
 }
 
 .donut-card canvas {
-  width: 120px !important;
-  height: 120px !important;
-  margin-bottom: 8px;
+  width: 150px !important;
+  height: 150px !important;
+  margin: 0 auto 0.5rem;
 }
 
 .donut-meta {
-  margin-top: 4px;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.donut-meta strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.donut-meta span {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.section-heading {
   text-align: center;
+  margin-bottom: 1rem;
+}
+
+.section-heading h4 {
+  margin: 0;
+}
+
+.section-heading p {
+  margin: 4px 0 0;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.chart-and-table {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.faturacao-view-switch {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+}
+
+.chart-mode-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.button-chip-group {
+  display: inline-flex;
+  gap: 0.4rem;
+}
+
+.chip-btn {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: var(--card);
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip-btn:hover {
+  border-color: var(--p3);
+  color: var(--p2);
+}
+
+.chip-btn.active {
+  background: var(--p2);
+  color: #fff;
+  border-color: var(--p2);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+}
+
+.chart-and-table .chart-wrap {
+  width: 100%;
+}
+
+.media-faturacao {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.media-faturacao th,
+.media-faturacao td {
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+}
+
+.media-faturacao th:first-child,
+.media-faturacao td:first-child {
+  text-align: center;
+}
+
+.media-faturacao thead th {
+  background: var(--card-accent, #f5f6fb);
+  font-weight: 600;
+}
+
+.media-faturacao tbody tr:nth-child(even) td {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.media-faturacao tbody tr:hover td {
+  background: var(--p4, rgba(98, 0, 238, 0.12)) !important;
+  color: var(--text);
+}
+
+@media (max-width: 768px) {
+  .chart-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .chart-mode-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filter-buttons {
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .filter-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .donut-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+  }
+
+  .donut-card canvas {
+    width: 130px !important;
+    height: 130px !important;
+  }
+}
+
+.page-intro {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.page-intro p {
+  color: var(--text-dim);
+  margin: 6px 0 0;
+}
+
+.page-meta {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  margin-top: -12px;
+  margin-bottom: 24px;
 }
 
 /* ===== Eixo-Y fixo para gráficos com scroll horizontal ===== */
