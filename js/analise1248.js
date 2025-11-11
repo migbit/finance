@@ -652,12 +652,12 @@ function renderTabelaComparativaAnos1248(faturas, targetId) {
 
   const yearBg = ['#fbfbff', '#e9ffebff', '#fffaf5', '#f8f9ff', '#f9f7ff'];
 
-  // célula Δ (verde +, vermelho −)
+  // célula Δ (verde +, vermelho -)
   const yoyCell = (cur, prev, bg) => {
     const diff = Math.round((Number(cur)||0) - (Number(prev)||0));
     if (diff === 0) return `<td style="background:${bg}; text-align:center; color:#555">€0</td>`;
     const color = diff > 0 ? '#28a745' : '#dc3545';
-    const sign  = diff > 0 ? '+' : '−';
+    const sign  = diff > 0 ? '+' : '-';
     return `<td style="background:${bg}; text-align:center; color:${color}"><strong>${sign} ${euroInt(Math.abs(diff))}</strong></td>`;
   };
 

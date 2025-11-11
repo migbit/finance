@@ -1,5 +1,6 @@
 import { db } from './script.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
+import { parseLocalDate } from './analisev2-utils.js';
 
 const BASE_YEAR = 2024;
 const monthLabels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -8,6 +9,8 @@ const COLORS = {
   '123': 'rgba(54,162,235,1)',
   '1248': 'rgba(245,133,20,1)'
 };
+
+const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const VIEW_CONFIG = {
   total:   { type: 'aggregate', apartments: ['123','1248'], color: COLORS.total },
@@ -23,49 +26,89 @@ const state = {
   faturas: [],
   chart: null
 };
+let viewButtonsController = null;
+let chartTypeButtonsController = null;
+let granularityButtonsController = null;
+
+function setChartTransition(active) {
+  const wrap = document.querySelector('#mod-faturacao .chart-wrap');
+  if (wrap) wrap.classList.toggle('is-loading', !!active);
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="faturacao"]')) return;
   setupFilterButtons();
   await loadData();
-  if (!state.faturas.length) {
-    showEmptyState('Sem dados disponíveis.');
-    return;
-  }
-  renderCurrentView();
 });
 
+window.addEventListener('analisev2:retry', (event) => {
+  if (event.detail?.module === 'faturacao') loadData();
+});
+
+window.addEventListener('beforeunload', cleanupFaturacaoResources);
+
 function setupFilterButtons() {
-  document.querySelectorAll('[data-faturacao-view]').forEach(btn => {
+  bindViewButtons();
+  bindChartTypeButtons();
+  bindGranularityButtons();
+}
+
+function bindViewButtons() {
+  if (viewButtonsController) viewButtonsController.abort();
+  viewButtonsController = new AbortController();
+  const { signal } = viewButtonsController;
+
+  document.querySelectorAll('[data-faturacao-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (btn.disabled) return;
       const target = btn.dataset.faturacaoView;
       if (!target || target === state.view) return;
+      addPressEffect(btn);
+      temporarilyDisable(btn);
       state.view = target;
       updateFilterButtonState();
       renderCurrentView();
-    });
+    }, { signal });
   });
   updateFilterButtonState();
+}
 
-  document.querySelectorAll('[data-chart-type]').forEach(btn => {
+function bindChartTypeButtons() {
+  if (chartTypeButtonsController) chartTypeButtonsController.abort();
+  chartTypeButtonsController = new AbortController();
+  const { signal } = chartTypeButtonsController;
+
+  document.querySelectorAll('[data-chart-type]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (btn.disabled) return;
       const type = btn.dataset.chartType;
       if (!type || type === state.chartType) return;
+      addPressEffect(btn);
+      temporarilyDisable(btn);
       state.chartType = type;
       updateChartTypeButtons();
       renderCurrentView();
-    });
+    }, { signal });
   });
   updateChartTypeButtons();
+}
 
-  document.querySelectorAll('[data-granularity]').forEach(btn => {
+function bindGranularityButtons() {
+  if (granularityButtonsController) granularityButtonsController.abort();
+  granularityButtonsController = new AbortController();
+  const { signal } = granularityButtonsController;
+
+  document.querySelectorAll('[data-granularity]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (btn.disabled) return;
       const mode = btn.dataset.granularity;
       if (!mode || mode === state.granularity) return;
+      addPressEffect(btn);
+      temporarilyDisable(btn);
       state.granularity = mode;
       updateGranularityButtons();
       renderCurrentView();
-    });
+    }, { signal });
   });
   updateGranularityButtons();
 }
@@ -95,14 +138,23 @@ function updateGranularityButtons() {
 }
 
 async function loadData() {
+  window.loadingManager?.show('faturacao', { type: 'skeleton' });
   try {
     const q = query(collection(db, 'faturas'), orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
     const rows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     state.faturas = consolidarFaturas(rows).filter(f => ['123','1248'].includes(String(f.apartamento)));
+    if (!state.faturas.length) {
+      showEmptyState('Sem dados disponíveis.');
+    } else {
+      renderCurrentView();
+    }
   } catch (error) {
-    console.error('Erro ao carregar faturas:', error);
+    window.errorHandler?.handleError('faturacao', error, 'loadData', loadData);
     state.faturas = [];
+    showEmptyState('Sem dados disponíveis.');
+  } finally {
+    window.loadingManager?.hide('faturacao');
   }
 }
 
@@ -110,24 +162,29 @@ function renderCurrentView() {
   const cfg = VIEW_CONFIG[state.view];
   if (!cfg) return;
 
-  const faturasView = filterByApartments(state.faturas, cfg.apartments);
-  if (!faturasView.length) {
-    showEmptyState('Sem dados para esta vista.');
-    return;
-  }
+  if (typeof setChartTransition === 'function') setChartTransition(true);
+  try {
+    const faturasView = filterByApartments(state.faturas, cfg.apartments);
+    if (!faturasView.length) {
+      showEmptyState('Sem dados para esta vista.');
+      return;
+    }
 
-  if (cfg.type === 'compare') {
-    renderComparativoChart(state.faturas);
-    renderTabelaComparativa(state.faturas, 'tabela-faturacao-v2');
-    return;
-  }
+    if (cfg.type === 'compare') {
+      renderComparativoChart(state.faturas);
+      renderTabelaComparativa(state.faturas, 'tabela-faturacao-v2');
+      return;
+    }
 
-  renderYearComparisonChart(faturasView, cfg.color);
+    renderYearComparisonChart(faturasView, cfg.color);
 
-  if (cfg.type === 'aggregate') {
-    renderTabelaTotal(faturasView, 'tabela-faturacao-v2');
-  } else {
-    renderTabelaPorApartamento(faturasView, cfg.apartments[0], 'tabela-faturacao-v2');
+    if (cfg.type === 'aggregate') {
+      renderTabelaTotal(faturasView, 'tabela-faturacao-v2');
+    } else {
+      renderTabelaPorApartamento(faturasView, cfg.apartments[0], 'tabela-faturacao-v2');
+    }
+  } finally {
+    if (typeof setChartTransition === 'function') setChartTransition(false);
   }
 }
 
@@ -203,7 +260,6 @@ function renderYearComparisonChart(faturas, color) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 0 },
       scales: {
         y: {
           beginAtZero: true,
@@ -275,7 +331,6 @@ function renderComparativoChart(faturas) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 0 },
       interaction: { mode: 'index', intersect: false },
       scales: {
         y: {
@@ -315,7 +370,7 @@ function renderTabelaTotal(faturas, targetId) {
   const yoyCell = (curr, prev, bg) => {
     const diff = Math.round(curr - prev);
     if (diff === 0) return `<td style="background:${bg};text-align:center;color:#555">€0</td>`;
-    const sign = diff > 0 ? '+' : '−';
+  const sign = diff > 0 ? '+' : '-';
     const color = diff > 0 ? '#16a34a' : '#dc2626';
     return `<td style="background:${bg};text-align:center;color:${color}"><strong>${sign} ${euroInt(Math.abs(diff))}</strong></td>`;
   };
@@ -433,7 +488,7 @@ function renderTabelaPorApartamento(faturas, apartamento, targetId) {
     const diff = Math.round(curr - prev);
     if (diff === 0) return `<td style="background:${bg};text-align:center;color:#555">€0</td>`;
     const color = diff > 0 ? '#16a34a' : '#dc2626';
-    const sign = diff > 0 ? '+' : '−';
+  const sign = diff > 0 ? '+' : '-';
     return `<td style="background:${bg};text-align:center;color:${color}"><strong>${sign} ${euroInt(Math.abs(diff))}</strong></td>`;
   };
 
@@ -682,8 +737,8 @@ function distributeByDay(f, callback) {
   if (!nights || nights <= 0) return false;
   if (typeof f.checkIn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(f.checkIn)) return false;
 
-  const start = new Date(`${f.checkIn}T00:00:00`);
-  if (Number.isNaN(start.getTime())) return false;
+  const start = parseLocalDate(f.checkIn);
+  if (!(start instanceof Date) || Number.isNaN(start.getTime())) return false;
   if (start.getFullYear() < 2025) return false;
 
   const nightlyValue = valorFatura(f) / nights;
@@ -736,8 +791,17 @@ function buildTimelineSequence(endYear, endMonth) {
 }
 
 function resetChart() {
-  if (state.chart) {
-    try { state.chart.destroy(); } catch {}
+  if (!state.chart) return;
+  try {
+    state.chart.destroy();
+  } catch (err) {
+    console.warn('Chart destruction failed (faturacao)', err);
+    const canvas = state.chart.canvas;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  } finally {
     state.chart = null;
   }
 }
@@ -783,6 +847,35 @@ function consolidarFaturas(arr) {
   }
 
   return flattened;
+}
+
+function addPressEffect(btn) {
+  if (!btn) return;
+  btn.classList.add('press');
+  const timeout = reduceMotionQuery.matches ? 0 : 120;
+  setTimeout(() => btn.classList.remove('press'), timeout);
+}
+
+function cleanupFaturacaoResources() {
+  if (viewButtonsController) {
+    viewButtonsController.abort();
+    viewButtonsController = null;
+  }
+  if (chartTypeButtonsController) {
+    chartTypeButtonsController.abort();
+    chartTypeButtonsController = null;
+  }
+  if (granularityButtonsController) {
+    granularityButtonsController.abort();
+    granularityButtonsController = null;
+  }
+  resetChart();
+}
+
+function temporarilyDisable(btn, delay) {
+  if (!btn) return;
+  btn.disabled = true;
+  setTimeout(() => { btn.disabled = false; }, delay || 240);
 }
 
 const mqMobile = window.matchMedia('(max-width: 1024px)');

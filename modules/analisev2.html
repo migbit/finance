@@ -17,33 +17,45 @@
 
   <header>
     <nav id="nav-menu">
-      <ul>
-        <li id="login-section" class="login-block">
-          <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
-          <span id="user-info" class="user-visible" style="display:none;">
-            <a href="#" id="user-name">👤 Username</a>
-          </span>
-        </li>
-
-        <li class="separator"></li>
-
-        <li class="menu-title">Apartamentos</li>
-        <li><a href="faturas.html">📄 Faturas</a></li>
-        <li><a href="analise.html">📊 Análise</a></li>
-        <li><a href="analisev2.html" class="active">🆕 Análise V2</a></li>
-        <li><a href="analise123.html">🏠 123</a></li>
-        <li><a href="analise1248.html">🏠 1248</a></li>
-        <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
-        <li><a href="caixa.html">💰 Caixa</a></li>
-        <li><a href="tmt.html">🧳 Taxa Turística</a></li>
-        <li><a href="diversos.html">📋 Diversos</a></li>
-
-        <li class="separator"></li>
-
-        <li class="menu-title">Investimentos</li>
-        <li><a href="dca.html">📈 DCA</a></li>
-        <li><a href="crypto.html">🚀 Cripto</a></li>
-      </ul>
+      <div id="login-section" class="login-block">
+        <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+        <span id="user-info" class="user-visible" style="display:none;">
+          <a href="#" id="user-name">👤 Username</a>
+        </span>
+      </div>
+      <div class="nav-links">
+        <div class="nav-group" data-nav-group>
+          <button class="nav-link nav-link--trigger" data-nav-toggle aria-haspopup="true" aria-expanded="false">
+            🏠 Apartamentos
+          </button>
+          <div class="nav-dropdown" role="menu">
+            <a href="faturas.html" role="menuitem">📄 Faturas</a>
+            <a href="analisev2.html" class="active" role="menuitem">🆕 Análise</a>
+            <a href="tmt.html" role="menuitem">🧳 Taxa Turística</a>
+            <a href="diversos.html" role="menuitem">📋 Diversos</a>
+          </div>
+        </div>
+        <div class="nav-group" data-nav-group>
+          <button class="nav-link nav-link--trigger" data-nav-toggle aria-haspopup="true" aria-expanded="false">
+            💼 Contabilidade
+          </button>
+          <div class="nav-dropdown" role="menu">
+            <a href="caixa.html" role="menuitem">💰 Caixa</a>
+            <a href="iva.html" role="menuitem">📑 IVA Estrangeiro</a>
+            <a href="pallco.html" role="menuitem">🏢 PALLCO</a>
+            <a href="carlos.html" role="menuitem">🧾 Carlos – Faturas</a>
+          </div>
+        </div>
+        <div class="nav-group" data-nav-group>
+          <button class="nav-link nav-link--trigger" data-nav-toggle aria-haspopup="true" aria-expanded="false">
+            📊 Investimentos
+          </button>
+          <div class="nav-dropdown" role="menu">
+            <a href="dca.html" role="menuitem">📈 DCA</a>
+            <a href="crypto.html" role="menuitem">🚀 Cripto</a>
+          </div>
+        </div>
+      </div>
     </nav>
   </header>
 
@@ -59,45 +71,63 @@
           <h4>Progresso</h4>
         </div>
 
-        <div class="filter-buttons" role="tablist" aria-label="Selecionar vista dos apartamentos">
-          <button class="filter-btn active" data-progress-view="total">Total (123 + 1248)</button>
-          <button class="filter-btn" data-progress-view="123">123</button>
-          <button class="filter-btn" data-progress-view="1248">1248</button>
+        <div class="chart-toolbar progress-toolbar">
+          <div class="toolbar-left segmented segmented--compact" role="tablist" aria-label="Selecionar granularidade do progresso">
+            <button class="chip-btn active" data-progress-granularity="mes" role="tab" aria-pressed="true">Por mês</button>
+            <button class="chip-btn" data-progress-granularity="dia" role="tab" aria-pressed="false">Por dia</button>
+          </div>
+
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista dos apartamentos">
+            <button class="filter-btn active" data-progress-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
+            <button class="filter-btn" data-progress-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-progress-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+
+          <div class="toolbar-right toolbar-placeholder" aria-hidden="true"></div>
         </div>
 
         <div class="donut-grid">
-          <div class="donut-card">
+          <div class="donut-card" data-metric="parcial">
+            <strong class="donut-title" id="label-parcial">
+              Parcial <span class="month-label"></span>
+            </strong>
             <canvas id="donut-parcial" aria-label="Parcial até ao dia atual" role="img"></canvas>
             <div class="donut-meta">
-              <strong id="label-parcial">Parcial</strong>
               <span id="donut-parcial-text">—</span>
             </div>
           </div>
 
-          <div class="donut-card">
+          <div class="donut-card" data-metric="ate">
+            <strong class="donut-title" id="label-ateset">
+              Até <span class="month-label"></span>
+            </strong>
             <canvas id="donut-ateset" aria-label="Até mês anterior" role="img"></canvas>
             <div class="donut-meta">
-              <strong id="label-ateset">Até</strong>
               <span id="donut-ateset-text">—</span>
             </div>
           </div>
 
-          <div class="donut-card">
+          <div class="donut-card" data-metric="vs">
+            <strong class="donut-title" id="label-vs">
+              Ano vs Ano <span class="month-label"></span>
+            </strong>
             <canvas id="donut-vs" aria-label="Ano atual vs ano anterior" role="img"></canvas>
             <div class="donut-meta">
-              <strong id="label-vs">Ano vs Ano</strong>
               <span id="donut-vs-text">—</span>
             </div>
           </div>
 
-          <div class="donut-card">
+          <div class="donut-card" data-metric="avg">
+            <strong class="donut-title" id="label-avg">
+              Ano vs Média <span class="month-label"></span>
+            </strong>
             <canvas id="donut-avg" aria-label="Ano atual vs média histórica" role="img"></canvas>
             <div class="donut-meta">
-              <strong id="label-avg">Ano vs Média</strong>
               <span id="donut-avg-text">—</span>
             </div>
           </div>
         </div>
+
       </div>
     </section>
 
@@ -107,28 +137,27 @@
           <h4>Faturação</h4>
         </div>
 
-        <div class="chart-controls">
-          <div class="filter-buttons faturacao-view-switch" role="tablist" aria-label="Selecionar vista de faturação">
-            <button class="filter-btn active" data-faturacao-view="total">Total (123 + 1248)</button>
-            <button class="filter-btn" data-faturacao-view="123">123</button>
-            <button class="filter-btn" data-faturacao-view="1248">1248</button>
-            <button class="filter-btn" data-faturacao-view="compare">1248 vs 123</button>
-          </div>
-
-          <div class="chart-mode-group">
-            <div class="button-chip-group" role="tablist" aria-label="Tipo de gráfico">
-              <button class="chip-btn active" data-chart-type="line">Linhas</button>
-              <button class="chip-btn" data-chart-type="bar">Barras</button>
-            </div>
-            <div class="button-chip-group" role="tablist" aria-label="Granularidade de faturação">
-              <button class="chip-btn active" data-granularity="mes">Por mês</button>
-              <button class="chip-btn" data-granularity="dia">Por dias</button>
-            </div>
-          </div>
-        </div>
-
         <div class="chart-wrap" style="height:320px">
           <canvas id="chart-faturacao-v2"></canvas>
+        </div>
+
+        <div class="chart-toolbar">
+          <div class="toolbar-left segmented segmented--compact" role="tablist" aria-label="Selecionar granularidade">
+            <button class="chip-btn active" data-granularity="mes" role="tab" aria-pressed="true">Por mês</button>
+            <button class="chip-btn" data-granularity="dia" role="tab" aria-pressed="false">Por dias</button>
+          </div>
+
+          <div class="toolbar-center segmented segmented--primary faturacao-view-switch" role="tablist" aria-label="Selecionar vista de faturação">
+            <button class="filter-btn active" data-faturacao-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
+            <button class="filter-btn" data-faturacao-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-faturacao-view="1248" role="tab" aria-pressed="false">1248</button>
+            <button class="filter-btn" data-faturacao-view="compare" role="tab" aria-pressed="false">123 vs 1248</button>
+          </div>
+
+          <div class="toolbar-right segmented segmented--compact" role="tablist" aria-label="Selecionar tipo de gráfico">
+            <button class="chip-btn active" data-chart-type="line" role="tab" aria-pressed="true">Linhas</button>
+            <button class="chip-btn" data-chart-type="bar" role="tab" aria-pressed="false">Barras</button>
+          </div>
         </div>
 
         <div class="table-wrap">
@@ -136,11 +165,146 @@
         </div>
       </div>
     </section>
+
+    <section id="mod-ocupacao" class="report-section" data-module="ocupacao">
+      <div class="viz-card chart-and-table">
+        <div class="section-heading">
+          <h4>Taxa de ocupação (%)</h4>
+        </div>
+
+        <div class="chart-toolbar">
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista da taxa de ocupação">
+            <button class="filter-btn active" data-ocupacao-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
+            <button class="filter-btn" data-ocupacao-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-ocupacao-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+        </div>
+
+        <div class="chart-wrap" style="height:320px">
+          <canvas id="chart-ocupacao"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section id="mod-valor-medio" class="report-section" data-module="valor-medio">
+      <div class="viz-card chart-and-table">
+        <div class="section-heading">
+          <h4>Valor médio/noite por reserva</h4>
+        </div>
+
+        <div class="chart-toolbar">
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista de valor médio">
+            <button class="filter-btn active" data-valor-medio-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
+            <button class="filter-btn" data-valor-medio-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-valor-medio-view="1248" role="tab" aria-pressed="false">1248</button>
+            <button class="filter-btn" data-valor-medio-view="compare" role="tab" aria-pressed="false">1248 vs 123</button>
+          </div>
+        </div>
+
+        <div class="chart-wrap" style="height:320px">
+          <canvas id="chart-valor-medio"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section id="mod-heatmap" class="report-section" data-module="heatmap">
+      <div class="viz-card">
+        <div class="section-heading">
+          <h4>Heatmap – variação mensal (%)</h4>
+          <p>Comparação de receita mensal vs. ano anterior</p>
+        </div>
+
+        <div class="chart-toolbar">
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista do heatmap">
+            <button class="filter-btn active" data-heatmap-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
+            <button class="filter-btn" data-heatmap-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-heatmap-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+        </div>
+
+        <div id="heatmap-variacao-analisev2" class="heatmap-area"></div>
+      </div>
+    </section>
+
+    <section id="mod-taxalimpeza" class="report-section" data-module="taxa-limpeza">
+      <div class="viz-card">
+        <div class="section-heading">
+          <h4>Taxa de limpeza</h4>
+          <p>Resumo mensal da taxa cobrada por reserva</p>
+        </div>
+
+        <div class="chart-toolbar">
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista da taxa de limpeza">
+            <button class="filter-btn active" data-limpeza-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
+            <button class="filter-btn" data-limpeza-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-limpeza-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+        </div>
+
+        <div class="table-wrap" id="taxa-limpeza-table"></div>
+      </div>
+    </section>
+
+    <section id="mod-noites-hospedes" class="report-section" data-module="noites-hospedes">
+      <div class="viz-card">
+        <div class="section-heading">
+          <h4>Noites & Hóspedes por reserva</h4>
+          <p>Evolução mensal desde 2025</p>
+        </div>
+
+        <div class="chart-toolbar">
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista de noites e hóspedes">
+            <button class="filter-btn active" data-nohosp-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
+            <button class="filter-btn" data-nohosp-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-nohosp-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+          <div class="toolbar-right segmented segmented--compact" role="tablist" aria-label="Selecionar tabela">
+            <button class="chip-btn active" data-table-select="noites" role="tab" aria-pressed="true">Noites</button>
+            <button class="chip-btn" data-table-select="hospedes" role="tab" aria-pressed="false">Hóspedes</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <div id="tabela-noites-combo"></div>
+          <div id="tabela-hospedes-combo" style="display:none"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="mod-checkins-semana" class="report-section" data-module="checkins-semana">
+      <div class="viz-card">
+        <div class="section-heading">
+          <h4>Dias da Semana – Check-ins</h4>
+          <p>Comparativo entre ano atual e anterior</p>
+        </div>
+
+        <div class="chart-toolbar">
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar apartamentos do check-in">
+            <button class="filter-btn active" data-checkins-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
+            <button class="filter-btn" data-checkins-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-checkins-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+        </div>
+
+        <div class="chart-wrap" style="height:320px">
+          <canvas id="chart-checkins-semana"></canvas>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <script type="module" src="../js/analisev2-error-handler.js"></script>
+  <script type="module" src="../js/analisev2-loading.js"></script>
   <script type="module" src="../js/script.js"></script>
   <script type="module" src="../js/analisev2-progresso.js"></script>
   <script type="module" src="../js/analisev2-faturacao.js"></script>
+  <script type="module" src="../js/analisev2-ocupacao.js"></script>
+  <script type="module" src="../js/analisev2-taxalimpeza.js"></script>
+  <script type="module" src="../js/analisev2-noites-hospedes.js"></script>
+  <script type="module" src="../js/analisev2-checkins-semana.js"></script>
+  <script type="module" src="../js/analisev2-heatmap.js"></script>
+  <script type="module" src="../js/analisev2-valor-medio.js"></script>
 </body>
 </html>

@@ -59,23 +59,5 @@
 
   <script type="module" src="./js/script.js"></script>
 
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const header  = document.querySelector('header');
-    const menuBtn = document.getElementById('menu-icon');
-    const navMenu = document.getElementById('nav-menu');
-
-    if (menuBtn && header) {
-      menuBtn.addEventListener('click', () => header.classList.toggle('active'));
-    }
-
-    if (navMenu && header) {
-      navMenu.addEventListener('click', (e) => {
-        if (e.target.closest('a')) header.classList.remove('active');
-      });
-    }
-  });
-</script>
-
 </body>
 </html>

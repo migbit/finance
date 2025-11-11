@@ -8,6 +8,188 @@
   - Adds mobile menu toggle + current link highlighting
 */
 
+// -------------------------------------------
+// Global navigation builder
+// -------------------------------------------
+
+const NAV_GROUPS = [
+  {
+    label: '🏠 Apartamentos',
+    key: 'apartamentos',
+    links: [
+      { label: '📄 Faturas', key: 'faturas', slug: 'modules/faturas.html', module: true },
+      { label: '🆕 Análise', key: 'analise', slug: 'modules/analisev2.html', module: true },
+      { label: '🧳 Taxa Turística', key: 'tmt', slug: 'modules/tmt.html', module: true },
+      { label: '📋 Diversos', key: 'diversos', slug: 'modules/diversos.html', module: true }
+    ]
+  },
+  {
+    label: '💼 Contabilidade',
+    key: 'contabilidade',
+    links: [
+      { label: '💰 Caixa', key: 'caixa', slug: 'modules/caixa.html', module: true },
+      { label: '📑 IVA Estrangeiro', key: 'iva', slug: 'modules/iva.html', module: true },
+      { label: '🏢 PALLCO', key: 'pallco', slug: 'modules/pallco.html', module: true },
+      { label: '🧾 Carlos – Faturas', key: 'carlos', slug: 'modules/carlos.html', module: true }
+    ]
+  },
+  {
+    label: '📊 Investimentos',
+    key: 'investimentos',
+    links: [
+      { label: '📈 DCA', key: 'dca', slug: 'modules/dca.html', module: true },
+      { label: '🚀 Cripto', key: 'crypto', slug: 'modules/crypto.html', module: true }
+    ]
+  }
+];
+
+const ACTIVE_KEY_MATCHERS = [
+  { key: 'analise', patterns: ['analisev2'] },
+  { key: 'faturas', patterns: ['faturas'] },
+  { key: 'tmt', patterns: ['tmt'] },
+  { key: 'diversos', patterns: ['diversos'] },
+  { key: 'caixa', patterns: ['caixa'] },
+  { key: 'iva', patterns: ['iva'] },
+  { key: 'pallco', patterns: ['pallco'] },
+  { key: 'carlos', patterns: ['carlos'] },
+  { key: 'dca', patterns: ['dca'] },
+  { key: 'crypto', patterns: ['crypto'] }
+];
+
+function resolveHref(slug, isModulePage) {
+  if (/^https?:\/\//.test(slug)) return slug;
+  if (isModulePage) {
+    return slug.replace(/^modules\//, '');
+  }
+  return slug;
+}
+
+function detectActiveKey() {
+  const path = window.location.pathname.toLowerCase();
+  const match = ACTIVE_KEY_MATCHERS.find(entry =>
+    entry.patterns.some(pattern => path.includes(pattern))
+  );
+  return match ? match.key : '';
+}
+
+function buildGlobalNav() {
+  const body = document.body;
+  if (!body) return;
+
+  const existingMenu = document.getElementById('menu-icon');
+  if (existingMenu) existingMenu.remove();
+  const existingNav = document.getElementById('nav-menu');
+  if (existingNav) {
+    const existingHeader = existingNav.closest('header');
+    if (existingHeader) existingHeader.remove();
+  }
+
+  const header = document.createElement('header');
+  header.innerHTML = `
+    <button id="menu-icon" aria-label="Abrir menu">☰</button>
+    <nav id="nav-menu">
+      <div id="login-section" class="login-block">
+        <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+        <span id="user-info" class="user-visible" style="display:none;">
+          <a href="#" id="user-name">👤 Username</a>
+        </span>
+      </div>
+      <div class="nav-links"></div>
+    </nav>
+  `;
+
+  body.prepend(header);
+
+  const isModulePage = window.location.pathname.includes('/modules/');
+  const activeKey = detectActiveKey();
+  const linksWrap = header.querySelector('.nav-links');
+
+  NAV_GROUPS.forEach(group => {
+    const groupEl = document.createElement('div');
+    groupEl.className = 'nav-group';
+    groupEl.setAttribute('data-nav-group', '');
+
+    const trigger = document.createElement('button');
+    trigger.className = 'nav-link nav-link--trigger';
+    trigger.setAttribute('data-nav-toggle', '');
+    trigger.setAttribute('aria-haspopup', 'true');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.textContent = group.label;
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'nav-dropdown';
+    dropdown.setAttribute('role', 'menu');
+
+    group.links.forEach(link => {
+      const anchor = document.createElement('a');
+      anchor.href = resolveHref(link.slug, isModulePage);
+      anchor.textContent = link.label;
+      anchor.setAttribute('role', 'menuitem');
+      if (link.key === activeKey) {
+        anchor.classList.add('active');
+      }
+      dropdown.appendChild(anchor);
+    });
+
+    groupEl.append(trigger, dropdown);
+    linksWrap.appendChild(groupEl);
+  });
+
+  setupNavInteractions(header);
+}
+
+function setupNavInteractions(header) {
+  const menuBtn = header.querySelector('#menu-icon');
+  const nav = header.querySelector('#nav-menu');
+  const groups = Array.from(header.querySelectorAll('[data-nav-group]'));
+
+  const closeGroups = () => {
+    groups.forEach(group => {
+      group.classList.remove('is-open');
+      const trigger = group.querySelector('[data-nav-toggle]');
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    });
+  };
+
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => header.classList.toggle('active'));
+  }
+
+  groups.forEach(group => {
+    const trigger = group.querySelector('[data-nav-toggle]');
+    if (!trigger) return;
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const isOpen = group.classList.contains('is-open');
+      closeGroups();
+      if (!isOpen) {
+        group.classList.add('is-open');
+        trigger.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('[data-nav-group]')) {
+      closeGroups();
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeGroups();
+  });
+
+  if (nav) {
+    nav.addEventListener('click', (event) => {
+      if (event.target.closest('a')) {
+        header.classList.remove('active');
+      }
+    });
+  }
+}
+
+buildGlobalNav();
+
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";

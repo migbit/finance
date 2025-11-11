@@ -110,6 +110,9 @@
                 <li><a href="caixa.html">💰 Caixa</a></li>
                 <li><a href="tmt.html">🧳 Taxa Turística</a></li>
                 <li><a href="diversos.html" class="active">📋 Diversos</a></li>
+                <li><a href="iva.html">📑 IVA Estrangeiro</a></li>
+                <li><a href="pallco.html">🏢 PALLCO</a></li>
+                <li><a href="carlos.html">💼 Carlos – Faturas</a></li>
 
                 <li class="separator"></li>
 
@@ -131,9 +134,6 @@
             <option value="compras">🛒 Compras</option>
             <option value="hospedes">👥 Hóspedes</option>
             <option value="reparacoes">🔧 Reparações</option>
-            <option value="iva">📑 IVA Estrangeiro</option>
-            <option value="pallco">🏢 PALLCO</option>
-            <option value="carlos">💼 Carlos – Faturas</option>
         </select>
         </div>
 
@@ -144,9 +144,6 @@
             <button class="tab-btn" data-tab="compras">🛒 Compras</button>
             <button class="tab-btn" data-tab="hospedes">👥 Hóspedes</button>
             <button class="tab-btn" data-tab="reparacoes">🔧 Reparações</button>
-            <button class="tab-btn" data-tab="iva">📑 IVA Estrangeiro</button>
-            <button class="tab-btn" data-tab="pallco">🏢 PALLCO</button>
-            <button class="tab-btn" data-tab="carlos">💼 Carlos – Faturas</button>
         </div>
 
         <!-- === MENSAGENS === -->
@@ -354,126 +351,6 @@
             </section>
         </div>
 
-        <!-- === IVA ESTRANGEIRO === -->
-        <div id="tab-iva" class="tab-content">
-            <section class="report-section">
-                <div class="viz-card">
-                    <h4>IVA Estrangeiro</h4>
-
-                    <!-- Formulário -->
-                    <form id="iva-estrangeiro-form" class="form-inline" style="margin-bottom: 1rem;">
-                        <input type="date" id="iva-data" required>
-                        <input type="text" id="iva-descricao" placeholder="Descrição" required>
-                        <input type="number" id="iva-valor" placeholder="Valor (sem IVA) €" step="0.01" required>
-                        <button type="submit" class="btn">Adicionar</button>
-                    </form>
-
-                    <!-- Tabela principal -->
-                    <div class="table-wrap">
-                        <table class="table" id="iva-estrangeiro-table">
-                            <thead>
-                                <tr>
-                                    <th>Data</th>
-                                    <th>Descrição</th>
-                                    <th>Valor (€)</th>
-                                    <th>IVA 23% (€)</th>
-                                    <th>Total (€)</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="iva-estrangeiro-body"><!-- via JS --></tbody>
-                        </table>
-                    </div>
-
-                    <div class="center" style="margin-top: 1rem;">
-                        <button id="iva-more-btn" class="btn" style="display:none;">Mostrar mais</button>
-                    </div>
-
-                    <!-- Resumo por Trimestre -->
-                    <div class="subcard" style="margin-top: 18px;">
-                        <h4>Resumo por Trimestre</h4>
-                        <div class="table-wrap">
-                            <table class="table" id="iva-estrangeiro-tri">
-                                <thead>
-                                    <tr>
-                                        <th>Ano</th>
-                                        <th>Trimestre</th>
-                                        <th>Valor (€)</th>
-                                        <th>IVA (€)</th>
-                                        <th>Total (€)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="iva-estrangeiro-tri-body"><!-- via JS --></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- === PALLCO === -->
-        <div id="tab-pallco" class="tab-content">
-            <section class="report-section">
-                <div class="viz-card">
-                    <h3>PALLCO</h3>
-                    <form id="pallco-form" class="form-inline" style="gap: 10px; flex-wrap: wrap; margin-bottom: 1rem;">
-                        <input type="date" id="pallco-data" required>
-                        <select id="pallco-descricao" required>
-                            <option value="">Descrição</option>
-                            <option value="Mensalidade">Mensalidade</option>
-                            <option value="Roupa">Roupa</option>
-                            <option value="Diversos">Diversos</option>
-                        </select>
-                        <input type="number" id="pallco-valor" placeholder="Valor (€)" step="0.01" required>
-                        <button type="submit" class="btn">Adicionar</button>
-                    </form>
-                </div>
-            </section>
-
-            <section class="report-section">
-                <div class="viz-card">
-                    <h4>Movimentos</h4>
-                    <div id="pallco-months"><!-- via JS --></div>
-                    <div class="pallco-older-toggle" id="pallco-older-wrap" style="display:none;">
-                        <button id="pallco-toggle-older" class="btn">Mostrar Movimentos Anteriores</button>
-                    </div>
-                </div>
-            </section>
-        </div>
-
-        <!-- === CARLOS – FATURAS PENDENTES === -->
-        <div id="tab-carlos" class="tab-content">
-            <section class="report-section">
-                <div class="viz-card">
-                    <h4>Carlos – Faturas Pendentes</h4>
-
-                    <!-- Formulário de Fatura -->
-                    <form id="carlos-invoice-form" class="form-inline mb-3" style="margin-bottom: 1rem;">
-                        <input type="text" id="invoice-number" placeholder="Nº Fatura (ex: 2023/15)" required>
-                        <input type="date" id="invoice-date" required>
-                        <input type="number" id="invoice-total" placeholder="Total (€)" step="0.01" required>
-                        <button type="submit" class="btn btn-success ml-2">Adicionar Fatura</button>
-                    </form>
-
-                    <!-- Tabela de Faturas + Pagamentos -->
-                    <div class="table-wrap">
-                        <table id="carlos-invoices-table" class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Nº Fatura</th>
-                                    <th>Data</th>
-                                    <th>Total (€)</th>
-                                    <th>Pago (€)</th>
-                                    <th>Saldo (€)</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="carlos-invoices-body"><!-- via JS --></tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-        </div>
     </main>
 
     <!-- Required Scripts -->
@@ -505,55 +382,7 @@
             });
         });
 
-    // Mobile Menu Toggle Script (consistent with all pages)
-document.addEventListener('DOMContentLoaded', () => {
-  const header  = document.querySelector('header');
-  const menuBtn = document.getElementById('menu-icon');
-  const navMenu = document.getElementById('nav-menu');
-
-  if (menuBtn && header) {
-    menuBtn.addEventListener('click', () => {
-      header.classList.toggle('active');
-    });
-  }
-
-  if (navMenu && header) {
-    navMenu.addEventListener('click', e => {
-      if (e.target.closest('a')) header.classList.remove('active');
-    });
-  }
-});
-
     </script>
-    <script>
-(function () {
-  function bindMenu() {
-    const header  = document.querySelector('header');
-    const btn     = document.getElementById('menu-icon');
-    const nav     = document.getElementById('nav-menu');
-    if (!header || !btn) return;
-
-    // Prevent double-binding
-    if (!btn.dataset.bound) {
-      btn.addEventListener('click', () => header.classList.toggle('active'));
-      btn.dataset.bound = '1';
-    }
-    if (nav && !nav.dataset.bound) {
-      nav.addEventListener('click', (e) => {
-        if (e.target.closest('a')) header.classList.remove('active');
-      });
-      nav.dataset.bound = '1';
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindMenu);
-  } else {
-    bindMenu();
-  }
-})();
-</script>
-
 <script>
   // existing tab click code is already present …
   // Add sync with select:

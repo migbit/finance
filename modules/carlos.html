@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carlos – Faturas</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="icon" href="../favicon.ico" type="image/x-icon">
+  <link rel="manifest" href="../manifest.json">
+</head>
+<body id="carlos-page" data-page="carlos-page">
+  <button id="menu-icon" aria-label="Open menu">☰</button>
+
+  <header>
+    <nav id="nav-menu">
+      <ul>
+        <li id="login-section" class="login-block">
+          <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+          <span id="user-info" class="user-visible" style="display:none;">
+            <a href="#" id="user-name">👤 Username</a>
+          </span>
+        </li>
+
+        <li class="separator"></li>
+
+        <li class="menu-title">Apartamentos</li>
+        <li><a href="faturas.html">📄 Faturas</a></li>
+        <li><a href="analise.html">📊 Análise</a></li>
+        <li><a href="analise123.html">🏠 123</a></li>
+        <li><a href="analise1248.html">🏠 1248</a></li>
+        <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+        <li><a href="caixa.html">💰 Caixa</a></li>
+        <li><a href="tmt.html">🧳 Taxa Turística</a></li>
+        <li><a href="diversos.html">📋 Diversos</a></li>
+        <li><a href="iva.html">📑 IVA Estrangeiro</a></li>
+        <li><a href="pallco.html">🏢 PALLCO</a></li>
+        <li><a href="carlos.html" class="active">💼 Carlos – Faturas</a></li>
+
+        <li class="separator"></li>
+
+        <li class="menu-title">Investimentos</li>
+        <li><a href="dca.html">📈 DCA</a></li>
+        <li><a href="crypto.html">🚀 Cripto</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <section class="report-section">
+      <div class="viz-card">
+        <h2>Carlos – Faturas Pendentes</h2>
+
+        <form id="carlos-invoice-form" class="form-inline mb-3" style="margin-bottom: 1rem;">
+          <input type="text" id="invoice-number" placeholder="Nº Fatura (ex: 2023/15)" required>
+          <input type="date" id="invoice-date" required>
+          <input type="number" id="invoice-total" placeholder="Total (€)" step="0.01" required>
+          <button type="submit" class="btn btn-success ml-2">Adicionar Fatura</button>
+        </form>
+
+        <div class="table-wrap">
+          <table id="carlos-invoices-table" class="table table-striped">
+            <thead>
+              <tr>
+                <th>Nº Fatura</th>
+                <th>Data</th>
+                <th>Total (€)</th>
+                <th>Pago (€)</th>
+                <th>Saldo (€)</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="carlos-invoices-body"><!-- via JS --></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../js/diversos.js"></script>
+  <script type="module" src="../js/script.js"></script>
+</body>
+</html>

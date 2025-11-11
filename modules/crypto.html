@@ -605,26 +605,5 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js"></script>
   <script type="module" src="../js/crypto.js"></script>
-
-  <!-- Mobile nav toggle -->
-  <script>
-    const menuIcon = document.getElementById('menu-icon');
-    const header = document.querySelector('header');
-    if (menuIcon && header) {
-      menuIcon.addEventListener('click', () => {
-        header.classList.toggle('active');
-      });
-
-      // Close sidebar when clicking outside on mobile
-      document.addEventListener('click', (e) => {
-        if (window.innerWidth <= 1024 &&
-            !header.contains(e.target) &&
-            !menuIcon.contains(e.target) &&
-            header.classList.contains('active')) {
-          header.classList.remove('active');
-        }
-      });
-    }
-  </script>
 </body>
 </html>

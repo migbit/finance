@@ -129,7 +129,7 @@ async function carregarRelatorio() {
         <tr data-id="${t.id}">
         <td>${date}</td>
         <td>${t.tipo}</td>
-        <td class="${valorClass} formatted-number">${v >= 0 ? '' : '−'}${formattedValor}</td>
+        <td class="${valorClass} formatted-number">${v >= 0 ? '' : '-'}${formattedValor}</td>
         <td>${rowActions(t.id)}</td>
         </tr>`;
     };
@@ -143,7 +143,7 @@ async function carregarRelatorio() {
     const totalDiv = (label, total) => {
       const totalClass = total >= 0 ? 'valor-positivo' : 'valor-negativo';
       const formatted = formatEuro(Math.abs(total));
-      return `<div class="total-caixa centered">${label}: <span class="${totalClass} formatted-number">${total >= 0 ? '' : '−'}${formatted}</span></div>`;
+      return `<div class="total-caixa centered">${label}: <span class="${totalClass} formatted-number">${total >= 0 ? '' : '-'}${formatted}</span></div>`;
     };
 
     const renderCaixa = (cont, dados, label = 'Total') => {

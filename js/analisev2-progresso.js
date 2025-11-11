@@ -1,5 +1,6 @@
 import { db } from './script.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
+import { parseLocalDate } from './analisev2-utils.js';
 
 const VIEW_APTS = {
   total: ['123', '1248'],
@@ -14,25 +15,40 @@ const METRICS = {
   avg: { labelId: 'label-avg', textId: 'donut-avg-text', canvasId: 'donut-avg' }
 };
 
+const donutStates = new Map();
+const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
 let currentView = 'total';
+let currentGranularity = 'mes';
 let faturasData = [];
+let faturasByGranularity = { mes: [], dia: [] };
+let filterButtonsController = null;
+let granularityButtonsController = null;
+let centerTextRegistered = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="progresso"]')) return;
 
   bindFilterButtons();
+  bindGranularityButtons();
   updateUpdatedAt(null);
 
   await loadFaturasData();
-  if (!faturasData.length) {
-    showEmptyState('Sem dados disponíveis');
-    return;
-  }
-
-  updateProgressoCharts();
 });
 
+window.addEventListener('analisev2:retry', (event) => {
+  if (event.detail?.module === 'progresso') {
+    loadFaturasData();
+  }
+});
+
+window.addEventListener('beforeunload', handleModuleTeardown);
+
 function bindFilterButtons() {
+  if (filterButtonsController) filterButtonsController.abort();
+  filterButtonsController = new AbortController();
+  const { signal } = filterButtonsController;
+
   document.querySelectorAll('[data-progress-view]').forEach(btn => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.progressView;
@@ -40,21 +56,50 @@ function bindFilterButtons() {
       currentView = view;
       updateButtonState();
       updateProgressoCharts();
-    });
+    }, { signal });
   });
 
   updateButtonState();
 }
 
+function bindGranularityButtons() {
+  if (granularityButtonsController) granularityButtonsController.abort();
+  granularityButtonsController = new AbortController();
+  const { signal } = granularityButtonsController;
+
+  document.querySelectorAll('[data-progress-granularity]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const mode = btn.dataset.progressGranularity;
+      if (!mode || mode === currentGranularity) return;
+      currentGranularity = mode;
+      updateGranularityButtons();
+      updateProgressoCharts();
+    }, { signal });
+  });
+  updateGranularityButtons();
+}
+
 async function loadFaturasData() {
+  window.loadingManager?.show('progresso', { type: 'skeleton' });
   try {
     const q = query(collection(db, 'faturas'), orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
     const raw = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     faturasData = consolidarFaturas(raw).filter(f => VIEW_APTS.total.includes(String(f.apartamento)));
+    faturasByGranularity = buildGranularityDatasets(faturasData);
+
+    if (!faturasData.length) {
+      showEmptyState('Sem dados disponíveis');
+    } else {
+      updateProgressoCharts();
+    }
   } catch (error) {
-    console.error('Erro ao carregar faturas:', error);
+    window.errorHandler?.handleError('progresso', error, 'loadFaturasData', loadFaturasData);
     faturasData = [];
+    faturasByGranularity = { mes: [], dia: [] };
+    showEmptyState('Sem dados disponíveis');
+  } finally {
+    window.loadingManager?.hide('progresso');
   }
 }
 
@@ -64,6 +109,7 @@ function updateProgressoCharts() {
     showEmptyState('Sem dados para esta vista');
     return;
   }
+  cleanupDonuts();
 
   const currentYear = new Date().getFullYear();
   const years = [...new Set(filtered.map(f => Number(f.ano)).filter(Boolean))].sort((a, b) => a - b);
@@ -79,10 +125,11 @@ function updateProgressoCharts() {
 }
 
 function showEmptyState(message) {
+  cleanupDonuts();
   Object.values(METRICS).forEach(metric => {
     const textEl = document.getElementById(metric.textId);
     if (textEl) textEl.textContent = message;
-    makeDonut(document.getElementById(metric.canvasId), 0);
+    renderNeutralDonut(document.getElementById(metric.canvasId));
   });
   updateUpdatedAt(null);
 }
@@ -95,9 +142,18 @@ function updateButtonState() {
   });
 }
 
+function updateGranularityButtons() {
+  document.querySelectorAll('[data-progress-granularity]').forEach(btn => {
+    const isActive = btn.dataset.progressGranularity === currentGranularity;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
 function getFilteredFaturas() {
   const targets = VIEW_APTS[currentView] || VIEW_APTS.total;
-  return faturasData.filter(f => targets.includes(String(f.apartamento)));
+  const dataset = faturasByGranularity[currentGranularity] || faturasByGranularity.mes || [];
+  return dataset.filter(f => targets.includes(String(f.apartamento)));
 }
 
 function updateParcial(faturas, ultimoAno, penultimoAno) {
@@ -177,7 +233,7 @@ function renderMetric(metricKey, { labelText, atual, comparacao, labels }) {
   const txt = document.getElementById(metric.textId);
   if (txt) txt.textContent = formatDelta(diff, labels);
 
-  makeDonut(document.getElementById(metric.canvasId), pct);
+  updateDonut(metric.canvasId, pct, diff);
 }
 
 function somar(faturas, predicate) {
@@ -188,6 +244,7 @@ function somar(faturas, predicate) {
 }
 
 function valorFatura(f) {
+  if (typeof f.valorDistribuido === 'number') return f.valorDistribuido;
   return Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0);
 }
 
@@ -257,6 +314,43 @@ function consolidarFaturas(arr) {
   return flattened;
 }
 
+function buildGranularityDatasets(base) {
+  const monthly = Array.isArray(base) ? [...base] : [];
+  const perDay = [];
+  monthly.forEach(f => {
+    const slices = splitFaturaPorDia(f);
+    if (slices && slices.length) perDay.push(...slices);
+    else perDay.push(f);
+  });
+  return { mes: monthly, dia: perDay };
+}
+
+function splitFaturaPorDia(fatura) {
+  const noites = Number(fatura.noites || 0);
+  if (!noites || noites <= 0) return null;
+  if (typeof fatura.checkIn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fatura.checkIn)) return null;
+
+  const inicio = parseLocalDate(fatura.checkIn);
+  if (!(inicio instanceof Date) || Number.isNaN(inicio.getTime())) return null;
+
+  const nightlyValue = valorFatura(fatura) / noites;
+  const slices = [];
+
+  for (let i = 0; i < noites; i++) {
+    const dia = new Date(inicio);
+    dia.setDate(dia.getDate() + i);
+    slices.push({
+      ...fatura,
+      ano: dia.getFullYear(),
+      mes: dia.getMonth() + 1,
+      dia: dia.getDate(),
+      valorDistribuido: nightlyValue
+    });
+  }
+
+  return slices;
+}
+
 const cssVar = (name, fallback) =>
   (getComputedStyle(document.documentElement).getPropertyValue(name) || '').trim() || fallback;
 
@@ -280,28 +374,55 @@ const centerText = {
   }
 };
 
-function makeDonut(canvas, percentSigned) {
-  if (!canvas) return null;
+function updateDonut(canvasId, percentSigned, diff) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const nextValue = clamp(Math.abs(percentSigned), 0, 100);
+  const isPositive = diff >= 0;
+  const color = isPositive ? cssVar('--ok', '#16a34a') : cssVar('--bad', '#e11d48');
+  const label = `${percentSigned >= 0 ? '+' : ''}${nextValue.toFixed(2)}%`;
 
+  let state = donutStates.get(canvasId);
+
+  if (!state) {
+    const chart = createDonut(canvas, nextValue, color, label);
+    donutStates.set(canvasId, { chart, value: nextValue, color });
+    return;
+  }
+
+  const { chart } = state;
+  const dataset = chart.data.datasets[0];
+  dataset.data = [nextValue, 100 - nextValue];
+  dataset.backgroundColor[0] = color;
+  chart.options.plugins.centerText.text = label;
+  chart.options.plugins.centerText.color = color;
+  if (reduceMotionQuery.matches) {
+    chart.update('none');
+  } else {
+    chart.options.animation = {
+      duration: 700,
+      easing: 'easeOutCubic'
+    };
+    chart.update();
+    triggerDonutPulse(canvas, isPositive);
+  }
+  state.value = nextValue;
+  state.color = color;
+}
+
+function createDonut(canvas, value, color, label) {
+  ensureCenterTextPlugin();
   canvas.style.width = '160px';
   canvas.style.height = '160px';
   canvas.width = 160;
   canvas.height = 160;
-
-  if (canvas._chart) {
-    try { canvas._chart.destroy(); } catch (_) { /* noop */ }
-  }
-
-  const value = Math.max(0, Math.min(100, Math.abs(percentSigned)));
-  const ring = percentSigned >= 0 ? cssVar('--ok', '#16a34a') : cssVar('--bad', '#e11d48');
-  const formatted = value.toFixed(2);
 
   const chart = new Chart(canvas.getContext('2d'), {
     type: 'doughnut',
     data: {
       datasets: [{
         data: [value, 100 - value],
-        backgroundColor: [ring, '#eef2f7'],
+        backgroundColor: [color, '#eef2f7'],
         borderWidth: 0
       }]
     },
@@ -311,19 +432,124 @@ function makeDonut(canvas, percentSigned) {
       aspectRatio: 1,
       devicePixelRatio: 1,
       cutout: '70%',
+      animation: reduceMotionQuery.matches ? false : { duration: 700, easing: 'easeOutCubic' },
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
         centerText: {
-          text: `${percentSigned > 0 ? '+' : ''}${formatted}%`,
-          color: ring
+          text: label,
+          color
         }
-      },
-      animation: false
+      }
     },
     plugins: [centerText]
   });
 
-  canvas._chart = chart;
+  if (!reduceMotionQuery.matches) triggerDonutPulse(canvas, color === cssVar('--ok', '#16a34a'));
+
   return chart;
+}
+
+function renderNeutralDonut(canvas) {
+  if (!canvas) return;
+  if (donutStates.has(canvas.id)) {
+    const state = donutStates.get(canvas.id);
+    if (state && state.chart) {
+      destroyChartSafe(state.chart);
+    }
+    donutStates.delete(canvas.id);
+  }
+
+  canvas.style.width = '160px';
+  canvas.style.height = '160px';
+  canvas.width = 160;
+  canvas.height = 160;
+
+  const chart = new Chart(canvas.getContext('2d'), {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [50, 50],
+        backgroundColor: ['#e2e8f0', '#f1f5f9'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      cutout: '70%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      animation: false
+    }
+  });
+  donutStates.set(canvas.id, { chart, value: 50, color: '#e2e8f0' });
+}
+
+function triggerDonutPulse(canvas, positive) {
+  if (reduceMotionQuery.matches) return;
+  const cls = positive ? 'pulse-positive' : 'pulse-negative';
+  canvas.classList.remove('pulse-positive', 'pulse-negative');
+  void canvas.offsetWidth;
+  canvas.classList.add(cls);
+  setTimeout(() => canvas.classList.remove(cls), 320);
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function cleanupDonuts() {
+  donutStates.forEach((state, canvasId) => {
+    if (state?.chart) {
+      destroyChartSafe(state.chart);
+    }
+  });
+  donutStates.clear();
+}
+
+function destroyChartSafe(chart) {
+  if (!chart) return;
+  try {
+    chart.destroy();
+  } catch (err) {
+    console.warn('[progresso] Chart destruction failed', err);
+    const canvas = chart.canvas;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  }
+}
+
+function ensureCenterTextPlugin() {
+  if (centerTextRegistered) return;
+  if (typeof Chart !== 'undefined' && typeof Chart.register === 'function') {
+    Chart.register(centerText);
+    centerTextRegistered = true;
+  }
+}
+
+function unregisterCenterTextPlugin() {
+  if (!centerTextRegistered) return;
+  if (typeof Chart !== 'undefined' && typeof Chart.unregister === 'function') {
+    Chart.unregister(centerText);
+  }
+  centerTextRegistered = false;
+}
+
+function cleanupControllers() {
+  if (filterButtonsController) {
+    filterButtonsController.abort();
+    filterButtonsController = null;
+  }
+  if (granularityButtonsController) {
+    granularityButtonsController.abort();
+    granularityButtonsController = null;
+  }
+}
+
+function handleModuleTeardown() {
+  cleanupDonuts();
+  cleanupControllers();
+  unregisterCenterTextPlugin();
 }
