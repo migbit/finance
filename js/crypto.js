@@ -1,4 +1,4 @@
-import { CryptoPortfolioApp } from './ui.js';
+import { CryptoPortfolioApp } from './crypto-ui.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 
 const app = new CryptoPortfolioApp();

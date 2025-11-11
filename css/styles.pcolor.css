@@ -1593,10 +1593,9 @@ body[data-page="analisev2"] .chart-toolbar .segmented button:not(.active) {
     gap: 1rem;
   }
 
-  .donut-card canvas {
-    width: 130px !important;
-    height: 130px !important;
-  }
+.donut-card canvas {
+  width: 130px !important;
+  height: 130px !important;
 }
 
 .page-intro {
@@ -1616,6 +1615,41 @@ body[data-page="analisev2"] .chart-toolbar .segmented button:not(.active) {
   margin-top: -12px;
   margin-bottom: 24px;
 }
+
+body[data-page="analisev2"] .tab-navigation--sticky{
+  position:sticky;
+  top:calc(var(--header-h) + 12px);
+  z-index:1100;
+  display:flex;
+  flex-wrap:wrap;
+  gap:var(--space-2);
+  justify-content:center;
+  padding:var(--space-2);
+  margin-bottom:var(--space-4);
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:var(--radius-md);
+  box-shadow:var(--shadow-1);
+}
+
+body[data-page="analisev2"] .tab-navigation--sticky .tab-btn{
+  padding:6px 16px;
+  border-radius:var(--radius-sm);
+  color:var(--text-dim);
+  text-decoration:none;
+  font-weight:600;
+  border:1px solid var(--border);
+  transition:background .18s ease, color .18s ease, border-color .18s ease;
+}
+
+body[data-page="analisev2"] .tab-navigation--sticky .tab-btn:hover,
+body[data-page="analisev2"] .tab-navigation--sticky .tab-btn:focus-visible{
+  background:var(--pale);
+  color:var(--p2);
+  border-color:var(--p2);
+  outline:none;
+}
+
 
 /* ===== Eixo-Y fixo para gráficos com scroll horizontal ===== */
 body[data-page="analise123vs1248"] .chart-wrap.has-y-lock {
