@@ -96,12 +96,12 @@ header {
   height: var(--header-h);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 var(--space-5);
   background: var(--p1);
   color: #fff;
   border-bottom: 1px solid rgba(255, 255, 255, .12);
-  box-shadow: var(--shadow-1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);;
   z-index: 1200;
   transition: height 0.3s ease;
 }
@@ -111,6 +111,22 @@ header h1 {
   letter-spacing: .2px;
   font-weight: 700;
   margin: 0;
+  position: absolute;
+  left: var(--space-5);
+}
+
+/* Add blur effect for modern look */
+@supports (backdrop-filter: blur(10px)) {
+  header {
+    backdrop-filter: blur(10px);
+    background: rgba(39, 55, 77, 0.95);
+  }
+}
+
+/* Subtle animation on scroll */
+header.scrolled {
+  height: 56px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 #menu-icon,
@@ -147,7 +163,9 @@ header h1 {
   position: relative;
   display: flex;
   align-items: center;
+  justify-content: center;
   width: 100%;
+  max-width: 1400px;
   gap: var(--space-4);
 }
 
@@ -155,10 +173,11 @@ header h1 {
   flex: 0 1 auto;
   display: flex;
   justify-content: center;
-  gap: var(--space-3);
+  align-items: center;
+  gap: var(--space-2);
   list-style: none;
   padding: 0;
-  margin: 0 auto;
+  margin: 0;
   flex-wrap: wrap;
 }
 
@@ -1858,38 +1877,65 @@ body[data-page="analise123vs1248"] .chart-wrap.has-y-lock .scroller::-webkit-scr
 
 /* ===== Truly sticky in-page menu (aligned with content, not page) ===== */
 .tab-navigation {
-  position: fixed;
-  top: 0px; /* moves it below the title/header */
-  left: var(--sidebar-width, 260px); /* aligns with content area after sidebar */
+  position: sticky;
+  top: var(--header-h); /* sticks below the main header */
+  left: 0;
   right: 0;
-  z-index: 90;
+  z-index: 100;
   display: flex;
-  justify-content: center; /* aligns with main content instead of page center */
+  justify-content: center;
+  align-items: center;
   flex-wrap: wrap;
-  background: var(--card, #fff);
-  padding: 0.7rem 1.2rem;
+  gap: 0.5rem;
+  background: #fff;
+  padding: 0.75rem 1.5rem;
   border-bottom: 2px solid var(--border);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
 }
 
-/* optional blur effect for polish */
-@supports (backdrop-filter: blur(6px)) {
+/* Blur effect for modern look */
+@supports (backdrop-filter: blur(8px)) {
   .tab-navigation {
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.95);
   }
 }
 
-/* tidy buttons */
-.tab-navigation .tab-btn {
-  white-space: nowrap;
-  margin: 0 0.3rem;
+/* Enhance on scroll */
+.tab-navigation.scrolled {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  padding: 0.6rem 1.5rem;
 }
 
-/* spacing below nav-bar and first card */
-.tab-navigation + .report-section,
-.tab-navigation + section {
-  margin-top: 100px; /* prevents overlay on title */
+.tab-navigation .tab-btn {
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.tab-navigation .tab-btn:hover {
+  background: rgba(82, 109, 130, 0.08);
+  color: var(--p2);
+  border-color: var(--p3);
+  transform: translateY(-1px);
+}
+
+.tab-navigation .tab-btn:active,
+.tab-navigation .tab-btn.active {
+  background: var(--p2);
+  color: #fff;
+  border-color: var(--p2);
+  box-shadow: 0 2px 8px rgba(82, 109, 130, 0.3);
 }
 
 /* ensure parents don't break layout */
@@ -1898,13 +1944,8 @@ main, .report-section, #tab-compras, #tab-mensagens, #tab-reparacoes {
   position: static !important;
 }
 
-/* add breathing space under the fixed nav-bar only in Diversos page */
-body#diversos-page main,
-body#analise-page main,
-body#analise123-page main,
-body#analise1248-page main,
-body#analise123vs1248-page main {
-  padding-top: 80px;
+body[data-page="analisev2"] main {
+  padding-top: calc(var(--header-h) + 1rem);
 }
 
 #crypto-table tbody tr {
@@ -2668,5 +2709,182 @@ body#analise123vs1248-page main {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}}
+
+/* ==================== ENHANCED TAB NAVIGATION ==================== */
+/* Override existing tab navigation styles */
+
+body[data-page="analisev2"] .tab-navigation,
+body[data-page="analisev2"] .tab-navigation--sticky {
+  position: sticky !important;
+  top: var(--header-h) !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 100 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 0.5rem !important;
+  background: #fff !important;
+  padding: 0.75rem 1.5rem !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+  transition: all 0.3s ease !important;
+  margin-bottom: 1.5rem !important;
+  margin-left: 0 !important;
+  width: 100% !important;
+}
+
+/* Blur effect */
+@supports (backdrop-filter: blur(8px)) {
+  body[data-page="analisev2"] .tab-navigation,
+  body[data-page="analisev2"] .tab-navigation--sticky {
+    backdrop-filter: blur(8px) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+  }
+}
+
+/* Tab buttons */
+body[data-page="analisev2"] .tab-navigation .tab-btn,
+body[data-page="analisev2"] .tab-navigation--sticky .tab-btn {
+  white-space: nowrap !important;
+  padding: 0.5rem 1.2rem !important;
+  border-radius: 20px !important;
+  background: #f8f9fa !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-dim) !important;
+  text-decoration: none !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  margin: 0 !important;
+}
+
+/* Hover state */
+body[data-page="analisev2"] .tab-navigation .tab-btn:hover,
+body[data-page="analisev2"] .tab-navigation--sticky .tab-btn:hover {
+  background: rgba(82, 109, 130, 0.1) !important;
+  color: var(--p2) !important;
+  border-color: var(--p2) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(82, 109, 130, 0.2) !important;
+}
+
+/* Active state */
+body[data-page="analisev2"] .tab-navigation .tab-btn:active,
+body[data-page="analisev2"] .tab-navigation .tab-btn.active,
+body[data-page="analisev2"] .tab-navigation--sticky .tab-btn:active,
+body[data-page="analisev2"] .tab-navigation--sticky .tab-btn.active {
+  background: var(--p2) !important;
+  color: #fff !important;
+  border-color: var(--p2) !important;
+  box-shadow: 0 2px 8px rgba(82, 109, 130, 0.4) !important;
+  transform: translateY(0) !important;
+}
+
+/* Adjust main content spacing */
+body[data-page="analisev2"] main {
+  padding-top: calc(var(--header-h) + 1rem) !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  body[data-page="analisev2"] .tab-navigation,
+  body[data-page="analisev2"] .tab-navigation--sticky {
+    padding: 0.5rem 1rem !important;
+    gap: 0.4rem !important;
+  }
+  
+  body[data-page="analisev2"] .tab-navigation .tab-btn,
+  body[data-page="analisev2"] .tab-navigation--sticky .tab-btn {
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.85rem !important;
+  }
+}
+
+/* Scroll offset for anchor links */
+body[data-page="analisev2"] section[id] {
+  scroll-margin-top: calc(var(--header-h) + 80px) !important;
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ==================== DIVERSOS PAGE TAB NAVIGATION ==================== */
+body[data-page="diversos-page"] .tab-navigation {
+  position: sticky !important;
+  top: var(--header-h) !important;
+  z-index: 100 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 0.5rem !important;
+  background: #fff !important;
+  padding: 0.75rem 1.5rem 1rem 1.5rem !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+  transition: all 0.3s ease !important;
+  margin-bottom: 1.5rem !important;
+  border-bottom: none !important;
+}
+
+@supports (backdrop-filter: blur(8px)) {
+  body[data-page="diversos-page"] .tab-navigation {
+    backdrop-filter: blur(8px) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+  }
+}
+
+body[data-page="diversos-page"] .tab-btn {
+  white-space: nowrap !important;
+  padding: 0.5rem 1.2rem !important;
+  border-radius: 20px !important;
+  background: #f8f9fa !important;
+  border: 1px solid var(--border) !important;
+  color: var(--text-dim) !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+body[data-page="diversos-page"] .tab-btn:hover {
+  background: rgba(82, 109, 130, 0.1) !important;
+  color: var(--p2) !important;
+  border-color: var(--p2) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(82, 109, 130, 0.2) !important;
+}
+
+body[data-page="diversos-page"] .tab-btn.active {
+  background: var(--p2) !important;
+  color: #fff !important;
+  border-color: var(--p2) !important;
+  box-shadow: 0 2px 8px rgba(82, 109, 130, 0.4) !important;
+  transform: translateY(0) !important;
+  border-bottom: none !important;
+}
+
+body[data-page="diversos-page"] main {
+  padding-top: calc(var(--header-h) + 1rem) !important;
+}
+
+@media (max-width: 768px) {
+  body[data-page="diversos-page"] .tab-navigation {
+    padding: 0.5rem 1rem !important;
+    gap: 0.4rem !important;
+  }
+  
+  body[data-page="diversos-page"] .tab-btn {
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.85rem !important;
   }
 }
