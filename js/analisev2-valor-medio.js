@@ -1,4 +1,5 @@
 import { db } from './script.js';
+import { createChart, destroyChartSafe } from './analisev2-charts.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 import {
   consolidarFaturas,
@@ -140,8 +141,8 @@ function renderValorMedioComparativo() {
       backgroundColor: withAlpha(COLORS['123'], 0.2),
       borderWidth: 2,
       tension: 0.25,
-      pointRadius: 3,
-      pointHoverRadius: 5,
+      pointRadius: 4,
+      pointHoverRadius: 6,
       fill: false,
       spanGaps: true
     });
@@ -154,19 +155,17 @@ function renderValorMedioComparativo() {
       backgroundColor: withAlpha(COLORS['1248'], 0.2),
       borderWidth: 2,
       tension: 0.25,
-      pointRadius: 3,
-      pointHoverRadius: 5,
+      pointRadius: 4,
+      pointHoverRadius: 6,
       fill: false,
       spanGaps: true
     });
   }
 
-  state.chart = new Chart(canvas, {
+  state.chart = createChart(canvas, {
     type: 'line',
     data: { labels: monthLabels, datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       scales: {
         y: {
@@ -186,7 +185,7 @@ function renderValorMedioComparativo() {
         legend: { position: 'top' }
       }
     }
-  });
+  }, { previousChart: state.chart });
 }
 
 function renderValorMedioChart(agg, latestYear, prevYear) {
@@ -203,8 +202,8 @@ function renderValorMedioChart(agg, latestYear, prevYear) {
       backgroundColor: withAlpha('rgba(148,163,184,1)', 0.15),
       borderDash: [4,4],
       tension: 0.25,
-      pointRadius: 2,
-      pointHoverRadius: 4,
+      pointRadius: 4,
+      pointHoverRadius: 6,
       fill: false,
       spanGaps: true
     });
@@ -217,21 +216,19 @@ function renderValorMedioChart(agg, latestYear, prevYear) {
     backgroundColor: withAlpha(COLORS[state.view] || COLORS.total, 0.15),
     borderWidth: 2,
     tension: 0.3,
-    pointRadius: 3,
-    pointHoverRadius: 5,
+    pointRadius: 4,
+    pointHoverRadius: 6,
     fill: false,
     spanGaps: true
   });
 
-  state.chart = new Chart(canvas, {
+  state.chart = createChart(canvas, {
     type: 'line',
     data: {
       labels: monthLabels,
       datasets
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       scales: {
         y: {
@@ -254,7 +251,7 @@ function renderValorMedioChart(agg, latestYear, prevYear) {
         legend: { position: 'top' }
       }
     }
-  });
+  }, { previousChart: state.chart });
 }
 
 function showValorMedioEmptyState(message) {
@@ -348,7 +345,7 @@ function nightlyFromFatura(fatura) {
 
 function resetValorMedioChart() {
   if (state.chart) {
-    try { state.chart.destroy(); } catch {}
+    destroyChartSafe(state.chart);
     state.chart = null;
   }
 }

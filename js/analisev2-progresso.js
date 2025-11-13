@@ -1,4 +1,5 @@
 import { db } from './script.js';
+import { createChart, destroyChartSafe } from './analisev2-charts.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 import {
   consolidarFaturas,
@@ -25,7 +26,6 @@ let faturasData = [];
 let faturasByGranularity = { mes: [], dia: [] };
 let filterButtonsController = null;
 let granularityButtonsController = null;
-let centerTextRegistered = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="progresso"]')) return;
@@ -294,26 +294,6 @@ function buildGranularityDatasets(base) {
 const cssVar = (name, fallback) =>
   (getComputedStyle(document.documentElement).getPropertyValue(name) || '').trim() || fallback;
 
-const centerText = {
-  id: 'centerText',
-  afterDraw(chart, args, opts) {
-    const { ctx, chartArea } = chart;
-    if (!chartArea) return;
-    const { left, right, top, bottom } = chartArea;
-    const x = (left + right) / 2;
-    const y = (top + bottom) / 2;
-    const txt = opts.text || '';
-    if (!txt) return;
-    ctx.save();
-    ctx.fillStyle = opts.color || '#0f172a';
-    ctx.font = '600 14px Montserrat, system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(txt, x, y);
-    ctx.restore();
-  }
-};
-
 function updateDonut(canvasId, percentSigned, diff) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -351,13 +331,13 @@ function updateDonut(canvasId, percentSigned, diff) {
 }
 
 function createDonut(canvas, value, color, label) {
-  ensureCenterTextPlugin();
+  if (!canvas) return null;
   canvas.style.width = '160px';
   canvas.style.height = '160px';
   canvas.width = 160;
   canvas.height = 160;
 
-  const chart = new Chart(canvas.getContext('2d'), {
+  const chart = createChart(canvas, {
     type: 'doughnut',
     data: {
       datasets: [{
@@ -376,13 +356,13 @@ function createDonut(canvas, value, color, label) {
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
+        datalabels: { display: false },
         centerText: {
           text: label,
           color
         }
       }
     },
-    plugins: [centerText]
   });
 
   if (!reduceMotionQuery.matches) triggerDonutPulse(canvas, color === cssVar('--ok', '#16a34a'));
@@ -405,7 +385,7 @@ function renderNeutralDonut(canvas) {
   canvas.width = 160;
   canvas.height = 160;
 
-  const chart = new Chart(canvas.getContext('2d'), {
+  const chart = createChart(canvas, {
     type: 'doughnut',
     data: {
       datasets: [{
@@ -418,7 +398,11 @@ function renderNeutralDonut(canvas) {
       responsive: true,
       maintainAspectRatio: true,
       cutout: '70%',
-      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        datalabels: { display: false }
+      },
       animation: false
     }
   });
@@ -447,36 +431,6 @@ function cleanupDonuts() {
   donutStates.clear();
 }
 
-function destroyChartSafe(chart) {
-  if (!chart) return;
-  try {
-    chart.destroy();
-  } catch (err) {
-    console.warn('[progresso] Chart destruction failed', err);
-    const canvas = chart.canvas;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-  }
-}
-
-function ensureCenterTextPlugin() {
-  if (centerTextRegistered) return;
-  if (typeof Chart !== 'undefined' && typeof Chart.register === 'function') {
-    Chart.register(centerText);
-    centerTextRegistered = true;
-  }
-}
-
-function unregisterCenterTextPlugin() {
-  if (!centerTextRegistered) return;
-  if (typeof Chart !== 'undefined' && typeof Chart.unregister === 'function') {
-    Chart.unregister(centerText);
-  }
-  centerTextRegistered = false;
-}
-
 function cleanupControllers() {
   if (filterButtonsController) {
     filterButtonsController.abort();
@@ -491,5 +445,4 @@ function cleanupControllers() {
 function handleModuleTeardown() {
   cleanupDonuts();
   cleanupControllers();
-  unregisterCenterTextPlugin();
 }

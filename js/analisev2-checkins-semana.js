@@ -1,4 +1,5 @@
 import { db } from './script.js';
+import { createChart, destroyChartSafe } from './analisev2-charts.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 import { parseLocalDate, VIEW_APTS } from './analisev2-core.js';
 
@@ -183,12 +184,10 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
   const hasDataLabelsPlugin = typeof ChartDataLabels !== 'undefined';
   const runtimePlugins = hasDataLabelsPlugin ? [ChartDataLabels] : [fallbackPercentPlugin];
 
-  state.chart = new Chart(canvas, {
+  state.chart = createChart(canvas, {
     type: 'bar',
     data: { labels: LABELS, datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'bottom' },
@@ -226,7 +225,7 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
       }
     },
     plugins: runtimePlugins
-  });
+  }, { previousChart: state.chart });
 }
 
 function renderEmpty(message) {
@@ -248,18 +247,8 @@ function renderEmpty(message) {
 
 function destroyCheckinsChart() {
   if (!state.chart) return;
-  try {
-    state.chart.destroy();
-  } catch (err) {
-    console.warn('Chart destruction failed (checkins-semana)', err);
-    const canvas = state.chart.canvas;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-  } finally {
-    state.chart = null;
-  }
+  destroyChartSafe(state.chart);
+  state.chart = null;
 }
 
 function cleanupCheckinsResources() {

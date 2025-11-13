@@ -1,4 +1,5 @@
 import { db } from './script.js';
+import { createChart, destroyChartSafe } from './analisev2-charts.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 import { parseLocalDate, consolidarFaturas, valorFatura, formatEuro, MONTH_LABELS } from './analisev2-core.js';
 
@@ -229,8 +230,8 @@ function renderYearComparisonChart(faturas, color) {
       borderColor: 'rgba(120,120,120,1)',
       backgroundColor: 'rgba(120,120,120,0.1)',
       tension: 0.25,
-      pointRadius: 2,
-      pointHoverRadius: 4
+      pointRadius: 4,
+      pointHoverRadius: 6
     });
   }
 
@@ -241,8 +242,8 @@ function renderYearComparisonChart(faturas, color) {
     backgroundColor: withAlpha(color, 0.15),
     borderWidth: 2,
     tension: 0.25,
-    pointRadius: 2,
-    pointHoverRadius: 4
+    pointRadius: 5,
+    pointHoverRadius: 7
   });
 
   const maxValue = Math.max(...atual, ...(anterior.length ? anterior : [0]));
@@ -254,12 +255,10 @@ function renderYearComparisonChart(faturas, color) {
 
   const chartType = state.chartType === 'bar' ? 'bar' : 'line';
 
-  state.chart = new Chart(canvas, {
+  state.chart = createChart(canvas, {
     type: chartType,
     data: { labels: monthLabels, datasets },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
       scales: {
         y: {
           beginAtZero: true,
@@ -274,7 +273,7 @@ function renderYearComparisonChart(faturas, color) {
         }
       }
     }
-  });
+  }, { previousChart: state.chart });
 
   attachMobileXAxisRotation(state.chart);
 }
@@ -299,7 +298,7 @@ function renderComparativoChart(faturas) {
 
   const chartType = state.chartType === 'bar' ? 'bar' : 'line';
 
-  state.chart = new Chart(canvas, {
+  state.chart = createChart(canvas, {
     type: chartType,
     data: {
       labels,
@@ -311,8 +310,8 @@ function renderComparativoChart(faturas) {
           backgroundColor: withAlpha(COLORS['123'], 0.1),
           borderWidth: 2,
           tension: 0.25,
-          pointRadius: 2,
-          pointHoverRadius: 4,
+          pointRadius: 4,
+          pointHoverRadius: 6,
           spanGaps: true
         },
         {
@@ -322,15 +321,13 @@ function renderComparativoChart(faturas) {
           backgroundColor: withAlpha(COLORS['1248'], 0.1),
           borderWidth: 2,
           tension: 0.25,
-          pointRadius: 2,
-          pointHoverRadius: 4,
+          pointRadius: 4,
+          pointHoverRadius: 6,
           spanGaps: true
         }
       ]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
       scales: {
         y: {
@@ -345,7 +342,7 @@ function renderComparativoChart(faturas) {
         }
       }
     }
-  });
+  }, { previousChart: state.chart });
 }
 
 function renderTabelaTotal(faturas, targetId) {
@@ -792,18 +789,8 @@ function buildTimelineSequence(endYear, endMonth) {
 
 function resetChart() {
   if (!state.chart) return;
-  try {
-    state.chart.destroy();
-  } catch (err) {
-    console.warn('Chart destruction failed (faturacao)', err);
-    const canvas = state.chart.canvas;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-  } finally {
-    state.chart = null;
-  }
+  destroyChartSafe(state.chart);
+  state.chart = null;
 }
 
 function euroInt(value) {
