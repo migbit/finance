@@ -96,6 +96,7 @@ function entrarEmModoEdicao(f) {
   // 4ª/5ª linhas (estadia & hóspedes)
   setVal('checkin', f.checkIn || '');
   setVal('checkout', f.checkOut || '');
+  setVal('data-reserva', f.dataReserva || '');
   setNum('noites', (typeof f.noites === 'number' ? f.noites : ''));
   setNum('preco-medio-noite', (typeof f.precoMedioNoite === 'number' ? f.precoMedioNoite : ''));
   setNum('adultos', (typeof f.hospedesAdultos === 'number' ? f.hospedesAdultos : ''));
@@ -253,8 +254,9 @@ const parseFloatSafe = (id, def = null) => {
   const v = getVal(id).trim(); if (v === '') return def; const n = parseFloat(v);  return Number.isNaN(n) ? def : n;
 };
 
-const checkIn  = getVal('checkin')  || null;  // "YYYY-MM-DD" ou null
-const checkOut = getVal('checkout') || null;
+const checkIn      = getVal('checkin')       || null;  // "YYYY-MM-DD" ou null
+const checkOut     = getVal('checkout')      || null;
+const dataReserva  = getVal('data-reserva')  || null;
 
 // calcular nº de noites se input estiver vazio
 function diffNoites(ci, co) {
@@ -289,6 +291,7 @@ const formData = {
   // 🔽 NOVOS CAMPOS (seguros p/ docs antigos)
   checkIn,
   checkOut,
+  dataReserva,
   noites: (typeof noitesInp === 'number' ? noitesInp : null),
   precoMedioNoite,
   hospedesAdultos,
