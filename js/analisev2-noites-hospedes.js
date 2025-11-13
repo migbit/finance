@@ -1,10 +1,34 @@
 import { db } from './script.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-import { VIEW_APTS, MONTH_LABELS, formatEuro } from './analisev2-core.js';
+import { VIEW_APTS, MONTH_LABELS, formatEuro, valorFatura } from './analisev2-core.js';
 const NIGHT_BUCKETS = ['2','3','4','5','6','7','≥8'];
 const HOSP_BUCKETS = [1,2,3,4,5,6,7,8];
 const NIGHT_BASE_YEAR = 2025;
 const HOSP_BASE_YEAR = 2025;
+const STAY_BUCKETS = [
+  { key: '1-2', label: '1-2 noites', min: 1, max: 2 },
+  { key: '3-4', label: '3-4 noites', min: 3, max: 4 },
+  { key: '5-6', label: '5-6 noites', min: 5, max: 6 },
+  { key: '7+', label: '7+ noites', min: 7, max: Infinity }
+];
+
+function clampGuestsCount(row) {
+  const adults = Number(row.hospedesAdultos || 0);
+  const kids = Number(row.hospedesCriancas || 0);
+  const sum = Math.max(1, Math.min(8, adults + kids));
+  return sum;
+}
+
+function calcExtraGuestsValue(row) {
+  const year = Number(row.ano);
+  const month = Number(row.mes);
+  const guests = clampGuestsCount(row);
+  const nights = Number(row.noites || 0);
+  if (year < 2025) return 0;
+  if (year === 2025 && month < 6) return 0;
+  if (guests <= 6 || nights <= 0) return 0;
+  return (guests - 6) * 20 * nights;
+}
 
 const state = {
   view: 'total',
@@ -72,6 +96,10 @@ async function loadRows() {
       const msg = '<div class="heatmap-muted">Sem dados disponíveis.</div>';
       renderNoites(msg);
       renderHospedes(msg);
+      renderStayLength(msg);
+      renderStayRecommendations(null);
+      renderNoitesTip([]);
+      renderHospedesTip([]);
     } else {
       render();
     }
@@ -81,6 +109,10 @@ async function loadRows() {
     const msg = '<div class="heatmap-muted">Sem dados disponíveis.</div>';
     renderNoites(msg);
     renderHospedes(msg);
+    renderStayLength(msg);
+    renderStayRecommendations(null);
+    renderNoitesTip([]);
+    renderHospedesTip([]);
   } finally {
     window.loadingManager?.hide('noites-hospedes');
   }
@@ -92,19 +124,34 @@ function render() {
     const msg = '<div class="heatmap-muted">Sem dados para esta vista.</div>';
     renderNoites(msg);
     renderHospedes(msg);
+    renderStayLength(msg);
+    renderStayRecommendations(null);
+    renderNoitesTip([]);
+    renderHospedesTip([]);
     return;
   }
 
   renderNoites(buildNoitesTable(rows));
   renderHospedes(buildHospedesTable(rows));
+  renderStayLengthSection(rows);
+  renderNoitesTip(rows);
+  renderHospedesTip(rows);
   toggleTables();
 }
 
 function toggleTables() {
   const noites = document.getElementById('tabela-noites-combo');
   const hospedes = document.getElementById('tabela-hospedes-combo');
+  const length = document.getElementById('tabela-length-stay');
+  const noitesTip = document.getElementById('noites-tip');
+  const hospedesTip = document.getElementById('hospedes-tip');
+  const lengthTip = document.getElementById('stay-recommendations');
   if (noites) noites.style.display = state.table === 'noites' ? 'block' : 'none';
   if (hospedes) hospedes.style.display = state.table === 'hospedes' ? 'block' : 'none';
+  if (length) length.style.display = state.table === 'length' ? 'block' : 'none';
+  if (noitesTip) noitesTip.style.display = state.table === 'noites' ? 'block' : 'none';
+  if (hospedesTip) hospedesTip.style.display = state.table === 'hospedes' ? 'block' : 'none';
+  if (lengthTip) lengthTip.style.display = state.table === 'length' ? 'block' : 'none';
 }
 
 function filterRows(apartments) {
@@ -247,22 +294,6 @@ function buildHospedesTable(rows) {
   const currentYear = new Date().getFullYear();
   if (currentYear < HOSP_BASE_YEAR) return '<div class="heatmap-muted">Sem dados suficientes.</div>';
 
-  const extraValue = (year, month, guests, nights) => {
-    if (year < 2025) return 0;
-    if (year === 2025 && month < 6) return 0;
-    const g = Number(guests) || 0;
-    const n = Number(nights) || 0;
-    if (g <= 6 || n <= 0) return 0;
-    return (g - 6) * 20 * n;
-  };
-
-  const clampGuests = (row) => {
-    const adults = Number(row.hospedesAdultos || 0);
-    const kids = Number(row.hospedesCriancas || 0);
-    const sum = Math.max(1, Math.min(8, adults + kids));
-    return sum;
-  };
-
   const mapCurrent = Array.from({ length: 12 }, () =>
     Object.fromEntries(HOSP_BUCKETS.map((h) => [h, { n: 0, v: 0 }]))
   );
@@ -273,8 +304,8 @@ function buildHospedesTable(rows) {
     if (year !== currentYear || year < HOSP_BASE_YEAR) return;
     if (!month || month < 1 || month > 12) return;
 
-    const guests = clampGuests(row);
-    const value = extraValue(year, month, guests, row.noites);
+    const guests = clampGuestsCount(row);
+    const value = calcExtraGuestsValue(row);
     mapCurrent[month - 1][guests].n += 1;
     mapCurrent[month - 1][guests].v += value;
   });
@@ -357,8 +388,8 @@ function buildHospedesTable(rows) {
       if (Number(row.ano) !== year) return;
       const month = Number(row.mes);
       if (!month || month < 1 || month > 12) return;
-      const guests = clampGuests(row);
-      const value = extraValue(year, month, guests, row.noites);
+      const guests = clampGuestsCount(row);
+      const value = calcExtraGuestsValue(row);
       totals[guests].n += 1;
       totals[guests].v += value;
       sumN += 1;
@@ -394,6 +425,201 @@ function buildHospedesTable(rows) {
 
   html += '</tbody></table>';
   return html;
+}
+
+function renderStayLengthSection(rows) {
+  const stats = computeStayLengthStats(rows);
+  const html = buildStayLengthTable(stats);
+  renderStayLength(html);
+  renderStayRecommendations(stats);
+}
+
+function computeStayLengthStats(rows) {
+  const stats = STAY_BUCKETS.map((bucket) => ({ ...bucket, count: 0, nights: 0, revenue: 0 }));
+  const totals = { revenue: 0, nights: 0 };
+
+  rows.forEach((row) => {
+    const nights = Number(row.noites || 0);
+    if (!nights || nights < 1) return;
+    const bucket = findStayBucket(nights);
+    if (!bucket) return;
+    const slot = stats.find((item) => item.key === bucket.key);
+    const revenue = valorFatura(row);
+    slot.count += 1;
+    slot.nights += nights;
+    slot.revenue += revenue;
+    totals.revenue += revenue;
+    totals.nights += nights;
+  });
+
+  stats.forEach((bucket) => {
+    bucket.avgNightly = bucket.nights ? bucket.revenue / bucket.nights : 0;
+    bucket.revenueShare = totals.revenue ? (bucket.revenue / totals.revenue) * 100 : 0;
+  });
+
+  return { buckets: stats, totals };
+}
+
+function buildStayLengthTable(stats) {
+  if (!stats?.buckets?.length) return '<div class="heatmap-muted">Sem reservas com noites registadas.</div>';
+  const rows = stats.buckets.map((bucket) => `
+    <tr>
+      <td>${bucket.label}</td>
+      <td>${bucket.count}</td>
+      <td>${bucket.nights}</td>
+      <td>${bucket.avgNightly ? formatEuro(bucket.avgNightly) : '—'}</td>
+      <td>${bucket.revenueShare ? bucket.revenueShare.toFixed(1) : '0.0'}%</td>
+    </tr>
+  `).join('');
+
+  return `
+    <table class="media-faturacao">
+      <thead>
+        <tr>
+          <th>Duração</th>
+          <th>Reservas</th>
+          <th>Noites</th>
+          <th>Preço médio</th>
+          <th>% receita</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function renderStayLength(html) {
+  const target = document.getElementById('tabela-length-stay');
+  if (target) target.innerHTML = html;
+}
+
+function renderStayRecommendations(stats) {
+  const target = document.getElementById('stay-recommendations');
+  if (!target) return;
+  if (!stats?.buckets?.length) {
+    target.innerHTML = '<p>Sem dados de estadias para recomendar ajustes.</p>';
+    target.style.display = state.table === 'length' ? 'block' : 'none';
+    return;
+  }
+  const dominant = stats.buckets.reduce((best, bucket) => bucket.revenueShare > best.revenueShare ? bucket : best, stats.buckets[0]);
+  const longStay = stats.buckets[stats.buckets.length - 1];
+  const shortStay = stats.buckets[0];
+  const dominantText = `${dominant.label} representam ${dominant.revenueShare.toFixed(1)}% da receita a ${formatEuro(dominant.avgNightly)} /noite.`;
+  let hint = 'Equilíbrio saudável entre estadias curtas e longas.';
+  if (longStay.avgNightly && shortStay.avgNightly && longStay.avgNightly + 10 < shortStay.avgNightly) {
+    hint = `7+ noites rendem ${formatEuro(longStay.avgNightly)} vs ${formatEuro(shortStay.avgNightly)} nas curtas – use mínimos flexíveis e adiciona fee quando preencher semanas críticas.`;
+  } else if (shortStay.count > longStay.count * 1.5) {
+    hint = 'Curta duração domina – considere exigir 3 noites em fins-de-semana para elevar ticket médio.';
+  }
+  target.innerHTML = `<p>${dominantText} ${hint}</p>`;
+  target.style.display = state.table === 'length' ? 'block' : 'none';
+}
+
+function findStayBucket(nights) {
+  return STAY_BUCKETS.find((bucket) => nights >= bucket.min && nights <= bucket.max) || STAY_BUCKETS[STAY_BUCKETS.length - 1];
+}
+
+function renderNoitesTip(rows) {
+  const target = document.getElementById('noites-tip');
+  if (!target) return;
+  if (!rows?.length) {
+    target.innerHTML = '<p>Sem dados suficientes sobre duração das estadias.</p>';
+    return;
+  }
+  const stats = computeStayLengthStats(rows);
+  if (!stats?.buckets?.length) {
+    target.innerHTML = '<p>Sem dados suficientes sobre duração das estadias.</p>';
+    return;
+  }
+  const dominant = stats.buckets.reduce((best, bucket) =>
+    bucket.revenueShare > best.revenueShare ? bucket : best, stats.buckets[0]);
+  const longStay = stats.buckets[stats.buckets.length - 1];
+  const shortStay = stats.buckets[0];
+  const baseText = `${dominant.label} representam ${dominant.revenueShare.toFixed(1)}% da receita a ${formatEuro(dominant.avgNightly)} /noite.`;
+  let hint = '';
+  if (longStay.avgNightly && shortStay.avgNightly && longStay.avgNightly + 10 < shortStay.avgNightly) {
+    hint = ` 7+ noites rendem ${formatEuro(longStay.avgNightly)} vs ${formatEuro(shortStay.avgNightly)} nas curtas – use mínimos flexíveis e adiciona fee quando preencher semanas críticas.`;
+  } else if (shortStay.count > longStay.count * 1.5) {
+    hint = ' Curta duração domina – considere exigir 3 noites ao fim de semana para elevar ticket médio.';
+  }
+  let compare = buildNoitesCompareSummary();
+  target.innerHTML = `<p>${baseText}${hint}</p>${compare ? `<p class="tip-compare">${compare}</p>` : ''}`;
+}
+
+function renderHospedesTip(rows) {
+  const target = document.getElementById('hospedes-tip');
+  if (!target) return;
+  if (!rows?.length) {
+    target.innerHTML = '<p>Sem dados suficientes sobre hóspedes por reserva.</p>';
+    return;
+  }
+  const insights = computeGuestInsights(rows);
+  if (!insights.total) {
+    target.innerHTML = '<p>Sem dados suficientes sobre hóspedes por reserva.</p>';
+    return;
+  }
+  const dominant = insights.stats.reduce((best, entry) =>
+    entry.share > best.share ? entry : best, insights.stats[0]);
+  const baseText = `${dominant.bucket} hóspedes representam ${dominant.share.toFixed(1)}% das reservas.`;
+  const extraText = insights.extraTotal
+    ? `Hóspedes extra (>6) já renderam ${formatEuro(insights.extraTotal)} em taxas este ano.`
+    : 'Ainda não foram cobradas taxas de hóspedes extra.';
+  let hint = '';
+  if (dominant.bucket >= 7) {
+    hint = ' A maioria das reservas leva grupos grandes – garanta que a taxa adicional está ativa em todas as OTAs.';
+  } else if (dominant.bucket <= 4) {
+    hint = ' Perfil familiar baixo – pode promover upgrades com hóspedes extra para aumentar receita.';
+  }
+  const compare = buildHospedesCompareSummary();
+  target.innerHTML = `<p>${hint || extraText}</p>${hint ? `<p>${extraText}</p>` : ''}${compare ? `<p class="tip-compare">${compare}</p>` : ''}`;
+}
+
+function computeGuestInsights(rows) {
+  const stats = HOSP_BUCKETS.map((bucket) => ({ bucket, count: 0, extraTotal: 0, share: 0 }));
+  let total = 0;
+  let extraTotal = 0;
+  rows.forEach((row) => {
+    const guests = clampGuestsCount(row);
+    const idx = HOSP_BUCKETS.indexOf(guests);
+    if (idx === -1) return;
+    stats[idx].count += 1;
+    total += 1;
+    const extra = calcExtraGuestsValue(row);
+    stats[idx].extraTotal += extra;
+    extraTotal += extra;
+  });
+  stats.forEach((entry) => {
+    entry.share = total ? (entry.count / total) * 100 : 0;
+  });
+  return { stats, total, extraTotal };
+}
+
+function buildNoitesCompareSummary() {
+  const rows1248 = filterRows(VIEW_APTS['1248']);
+  const rows123 = filterRows(VIEW_APTS['123']);
+  if (!rows1248.length || !rows123.length) return '';
+  const stats1248 = computeStayLengthStats(rows1248);
+  const stats123 = computeStayLengthStats(rows123);
+  const shortKey = STAY_BUCKETS[0].key;
+  const short1248 = stats1248.buckets.find((b) => b.key === shortKey)?.avgNightly || 0;
+  const short123 = stats123.buckets.find((b) => b.key === shortKey)?.avgNightly || 0;
+  if (!short1248 || !short123) return '';
+  const leader = short1248 >= short123 ? '1248' : '123';
+  const diff = Math.abs(short1248 - short123);
+  if (diff < 1) return '';
+  return `Comparação 1248 vs 123: Apt ${leader} cobra ${formatEuro(diff)} a mais em estadias 1-2 noites.`;
+}
+
+function buildHospedesCompareSummary() {
+  const rows1248 = filterRows(VIEW_APTS['1248']);
+  const rows123 = filterRows(VIEW_APTS['123']);
+  if (!rows1248.length || !rows123.length) return '';
+  const insights1248 = computeGuestInsights(rows1248);
+  const insights123 = computeGuestInsights(rows123);
+  const diff = (insights1248.extraTotal || 0) - (insights123.extraTotal || 0);
+  if (Math.abs(diff) < 1) return '';
+  const leader = diff >= 0 ? '1248' : '123';
+  return `Comparação 1248 vs 123: Apt ${leader} gera ${formatEuro(Math.abs(diff))} a mais em taxas de hóspedes extra.`;
 }
 
 function pctGradient(value, min, max) {

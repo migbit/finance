@@ -1,12 +1,18 @@
 const MODULES_TO_RELOAD = [
   'progresso',
+  'seasonal',
   'faturacao',
   'ocupacao',
+  'revpan',
   'valor-medio',
+  'pricing-lab',
   'heatmap',
   'taxa-limpeza',
   'noites-hospedes',
-  'checkins-semana'
+  'checkins-semana',
+  'leadtime',
+  'weekpart',
+  'gap-analysis'
 ];
 
 function dispatchReload() {

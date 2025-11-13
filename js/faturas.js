@@ -53,9 +53,94 @@ const relatorioFaturacaoDiv = document.getElementById('relatorio-faturacao');
 const editarIdInput      = document.getElementById('fatura-id-edicao');
 const cancelarEdicaoBtn  = document.getElementById('cancelar-edicao');
 const submitBtn = document.getElementById('submit-fatura') || (faturaForm && faturaForm.querySelector('button[type="submit"]'));
+const navWrap = document.getElementById('fatura-nav');
+const prevBtn = document.getElementById('fatura-prev');
+const nextBtn = document.getElementById('fatura-next');
+let currentIndex = -1;
+let loadedFaturas = [];
+
+const parseInvoiceNumber = (numero) => {
+  if (typeof numero !== 'string' || !numero.trim()) {
+    return { prefix: '', number: Number.NEGATIVE_INFINITY };
+  }
+  const trimmed = numero.trim();
+  const match = trimmed.match(/^([A-Za-zÀ-ÿ]+)(\d+)$/i);
+  if (match) {
+    return { prefix: match[1].toUpperCase(), number: parseInt(match[2], 10) || Number.NEGATIVE_INFINITY };
+  }
+  const digits = parseInt(trimmed.replace(/\D/g, ''), 10);
+  const prefix = trimmed.replace(/\d/g, '').toUpperCase();
+  return {
+    prefix: prefix || '',
+    number: Number.isNaN(digits) ? Number.NEGATIVE_INFINITY : digits
+  };
+};
+
+const sortInvoicesForNav = (items) => {
+  return items.slice().sort((a, b) => {
+    const pa = parseInvoiceNumber(a.numeroFatura || '');
+    const pb = parseInvoiceNumber(b.numeroFatura || '');
+    if (pa.prefix === pb.prefix) {
+      if (pa.number === pb.number) {
+        const aTs = a.timestamp?.seconds ?? 0;
+        const bTs = b.timestamp?.seconds ?? 0;
+        return aTs - bTs;
+      }
+      return pa.number - pb.number;
+    }
+    return pa.prefix.localeCompare(pb.prefix);
+  });
+};
+
+const normalizeDateField = (value) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value.toDate === 'function') {
+    try {
+      return value.toDate().toISOString().slice(0, 10);
+    } catch (err) {
+      console.warn('Não foi possível converter data Firestore', err);
+      return null;
+    }
+  }
+  return null;
+};
+
+const updateNavigator = () => {
+  if (!navWrap) return;
+  const hasSelection = currentIndex >= 0 && currentIndex < loadedFaturas.length;
+  navWrap.style.display = hasSelection ? 'inline-flex' : 'none';
+  if (prevBtn) prevBtn.disabled = !hasSelection || currentIndex <= 0;
+  if (nextBtn) nextBtn.disabled = !hasSelection || currentIndex >= loadedFaturas.length - 1;
+};
+
+const setCurrentIndexById = (id) => {
+  if (!id) {
+    currentIndex = -1;
+  } else {
+    currentIndex = loadedFaturas.findIndex((f) => f.id === id);
+  }
+  updateNavigator();
+};
+
+const navigateInvoice = (delta) => {
+  if (currentIndex < 0) return;
+  const targetIndex = currentIndex + delta;
+  if (targetIndex < 0 || targetIndex >= loadedFaturas.length) return;
+  const target = loadedFaturas[targetIndex];
+  if (target) {
+    entrarEmModoEdicao(target, { skipScroll: true });
+  }
+};
+
+if (prevBtn) prevBtn.addEventListener('click', () => navigateInvoice(-1));
+if (nextBtn) nextBtn.addEventListener('click', () => navigateInvoice(1));
 
 // Ativa modo edição e preenche todos os campos
-function entrarEmModoEdicao(f) {
+function entrarEmModoEdicao(f, options = {}) {
+  const { skipScroll = false } = options;
+  if (f?.id) setCurrentIndexById(f.id);
+  if (submitBtn) submitBtn.textContent = f?.id ? 'Atualizar' : 'Guardar';
   // Mostrar o form e ajustar botões
   const wrap = document.getElementById('fatura-form-wrap');
   const toggleBtn = document.getElementById('toggle-fatura-form');
@@ -110,15 +195,23 @@ function entrarEmModoEdicao(f) {
   if (first) first.focus();
 
   // Scroll suave até ao formulário
-  if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!skipScroll && wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function sairDoModoEdicao() {
+function sairDoModoEdicao(options = {}) {
+  const { keepInvoiceNumber = false } = options;
+  const numeroInput = document.getElementById('numero-fatura');
+  const numeroAtual = numeroInput ? numeroInput.value : '';
   if (editarIdInput) editarIdInput.value = '';
   if (submitBtn) submitBtn.textContent = 'Guardar';
   if (cancelarEdicaoBtn) cancelarEdicaoBtn.style.display = 'none';
   faturaForm.reset();
-  definirValoresPadrao(); // mantém o teu comportamento atual do “próximo nº”
+  setCurrentIndexById(null);
+  if (keepInvoiceNumber && numeroInput) {
+    numeroInput.value = numeroAtual;
+  } else {
+    definirValoresPadrao(); // mantém o teu comportamento atual do “próximo nº”
+  }
 }
 
 if (cancelarEdicaoBtn) {
@@ -308,7 +401,7 @@ const formData = {
       const { timestamp, ...dataSemTimestamp } = formData;
       await updateDoc(doc(db, "faturas", editId), dataSemTimestamp);
       alert('Fatura atualizada com sucesso!');
-      sairDoModoEdicao();
+      sairDoModoEdicao({ keepInvoiceNumber: true });
     } else {
       await addDoc(collection(db, "faturas"), formData);
       alert('Fatura registrada com sucesso!');
@@ -325,6 +418,8 @@ const formData = {
 
 async function carregarTodosRelatorios() {
   const firebaseFaturas = await carregarFaturas();
+  loadedFaturas = sortInvoicesForNav(firebaseFaturas);
+  updateNavigator();
   const faturas = firebaseFaturas.concat(manualFaturasEstatica);
 
   gerarRelatorioFaturacao(faturas);
@@ -334,7 +429,16 @@ async function carregarFaturas() {
     try {
         const q = query(collection(db, "faturas"), orderBy("timestamp", "desc"));
         const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        return querySnapshot.docs.map(docSnap => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            ...data,
+            checkIn: normalizeDateField(data.checkIn),
+            checkOut: normalizeDateField(data.checkOut),
+            dataReserva: normalizeDateField(data.dataReserva)
+          };
+        });
     } catch (error) {
         console.error("Erro ao carregar faturas:", error);
         return [];
@@ -545,6 +649,7 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
       // novos campos (para o botão Editar):
       checkIn: d.checkIn || null,
       checkOut: d.checkOut || null,
+      dataReserva: d.dataReserva || null,
       noites: (typeof d.noites === 'number' ? d.noites : null),
       precoMedioNoite: (d.precoMedioNoite ?? null),
       hospedesAdultos: (d.hospedesAdultos ?? null),
@@ -567,6 +672,7 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
         <td>${euroInt(total)}</td>
         <td>${toDDMM(d.checkIn)}</td>
         <td>${toDDMM(d.checkOut)}</td>
+        <td>${toDDMM(d.dataReserva)}</td>
         <td>${(typeof d.noites === 'number') ? d.noites : '—'}</td>
         <td>${
           (typeof d.noites === 'number' && d.noites > 0)
@@ -592,6 +698,7 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
           <th>Total</th>
           <th>Check-in</th>
           <th>Check-out</th>
+          <th>Data Reserva</th>
           <th>Noites</th>
           <th>Preço Médio/Noite</th>
           <th>Limp.</th>

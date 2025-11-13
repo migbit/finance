@@ -193,8 +193,14 @@
       <input type="hidden" id="fatura-id-edicao">
 
       <div class="form-actions">
-        <button type="submit" id="submit-fatura">Guardar</button>
-        <button type="button" id="cancelar-edicao" style="display:none;">Cancelar edição</button>
+        <div class="action-left">
+          <button type="submit" id="submit-fatura">Guardar</button>
+          <button type="button" id="cancelar-edicao" style="display:none;">Cancelar edição</button>
+          <div class="fatura-nav" id="fatura-nav" style="display:none;">
+            <button type="button" id="fatura-prev" aria-label="Fatura anterior">←</button>
+            <button type="button" id="fatura-next" aria-label="Próxima fatura">→</button>
+          </div>
+        </div>
       </div>
     </form>
   </div>

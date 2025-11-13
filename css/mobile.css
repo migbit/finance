@@ -23,7 +23,7 @@
   }
 
   /* Off-canvas sidebar with backdrop */
-  header {
+  body > header {
     position: fixed;
     top: 0;
     left: 0;
@@ -35,13 +35,13 @@
     overscroll-behavior: contain; /* Prevent scroll chaining */
   }
   
-  header.active {
+  body > header.active {
     transform: translateX(0);
     box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
   }
 
   /* Backdrop overlay for sidebar */
-  header.active::before {
+  body > header.active::before {
     content: '';
     position: fixed;
     top: 0;
@@ -326,7 +326,7 @@
 
 /* ---------- Print styles ---------- */
 @media print {
-  header,
+  body > header,
   #menu-icon {
     display: none !important;
   }

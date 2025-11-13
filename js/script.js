@@ -18,7 +18,8 @@ const NAV_GROUPS = [
     key: 'apartamentos',
     links: [
       { label: '📄 Faturas', key: 'faturas', slug: 'modules/faturas.html', module: true },
-      { label: '🆕 Análise', key: 'analise', slug: 'modules/analisev2.html', module: true },
+      { label: '🆕 Análise V3', key: 'analisev3', slug: 'modules/analisev3.html', module: true },
+      { label: '📊 Análise V2', key: 'analisev2', slug: 'modules/analisev2.html', module: true },
       { label: '🧳 Taxa Turística', key: 'tmt', slug: 'modules/tmt.html', module: true },
       { label: '📋 Diversos', key: 'diversos', slug: 'modules/diversos.html', module: true }
     ]
@@ -44,7 +45,8 @@ const NAV_GROUPS = [
 ];
 
 const ACTIVE_KEY_MATCHERS = [
-  { key: 'analise', patterns: ['analisev2'] },
+  { key: 'analisev3', patterns: ['analisev3'] },
+  { key: 'analisev2', patterns: ['analisev2'] },
   { key: 'faturas', patterns: ['faturas'] },
   { key: 'tmt', patterns: ['tmt'] },
   { key: 'diversos', patterns: ['diversos'] },
@@ -86,7 +88,7 @@ function buildGlobalNav() {
 
   const header = document.createElement('header');
   header.innerHTML = `
-    <button id="menu-icon" aria-label="Abrir menu">☰</button>
+    <button id="menu-icon" aria-label="Abrir menu" class="menu-icon">☰</button>
     <nav id="nav-menu">
       <div id="login-section" class="login-block">
         <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
@@ -136,6 +138,14 @@ function buildGlobalNav() {
   });
 
   setupNavInteractions(header);
+}
+
+function initNavWhenReady() {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', buildGlobalNav);
+  } else {
+    buildGlobalNav();
+  }
 }
 
 function setupNavInteractions(header) {
@@ -188,7 +198,7 @@ function setupNavInteractions(header) {
   }
 }
 
-buildGlobalNav();
+initNavWhenReady();
 
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";

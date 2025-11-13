@@ -65,6 +65,7 @@ async function loadValorMedioData() {
     const raw = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     state.faturas = consolidarFaturas(raw);
     state.nightlyEntries = expandNightlyEntries(state.faturas);
+    renderCompetitiveCard();
     if (!state.nightlyEntries.length) {
       showValorMedioEmptyState('Sem dados disponíveis.');
     } else {
@@ -74,6 +75,7 @@ async function loadValorMedioData() {
     window.errorHandler?.handleError('valor-medio', error, 'loadValorMedioData', loadValorMedioData);
     state.faturas = [];
     state.nightlyEntries = [];
+    renderCompetitiveCard();
     showValorMedioEmptyState('Sem dados disponíveis.');
   } finally {
     window.loadingManager?.hide('valor-medio');
@@ -303,6 +305,79 @@ function selectLatestYear(list) {
 
 function createMonthlyBuckets() {
   return Array.from({ length: 12 }, () => ({ sum: 0, count: 0 }));
+}
+
+function renderCompetitiveCard() {
+  const container = document.getElementById('competitive-indicator');
+  if (!container) return;
+  if (!state.nightlyEntries.length || !state.faturas.length) {
+    container.innerHTML = '<div class="competitive-placeholder">Sem dados para comparar os apartamentos.</div>';
+    return;
+  }
+  const metrics = computeCompetitiveMetrics();
+  if (!metrics) {
+    container.innerHTML = '<div class="competitive-placeholder">Sem dados para comparar os apartamentos.</div>';
+    return;
+  }
+
+  const leader = metrics.reduce((best, item) => item.avgNightly > best.avgNightly ? item : best, metrics[0]);
+  const rival = metrics.find((item) => item.apartamento !== leader.apartamento);
+  const diffNightly = rival ? leader.avgNightly - rival.avgNightly : 0;
+
+  container.innerHTML = `
+    ${metrics.map((item) => `
+      <div class="competitive-item apt-${item.apartamento}">
+        <h6><span class="apt-tag apt-${item.apartamento}">Apt ${item.apartamento}</span></h6>
+        <p><span class="metric-label">€ / noite</span><strong>${formatEuro(item.avgNightly)}</strong></p>
+        <p><span class="metric-label">€ / mês</span><strong>${formatEuro(item.avgMonthly)}</strong></p>
+        <p><span class="metric-label">€ / hóspede</span><strong>${formatEuro(item.perGuest)}</strong></p>
+      </div>
+    `).join('')}
+    <div class="competitive-summary">
+      ${rival ? `Apt ${leader.apartamento} lidera por ${formatEuro(Math.abs(diffNightly))} / noite.` : 'Apenas um apartamento com dados.'}
+    </div>
+  `;
+}
+
+function computeCompetitiveMetrics(windowSize = 6) {
+  const entries = state.nightlyEntries;
+  if (!Array.isArray(entries) || !entries.length) return null;
+  const monthKeys = Array.from(new Set(entries.map((entry) => `${entry.ano}-${pad(entry.mes)}`))).sort();
+  const targetKeys = new Set(monthKeys.slice(-windowSize));
+  if (!targetKeys.size) return null;
+
+  const base = {
+    '123': { revenue: 0, nights: 0, months: new Set(), guests: 0 },
+    '1248': { revenue: 0, nights: 0, months: new Set(), guests: 0 }
+  };
+
+  entries.forEach((entry) => {
+    const key = `${entry.ano}-${pad(entry.mes)}`;
+    const apt = String(entry.apartamento);
+    if (!targetKeys.has(key) || !base[apt]) return;
+    base[apt].revenue += Number(entry.valor) || 0;
+    base[apt].nights += 1;
+    base[apt].months.add(key);
+  });
+
+  state.faturas.forEach((fatura) => {
+    const key = `${fatura.ano}-${pad(fatura.mes)}`;
+    const apt = String(fatura.apartamento);
+    if (!targetKeys.has(key) || !base[apt]) return;
+    const guests = Number(fatura.hospedesAdultos || 0) + Number(fatura.hospedesCriancas || 0) + Number(fatura.hospedesBebes || 0);
+    base[apt].guests += Math.max(guests, 1);
+  });
+
+  return Object.entries(base).map(([apartamento, info]) => ({
+    apartamento,
+    avgNightly: info.nights ? info.revenue / info.nights : 0,
+    avgMonthly: info.months.size ? info.revenue / info.months.size : info.revenue,
+    perGuest: info.guests ? info.revenue / info.guests : 0
+  }));
+}
+
+function pad(value) {
+  return String(value).padStart(2, '0');
 }
 
 function expandNightlyEntries(faturas) {
