@@ -74,7 +74,12 @@
     <div class="page-intro">
       <h2>Análise Apartamentos</h2>
     </div>
-    <p class="page-meta" id="analisev2-updated">Atualizado a —</p>
+    <div class="page-meta page-meta--inline">
+      <span id="analisev2-updated" aria-live="polite">Atualizado a —</span>
+      <button type="button" class="page-meta-reload" id="analisev2-reload" aria-label="Recarregar dados" title="Recarregar dados">
+        ↻
+      </button>
+    </div>
 
     <section id="mod-progresso" class="report-section progresso-container" data-module="progresso">
       <div class="viz-card progress-card">
@@ -308,6 +313,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script type="module" src="../js/analisev2-error-handler.js"></script>
   <script type="module" src="../js/analisev2-loading.js"></script>
+  <script type="module" src="../js/analisev2-refresh.js"></script>
   <script type="module" src="../js/script.js"></script>
   <script type="module" src="../js/analisev2-progresso.js"></script>
   <script type="module" src="../js/analisev2-faturacao.js"></script>

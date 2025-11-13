@@ -1,12 +1,6 @@
 import { db } from './script.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-import { parseLocalDate } from './analisev2-utils.js';
-
-const VIEW_APTS = {
-  total: ['123', '1248'],
-  '123': ['123'],
-  '1248': ['1248']
-};
+import { parseLocalDate, VIEW_APTS } from './analisev2-core.js';
 
 const SERIES_COLORS = {
   total: 'rgb(20, 78, 3)',

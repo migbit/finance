@@ -1,11 +1,16 @@
 import { db } from './script.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-import { parseLocalDate } from './analisev2-utils.js';
+import {
+  consolidarFaturas,
+  splitFaturaPorDia,
+  valorFatura,
+  formatEuro,
+  MONTH_LABELS,
+  VIEW_APTS as BASE_VIEW_APTS
+} from './analisev2-core.js';
 
 const VIEW_APTS = {
-  total: ['123', '1248'],
-  '123': ['123'],
-  '1248': ['1248'],
+  ...BASE_VIEW_APTS,
   compare: ['123', '1248']
 };
 
@@ -15,7 +20,7 @@ const COLORS = {
   '1248': 'rgba(245,133,20,1)'
 };
 
-const monthLabels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const monthLabels = MONTH_LABELS;
 const MIN_VALOR_MEDIO_YEAR = 2025;
 
 const state = {
@@ -341,41 +346,11 @@ function nightlyFromFatura(fatura) {
   return valorFatura(fatura) / noites;
 }
 
-function splitFaturaPorDia(fatura) {
-  const noites = Number(fatura.noites || 0);
-  if (!noites || noites <= 0) return null;
-  if (typeof fatura.checkIn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fatura.checkIn)) return null;
-
-  const inicio = parseLocalDate(fatura.checkIn);
-  if (!(inicio instanceof Date) || Number.isNaN(inicio.getTime())) return null;
-
-  const nightlyValue = nightlyFromFatura(fatura);
-  if (!nightlyValue) return null;
-
-  const slices = [];
-  for (let i = 0; i < noites; i++) {
-    const dia = new Date(inicio);
-    dia.setDate(dia.getDate() + i);
-    slices.push({
-      ano: dia.getFullYear(),
-      mes: dia.getMonth() + 1,
-      dia: dia.getDate(),
-      valorDistribuido: nightlyValue
-    });
-  }
-
-  return slices;
-}
-
 function resetValorMedioChart() {
   if (state.chart) {
     try { state.chart.destroy(); } catch {}
     state.chart = null;
   }
-}
-
-function valorFatura(f) {
-  return Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0);
 }
 
 function withAlpha(color, alpha) {
@@ -386,33 +361,4 @@ function withAlpha(color, alpha) {
     return color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
   }
   return color;
-}
-
-function formatEuro(value) {
-  const num = Math.round(Number(value) || 0);
-  return num.toLocaleString('pt-PT', { maximumFractionDigits: 0, useGrouping: true })
-    .replace(/\./g, ' ') + ' €';
-}
-
-function consolidarFaturas(arr) {
-  const buckets = new Map();
-  for (const f of arr || []) {
-    const key = `${f.ano}-${f.mes}-${String(f.apartamento)}`;
-    const isDetailed =
-      (typeof f.checkIn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.checkIn)) ||
-      Number(f.noites || 0) > 0 ||
-      f.tipo === 'reserva';
-
-    if (!buckets.has(key)) buckets.set(key, { detailed: [], manual: [] });
-    const bucket = buckets.get(key);
-    (isDetailed ? bucket.detailed : bucket.manual).push(f);
-  }
-
-  const flattened = [];
-  for (const { detailed, manual } of buckets.values()) {
-    if (detailed.length) flattened.push(...detailed);
-    else flattened.push(...manual);
-  }
-
-  return flattened;
 }

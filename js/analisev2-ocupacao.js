@@ -1,12 +1,6 @@
 import { db } from './script.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-import { parseLocalDate } from './analisev2-utils.js';
-
-const VIEW_APTS = {
-  total: ['123', '1248'],
-  '123': ['123'],
-  '1248': ['1248']
-};
+import { parseLocalDate, consolidarFaturas, MONTH_LABELS, VIEW_APTS } from './analisev2-core.js';
 
 const COLORS = {
   total: 'rgb(20, 78, 3)',
@@ -14,7 +8,7 @@ const COLORS = {
   '1248': 'rgba(245,133,20,1)'
 };
 
-const monthLabels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const monthLabels = MONTH_LABELS;
 const MIN_OCCUPANCY_YEAR = 2025;
 
 const state = {
@@ -298,27 +292,4 @@ function cleanupOcupacaoResources() {
     ocupacaoButtonsController = null;
   }
   resetChart();
-}
-
-function consolidarFaturas(arr) {
-  const buckets = new Map();
-  for (const f of arr || []) {
-    const key = `${f.ano}-${f.mes}-${String(f.apartamento)}`;
-    const isDetailed =
-      (typeof f.checkIn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.checkIn)) ||
-      Number(f.noites || 0) > 0 ||
-      f.tipo === 'reserva';
-
-    if (!buckets.has(key)) buckets.set(key, { detailed: [], manual: [] });
-    const bucket = buckets.get(key);
-    (isDetailed ? bucket.detailed : bucket.manual).push(f);
-  }
-
-  const flattened = [];
-  for (const { detailed, manual } of buckets.values()) {
-    if (detailed.length) flattened.push(...detailed);
-    else flattened.push(...manual);
-  }
-
-  return flattened;
 }

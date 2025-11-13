@@ -1,9 +1,9 @@
 import { db } from './script.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-import { parseLocalDate } from './analisev2-utils.js';
+import { parseLocalDate, consolidarFaturas, valorFatura, formatEuro, MONTH_LABELS } from './analisev2-core.js';
 
 const BASE_YEAR = 2024;
-const monthLabels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const monthLabels = MONTH_LABELS;
 const COLORS = {
   total: 'rgb(20, 78, 3)',
   '123': 'rgba(54,162,235,1)',
@@ -806,14 +806,8 @@ function resetChart() {
   }
 }
 
-function valorFatura(f) {
-  return Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0);
-}
-
 function euroInt(value) {
-  const num = Math.round(Number(value) || 0);
-  return num.toLocaleString('pt-PT', { maximumFractionDigits: 0, useGrouping: true })
-    .replace(/\./g, ' ') + ' €';
+  return formatEuro(value);
 }
 
 function withAlpha(color, alpha) {
@@ -824,29 +818,6 @@ function withAlpha(color, alpha) {
     return color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
   }
   return color;
-}
-
-function consolidarFaturas(arr) {
-  const buckets = new Map();
-  for (const f of arr) {
-    const key = `${f.ano}-${f.mes}-${String(f.apartamento)}`;
-    const isDetailed =
-      (typeof f.checkIn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.checkIn)) ||
-      Number(f.noites || 0) > 0 ||
-      f.tipo === 'reserva';
-
-    if (!buckets.has(key)) buckets.set(key, { detailed: [], manual: [] });
-    const bucket = buckets.get(key);
-    (isDetailed ? bucket.detailed : bucket.manual).push(f);
-  }
-
-  const flattened = [];
-  for (const { detailed, manual } of buckets.values()) {
-    if (detailed.length) flattened.push(...detailed);
-    else flattened.push(...manual);
-  }
-
-  return flattened;
 }
 
 function addPressEffect(btn) {

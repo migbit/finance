@@ -1,13 +1,6 @@
 import { db } from './script.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-
-const VIEW_APTS = {
-  total: ['123', '1248'],
-  '123': ['123'],
-  '1248': ['1248']
-};
-
-const MONTH_LABELS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+import { VIEW_APTS, MONTH_LABELS } from './analisev2-core.js';
 const containerId = 'heatmap-variacao-analisev2';
 
 const state = {

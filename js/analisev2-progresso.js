@@ -1,12 +1,13 @@
 import { db } from './script.js';
 import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-import { parseLocalDate } from './analisev2-utils.js';
-
-const VIEW_APTS = {
-  total: ['123', '1248'],
-  '123': ['123'],
-  '1248': ['1248']
-};
+import {
+  consolidarFaturas,
+  splitFaturaPorDia,
+  valorFatura,
+  formatEuro,
+  MONTH_LABELS,
+  VIEW_APTS
+} from './analisev2-core.js';
 
 const METRICS = {
   parcial: { labelId: 'label-parcial', textId: 'donut-parcial-text', canvasId: 'donut-parcial' },
@@ -243,15 +244,9 @@ function somar(faturas, predicate) {
   }, 0);
 }
 
-function valorFatura(f) {
-  if (typeof f.valorDistribuido === 'number') return f.valorDistribuido;
-  return Number(f.valorTransferencia || 0) + Number(f.taxaAirbnb || 0);
-}
-
 function obterNomeMes(numeroMes) {
-  const nomes = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const idx = Math.max(1, Math.min(12, Number(numeroMes))) - 1;
-  return nomes[idx];
+  return MONTH_LABELS[idx];
 }
 
 function formatDelta(diff, labels = {}) {
@@ -266,12 +261,6 @@ function formatDelta(diff, labels = {}) {
 
   const abs = formatEuro(Math.abs(diff));
   return diff > 0 ? `${positive} ${abs}` : `${negative} ${abs}`;
-}
-
-function formatEuro(value) {
-  const num = Math.round(Number(value) || 0);
-  return num.toLocaleString('pt-PT', { maximumFractionDigits: 0, useGrouping: true })
-    .replace(/\./g, ' ') + ' €';
 }
 
 function setMetricLabel(id, text) {
@@ -291,29 +280,6 @@ function formatTimestamp(date) {
   return `${d} ${t}`;
 }
 
-function consolidarFaturas(arr) {
-  const buckets = new Map();
-  for (const f of arr) {
-    const key = `${f.ano}-${f.mes}-${String(f.apartamento)}`;
-    const isDetailed =
-      (typeof f.checkIn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.checkIn)) ||
-      Number(f.noites || 0) > 0 ||
-      f.tipo === 'reserva';
-
-    if (!buckets.has(key)) buckets.set(key, { detailed: [], manual: [] });
-    const bucket = buckets.get(key);
-    (isDetailed ? bucket.detailed : bucket.manual).push(f);
-  }
-
-  const flattened = [];
-  for (const { detailed, manual } of buckets.values()) {
-    if (detailed.length) flattened.push(...detailed);
-    else flattened.push(...manual);
-  }
-
-  return flattened;
-}
-
 function buildGranularityDatasets(base) {
   const monthly = Array.isArray(base) ? [...base] : [];
   const perDay = [];
@@ -323,32 +289,6 @@ function buildGranularityDatasets(base) {
     else perDay.push(f);
   });
   return { mes: monthly, dia: perDay };
-}
-
-function splitFaturaPorDia(fatura) {
-  const noites = Number(fatura.noites || 0);
-  if (!noites || noites <= 0) return null;
-  if (typeof fatura.checkIn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(fatura.checkIn)) return null;
-
-  const inicio = parseLocalDate(fatura.checkIn);
-  if (!(inicio instanceof Date) || Number.isNaN(inicio.getTime())) return null;
-
-  const nightlyValue = valorFatura(fatura) / noites;
-  const slices = [];
-
-  for (let i = 0; i < noites; i++) {
-    const dia = new Date(inicio);
-    dia.setDate(dia.getDate() + i);
-    slices.push({
-      ...fatura,
-      ano: dia.getFullYear(),
-      mes: dia.getMonth() + 1,
-      dia: dia.getDate(),
-      valorDistribuido: nightlyValue
-    });
-  }
-
-  return slices;
 }
 
 const cssVar = (name, fallback) =>
