@@ -372,6 +372,13 @@
           <h4>Recomendações de preços</h4>
           <p>Cada ponto é um mês: X = ocupação · Y = preço médio · cor = estação.</p>
         </div>
+        <div class="chart-toolbar">
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista de recomendações de preços">
+            <button class="filter-btn active" data-pricing-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
+            <button class="filter-btn" data-pricing-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-pricing-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+        </div>
         <div class="chart-wrap" style="height:360px">
           <canvas id="chart-pricing-lab" aria-label="Pricing scatter" role="img"></canvas>
         </div>

@@ -2062,6 +2062,51 @@ body[data-page="diversos-page"] .tab-navigation {
   overflow-x: auto;
 }
 
+.heatmap-insights {
+  margin-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.75rem;
+}
+
+.heatmap-insights h5 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+
+.heatmap-insights ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.heatmap-insights li {
+  padding-left: 0.4rem;
+  border-left: 3px solid transparent;
+  font-weight: 600;
+  color: #374151;
+}
+
+.heatmap-insights li.insight-warning {
+  border-color: #f97316;
+  color: #9a3412;
+}
+
+.heatmap-insights li.insight-success {
+  border-color: #22c55e;
+  color: #15803d;
+}
+
+.heatmap-insights li.insight-info {
+  border-color: #3b82f6;
+  color: #1e40af;
+}
+
 .heatmap-area {
   width: 100%;
 }

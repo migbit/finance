@@ -119,7 +119,19 @@ function renderHeatmap(rows) {
     html += '</tr>';
   }
 
-  html += '</tbody></table></div>';
+  html += '</tbody></table>';
+
+  const insights = generateHeatmapInsights(totals, validYears, currYear, currMonth);
+  if (insights.length) {
+    html += `
+      <div class="heatmap-insights">
+        <h5>Insights</h5>
+        <ul>${insights.map((insight) => `<li class="insight-${insight.type}">${insight.message}</li>`).join('')}</ul>
+      </div>
+    `;
+  }
+
+  html += '</div>';
   setHeatmapContent(html);
 }
 
@@ -160,6 +172,72 @@ function idealTextOn(hex) {
   const b = parseInt(hex.slice(5, 7), 16);
   const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
   return luminance < 160 ? '#fff' : '#111';
+}
+
+function generateHeatmapInsights(totals, years, currYear, currMonth) {
+  const insights = [];
+  if (!Array.isArray(years) || !years.length) return insights;
+  const latestYear = years[years.length - 1];
+  const comparisonYear = latestYear - 1;
+  if (!totals[latestYear] || !totals[comparisonYear]) return insights;
+
+  const startMonth = Math.max(1, currMonth - 2);
+  const endMonth = Math.min(12, currMonth);
+  
+  const monthDeltas = [];
+  for (let month = startMonth; month <= endMonth; month++) {
+    const currValue = totals[latestYear]?.[month];
+    const prevValue = totals[comparisonYear]?.[month];
+    if (!currValue || !prevValue) continue;
+    const delta = ((currValue - prevValue) / prevValue) * 100;
+    monthDeltas.push({ month, delta, currValue, prevValue });
+  }
+  
+  if (!monthDeltas.length) return insights;
+  
+  // Add critical warnings
+  monthDeltas.forEach(({ month, delta }) => {
+    if (delta < -15) {
+      insights.push({
+        type: 'warning',
+        priority: 1,
+        message: `🚨 ${MONTH_LABELS[month - 1]}: Receita -${Math.abs(delta).toFixed(0)}% vs ano passado`
+      });
+    }
+  });
+  
+  // Add positive highlights
+  monthDeltas.forEach(({ month, delta }) => {
+    if (delta >= 15) {
+      insights.push({
+        type: 'success',
+        priority: 2,
+        message: `✅ ${MONTH_LABELS[month - 1]}: Receita +${delta.toFixed(0)}% vs ano passado`
+      });
+    }
+  });
+  
+  // Add neutral observations if no warnings/highlights
+  if (insights.length === 0) {
+    const avgDelta = monthDeltas.reduce((sum, d) => sum + d.delta, 0) / monthDeltas.length;
+    if (avgDelta >= 0) {
+      insights.push({
+        type: 'info',
+        priority: 3,
+        message: `📊 Variação média recente: +${avgDelta.toFixed(0)}% vs ano passado`
+      });
+    } else {
+      insights.push({
+        type: 'info',
+        priority: 3,
+        message: `📊 Variação média recente: ${avgDelta.toFixed(0)}% vs ano passado`
+      });
+    }
+  }
+  
+  return insights
+    .sort((a, b) => (a.priority || 5) - (b.priority || 5))
+    .slice(0, 3);
 }
 
 function formatPct(value) {

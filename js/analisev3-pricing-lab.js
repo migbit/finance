@@ -8,7 +8,21 @@ const SEASON_COLORS = {
   spring: '#22c55e'
 };
 
+const VIEW_APTS = {
+  total: ['123', '1248'],
+  '123': ['123'],
+  '1248': ['1248']
+};
+
+const VIEW_LABELS = {
+  total: 'Total',
+  '123': 'Apartamento 123',
+  '1248': 'Apartamento 1248'
+};
+
 const state = {
+  view: 'total',
+  months: [],
   points: [],
   chart: null
 };
@@ -23,6 +37,16 @@ const quadrantPlugin = {
     const y = scales.y.getPixelForValue?.(yThreshold);
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(x, chartArea.top, chartArea.right - x, y - chartArea.top);
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(x, y, chartArea.right - x, chartArea.bottom - y);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(chartArea.left, chartArea.top, x - chartArea.left, y - chartArea.top);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(chartArea.left, y, x - chartArea.left, chartArea.bottom - y);
+    ctx.globalAlpha = 1;
     ctx.strokeStyle = 'rgba(107,114,128,0.6)';
     ctx.lineWidth = 1;
     ctx.setLineDash([6, 4]);
@@ -32,6 +56,18 @@ const quadrantPlugin = {
     ctx.moveTo(chartArea.left, y);
     ctx.lineTo(chartArea.right, y);
     ctx.stroke();
+    ctx.font = '600 11px var(--font-sans, system-ui, sans-serif)';
+    ctx.fillStyle = 'rgba(55,65,81,0.7)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const midR = (x + chartArea.right) / 2;
+    const midL = (chartArea.left + x) / 2;
+    const midT = (chartArea.top + y) / 2;
+    const midB = (y + chartArea.bottom) / 2;
+    ctx.fillText('✓ Sweet spot', midR, midT);
+    ctx.fillText('⚠ Subprecificado', midR, midB);
+    ctx.fillText('💡 Procura baixa', midL, midT);
+    ctx.fillText('🚨 Problema', midL, midB);
     ctx.restore();
   }
 };
@@ -85,6 +121,7 @@ ensurePricingPlugins();
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="pricing-lab"]')) return;
+  bindPricingViewButtons();
   await loadPricingLab();
 });
 
@@ -101,12 +138,12 @@ async function loadPricingLab() {
   try {
     const { months } = await getMonthlyPerformance();
     const filtered = months.filter((month) => Number(month.year) >= 2025);
-    state.points = buildPoints(filtered);
-    if (!state.points.length) {
+    state.months = filtered;
+    if (!filtered.length) {
+      state.points = [];
       renderEmpty('Sem dados suficientes (apenas 2025+).');
     } else {
-      renderChart();
-      renderRecommendations();
+      refreshPricingLab();
     }
   } catch (error) {
     window.errorHandler?.handleError('pricing-lab', error, 'loadPricingLab', loadPricingLab);
@@ -116,11 +153,57 @@ async function loadPricingLab() {
   }
 }
 
-function buildPoints(months) {
+function bindPricingViewButtons() {
+  const buttons = document.querySelectorAll('[data-pricing-view]');
+  if (!buttons.length) return;
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = btn.dataset.pricingView;
+      if (!next || next === state.view) return;
+      state.view = VIEW_APTS[next] ? next : 'total';
+      updatePricingViewButtons();
+      refreshPricingLab();
+    });
+  });
+  updatePricingViewButtons();
+}
+
+function updatePricingViewButtons() {
+  document.querySelectorAll('[data-pricing-view]').forEach((btn) => {
+    const active = btn.dataset.pricingView === state.view;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+function refreshPricingLab() {
+  const months = state.months || [];
+  if (!months.length) return;
+  const apartments = VIEW_APTS[state.view] || VIEW_APTS.total;
+  state.points = buildPoints(months, apartments);
+  if (!state.points.length) {
+    renderEmpty(`Sem dados suficientes para ${VIEW_LABELS[state.view] || 'esta vista'}.`);
+    return;
+  }
+  renderChart();
+  renderRecommendations();
+}
+
+function buildPoints(months, apartments) {
+  if (!Array.isArray(months) || !months.length || !Array.isArray(apartments) || !apartments.length) return [];
   const latest = months.slice(-12);
   return latest.map((month) => {
-    const occupancy = month.availableTotal ? (month.totalOccupied / month.availableTotal) * 100 : 0;
-    const avgPrice = month.totalOccupied ? month.totalRevenue / month.totalOccupied : 0;
+    const revenue = apartments.reduce((sum, apt) => sum + (month.revenueByApt?.[apt] || 0), 0);
+    const occupied = apartments.reduce((sum, apt) => sum + (month.occupiedByApt?.[apt] || 0), 0);
+    const fallbackAvailable = month.availableTotal && VIEW_APTS.total.length
+      ? month.availableTotal / VIEW_APTS.total.length
+      : 0;
+    const available = apartments.reduce((sum, apt) => {
+      const value = month.availableByApt?.[apt];
+      return sum + (Number.isFinite(value) ? value : fallbackAvailable);
+    }, 0);
+    const occupancy = available ? (occupied / available) * 100 : null;
+    const avgPrice = occupied ? revenue / occupied : null;
     return {
       x: Number.isFinite(occupancy) ? Number(occupancy.toFixed(1)) : null,
       y: Number.isFinite(avgPrice) ? avgPrice : null,
@@ -133,6 +216,7 @@ function buildPoints(months) {
 }
 
 function renderChart() {
+  if (!state.points.length) return;
   ensurePricingPlugins();
   destroyChart();
   const canvas = document.getElementById('chart-pricing-lab');
@@ -197,8 +281,9 @@ function renderChart() {
 function renderRecommendations() {
   const container = document.getElementById('pricing-action-cards');
   if (!container) return;
+  const viewLabel = VIEW_LABELS[state.view] || 'esta vista';
   if (!state.points.length) {
-    container.innerHTML = '<article class="action-card"><h5>Sem dados</h5><p>Adicione meses recentes para gerar recomendações.</p></article>';
+    container.innerHTML = `<article class="action-card"><h5>Sem dados</h5><p>${viewLabel} ainda não tem meses suficientes para recomendações.</p></article>`;
     return;
   }
 
