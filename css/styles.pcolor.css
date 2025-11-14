@@ -3472,6 +3472,13 @@ body[data-page="analisev3"] .chart-toolbar .segmented button {
   font-size: 0.85rem;
 }
 
+.length-reco-card .tip-seasonal {
+  margin-top: 0.35rem;
+  color: #0f172a;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
 .weekpart-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

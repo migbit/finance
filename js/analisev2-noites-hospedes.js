@@ -542,8 +542,9 @@ function renderNoitesTip(rows) {
   } else if (shortStay.count > longStay.count * 1.5) {
     hint = ' Curta duração domina – considere exigir 3 noites ao fim de semana para elevar ticket médio.';
   }
-  let compare = buildNoitesCompareSummary();
-  target.innerHTML = `<p>${baseText}${hint}</p>${compare ? `<p class="tip-compare">${compare}</p>` : ''}`;
+  const compare = buildNoitesCompareSummary();
+  const seasonal = buildSeasonalStayPattern(rows);
+  target.innerHTML = `<p>${baseText}${hint}</p>${compare ? `<p class="tip-compare">${compare}</p>` : ''}${seasonal ? `<p class="tip-seasonal">${seasonal}</p>` : ''}`;
 }
 
 function renderHospedesTip(rows) {
@@ -608,6 +609,20 @@ function buildNoitesCompareSummary() {
   const diff = Math.abs(short1248 - short123);
   if (diff < 1) return '';
   return `Comparação 1248 vs 123: Apt ${leader} cobra ${formatEuro(diff)} a mais em estadias 1-2 noites.`;
+}
+
+function buildSeasonalStayPattern(rows) {
+  const summerMonths = new Set([6, 7, 8]);
+  const winterMonths = new Set([12, 1, 2]);
+  const summer = rows.filter((row) => summerMonths.has(Number(row.mes)));
+  const winter = rows.filter((row) => winterMonths.has(Number(row.mes)));
+  if (!summer.length || !winter.length) return '';
+  const averageNights = (list) => list.reduce((sum, row) => sum + (Number(row.noites) || 0), 0) / list.length;
+  const summerAvg = averageNights(summer);
+  const winterAvg = averageNights(winter);
+  const diff = Math.abs(summerAvg - winterAvg);
+  if (!Number.isFinite(diff) || diff < 0.5) return '';
+  return `Sazonalidade: Verão ${summerAvg.toFixed(1)} noites vs Inverno ${winterAvg.toFixed(1)} noites.`;
 }
 
 function buildHospedesCompareSummary() {
