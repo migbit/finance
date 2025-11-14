@@ -46,6 +46,16 @@ const revpanQuadrantPlugin = {
     const y = scales.y.getPixelForValue?.(yThreshold);
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle = '#16a34a';
+    ctx.fillRect(x, chartArea.top, chartArea.right - x, y - chartArea.top); // top-right
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(x, y, chartArea.right - x, chartArea.bottom - y); // bottom-right
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(chartArea.left, chartArea.top, x - chartArea.left, y - chartArea.top); // top-left
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(chartArea.left, y, x - chartArea.left, chartArea.bottom - y); // bottom-left
+    ctx.globalAlpha = 1;
     ctx.strokeStyle = 'rgba(107,114,128,0.45)';
     ctx.lineWidth = 1;
     ctx.setLineDash([6, 4]);
@@ -75,6 +85,13 @@ const revpanQuadrantPlugin = {
     ctx.fillText(labels.topLeft, midLeft, midTop);
     ctx.fillText(labels.bottomLeft, midLeft, midBottom);
     ctx.restore();
+  }
+};
+
+const revpanScatterLabelsPlugin = {
+  id: 'revpanScatterLabels',
+  afterDatasetsDraw(chart) {
+    // Plugin disabled - labels shown in tooltip only
   }
 };
 
@@ -248,7 +265,10 @@ function renderRevpanCompare() {
           },
           grid: { color: 'rgba(0,0,0,0.05)' }
         },
-        x: { grid: { display: false } }
+        x: { 
+          grid: { display: false },
+          ticks: { autoSkip: false, maxRotation: 0 }
+        }
       },
       plugins: {
         tooltip: {
@@ -333,7 +353,10 @@ function renderChart(series) {
           },
           grid: { color: 'rgba(0,0,0,0.05)' }
         },
-        x: { grid: { display: false } }
+        x: { 
+          grid: { display: false },
+          ticks: { autoSkip: false, maxRotation: 0 }
+        }
       },
       plugins: {
         tooltip: {
@@ -441,9 +464,12 @@ function aggregateMonthlyMetrics(months, apartments = []) {
     const revpan = available ? revenue / available : null;
     const avgPrice = occupied ? revenue / occupied : 0;
     const rawOccupancy = available ? (occupied / available) * 100 : null;
-    let occupancy = Number.isFinite(rawOccupancy) ? Math.max(0, Math.min(rawOccupancy, 100)) : null;
-    if (Number.isFinite(rawOccupancy) && rawOccupancy > 100.5) {
-      console.warn(`Ocupação acima de 100% detectada em ${month.year}-${month.month}: ${rawOccupancy.toFixed(1)}%. Verifique noites disponíveis.`);
+    let occupancy = null;
+    if (Number.isFinite(rawOccupancy)) {
+      if (rawOccupancy > 100.5) {
+        console.warn(`Ocupação acima de 100% detectada em ${month.year}-${month.month}: ${rawOccupancy.toFixed(1)}%. Verifique noites disponíveis.`);
+      }
+      occupancy = Math.max(0, Math.min(rawOccupancy, 100));
     }
     return {
       year: month.year,
@@ -686,16 +712,10 @@ function renderRevpanScatter(series) {
             bottomLeft: '🚨 Atenção'
           }
         },
-        datalabels: typeof ChartDataLabels !== 'undefined' ? {
-          align: 'left',
-          anchor: 'center',
-          offset: 8,
-          color: '#1f2937',
-          font: { size: 10, weight: 600 },
-          formatter: (value, context) => context.dataset.data[context.dataIndex].label
-        } : undefined
+        datalabels: { display: false }
       }
-    }
+    },
+    plugins: [revpanScatterLabelsPlugin]
   });
   setScatterNote('Cada ponto cruza Ocupação × RevPAN para expor meses sub ou sobre precificados.');
 }
