@@ -41,6 +41,10 @@ window.addEventListener('analisev2:retry', (event) => {
   if (event.detail?.module === 'valor-medio') loadValorMedioData();
 });
 
+window.addEventListener('beforeunload', () => {
+  resetValorMedioChart();
+});
+
 function bindViewButtons() {
   document.querySelectorAll('[data-valor-medio-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -324,6 +328,9 @@ function renderCompetitiveCard() {
   const rival = metrics.find((item) => item.apartamento !== leader.apartamento);
   const diffNightly = rival ? leader.avgNightly - rival.avgNightly : 0;
 
+  const trend123 = calculatePriceTrend(state.nightlyEntries, '123');
+  const trend1248 = calculatePriceTrend(state.nightlyEntries, '1248');
+
   container.innerHTML = `
     ${metrics.map((item) => `
       <div class="competitive-item apt-${item.apartamento}">
@@ -334,7 +341,13 @@ function renderCompetitiveCard() {
       </div>
     `).join('')}
     <div class="competitive-summary">
-      ${rival ? `Apt ${leader.apartamento} lidera por ${formatEuro(Math.abs(diffNightly))} / noite.` : 'Apenas um apartamento com dados.'}
+      ${rival ? `
+        Apt ${leader.apartamento} lidera por ${formatEuro(Math.abs(diffNightly))} / noite.
+        <div class="competitive-trends">
+          <p>Apt 123: ${formatTrendIndicator(trend123)}</p>
+          <p>Apt 1248: ${formatTrendIndicator(trend1248)}</p>
+        </div>
+      ` : 'Apenas um apartamento com dados.'}
     </div>
   `;
 }
@@ -378,6 +391,26 @@ function computeCompetitiveMetrics(windowSize = 6) {
 
 function pad(value) {
   return String(value).padStart(2, '0');
+}
+
+function calculatePriceTrend(entries, apartment) {
+  if (!Array.isArray(entries) || !entries.length) return null;
+  const filtered = entries.filter((entry) => String(entry.apartamento) === String(apartment));
+  if (filtered.length < 8) return null;
+  const recent = filtered.slice(-6);
+  const older = filtered.slice(-12, -6);
+  if (!recent.length || !older.length) return null;
+  const recentAvg = recent.reduce((sum, entry) => sum + (entry.valor || 0), 0) / recent.length;
+  const olderAvg = older.reduce((sum, entry) => sum + (entry.valor || 0), 0) / older.length;
+  if (!Number.isFinite(recentAvg) || !Number.isFinite(olderAvg) || olderAvg === 0) return null;
+  return ((recentAvg - olderAvg) / olderAvg) * 100;
+}
+
+function formatTrendIndicator(trend) {
+  if (trend == null) return 'Dados insuficientes';
+  if (trend > 5) return `📈 Subindo (${trend.toFixed(1)}%)`;
+  if (trend < -5) return `📉 Descendo (${trend.toFixed(1)}%)`;
+  return `➡️ Estável (${trend.toFixed(1)}%)`;
 }
 
 function expandNightlyEntries(faturas) {
