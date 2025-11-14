@@ -55,6 +55,25 @@ const revpanQuadrantPlugin = {
     ctx.moveTo(chartArea.left, y);
     ctx.lineTo(chartArea.right, y);
     ctx.stroke();
+
+    const labels = opts.labels || {
+      topRight: '✓ Zona ideal',
+      bottomRight: '⚠ Subprecificado',
+      topLeft: '💡 Procura baixa',
+      bottomLeft: '🚨 Atenção'
+    };
+    ctx.font = '600 11px var(--font-sans, system-ui, sans-serif)';
+    ctx.fillStyle = 'rgba(55,65,81,0.8)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const midTop = (chartArea.top + y) / 2;
+    const midBottom = (chartArea.bottom + y) / 2;
+    const midLeft = (chartArea.left + x) / 2;
+    const midRight = (chartArea.right + x) / 2;
+    ctx.fillText(labels.topRight, midRight, midTop);
+    ctx.fillText(labels.bottomRight, midRight, midBottom);
+    ctx.fillText(labels.topLeft, midLeft, midTop);
+    ctx.fillText(labels.bottomLeft, midLeft, midBottom);
     ctx.restore();
   }
 };
@@ -421,18 +440,27 @@ function aggregateMonthlyMetrics(months, apartments = []) {
     const available = apartments.reduce((sum, apt) => sum + (month.availableByApt?.[apt] ?? fallback), 0);
     const revpan = available ? revenue / available : null;
     const avgPrice = occupied ? revenue / occupied : 0;
-    const occupancy = available ? (occupied / available) * 100 : 0;
+    const rawOccupancy = available ? (occupied / available) * 100 : null;
+    let occupancy = Number.isFinite(rawOccupancy) ? Math.max(0, Math.min(rawOccupancy, 100)) : null;
+    if (Number.isFinite(rawOccupancy) && rawOccupancy > 100.5) {
+      console.warn(`Ocupação acima de 100% detectada em ${month.year}-${month.month}: ${rawOccupancy.toFixed(1)}%. Verifique noites disponíveis.`);
+    }
     return {
       year: month.year,
       month: month.month,
       revpan: Number.isFinite(revpan) ? revpan : null,
-      occupancy: Number.isFinite(occupancy) ? Math.max(0, Math.min(occupancy, 110)) : null,
+      occupancy,
       avgPrice,
       revenue,
       available,
       occupied
     };
   }).filter((entry) => entry.revpan != null);
+}
+
+function calculateEfficiency(revpan, avgPrice) {
+  if (!Number.isFinite(revpan) || !Number.isFinite(avgPrice) || avgPrice <= 0) return null;
+  return Math.max(0, (revpan / avgPrice) * 100);
 }
 
 function calculateTargetRevpan(metrics = []) {
@@ -451,52 +479,79 @@ function calculateYtdRevpan(metrics = []) {
   const latestYearRows = metrics.filter((m) => m.year === latestYear);
   if (!latestYearRows.length) return null;
   const cutoffMonth = Math.max(...latestYearRows.map((m) => m.month));
-  const collectValue = (year) => {
+  const collectStats = (year) => {
     const rows = metrics.filter((m) => m.year === year && m.month <= cutoffMonth);
+    if (!rows.length) return null;
     const revenue = rows.reduce((sum, row) => sum + row.revenue, 0);
     const available = rows.reduce((sum, row) => sum + row.available, 0);
-    return available ? revenue / available : null;
+    const occupied = rows.reduce((sum, row) => sum + row.occupied, 0);
+    if (!available) return null;
+    const revpan = revenue / available;
+    const avgPrice = occupied ? revenue / occupied : null;
+    return { revpan, avgPrice };
   };
-  const currentValue = collectValue(latestYear);
-  if (!Number.isFinite(currentValue)) return null;
-  const prevValue = collectValue(latestYear - 1);
+  const currentStats = collectStats(latestYear);
+  if (!currentStats || !Number.isFinite(currentStats.revpan)) return null;
+  const prevStats = collectStats(latestYear - 1);
+  const prevValue = prevStats?.revpan ?? null;
   return {
     currentLabel: `${MONTH_LABELS[cutoffMonth - 1]} ${latestYear}`,
     prevLabel: Number.isFinite(prevValue) ? `${MONTH_LABELS[cutoffMonth - 1]} ${latestYear - 1}` : null,
-    currentValue,
+    currentValue: currentStats.revpan,
     prevValue: Number.isFinite(prevValue) ? prevValue : null,
-    delta: Number.isFinite(prevValue) ? currentValue - prevValue : null,
-    changePercent: Number.isFinite(prevValue) && prevValue !== 0 ? ((currentValue - prevValue) / prevValue) * 100 : null
+    delta: Number.isFinite(prevValue) ? currentStats.revpan - prevValue : null,
+    changePercent: Number.isFinite(prevValue) && prevValue !== 0 ? ((currentStats.revpan - prevValue) / prevValue) * 100 : null,
+    efficiency: calculateEfficiency(currentStats.revpan, currentStats.avgPrice)
   };
 }
 
 function generateRevpanInsights(latestMetrics = []) {
   const insights = [];
+  const TH = {
+    critical: { occupancy: 40, ratio: 0.4 },
+    warning: { occupancy: 50, ratio: 0.5 },
+    underpriced: { occupancy: 85, ratio: 0.7 },
+    excellent: { occupancy: 75, ratio: 0.75 }
+  };
   latestMetrics.forEach((metric) => {
-    if (!Number.isFinite(metric.revpan) || !Number.isFinite(metric.occupancy)) return;
+    if (!Number.isFinite(metric.revpan) || !Number.isFinite(metric.occupancy) || !Number.isFinite(metric.avgPrice)) return;
     const monthName = MONTH_LABELS[metric.month - 1];
-    if (metric.occupancy >= 85 && metric.revpan < metric.avgPrice * 0.7) {
+    const ratio = metric.avgPrice > 0 ? metric.revpan / metric.avgPrice : 0;
+    if (metric.occupancy < TH.critical.occupancy && ratio < TH.critical.ratio) {
+      insights.push({
+        type: 'critical',
+        priority: 1,
+        message: `🚨 ${monthName}: Ocupação ${metric.occupancy.toFixed(0)}% e RevPAN ${formatRevpanValue(metric.revpan)} → ação urgente.`
+      });
+      return;
+    }
+    if (metric.occupancy >= TH.underpriced.occupancy && ratio < TH.underpriced.ratio) {
       insights.push({
         type: 'warning',
-        message: `${monthName}: Ocupação ${metric.occupancy.toFixed(0)}% mas RevPAN ${formatRevpanValue(metric.revpan)} → subir preços ~10-15%.`
+        priority: 2,
+        message: `⚠️ ${monthName}: Subprecificado (${metric.occupancy.toFixed(0)}%) → aumentar preços 10-15%.`
       });
       return;
     }
-    if (metric.occupancy < 50 && metric.revpan < metric.avgPrice * 0.5) {
+    if (metric.occupancy < TH.warning.occupancy && ratio < TH.warning.ratio) {
       insights.push({
         type: 'problem',
-        message: `${monthName}: Ocupação ${metric.occupancy.toFixed(0)}% e RevPAN ${formatRevpanValue(metric.revpan)} → baixar preços ou promover estadias longas.`
+        priority: 3,
+        message: `💡 ${monthName}: Procura fraca (${metric.occupancy.toFixed(0)}%) → promoções ou estadias longas.`
       });
       return;
     }
-    if (metric.occupancy >= 75 && metric.revpan >= metric.avgPrice * 0.75) {
+    if (metric.occupancy >= TH.excellent.occupancy && ratio >= TH.excellent.ratio) {
       insights.push({
         type: 'success',
-        message: `${monthName}: Excelente equilíbrio (${metric.occupancy.toFixed(0)}% · ${formatRevpanValue(metric.revpan)}).`
+        priority: 4,
+        message: `✅ ${monthName}: Excelente equilíbrio (${metric.occupancy.toFixed(0)}% · ${formatRevpanValue(metric.revpan)}).`
       });
     }
   });
-  return insights.slice(0, 4);
+  return insights
+    .sort((a, b) => (a.priority || 5) - (b.priority || 5))
+    .slice(0, 4);
 }
 
 function buildSnapshotInsight(metric, prevValue, prevYear) {
@@ -550,6 +605,9 @@ function renderRevpanSummary(series) {
     <p class="eyebrow">Até ${summary.currentLabel}</p>
     <div class="value">${formatRevpanValue(summary.currentValue)}</div>
     <p class="${deltaClass}">${deltaText}</p>
+    <p class="efficiency">${summary.efficiency != null
+      ? `Eficiência: ${summary.efficiency.toFixed(0)}% do potencial (preço médio)`
+      : 'Eficiência: indisponível'}</p>
   `;
 }
 
@@ -598,8 +656,8 @@ function renderRevpanScatter(series) {
       scales: {
         x: {
           title: { display: true, text: 'Ocupação (%)' },
-          min: 30,
-          max: 105,
+          min: 0,
+          max: 100,
           ticks: { callback: (value) => `${value}%` }
         },
         y: {
@@ -620,7 +678,13 @@ function renderRevpanScatter(series) {
         },
         revpanQuadrants: {
           xThreshold: OCCUPANCY_TARGET,
-          yThreshold: avgRevpan
+          yThreshold: avgRevpan,
+          labels: {
+            topRight: '✓ Zona ideal',
+            bottomRight: '⚠ Subprecificado',
+            topLeft: '💡 Procura baixa',
+            bottomLeft: '🚨 Atenção'
+          }
         },
         datalabels: typeof ChartDataLabels !== 'undefined' ? {
           align: 'left',

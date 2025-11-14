@@ -3222,6 +3222,13 @@ body[data-page="analisev3"] .chart-toolbar .segmented button {
   font-weight: 500;
 }
 
+.revpan-card .efficiency {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+
 .revpan-highlight {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -3272,6 +3279,12 @@ body[data-page="analisev3"] .chart-toolbar .segmented button {
 .revpan-highlight li.revpan-insight--info {
   border-color: #3b82f6;
   color: #1d4ed8;
+}
+
+.revpan-highlight li.revpan-insight--critical {
+  border-color: #dc2626;
+  color: #7f1d1d;
+  font-weight: 700;
 }
 
 .revpan-scatter-wrap {
