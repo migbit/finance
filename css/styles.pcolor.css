@@ -3171,10 +3171,117 @@ body[data-page="analisev3"] .chart-toolbar .segmented button {
 }
 
 
-.revpan-highlight {
-  margin-top: 1.25rem;
-  font-weight: 600;
+.revpan-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+  align-items: stretch;
+}
+
+.revpan-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.revpan-card .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.revpan-card .value {
+  font-size: 1.65rem;
+  font-weight: 700;
   color: var(--text-strong);
+}
+
+.revpan-card .delta {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.revpan-card .delta.positive {
+  color: #166534;
+}
+
+.revpan-card .delta.negative {
+  color: #b91c1c;
+}
+
+.revpan-card .muted {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.revpan-highlight {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #fff;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.revpan-highlight h5 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+
+.revpan-highlight ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.revpan-highlight li {
+  padding-left: 0.35rem;
+  border-left: 3px solid transparent;
+  font-weight: 600;
+}
+
+.revpan-highlight li.revpan-insight--success {
+  border-color: #16a34a;
+  color: #166534;
+}
+
+.revpan-highlight li.revpan-insight--warning {
+  border-color: #f97316;
+  color: #9a3412;
+}
+
+.revpan-highlight li.revpan-insight--problem {
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.revpan-highlight li.revpan-insight--info {
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+.revpan-scatter-wrap {
+  margin-top: 1.5rem;
+}
+
+.revpan-note {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #6b7280;
 }
 
 .competitive-card {

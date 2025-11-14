@@ -15,15 +15,62 @@ const COLORS = {
   '1248': 'rgba(245,133,20,1)'
 };
 
+const VIEW_LABELS = {
+  total: 'Total',
+  '123': 'Apartamento 123',
+  '1248': 'Apartamento 1248',
+  compare: 'Comparação'
+};
+
 const MIN_REVPAN_YEAR = 2025;
+const OCCUPANCY_TARGET = 75;
+const TARGET_REVPAN_RATIO = 0.75;
 
 const state = {
   view: 'total',
   months: [],
-  chart: null
+  chart: null,
+  scatterChart: null
 };
 
 let buttonsController = null;
+let revpanPluginsRegistered = false;
+
+const revpanQuadrantPlugin = {
+  id: 'revpanQuadrants',
+  afterDraw(chart, args, opts) {
+    const { ctx, chartArea, scales } = chart;
+    if (!opts || !scales?.x || !scales?.y) return;
+    const { xThreshold, yThreshold } = opts;
+    const x = scales.x.getPixelForValue?.(xThreshold);
+    const y = scales.y.getPixelForValue?.(yThreshold);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(107,114,128,0.45)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, chartArea.top);
+    ctx.lineTo(x, chartArea.bottom);
+    ctx.moveTo(chartArea.left, y);
+    ctx.lineTo(chartArea.right, y);
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
+function ensureRevpanPlugins() {
+  if (revpanPluginsRegistered) return;
+  if (typeof Chart === 'undefined' || !Chart?.register) return;
+  try {
+    Chart.register(revpanQuadrantPlugin);
+    revpanPluginsRegistered = true;
+  } catch (error) {
+    console.error('Falha ao registar plugins do RevPAN', error);
+  }
+}
+
+ensureRevpanPlugins();
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="revpan"]')) return;
@@ -38,6 +85,7 @@ window.addEventListener('analisev2:retry', (event) => {
 window.addEventListener('beforeunload', () => {
   if (buttonsController) buttonsController.abort();
   destroyChart();
+  destroyScatterChart();
 });
 
 function bindViewButtons() {
@@ -92,6 +140,8 @@ function renderRevpan() {
 
   if (state.view === 'compare') {
     renderRevpanCompare();
+    renderRevpanSummary(null);
+    renderRevpanScatter(null);
     return;
   }
 
@@ -104,23 +154,23 @@ function renderRevpan() {
 
   renderChart(series);
   renderHighlight(series);
+  renderRevpanSummary(series);
+  renderRevpanScatter(series);
 }
 
 function buildRevpanSeries(months, apartments) {
+  if (!Array.isArray(apartments) || !apartments.length) {
+    return { years: [], map: new Map(), metrics: [] };
+  }
+  const metrics = aggregateMonthlyMetrics(months, apartments);
   const years = new Map();
-  months.forEach((month) => {
-    if (!apartments?.length) return;
-    const key = month.year;
-    if (!years.has(key)) years.set(key, Array(12).fill(null));
-    const revenue = apartments.reduce((sum, apt) => sum + (month.revenueByApt?.[apt] || 0), 0);
-    const available = apartments.reduce((sum, apt) => sum + (month.availableByApt?.[apt] || month.availableTotal / 2), 0);
-    if (!available) return;
-    const value = (revenue / available) * 100;
-    const arr = years.get(key);
-    arr[month.month - 1] = Number.isFinite(value) ? value : null;
+  metrics.forEach((metric) => {
+    if (!years.has(metric.year)) years.set(metric.year, Array(12).fill(null));
+    const arr = years.get(metric.year);
+    arr[metric.month - 1] = Number.isFinite(metric.revpan) ? metric.revpan : null;
   });
   const sortedYears = Array.from(years.keys()).sort((a, b) => a - b);
-  return { years: sortedYears, map: years };
+  return { years: sortedYears, map: years, metrics };
 }
 
 function renderRevpanCompare() {
@@ -175,7 +225,7 @@ function renderRevpanCompare() {
         y: {
           beginAtZero: true,
           ticks: {
-            callback: (value) => `${formatEuro(value)} /100 noites`
+            callback: (value) => formatRevpanValue(value)
           },
           grid: { color: 'rgba(0,0,0,0.05)' }
         },
@@ -184,7 +234,7 @@ function renderRevpanCompare() {
       plugins: {
         tooltip: {
           callbacks: {
-            label: (context) => `${context.dataset.label}: ${formatEuro(context.parsed.y)} /100 noites`
+            label: (context) => `${context.dataset.label}: ${formatRevpanValue(context.parsed.y)}`
           }
         },
         legend: { position: 'top' }
@@ -194,7 +244,10 @@ function renderRevpanCompare() {
 
   const info = document.getElementById('revpan-highlight');
   if (info) {
-    info.textContent = 'Comparação direta entre apartamentos 123 e 1248.';
+    info.innerHTML = `
+      <h5>Insights</h5>
+      <p>Comparação direta entre apartamentos 123 e 1248.</p>
+    `;
   }
 }
 
@@ -229,6 +282,19 @@ function renderChart(series) {
       pointHoverRadius: 5
     });
   }
+  const targetRevpan = calculateTargetRevpan(series.metrics);
+  if (targetRevpan > 0) {
+    datasets.push({
+      label: 'Alvo RevPAN (75% ocup.)',
+      data: Array(12).fill(targetRevpan),
+      borderColor: '#0ea5e9',
+      borderWidth: 1.5,
+      borderDash: [6, 6],
+      tension: 0,
+      spanGaps: true,
+      pointRadius: 0
+    });
+  }
 
   const plugins = [];
   if (typeof ChartDataLabels !== 'undefined') plugins.push(ChartDataLabels);
@@ -244,7 +310,7 @@ function renderChart(series) {
         y: {
           beginAtZero: true,
           ticks: {
-            callback: (value) => `${formatEuro(value)} /100 noites`
+            callback: (value) => formatRevpanValue(value)
           },
           grid: { color: 'rgba(0,0,0,0.05)' }
         },
@@ -255,7 +321,7 @@ function renderChart(series) {
           callbacks: {
             label: (context) => {
               const value = context.parsed.y;
-              return `${context.dataset.label}: ${formatEuro(value)} /100 noites`;
+              return `${context.dataset.label}: ${formatRevpanValue(value)}`;
             }
           }
         },
@@ -263,7 +329,7 @@ function renderChart(series) {
         datalabels: typeof ChartDataLabels !== 'undefined' ? {
           align: 'top',
           anchor: 'end',
-          formatter: (value) => (value ? formatEuro(value) : ''),
+          formatter: (value) => (value != null ? formatEuro(value) : ''),
           font: { size: 10, weight: '600' }
         } : undefined
       }
@@ -272,50 +338,46 @@ function renderChart(series) {
 }
 
 function renderHighlight(series) {
-  if (state.view === 'compare') return;
   const info = document.getElementById('revpan-highlight');
   if (!info) return;
+  if (state.view === 'compare') {
+    info.innerHTML = `
+      <h5>Insights</h5>
+      <p>Use uma vista individual para obter recomendações de preço.</p>
+    `;
+    return;
+  }
   const latestYear = series.years[series.years.length - 1];
+  if (!latestYear) {
+    info.innerHTML = '<p>Sem dados recentes para RevPAN.</p>';
+    return;
+  }
+  const latestMetrics = (series.metrics || []).filter((metric) => metric.year === latestYear);
+  if (!latestMetrics.length) {
+    info.innerHTML = '<p>Sem dados recentes para RevPAN.</p>';
+    return;
+  }
+  const lastMetric = latestMetrics.reduce((acc, metric) => (!acc || metric.month > acc.month ? metric : acc), null);
   const prevYear = series.years.length > 1 ? series.years[series.years.length - 2] : null;
-  const latestArray = latestYear ? series.map.get(latestYear) : null;
-  if (!latestArray) {
-    info.textContent = 'Sem dados recentes para RevPAN.';
-    return;
-  }
-  const lastIndex = findLastValueIndex(latestArray);
-  if (lastIndex === -1) {
-    info.textContent = 'Sem valores no ano atual.';
-    return;
-  }
-  const latestValue = latestArray[lastIndex];
-  const prevValue = prevYear ? series.map.get(prevYear)?.[lastIndex] : null;
-  const monthName = MONTH_LABELS[lastIndex];
-  if (latestValue == null) {
-    info.textContent = 'Sem valores calculados.';
-    return;
-  }
-  let trend = null;
-  if (prevValue != null) {
-    const delta = latestValue - prevValue;
-    const symbol = delta >= 0 ? '+' : '−';
-    trend = `${symbol}${formatEuro(Math.abs(delta))}`;
-  }
-  info.textContent = prevValue != null
-    ? `${monthName}: RevPAN ${formatEuro(latestValue)} /100 noites (${trend} vs ${prevYear})`
-    : `${monthName}: RevPAN ${formatEuro(latestValue)} /100 noites`;
-}
-
-function findLastValueIndex(arr) {
-  for (let i = arr.length - 1; i >= 0; i--) {
-    if (arr[i] != null) return i;
-  }
-  return -1;
+  const prevValue = prevYear && lastMetric ? series.map.get(prevYear)?.[lastMetric.month - 1] : null;
+  const insights = [];
+  const snapshot = buildSnapshotInsight(lastMetric, prevValue, prevYear);
+  if (snapshot) insights.push(snapshot);
+  insights.push(...generateRevpanInsights(latestMetrics));
+  info.innerHTML = `
+    <h5>Insights ${VIEW_LABELS[state.view] || ''}</h5>
+    ${insights.length
+      ? `<ul>${insights.map((item) => `<li class="revpan-insight--${item.type}">${item.message}</li>`).join('')}</ul>`
+      : '<p>Performance estável – sem alertas críticos.</p>'}
+  `;
 }
 
 function renderEmpty(message) {
   destroyChart();
+  renderRevpanSummary(null);
+  renderRevpanScatter(null);
   const info = document.getElementById('revpan-highlight');
-  if (info) info.textContent = message;
+  if (info) info.innerHTML = `<p>${message}</p>`;
   const canvas = document.getElementById('chart-revpan');
   if (canvas) {
     const ctx = canvas.getContext('2d');
@@ -343,4 +405,245 @@ function withAlpha(color, alpha) {
 function selectLatestYear(list) {
   if (!Array.isArray(list) || !list.length) return null;
   return list[list.length - 1];
+}
+
+function formatRevpanValue(value) {
+  if (!Number.isFinite(value)) return '—';
+  return `${formatEuro(value)} /noite`;
+}
+
+function aggregateMonthlyMetrics(months, apartments = []) {
+  if (!Array.isArray(apartments) || !apartments.length) return [];
+  return months.map((month) => {
+    const fallback = month.availableTotal && apartments.length ? month.availableTotal / apartments.length : 0;
+    const revenue = apartments.reduce((sum, apt) => sum + (month.revenueByApt?.[apt] || 0), 0);
+    const occupied = apartments.reduce((sum, apt) => sum + (month.occupiedByApt?.[apt] || 0), 0);
+    const available = apartments.reduce((sum, apt) => sum + (month.availableByApt?.[apt] ?? fallback), 0);
+    const revpan = available ? revenue / available : null;
+    const avgPrice = occupied ? revenue / occupied : 0;
+    const occupancy = available ? (occupied / available) * 100 : 0;
+    return {
+      year: month.year,
+      month: month.month,
+      revpan: Number.isFinite(revpan) ? revpan : null,
+      occupancy: Number.isFinite(occupancy) ? Math.max(0, Math.min(occupancy, 110)) : null,
+      avgPrice,
+      revenue,
+      available,
+      occupied
+    };
+  }).filter((entry) => entry.revpan != null);
+}
+
+function calculateTargetRevpan(metrics = []) {
+  if (!metrics.length) return 0;
+  const revenue = metrics.reduce((sum, item) => sum + item.revenue, 0);
+  const occupied = metrics.reduce((sum, item) => sum + item.occupied, 0);
+  if (!occupied) return 0;
+  const avgPrice = revenue / occupied;
+  return avgPrice * TARGET_REVPAN_RATIO;
+}
+
+function calculateYtdRevpan(metrics = []) {
+  if (!metrics.length) return null;
+  const latestYear = Math.max(...metrics.map((m) => m.year));
+  if (!Number.isFinite(latestYear)) return null;
+  const latestYearRows = metrics.filter((m) => m.year === latestYear);
+  if (!latestYearRows.length) return null;
+  const cutoffMonth = Math.max(...latestYearRows.map((m) => m.month));
+  const collectValue = (year) => {
+    const rows = metrics.filter((m) => m.year === year && m.month <= cutoffMonth);
+    const revenue = rows.reduce((sum, row) => sum + row.revenue, 0);
+    const available = rows.reduce((sum, row) => sum + row.available, 0);
+    return available ? revenue / available : null;
+  };
+  const currentValue = collectValue(latestYear);
+  if (!Number.isFinite(currentValue)) return null;
+  const prevValue = collectValue(latestYear - 1);
+  return {
+    currentLabel: `${MONTH_LABELS[cutoffMonth - 1]} ${latestYear}`,
+    prevLabel: Number.isFinite(prevValue) ? `${MONTH_LABELS[cutoffMonth - 1]} ${latestYear - 1}` : null,
+    currentValue,
+    prevValue: Number.isFinite(prevValue) ? prevValue : null,
+    delta: Number.isFinite(prevValue) ? currentValue - prevValue : null,
+    changePercent: Number.isFinite(prevValue) && prevValue !== 0 ? ((currentValue - prevValue) / prevValue) * 100 : null
+  };
+}
+
+function generateRevpanInsights(latestMetrics = []) {
+  const insights = [];
+  latestMetrics.forEach((metric) => {
+    if (!Number.isFinite(metric.revpan) || !Number.isFinite(metric.occupancy)) return;
+    const monthName = MONTH_LABELS[metric.month - 1];
+    if (metric.occupancy >= 85 && metric.revpan < metric.avgPrice * 0.7) {
+      insights.push({
+        type: 'warning',
+        message: `${monthName}: Ocupação ${metric.occupancy.toFixed(0)}% mas RevPAN ${formatRevpanValue(metric.revpan)} → subir preços ~10-15%.`
+      });
+      return;
+    }
+    if (metric.occupancy < 50 && metric.revpan < metric.avgPrice * 0.5) {
+      insights.push({
+        type: 'problem',
+        message: `${monthName}: Ocupação ${metric.occupancy.toFixed(0)}% e RevPAN ${formatRevpanValue(metric.revpan)} → baixar preços ou promover estadias longas.`
+      });
+      return;
+    }
+    if (metric.occupancy >= 75 && metric.revpan >= metric.avgPrice * 0.75) {
+      insights.push({
+        type: 'success',
+        message: `${monthName}: Excelente equilíbrio (${metric.occupancy.toFixed(0)}% · ${formatRevpanValue(metric.revpan)}).`
+      });
+    }
+  });
+  return insights.slice(0, 4);
+}
+
+function buildSnapshotInsight(metric, prevValue, prevYear) {
+  if (!metric || !Number.isFinite(metric.revpan)) return null;
+  const monthName = MONTH_LABELS[metric.month - 1];
+  if (!Number.isFinite(prevValue)) {
+    return {
+      type: 'info',
+      message: `Último dado (${monthName} ${metric.year}): ${formatRevpanValue(metric.revpan)}.`
+    };
+  }
+  const delta = metric.revpan - prevValue;
+  const pct = prevValue !== 0 ? (delta / prevValue) * 100 : null;
+  const compareLabel = prevYear ?? (metric.year - 1);
+  return {
+    type: delta >= 0 ? 'success' : 'problem',
+    message: `Último dado (${monthName} ${metric.year}): ${formatRevpanValue(metric.revpan)} (${delta >= 0 ? '+' : '−'}${formatEuro(Math.abs(delta))}${Number.isFinite(pct) ? ` · ${pct >= 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%` : ''} vs ${compareLabel}).`
+  };
+}
+
+function renderRevpanSummary(series) {
+  const card = document.getElementById('revpan-ytd-card');
+  if (!card) return;
+  if (state.view === 'compare') {
+    card.innerHTML = `
+      <p class="eyebrow">YTD RevPAN</p>
+      <div class="value">—</div>
+      <p class="delta muted">Disponível apenas nas vistas Total ou individuais.</p>
+    `;
+    return;
+  }
+  const summary = series?.metrics ? calculateYtdRevpan(series.metrics) : null;
+  if (!summary) {
+    card.innerHTML = `
+      <p class="eyebrow">YTD RevPAN</p>
+      <div class="value">—</div>
+      <p class="delta muted">Sem dados suficientes.</p>
+    `;
+    return;
+  }
+  let deltaText = 'Sem base do ano anterior.';
+  let deltaClass = 'delta muted';
+  if (summary.prevLabel && Number.isFinite(summary.delta)) {
+    const pct = Number.isFinite(summary.changePercent)
+      ? ` (${summary.changePercent >= 0 ? '+' : '−'}${Math.abs(summary.changePercent).toFixed(1)}%)`
+      : '';
+    deltaClass = summary.delta >= 0 ? 'delta positive' : 'delta negative';
+    deltaText = `${summary.delta >= 0 ? '+' : '−'}${formatEuro(Math.abs(summary.delta))}${pct} vs ${summary.prevLabel}`;
+  }
+  card.innerHTML = `
+    <p class="eyebrow">Até ${summary.currentLabel}</p>
+    <div class="value">${formatRevpanValue(summary.currentValue)}</div>
+    <p class="${deltaClass}">${deltaText}</p>
+  `;
+}
+
+function renderRevpanScatter(series) {
+  const canvas = document.getElementById('chart-revpan-scatter');
+  if (!canvas || typeof Chart === 'undefined') return;
+  ensureRevpanPlugins();
+  if (!series?.metrics || !series.metrics.length || state.view === 'compare') {
+    destroyScatterChart();
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setScatterNote(state.view === 'compare'
+      ? 'Gráfico de dispersão disponível apenas para Total ou um apartamento.'
+      : 'Sem dados suficientes para o gráfico de dispersão.');
+    return;
+  }
+  const points = series.metrics
+    .filter((metric) => Number.isFinite(metric.revpan) && Number.isFinite(metric.occupancy))
+    .map((metric) => ({
+      x: Number(metric.occupancy.toFixed(1)),
+      y: metric.revpan,
+      label: `${MONTH_LABELS[metric.month - 1].slice(0, 3)} ${String(metric.year).slice(-2)}`
+    }));
+  if (!points.length) {
+    destroyScatterChart();
+    setScatterNote('Sem dados suficientes para o gráfico de dispersão.');
+    return;
+  }
+  const avgRevpan = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+  destroyScatterChart();
+  state.scatterChart = new Chart(canvas, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Meses',
+        data: points,
+        pointBackgroundColor: COLORS[state.view] || COLORS.total,
+        pointBorderColor: '#111827',
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          title: { display: true, text: 'Ocupação (%)' },
+          min: 30,
+          max: 105,
+          ticks: { callback: (value) => `${value}%` }
+        },
+        y: {
+          title: { display: true, text: 'RevPAN (€/noite)' },
+          beginAtZero: true,
+          ticks: { callback: (value) => formatRevpanValue(value) }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context) => {
+              const point = context.raw;
+              return `${point.label}: ${context.parsed.x}% · ${formatRevpanValue(context.parsed.y)}`;
+            }
+          }
+        },
+        revpanQuadrants: {
+          xThreshold: OCCUPANCY_TARGET,
+          yThreshold: avgRevpan
+        },
+        datalabels: typeof ChartDataLabels !== 'undefined' ? {
+          align: 'left',
+          anchor: 'center',
+          offset: 8,
+          color: '#1f2937',
+          font: { size: 10, weight: 600 },
+          formatter: (value, context) => context.dataset.data[context.dataIndex].label
+        } : undefined
+      }
+    }
+  });
+  setScatterNote('Cada ponto cruza Ocupação × RevPAN para expor meses sub ou sobre precificados.');
+}
+
+function destroyScatterChart() {
+  if (state.scatterChart) {
+    destroyChartSafe(state.scatterChart);
+    state.scatterChart = null;
+  }
+}
+
+function setScatterNote(message) {
+  const note = document.getElementById('revpan-scatter-note');
+  if (note) note.textContent = message;
 }

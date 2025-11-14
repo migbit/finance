@@ -307,7 +307,7 @@
       <div class="viz-card">
         <div class="section-heading">
           <h4>Receita por Noite Disponível (RevPAN)</h4>
-          <p>Receita mensal ÷ noites disponíveis × 100 – mede poder real de ganho.</p>
+          <p>Receita mensal ÷ noites disponíveis – mede poder real de ganho.</p>
         </div>
         <div class="chart-toolbar">
           <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista do RevPAN">
@@ -317,10 +317,21 @@
             <button class="filter-btn" data-revpan-view="compare" role="tab" aria-pressed="false">1248 vs 123</button>
           </div>
         </div>
+        <div class="revpan-summary-grid">
+          <div class="revpan-card" id="revpan-ytd-card">
+            <p class="eyebrow">YTD RevPAN</p>
+            <div class="value">—</div>
+            <p class="delta muted">A aguardar dados...</p>
+          </div>
+          <div class="revpan-highlight" id="revpan-highlight">A aguardar dados...</div>
+        </div>
         <div class="chart-wrap" style="height:320px">
           <canvas id="chart-revpan"></canvas>
         </div>
-        <div class="revpan-highlight" id="revpan-highlight">A aguardar dados...</div>
+        <div class="chart-wrap revpan-scatter-wrap" style="height:320px">
+          <canvas id="chart-revpan-scatter"></canvas>
+        </div>
+        <p class="revpan-note" id="revpan-scatter-note">Cada ponto cruza Ocupação × RevPAN para identificar meses sub ou sobre precificados.</p>
       </div>
     </section>
 
