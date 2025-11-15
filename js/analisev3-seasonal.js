@@ -7,6 +7,7 @@ let isRendering = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="seasonal"]')) return;
+  bindSeasonalExport();
   await renderSeasonal();
 });
 
@@ -18,6 +19,12 @@ window.addEventListener('beforeunload', () => {
   charts.forEach((chart) => chart?.destroy());
   charts.clear();
 });
+
+function bindSeasonalExport() {
+  const button = document.querySelector('[data-export-target="seasonal"]');
+  if (!button) return;
+  button.addEventListener('click', () => exportSeasonalCard(button));
+}
 
 async function renderSeasonal() {
   if (isRendering) return;
@@ -304,4 +311,143 @@ function getSeasonInsights(season, summary) {
   }
 
   return insights.slice(0, 3);
+}
+
+async function exportSeasonalCard(button) {
+  const target = document.querySelector('#mod-seasonal .seasonal-card');
+  if (!target) return;
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'A gerar…';
+    }
+    await ensureSeasonalExportLibs();
+    const doc = new window.jspdf.jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let yPos = margin;
+
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text('Performance sazonal', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 10;
+
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Receita, ocupação e preço médio vs média histórica por estação', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 12;
+
+    doc.setFontSize(9);
+    const today = new Date().toLocaleDateString('pt-PT');
+    doc.text(`Relatório de ${today}`, margin, yPos);
+    yPos += 10;
+
+    const contentWidth = pageWidth - 2 * margin;
+    const colWidth = contentWidth / 2;
+    let currentCol = 0;
+
+    SEASONS.forEach((season, idx) => {
+      const card = document.querySelector(`[data-season="${season}"]`);
+      if (!card) return;
+
+      if (yPos > pageHeight - 40) {
+        doc.addPage();
+        yPos = margin;
+        currentCol = 0;
+      }
+
+      const xPos = margin + currentCol * colWidth;
+      const seasonName = { summer: 'Verão', fall: 'Outono', winter: 'Inverno', spring: 'Primavera' }[season];
+      const seasonMonths = { summer: 'Jun – Ago', fall: 'Set – Nov', winter: 'Dez – Fev', spring: 'Mar – Mai' }[season];
+
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text(seasonName, xPos + 5, yPos);
+      yPos += 6;
+
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text(seasonMonths, xPos + 5, yPos);
+      yPos += 8;
+
+      const revenue = card.querySelector(`#seasonal-${season}-revenue`)?.textContent || '—';
+      const occ = card.querySelector(`#seasonal-${season}-occ`)?.textContent || '—';
+      const avg = card.querySelector(`#seasonal-${season}-avg`)?.textContent || '—';
+      const yoy = card.querySelector(`#seasonal-${season}-yoy`)?.textContent || '—';
+      const nights = card.querySelector(`#seasonal-${season}-nights`)?.textContent || '—';
+      const revpan = card.querySelector(`#seasonal-${season}-revpan`)?.textContent || '—';
+      const rank = card.querySelector(`#seasonal-${season}-rank`)?.textContent || '—';
+
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      const lineHeight = 5.5;
+      const labelWidth = 30;
+      const data = [
+        ['Receita:', revenue],
+        ['Ocupação:', occ],
+        ['Preço médio:', avg],
+        ['YoY:', yoy],
+        ['Noites:', nights],
+        ['RevPAN:', revpan],
+        ['Ranking:', rank]
+      ];
+
+      data.forEach(([label, value]) => {
+        doc.setFont(undefined, 'bold');
+        doc.text(label, xPos + 5, yPos);
+        doc.setFont(undefined, 'normal');
+        doc.text(value, xPos + labelWidth, yPos);
+        yPos += lineHeight;
+      });
+
+      const insightsEl = card.querySelector(`#seasonal-${season}-insights`);
+      if (insightsEl && insightsEl.innerHTML) {
+        yPos += 2;
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'italic');
+        doc.setTextColor(80, 80, 80);
+        const insightText = Array.from(insightsEl.querySelectorAll('.insight-chip'))
+          .map(chip => chip.textContent.trim())
+          .join(' • ');
+        if (insightText) {
+          const wrappedText = doc.splitTextToSize(insightText, colWidth - 10);
+          doc.text(wrappedText, xPos + 5, yPos);
+          yPos += wrappedText.length * 3.5;
+        }
+      }
+
+      yPos += 3;
+      currentCol++;
+      if (currentCol >= 2) {
+        currentCol = 0;
+        yPos += 5;
+      }
+    });
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    doc.save(`export-sazonal-${stamp}.pdf`);
+  } catch (error) {
+    console.error('Erro ao exportar sazonal', error);
+    if (button) button.textContent = 'Erro';
+    setTimeout(() => {
+      if (button) button.textContent = 'Exportar';
+    }, 2000);
+    return;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Exportar';
+    }
+  }
+}
+
+async function ensureSeasonalExportLibs() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    const module = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    if (module?.jspdf) window.jspdf = module.jspdf;
+  }
 }

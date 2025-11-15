@@ -106,18 +106,89 @@ h4 {
 }
 
 .section-heading {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 1rem;
+  position: relative;
+}
+
+.section-heading > div {
+  text-align: center;
+  flex: 1;
 }
 
 .section-heading h4 {
   margin: 0;
+  flex: 1;
+  text-align: left;
 }
 
 .section-heading p {
   margin: 4px 0 0;
   color: var(--text-dim);
   font-size: 0.9rem;
+}
+
+.title-tag {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-left: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-export {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  border-radius: 999px;
+  padding: 0.4rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.btn-export:hover:not(:disabled) {
+  filter: brightness(0.95);
+  border-color: #d1d5db;
+}
+
+.btn-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-export-top-right {
+  white-space: nowrap;
+  margin-left: 1rem;
+  flex-shrink: 0;
+}
+
+.seasonal-heading {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: center;
+  position: relative;
+}
+
+.seasonal-heading > div {
+  text-align: center;
+  flex: 1;
+}
+
+.seasonal-heading h4,
+.seasonal-heading p {
+  text-align: center;
+}
+
+.seasonal-heading .btn-export {
+  position: absolute;
+  right: 0;
+  margin-top: 0.25rem;
 }
 
 h3 {
@@ -1453,6 +1524,116 @@ body[data-page="faturas"] .form-actions .fatura-nav button {
   font-size: 1.1rem;
   line-height: 1;
 }
+
+body[data-page="faturas"] .analysis-filter {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f3f4f6;
+  font-size: 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+body[data-page="faturas"] .analysis-filter label {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: #1f2937;
+  margin: 0;
+  padding: 0;
+}
+
+body[data-page="faturas"] .analysis-filter input[type="month"] {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  height: 32px;
+  font-size: 0.85rem;
+  min-width: 150px;
+  background: #fff;
+  color: #111827;
+  cursor: pointer;
+}
+
+body[data-page="faturas"] .analysis-filter button {
+  height: 32px;
+  padding: 0 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #111827;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+body[data-page="faturas"] .analysis-filter button:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+body[data-page="faturas"] .analysis-result {
+  margin-top: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+  padding: 0.85rem 1rem;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+body[data-page="faturas"] .analysis-result strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+}
+
+body[data-page="faturas"] .analysis-result span {
+  display: block;
+  color: #374151;
+}
+
+body[data-page="faturas"] .analysis-toolbar {
+  margin-top: 1.25rem;
+  margin-bottom: 1rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: linear-gradient(90deg, rgba(15,23,42,0.92), rgba(30,64,175,0.9));
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+body[data-page="faturas"] .analysis-toolbar__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+body[data-page="faturas"] .analysis-toolbar__info strong {
+  font-size: 1rem;
+}
+
+body[data-page="faturas"] .analysis-toolbar__info span {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.8);
+}
+
 /* ========================================================================== */
 /*  Tab Navigation                                                            */
 /* ========================================================================== */
@@ -3495,6 +3676,16 @@ body[data-page="analisev3"] .chart-toolbar .segmented button {
 .metric-card h5 {
   margin: 0 0 0.3rem 0;
   font-size: 0.95rem;
+}
+
+.value-warning {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+.value-success {
+  color: #15803d;
+  font-weight: 700;
 }
 
 .weekpart-reco {

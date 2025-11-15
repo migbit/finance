@@ -58,7 +58,6 @@ const prevBtn = document.getElementById('fatura-prev');
 const nextBtn = document.getElementById('fatura-next');
 let currentIndex = -1;
 let loadedFaturas = [];
-
 const parseInvoiceNumber = (numero) => {
   if (typeof numero !== 'string' || !numero.trim()) {
     return { prefix: '', number: Number.NEGATIVE_INFINITY };
@@ -91,7 +90,6 @@ const sortInvoicesForNav = (items) => {
     return pa.prefix.localeCompare(pb.prefix);
   });
 };
-
 const normalizeDateField = (value) => {
   if (!value) return null;
   if (typeof value === 'string') return value;
@@ -99,7 +97,7 @@ const normalizeDateField = (value) => {
     try {
       return value.toDate().toISOString().slice(0, 10);
     } catch (err) {
-      console.warn('Não foi possível converter data Firestore', err);
+      console.warn('Falha a converter data Firestore', err);
       return null;
     }
   }
@@ -137,10 +135,23 @@ if (prevBtn) prevBtn.addEventListener('click', () => navigateInvoice(-1));
 if (nextBtn) nextBtn.addEventListener('click', () => navigateInvoice(1));
 
 // Ativa modo edição e preenche todos os campos
-function entrarEmModoEdicao(f, options = {}) {
+async function entrarEmModoEdicao(f, options = {}) {
   const { skipScroll = false } = options;
+  
+  // Ensure loadedFaturas is populated for navigation
+  if (loadedFaturas.length === 0 && f?.id) {
+    const firebaseFaturas = await carregarFaturas();
+    loadedFaturas = sortInvoicesForNav(firebaseFaturas);
+  }
+  
   if (f?.id) setCurrentIndexById(f.id);
   if (submitBtn) submitBtn.textContent = f?.id ? 'Atualizar' : 'Guardar';
+  
+  // Ensure nav buttons are visible when editing
+  if (navWrap) {
+    navWrap.style.display = 'inline-flex';
+    updateNavigator(); // Update button states
+  }
   // Mostrar o form e ajustar botões
   const wrap = document.getElementById('fatura-form-wrap');
   const toggleBtn = document.getElementById('toggle-fatura-form');
@@ -198,20 +209,13 @@ function entrarEmModoEdicao(f, options = {}) {
   if (!skipScroll && wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function sairDoModoEdicao(options = {}) {
-  const { keepInvoiceNumber = false } = options;
-  const numeroInput = document.getElementById('numero-fatura');
-  const numeroAtual = numeroInput ? numeroInput.value : '';
+function sairDoModoEdicao() {
   if (editarIdInput) editarIdInput.value = '';
   if (submitBtn) submitBtn.textContent = 'Guardar';
   if (cancelarEdicaoBtn) cancelarEdicaoBtn.style.display = 'none';
   faturaForm.reset();
   setCurrentIndexById(null);
-  if (keepInvoiceNumber && numeroInput) {
-    numeroInput.value = numeroAtual;
-  } else {
-    definirValoresPadrao(); // mantém o teu comportamento atual do “próximo nº”
-  }
+  definirValoresPadrao(); // mantém o teu comportamento atual do “próximo nº”
 }
 
 if (cancelarEdicaoBtn) {
@@ -401,7 +405,7 @@ const formData = {
       const { timestamp, ...dataSemTimestamp } = formData;
       await updateDoc(doc(db, "faturas", editId), dataSemTimestamp);
       alert('Fatura atualizada com sucesso!');
-      sairDoModoEdicao({ keepInvoiceNumber: true });
+      sairDoModoEdicao();
     } else {
       await addDoc(collection(db, "faturas"), formData);
       alert('Fatura registrada com sucesso!');
@@ -853,3 +857,46 @@ window.exportarPDFFaturacao = function(key, grupoJson) {
     })
     .catch(err => console.error('Erro ao exportar PDF:', err));
 };
+
+function runAnalysis(auto = false) {
+  const start = analysisStartInput?.value;
+  const end = analysisEndInput?.value;
+
+  if (!cachedReportRows || !cachedReportRows.length) {
+    if (!auto) analysisResultBox.textContent = 'Carregue as faturas antes de executar a análise.';
+    return;
+  }
+
+  if (!start || !end) {
+    if (!auto) analysisResultBox.textContent = 'Selecione meses válidos para analisar.';
+    return;
+  }
+
+  const [startYear, startMonth] = start.split('-').map(Number);
+  const [endYear, endMonth] = end.split('-').map(Number);
+
+  if (!Number.isFinite(startYear) || !Number.isFinite(startMonth) || !Number.isFinite(endYear) || !Number.isFinite(endMonth)) {
+    if (!auto) analysisResultBox.textContent = 'Selecione meses válidos.';
+    return;
+  }
+
+  if (startYear > endYear || (startYear === endYear && startMonth > endMonth)) {
+    analysisResultBox.textContent = 'O mês inicial deve ser anterior ao mês final.';
+    return;
+  }
+  const summary = summarizePeriod(cachedReportRows, start, end);
+  const label = `${obterNomeMes(start.month)} ${start.year} – ${obterNomeMes(end.month)} ${end.year}`;
+  if (!summary || !summary.entries) {
+    analysisResultBox.innerHTML = `<strong>${label}</strong><span>Sem faturas no intervalo selecionado.</span>`;
+    return;
+  }
+  const monthsText = summary.monthCount === 1 ? '1 mês' : `${summary.monthCount} meses`;
+  const entriesText = summary.entries === 1 ? '1 fatura' : `${summary.entries} faturas`;
+  const nightsText = summary.nights ? `${summary.nights} noites` : 'Noites não registadas';
+  analysisResultBox.innerHTML = `
+    <strong>${label}</strong>
+    <span>Total receita: ${euroInt(summary.revenue)}</span>
+    <span>Média/noite: ${summary.avgNightly ? euroInt(summary.avgNightly) : '— (sem noites registadas)'}</span>
+    <span>${monthsText} · ${entriesText} · ${nightsText}</span>
+  `;
+}

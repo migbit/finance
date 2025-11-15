@@ -39,6 +39,7 @@ function setChartTransition(active) {
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="faturacao"]')) return;
   setupFilterButtons();
+  bindExportButton();
   await loadData();
 });
 
@@ -852,4 +853,116 @@ function attachMobileXAxisRotation(chart) {
   apply();
   mqMobile.addEventListener?.('change', apply);
   mqMobile.addListener?.(apply);
+}
+
+function bindExportButton() {
+  const button = document.querySelector('[data-export-target="faturacao"]');
+  if (!button) return;
+  button.addEventListener('click', () => exportFaturacaoTable(button));
+}
+
+async function exportFaturacaoTable(button) {
+  const tableContainer = document.querySelector('#tabela-faturacao-v2');
+  if (!tableContainer) return;
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'A gerar…';
+    }
+
+    await ensureFaturacaoExportLibs();
+    const doc = new window.jspdf.jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let yPos = margin;
+
+    // Title based on current view
+    const viewLabels = {
+      total: 'Total (123 + 1248)',
+      '123': 'Apartamento 123',
+      '1248': 'Apartamento 1248',
+      compare: 'Comparação 123 vs 1248'
+    };
+
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Faturação - ${viewLabels[state.view]}`, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 10;
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(100, 100, 100);
+    const today = new Date().toLocaleDateString('pt-PT');
+    doc.text(`Relatório de ${today}`, margin, yPos);
+    yPos += 8;
+
+    // Get table HTML
+    const table = tableContainer.querySelector('table');
+    if (!table) {
+      throw new Error('Tabela não encontrada');
+    }
+
+    // Convert table to PDF using autoTable
+    doc.autoTable({
+      html: table,
+      startY: yPos,
+      margin: { top: margin, right: margin, bottom: margin, left: margin },
+      styles: {
+        fontSize: 9,
+        halign: 'center',
+        valign: 'middle'
+      },
+      headStyles: {
+        fillColor: [54, 83, 145],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      bodyStyles: {
+        textColor: 50
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245]
+      },
+      didDrawPage: (data) => {
+        // Add page number
+        const pageSize = doc.internal.pageSize;
+        const pageCount = doc.internal.getNumberOfPages();
+        const pageNum = data.pageNumber;
+        if (pageCount > 1) {
+          doc.setFontSize(8);
+          doc.text(`Página ${pageNum}/${pageCount}`, pageWidth - margin - 20, pageHeight - 10);
+        }
+      }
+    });
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    const viewName = state.view === 'compare' ? '123vs1248' : state.view;
+    doc.save(`export-faturacao-${viewName}-${stamp}.pdf`);
+  } catch (error) {
+    console.error('Erro ao exportar faturação', error);
+    if (button) button.textContent = 'Erro';
+    setTimeout(() => {
+      if (button) button.textContent = 'Exportar';
+    }, 2000);
+    return;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Exportar';
+    }
+  }
+}
+
+async function ensureFaturacaoExportLibs() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    const module = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    if (module?.jspdf) window.jspdf = module.jspdf;
+  }
+  
+  // Load autoTable plugin
+  if (!window.jspdf.jsPDF.prototype.autoTable) {
+    await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.41/jspdf.plugin.autotable.min.js');
+  }
 }

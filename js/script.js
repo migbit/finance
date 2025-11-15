@@ -18,8 +18,7 @@ const NAV_GROUPS = [
     key: 'apartamentos',
     links: [
       { label: '📄 Faturas', key: 'faturas', slug: 'modules/faturas.html', module: true },
-      { label: '🆕 Análise V3', key: 'analisev3', slug: 'modules/analisev3.html', module: true },
-      { label: '📊 Análise V2', key: 'analisev2', slug: 'modules/analisev2.html', module: true },
+      { label: '🆕 Análise', key: 'analisev3', slug: 'modules/analisev3.html', module: true },
       { label: '🧳 Taxa Turística', key: 'tmt', slug: 'modules/tmt.html', module: true },
       { label: '📋 Diversos', key: 'diversos', slug: 'modules/diversos.html', module: true }
     ]
@@ -46,7 +45,6 @@ const NAV_GROUPS = [
 
 const ACTIVE_KEY_MATCHERS = [
   { key: 'analisev3', patterns: ['analisev3'] },
-  { key: 'analisev2', patterns: ['analisev2'] },
   { key: 'faturas', patterns: ['faturas'] },
   { key: 'tmt', patterns: ['tmt'] },
   { key: 'diversos', patterns: ['diversos'] },

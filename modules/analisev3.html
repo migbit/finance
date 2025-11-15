@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Análise V3</title>
+  <title>Análise</title>
   <link rel="stylesheet" href="../css/styles.pcolor.css">
   <link rel="stylesheet" href="../css/mobile.css">
   <link rel="icon" href="../favicon.ico" sizes="any">
@@ -30,8 +30,7 @@
           </button>
           <div class="nav-dropdown" role="menu">
             <a href="faturas.html" role="menuitem">📄 Faturas</a>
-            <a href="analisev3.html" class="active" role="menuitem">🆕 Análise V3</a>
-            <a href="analisev2.html" role="menuitem">📊 Análise V2</a>
+            <a href="analisev3.html" class="active" role="menuitem">🆕 Análise</a>
             <a href="tmt.html" role="menuitem">🧳 Taxa Turística</a>
             <a href="diversos.html" role="menuitem">📋 Diversos</a>
           </div>
@@ -78,7 +77,7 @@
     </div>
 
     <div class="page-intro">
-      <h2>Análise Apartamentos – V3</h2>
+      <h2>Análise Apartamentos <span class="title-tag">v3</span></h2>
     </div>
     <div class="page-meta page-meta--inline">
       <span id="analisev2-updated" aria-live="polite">Atualizado a —</span>
@@ -155,9 +154,12 @@
 
     <section id="mod-seasonal" class="report-section" data-module="seasonal">
       <div class="viz-card seasonal-card">
-        <div class="section-heading">
-          <h4>Performance sazonal</h4>
-          <p>Receita, ocupação e preço médio vs média histórica por estação.</p>
+        <div class="section-heading seasonal-heading">
+          <div>
+            <h4>Performance sazonal</h4>
+            <p>Receita, ocupação e preço médio vs média histórica por estação.</p>
+          </div>
+          <button type="button" class="btn-export btn-export-top-right" data-export-target="seasonal">Exportar</button>
         </div>
         <div class="seasonal-grid">
           <article class="seasonal-tile" data-season="summer">
@@ -242,8 +244,9 @@
 
     <section id="mod-faturacao" class="report-section" data-module="faturacao">
       <div class="viz-card chart-and-table">
-        <div class="section-heading">
-          <h4>Faturação</h4>
+        <div class="section-heading" style="justify-content: center; position: relative;">
+          <h4 style="flex: 1; text-align: center;">Faturação</h4>
+          <button type="button" class="btn-export btn-export-top-right" data-export-target="faturacao" style="position: absolute; right: 0;">Exportar</button>
         </div>
 
         <div class="chart-wrap" style="height:320px">
@@ -488,17 +491,6 @@
       </div>
     </section>
 
-    <section id="mod-leadtime" class="report-section" data-module="leadtime">
-      <div class="viz-card">
-        <div class="section-heading">
-          <h4>Booking lead time</h4>
-          <p>Dias entre reserva e check-in para calibrar restrições e preços.</p>
-        </div>
-        <div class="table-wrap" id="leadtime-table"></div>
-        <div class="leadtime-summary" id="leadtime-summary"></div>
-      </div>
-    </section>
-
     <section id="mod-weekpart" class="report-section" data-module="weekpart">
       <div class="viz-card">
         <div class="section-heading">
@@ -568,6 +560,17 @@
           </table>
         </div>
         <div class="weekpart-reco" id="weekpart-recommendation">Aguarde métricas para recomendações.</div>
+      </div>
+    </section>
+
+    <section id="mod-leadtime" class="report-section" data-module="leadtime">
+      <div class="viz-card">
+        <div class="section-heading">
+          <h4>Booking lead time</h4>
+          <p>Dias entre reserva e check-in para calibrar restrições e preços.</p>
+        </div>
+        <div class="table-wrap" id="leadtime-table"></div>
+        <div class="leadtime-summary" id="leadtime-summary"></div>
       </div>
     </section>
 

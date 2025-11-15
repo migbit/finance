@@ -100,6 +100,22 @@ function renderWeekpart(forceEmpty = false) {
   setWeekpartText('weekday-occ', `${metrics.weekdayOcc.toFixed(1)}%`);
   setWeekpartText('weekend-occ', `${metrics.weekendOcc.toFixed(1)}%`);
   setWeekpartText('weekend-premium', `${metrics.premium.toFixed(1)}%`);
+  const weekdayOccEl = document.getElementById('weekday-occ');
+  const weekendOccEl = document.getElementById('weekend-occ');
+  if (weekdayOccEl) {
+    weekdayOccEl.className = metrics.weekdayOcc < 50 ? 'value-warning' : '';
+  }
+  if (weekendOccEl) {
+    weekendOccEl.className = metrics.weekendOcc > 85 ? 'value-success' : '';
+  }
+  const premiumEl = document.getElementById('weekend-premium');
+  if (premiumEl) {
+    premiumEl.className = metrics.premium < 10
+      ? 'value-warning'
+      : metrics.premium > 25
+        ? 'value-success'
+        : '';
+  }
   setRecommendation(buildRecommendation(metrics));
 }
 
