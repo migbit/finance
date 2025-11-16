@@ -1,5 +1,5 @@
 /* Migbit Finance – Service Worker (DEV safe) */
-const CACHE = 'finance-static-v12'; // ⬅️ bump this on each deploy
+const CACHE = 'finance-static-v13'; // ⬅️ bump this on each deploy
 
 const CORE = [
   './',

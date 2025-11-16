@@ -11,6 +11,21 @@ const SERIES_COLORS = {
 
 const LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 const BASE_YEAR = 2025;
+const METRIC_TYPES = Object.freeze({
+  checkins: {
+    key: 'checkins',
+    label: 'Check-ins',
+    field: 'checkIn',
+    emptyMessage: 'Sem check-ins registados.'
+  },
+  reservas: {
+    key: 'reservas',
+    label: 'Reservas',
+    field: 'dataReserva',
+    emptyMessage: 'Sem reservas registadas.'
+  }
+});
+
 const fallbackPercentPlugin = {
   id: 'checkinsPercentLabels',
   afterDatasetsDraw(chart) {
@@ -40,6 +55,7 @@ const fallbackPercentPlugin = {
 
 const state = {
   view: 'total',
+  metric: 'checkins',
   rows: [],
   chart: null
 };
@@ -71,12 +87,26 @@ function bindButtons() {
       render();
     }, { signal });
   });
+  document.querySelectorAll('[data-checkins-metric]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = btn.dataset.checkinsMetric;
+      if (!next || next === state.metric) return;
+      state.metric = next;
+      updateButtons();
+      render();
+    }, { signal });
+  });
   updateButtons();
 }
 
 function updateButtons() {
   document.querySelectorAll('[data-checkins-view]').forEach((btn) => {
     const active = btn.dataset.checkinsView === state.view;
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+  document.querySelectorAll('[data-checkins-metric]').forEach((btn) => {
+    const active = btn.dataset.checkinsMetric === state.metric;
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
@@ -108,9 +138,9 @@ function render() {
     renderEmpty('Sem dados para esta vista.');
     return;
   }
-  const dataset = calculateCounts(rows, state.view);
-  if (!dataset.curr.some((v) => v > 0) && !dataset.prev.some((v) => v > 0)) {
-    renderEmpty('Sem check-ins registados.');
+  const dataset = calculateCounts(rows, state.view, state.metric);
+  if (!dataset.hasData) {
+    renderEmpty(dataset.emptyMessage);
     return;
   }
   renderChart(dataset);
@@ -122,7 +152,8 @@ function filterRows(apartments) {
   return state.rows.filter((row) => allow.has(String(row.apartamento)));
 }
 
-function calculateCounts(rows, view) {
+function calculateCounts(rows, view, metric) {
+  const metricConfig = METRIC_TYPES[metric] || METRIC_TYPES.checkins;
   const todayISO = new Date().toISOString().slice(0, 10);
   const currentYear = new Date().getFullYear();
   const lastYear = currentYear - 1;
@@ -130,10 +161,10 @@ function calculateCounts(rows, view) {
   const prev = Array(7).fill(0);
 
   rows.forEach((row) => {
-    const checkIn = row.checkIn;
-    if (typeof checkIn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(checkIn)) return;
-    if (checkIn > todayISO) return;
-    const date = parseLocalDate(checkIn);
+    const rawDate = row[metricConfig.field];
+    if (typeof rawDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) return;
+    if (rawDate > todayISO) return;
+    const date = parseLocalDate(rawDate);
     if (!(date instanceof Date) || Number.isNaN(date.getTime())) return;
     const year = date.getFullYear();
     if (year < BASE_YEAR) return;
@@ -144,7 +175,17 @@ function calculateCounts(rows, view) {
 
   const color = SERIES_COLORS[view] || SERIES_COLORS.total;
 
-  return { curr, prev, currentYear, lastYear, color };
+  const hasData = curr.some((v) => v > 0) || prev.some((v) => v > 0);
+
+  return {
+    curr,
+    prev,
+    currentYear,
+    lastYear,
+    color,
+    hasData,
+    emptyMessage: metricConfig.emptyMessage
+  };
 }
 
 function renderChart({ curr, prev, currentYear, lastYear, color }) {
@@ -182,6 +223,25 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
   });
 
   const hasDataLabelsPlugin = typeof ChartDataLabels !== 'undefined';
+  const datalabelsConfig = {
+    anchor: 'center',
+    align: 'center',
+    clamp: true,
+    clip: false,
+    offset: 0,
+    color: '#0f172a',
+    font: {
+      weight: '600',
+      size: 11
+    },
+    formatter: (value, context) => {
+      const total = context.dataset?.total || 0;
+      if (!total) return '';
+      const pct = (Number(value) / total) * 100;
+      if (!Number.isFinite(pct) || pct <= 0) return '';
+      return `${Math.round(pct)}%`;
+    }
+  };
   const runtimePlugins = hasDataLabelsPlugin ? [ChartDataLabels] : [fallbackPercentPlugin];
 
   state.chart = createChart(canvas, {
@@ -196,23 +256,7 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
             label: (context) => ` ${context.dataset.label}: ${context.parsed.y}`
           }
         },
-        datalabels: hasDataLabelsPlugin ? {
-          anchor: 'center',
-          align: 'center',
-          offset: 0,
-          color: '#0f172a',
-          font: {
-            weight: '600',
-            size: 11
-          },
-          formatter: (value, context) => {
-            const total = context.dataset?.total || 0;
-            if (!total) return '';
-            const pct = (Number(value) / total) * 100;
-            if (!Number.isFinite(pct)) return '';
-            return `${Math.round(pct)}%`;
-          }
-        } : undefined
+        datalabels: hasDataLabelsPlugin ? datalabelsConfig : undefined
       },
       scales: {
         x: { grid: { display: false } },

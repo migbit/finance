@@ -71,7 +71,7 @@
       <a class="tab-btn" href="#mod-heatmap">Heatmap</a>
       <a class="tab-btn" href="#mod-noites-hospedes">Noites</a>
       <a class="tab-btn" href="#mod-noites-hospedes">Hóspedes</a>
-      <a class="tab-btn" href="#mod-checkins-semana">Check-ins</a>
+      <a class="tab-btn" href="#mod-checkins-semana">Dias</a>
       <a class="tab-btn" href="#mod-weekpart">Semana/Fds</a>
       <a class="tab-btn" href="#mod-leadtime">Lead time</a>
     </div>
@@ -472,16 +472,20 @@
 
     <section id="mod-checkins-semana" class="report-section" data-module="checkins-semana">
       <div class="viz-card">
-        <div class="section-heading">
-          <h4>Dias da Semana – Check-ins</h4>
-          <p>Comparativo entre ano atual e anterior</p>
+        <div class="section-heading section-heading--centered">
+          <h4>Dias da Semana</h4>
+          <p>Em que dias são feitos os check-ins e as reservas.</p>
         </div>
 
         <div class="chart-toolbar">
-          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar apartamentos do check-in">
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar apartamentos">
             <button class="filter-btn active" data-checkins-view="total" role="tab" aria-pressed="true">Total (123 + 1248)</button>
             <button class="filter-btn" data-checkins-view="123" role="tab" aria-pressed="false">123</button>
             <button class="filter-btn" data-checkins-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+          <div class="toolbar-right segmented segmented--compact" role="tablist" aria-label="Selecionar métrica">
+            <button class="filter-btn active" data-checkins-metric="checkins" role="tab" aria-pressed="true">Check-ins</button>
+            <button class="filter-btn" data-checkins-metric="reservas" role="tab" aria-pressed="false">Reservas</button>
           </div>
         </div>
 
@@ -569,8 +573,16 @@
           <h4>Booking lead time</h4>
           <p>Dias entre reserva e check-in para calibrar restrições e preços.</p>
         </div>
+        <div class="chart-toolbar">
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista de lead time">
+            <button type="button" class="active" data-leadtime-view="total" aria-pressed="true">Total</button>
+            <button type="button" data-leadtime-view="123" aria-pressed="false">123</button>
+            <button type="button" data-leadtime-view="1248" aria-pressed="false">1248</button>
+          </div>
+        </div>
         <div class="table-wrap" id="leadtime-table"></div>
         <div class="leadtime-summary" id="leadtime-summary"></div>
+        <div class="leadtime-booking" id="leadtime-booking"></div>
       </div>
     </section>
 

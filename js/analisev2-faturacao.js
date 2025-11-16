@@ -230,7 +230,7 @@ function renderYearComparisonChart(faturas, color) {
       borderWidth: 1.5,
       borderColor: 'rgba(120,120,120,1)',
       backgroundColor: 'rgba(120,120,120,0.1)',
-      tension: 0.25,
+      tension: 0.1,
       pointRadius: 4,
       pointHoverRadius: 6
     });
@@ -242,7 +242,7 @@ function renderYearComparisonChart(faturas, color) {
     borderColor: color,
     backgroundColor: withAlpha(color, 0.15),
     borderWidth: 2,
-    tension: 0.25,
+    tension: 0.1,
     pointRadius: 5,
     pointHoverRadius: 7
   });
@@ -263,6 +263,7 @@ function renderYearComparisonChart(faturas, color) {
       scales: {
         y: {
           beginAtZero: true,
+          min: 0,
           suggestedMax,
           ticks: { stepSize: 500, precision: 0 },
           grid: { color: 'rgba(0,0,0,0.06)' },
@@ -310,7 +311,7 @@ function renderComparativoChart(faturas) {
           borderColor: COLORS['123'],
           backgroundColor: withAlpha(COLORS['123'], 0.1),
           borderWidth: 2,
-          tension: 0.25,
+          tension: 0.1,
           pointRadius: 4,
           pointHoverRadius: 6,
           spanGaps: true
@@ -321,7 +322,7 @@ function renderComparativoChart(faturas) {
           borderColor: COLORS['1248'],
           backgroundColor: withAlpha(COLORS['1248'], 0.1),
           borderWidth: 2,
-          tension: 0.25,
+          tension: 0.1,
           pointRadius: 4,
           pointHoverRadius: 6,
           spanGaps: true
@@ -333,6 +334,7 @@ function renderComparativoChart(faturas) {
       scales: {
         y: {
           beginAtZero: true,
+          min: 0,
           ticks: { precision: 0 },
           grid: { color: 'rgba(0,0,0,0.06)' },
           border: { display: false }

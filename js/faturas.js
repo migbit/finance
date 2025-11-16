@@ -58,6 +58,34 @@ const prevBtn = document.getElementById('fatura-prev');
 const nextBtn = document.getElementById('fatura-next');
 let currentIndex = -1;
 let loadedFaturas = [];
+let toastStack;
+
+const getToastStack = () => {
+  if (toastStack && document.body.contains(toastStack)) return toastStack;
+  toastStack = document.querySelector('.toast-stack');
+  if (!toastStack) {
+    toastStack = document.createElement('div');
+    toastStack.className = 'toast-stack';
+    document.body.appendChild(toastStack);
+  }
+  return toastStack;
+};
+
+const showToast = (message, type = 'success') => {
+  if (!message) return;
+  const stack = getToastStack();
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  stack.appendChild(toast);
+
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 250);
+  }, 3200);
+};
+
 const parseInvoiceNumber = (numero) => {
   if (typeof numero !== 'string' || !numero.trim()) {
     return { prefix: '', number: Number.NEGATIVE_INFINITY };
@@ -400,23 +428,32 @@ const formData = {
   const editId = editarIdInput ? editarIdInput.value : '';
 
   try {
+    let stayInEditMode = false;
+    let editTargetId = null;
+
     if (editId) {
       // não atualizar o timestamp numa edição
       const { timestamp, ...dataSemTimestamp } = formData;
       await updateDoc(doc(db, "faturas", editId), dataSemTimestamp);
-      alert('Fatura atualizada com sucesso!');
-      sairDoModoEdicao();
+      showToast('Fatura atualizada com sucesso!');
+      stayInEditMode = true;
+      editTargetId = editId;
     } else {
       await addDoc(collection(db, "faturas"), formData);
-      alert('Fatura registrada com sucesso!');
+      showToast('Fatura registrada com sucesso!');
       faturaForm.reset();
       definirValoresPadrao();
     }
 
-    carregarTodosRelatorios();
+    await carregarTodosRelatorios();
+
+    if (stayInEditMode && editTargetId) {
+      const updated = loadedFaturas.find((f) => f.id === editTargetId);
+      if (updated) await entrarEmModoEdicao(updated, { skipScroll: true });
+    }
   } catch (error) {
     console.error("Erro ao gravar fatura:", error);
-    alert('Ocorreu um erro ao gravar a fatura.');
+    showToast('Ocorreu um erro ao gravar a fatura.', 'error');
   }
 });
 
@@ -562,7 +599,7 @@ window.editarFatura = function (btn) {
     entrarEmModoEdicao(f);
   } catch (e) {
     console.error('Falha a ler dados da fatura para edição:', e);
-    alert('Não foi possível abrir esta fatura para edição.');
+    showToast('Não foi possível abrir esta fatura para edição.', 'error');
   }
 };
 
@@ -577,12 +614,12 @@ window.apagarFatura = async function(btn) {
 
   try {
     await deleteDoc(doc(db, 'faturas', id));
-    alert('Fatura apagada.');
+    showToast('Fatura apagada.');
     sairDoModoEdicao();
     carregarTodosRelatorios();
   } catch (err) {
     console.error('Erro ao apagar fatura:', err);
-    alert('Não foi possível apagar a fatura.');
+    showToast('Não foi possível apagar a fatura.', 'error');
   }
 };
 
