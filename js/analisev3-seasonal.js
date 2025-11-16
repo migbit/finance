@@ -339,10 +339,8 @@ async function exportSeasonalCard(button) {
     doc.text('Receita, ocupação e preço médio vs média histórica por estação', pageWidth / 2, yPos, { align: 'center' });
     yPos += 12;
 
-    doc.setFontSize(9);
-    const today = new Date().toLocaleDateString('pt-PT');
-    doc.text(`Relatório de ${today}`, margin, yPos);
-    yPos += 10;
+    const generatedLabel = new Date().toLocaleDateString('pt-PT');
+    yPos += 2;
 
     const contentWidth = pageWidth - 2 * margin;
     const colWidth = contentWidth / 2;
@@ -427,6 +425,14 @@ async function exportSeasonalCard(button) {
         yPos += 5;
       }
     });
+
+    const totalPages = doc.internal.getNumberOfPages();
+    doc.setPage(totalPages);
+    const footerHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Gerado a ${generatedLabel}`, margin, footerHeight - margin / 2);
 
     const stamp = new Date().toISOString().slice(0, 10);
     doc.save(`export-sazonal-${stamp}.pdf`);

@@ -7,40 +7,55 @@
   --mobile-sidebar-width: 280px;
   --mobile-header-height: 60px;
   --mobile-padding: 16px;
-  --mobile-font-base: 16px; /* Improved base size for readability */
+  --mobile-font-base: 16px;
   --mobile-line-height: 1.6;
-  --touch-target-min: 44px; /* iOS/Android minimum touch target */
+  --touch-target-min: 44px;
   --mobile-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --mobile-border-radius: 12px;
 }
 
 /* ---------- Global mobile layout (≤1024px) ---------- */
 @media (max-width: 1024px) {
-  /* Improve text readability */
   body {
     font-size: var(--mobile-font-base);
     line-height: var(--mobile-line-height);
-    -webkit-text-size-adjust: 100%; /* Prevent iOS zoom on focus */
+    -webkit-text-size-adjust: 100%;
   }
 
-  /* Off-canvas sidebar with backdrop */
+  /* Header shell */
   body > header {
     position: fixed;
     top: 0;
     left: 0;
-    width: var(--mobile-sidebar-width);
+    width: 100%;
+    height: var(--mobile-header-height);
+    z-index: 1000;
+    pointer-events: none;
+  }
+  body > header #menu-icon,
+  body > header .menu-icon {
+    pointer-events: auto;
+  }
+
+  /* Off-canvas sidebar */
+  #nav-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--mobile-sidebar-width) !important;
     height: 100vh;
     transform: translateX(-100%);
     transition: transform var(--mobile-transition);
-    z-index: 1000;
-    overscroll-behavior: contain; /* Prevent scroll chaining */
-  }
-  
-  body > header.active {
-    transform: translateX(0);
+    overscroll-behavior: contain;
+    background: #fff;
     box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
+    pointer-events: auto;
   }
 
-  /* Backdrop overlay for sidebar */
+  body > header.active #nav-menu {
+    transform: translateX(0);
+  }
+
   body > header.active::before {
     content: '';
     position: fixed;
@@ -50,30 +65,36 @@
     height: 100vh;
     background: rgba(0, 0, 0, 0.4);
     z-index: -1;
+    pointer-events: auto;
   }
 
-  /* Enhanced hamburger menu button */
-  #menu-icon {
+  /* Hamburger menu button - visible on mobile */
+  #menu-icon,
+  .menu-icon {
+    display: flex;
     position: fixed;
     top: 12px;
     right: 12px;
     width: var(--touch-target-min);
     height: var(--touch-target-min);
-    display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1100;
     border: 0;
-    background: #fff;
+    background: #e8e8e8;
+    color: #333;
+    font-size: 1.5rem;
     border-radius: 10px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
     cursor: pointer;
-    transition: transform 0.2s ease;
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  #menu-icon:active {
+  #menu-icon:active,
+  #menu-icon:hover {
     transform: scale(0.95);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   /* Main content spacing */
@@ -83,22 +104,123 @@
     padding: calc(var(--mobile-header-height) + 20px) var(--mobile-padding) var(--mobile-padding);
   }
 
-  /* Navigation scroll area with momentum scrolling */
+  /* Navigation scroll area */
   #nav-menu {
     max-height: calc(100vh - 80px);
     overflow-y: auto;
-    -webkit-overflow-scrolling: touch; /* Smooth iOS scrolling */
+    -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    padding-bottom: env(safe-area-inset-bottom); /* iPhone notch safety */
+    padding: var(--mobile-padding) 0;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Improve button/input touch targets */
-  button, 
-  input[type="submit"], 
+  /* Mobile nav menu styling */
+  #nav-menu .nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  #nav-menu .nav-group {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  #nav-menu .nav-link {
+    display: block;
+    width: 100%;
+    padding: 14px var(--mobile-padding);
+    font-size: 0.95rem;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  #nav-menu .nav-link:hover,
+  #nav-menu .nav-link:focus {
+    background: rgba(102, 126, 234, 0.08);
+  }
+
+  #nav-menu .nav-link.active {
+    background: rgba(102, 126, 234, 0.12);
+    font-weight: 600;
+  }
+
+  #nav-menu .nav-dropdown {
+    display: none;
+    background: rgba(0, 0, 0, 0.02);
+    flex-direction: column;
+    gap: 0;
+  }
+
+  #nav-menu .nav-group.is-open .nav-dropdown {
+    display: flex;
+  }
+
+  #nav-menu .nav-dropdown a {
+    display: block;
+    padding: 12px var(--mobile-padding);
+    padding-left: calc(var(--mobile-padding) * 2);
+    font-size: 0.9rem;
+    color: rgba(0, 0, 0, 0.7);
+    text-decoration: none;
+    transition: background 0.2s ease;
+  }
+
+  #nav-menu .nav-dropdown a:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #333;
+  }
+
+  #nav-menu .nav-dropdown a.active {
+    color: #667eea;
+    font-weight: 600;
+    background: rgba(102, 126, 234, 0.08);
+  }
+
+  /* Login section styling */
+  #login-section {
+    padding: var(--mobile-padding);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.08);
+    margin-bottom: 0.5rem;
+  }
+
+  #login-section a {
+    display: block;
+    padding: 10px 12px;
+    text-align: center;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  #login-section #login-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+  }
+
+  #login-section #login-btn:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  }
+
+  /* Center page meta (timestamp) */
+  .page-meta {
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+  }
+
+  /* Touch targets for buttons */
+  button,
+  input[type="submit"],
   input[type="button"],
   select {
     min-height: var(--touch-target-min);
-    font-size: 16px; /* Prevents zoom on iOS */
+    font-size: 16px;
   }
 }
 
@@ -169,7 +291,10 @@
     --mobile-padding: 12px;
   }
 
-  /* Enhanced page title */
+  body, html {
+    font-size: var(--mobile-font-base);
+  }
+
   .page-title {
     font-size: 1.5rem;
     line-height: 1.3;
@@ -177,37 +302,129 @@
     word-break: break-word;
   }
 
-  /* Main content full width */
   main,
   body[data-page="dca"] main {
-    margin-left: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
+    margin-left: 0;
+    width: 100%;
+    max-width: 100%;
     padding: calc(var(--mobile-header-height) + 16px) var(--mobile-padding) var(--mobile-padding);
   }
 
-  /* Improve readability for text content */
   p, li {
     font-size: 16px;
-    line-height: 1.6;
+    line-height: var(--mobile-line-height);
     margin-bottom: 1em;
   }
 
-  /* Cards and sections */
   .dca-page .viz-card,
   .report-section {
     padding: var(--mobile-padding);
     margin-bottom: var(--mobile-padding);
-    border-radius: 12px;
+    border-radius: var(--mobile-border-radius);
+  }
+
+  /* Analise page tab navigation */
+  body#analisev3-page .tab-navigation {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.6rem;
+    padding: 0.5rem var(--mobile-padding);
+    position: sticky;
+    top: calc(var(--mobile-header-height) - 10px);
+    z-index: 900;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.92));
+    backdrop-filter: blur(6px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body#analisev3-page .tab-navigation .tab-btn {
+    flex: 0 0 auto;
+    padding: 0.55rem 0.9rem;
+  }
+
+  body#analisev3-page .viz-card,
+  body#analisev3-page .report-section {
+    padding: var(--mobile-padding);
+    border-radius: 18px;
+  }
+
+  body#analisev3-page .section-heading {
+    align-items: center;
+    text-align: center;
+    gap: 0.25rem;
+  }
+
+  body#analisev3-page .chart-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+
+  body#analisev3-page .chart-toolbar > * {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  body#analisev3-page .chart-toolbar .segmented {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body#analisev3-page .chart-toolbar .segmented button,
+  body#analisev3-page .chart-toolbar .segmented .chip-btn {
+    flex: 0 0 auto;
+  }
+
+  body#analisev3-page .chart-wrap {
+    min-height: 260px;
+    height: auto;
+  }
+
+  body#analisev3-page .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+
+  body#analisev3-page table {
+    min-width: 520px;
+  }
+
+  body#analisev3-page .kpis-grid,
+  body#analisev3-page .donut-grid,
+  body#analisev3-page .seasonal-grid,
+  body#analisev3-page .revpan-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body#analisev3-page .gap-panel__content {
+    gap: 0.5rem;
+  }
+
+  body#analisev3-page #analisev2-updated {
+    display: block;
+    margin-bottom: 0.5rem;
+    width: 100%;
+    text-align: center;
   }
 }
 
 /* ---------- Enhanced table behavior ---------- */
 @media (max-width: 1024px) {
-  /* Table wrapper with improved scrolling */
   .viz-card {
     overflow: hidden;
-    border-radius: 12px;
+    border-radius: var(--mobile-border-radius);
   }
 
   .viz-card .table-wrap {
@@ -215,27 +432,9 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
-    padding: 0 0 8px 0;
-    
-    /* Visual scroll hint */
-    background: linear-gradient(to right, 
-      white 30%, 
-      rgba(255, 255, 255, 0)),
-      linear-gradient(to right, 
-      rgba(255, 255, 255, 0), 
-      white 70%) 100% 0,
-      linear-gradient(to right, 
-      rgba(0, 0, 0, 0.1), 
-      transparent 10px),
-      linear-gradient(to left, 
-      rgba(0, 0, 0, 0.1), 
-      transparent 10px) 100% 0;
-    background-size: 40px 100%, 40px 100%, 10px 100%, 10px 100%;
-    background-repeat: no-repeat;
-    background-attachment: local, local, scroll, scroll;
+    padding: 0 0 8px;
   }
 
-  /* Table with better mobile typography */
   .viz-card .table-wrap table {
     width: max-content;
     min-width: 100%;
@@ -247,12 +446,11 @@
   .viz-card .table-wrap th,
   .viz-card .table-wrap td {
     white-space: nowrap;
-    padding: 10px 12px; /* Increased padding for better touch */
-    font-size: 14px; /* Improved readability */
+    padding: 10px 12px;
+    font-size: 14px;
     line-height: 1.4;
   }
 
-  /* Sticky header with better visibility */
   .viz-card .table-wrap thead th {
     position: sticky;
     top: 0;
@@ -261,11 +459,10 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   }
 
-  /* No sticky columns on mobile */
   .viz-card .table-wrap th:first-child,
   .viz-card .table-wrap td:first-child {
-    position: static !important;
-    left: auto !important;
+    position: static;
+    left: auto;
   }
 }
 
@@ -275,7 +472,6 @@
     --mobile-padding: 10px;
   }
 
-  /* Even more compact layout */
   .page-title {
     font-size: 1.25rem;
   }
@@ -289,8 +485,8 @@
   /* Stack all form elements */
   .form-inline,
   .form-row {
-    flex-direction: column !important;
-    grid-template-columns: 1fr !important;
+    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   /* Full width buttons */
@@ -488,72 +684,39 @@
   }
 }
 
-@media (max-width:1024px){
-  /* KPI grid: stack nicely */
-  .kpis-grid { 
+@media (max-width: 1024px) {
+  .kpis-grid {
     gap: 12px;
     grid-template-columns: 1fr 1fr;
   }
 }
-@media (max-width:680px){
-  .kpis-grid { grid-template-columns: 1fr; }
-}
 
-/* Crypto table inside viz-card gets the same mobile scroll/compact style */
-@media (max-width:1024px){
-  .viz-card .toolbar{
-    display: flex; flex-wrap: wrap; gap: 8px;
-  }
-  .viz-card .toolbar .btn{
-    height: 40px;
-  }
-
-  /* Let the table grow and scroll horizontally */
-  .viz-card .table-wrap{ 
-    overflow-x: auto; 
-    -webkit-overflow-scrolling: touch; 
-    margin: 8px 0; 
-    padding-bottom: 4px; 
-  }
-  .viz-card .table-wrap table{
-    width: max-content; 
-    min-width: 100%;
-    border-collapse: collapse;
-  }
-  .viz-card .table-wrap th,
-  .viz-card .table-wrap td{
-    white-space: nowrap; 
-    padding: 6px 8px; 
-    font-size: 12px; 
-    line-height: 1.25;
-    vertical-align: middle;
-  }
-
-  /* Make the toggle EUR/USD sit side-by-side cleanly on small widths */
-  .viz-card .toolbar .btn-toggle{
-    flex: 1 1 120px;
+@media (max-width: 680px) {
+  .kpis-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-/* Optional: hide lowest-priority columns on very small phones */
-@media (max-width:480px){
+/* Hide low-priority crypto columns on small phones */
+@media (max-width: 480px) {
   #crypto-table th.col-invested-usd,
   #crypto-table td.col-invested-usd,
   #crypto-table th.col-invested-eur,
-  #crypto-table td.col-invested-eur { display:none; }
+  #crypto-table td.col-invested-eur {
+    display: none;
+  }
 }
 
-/* ===== Crypto page controls: compact size ===== */
-.viz-card .toolbar{
+/* ===== Toolbar (Crypto, tables, etc.) ===== */
+.viz-card .toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
 }
 
-/* Buttons (e.g., + Adicionar Crypto, Exportar PDF, EUR/USD, Mostrar valores < $5) */
 .viz-card .toolbar .btn,
-.viz-card .toolbar button{
+.viz-card .toolbar button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -562,106 +725,51 @@
   font-size: 13px;
   line-height: 1.2;
   border-radius: 8px;
-  width: auto;          /* prevent full-width buttons */
+  width: auto;
   min-width: unset;
 }
 
-/* Make the EUR/USD toggles not stretch */
-.viz-card .toolbar .btn-toggle{
+.viz-card .toolbar .btn-toggle {
   flex: 0 0 auto;
 }
 
-/* Location dropdown (and any selects in the toolbar) */
-.viz-card .toolbar select{
+.viz-card .toolbar select {
   height: 36px;
   padding: 0 10px;
   font-size: 13px;
-  line-height: 36px;
   border-radius: 8px;
-  width: auto;          /* avoid spanning the row */
+  width: auto;
   max-width: 100%;
-  appearance: auto;     /* keep native look but sized */
 }
 
-/* Inputs in toolbar (if any) */
 .viz-card .toolbar input[type="text"],
 .viz-card .toolbar input[type="number"],
-.viz-card .toolbar input[type="search"]{
+.viz-card .toolbar input[type="search"] {
   height: 36px;
   padding: 6px 10px;
   font-size: 13px;
   border-radius: 8px;
 }
 
-/* Extra tiny phones: nudge down a bit */
-@media (max-width: 480px){
-  .viz-card .toolbar .btn,
-  .viz-card .toolbar button,
-  .viz-card .toolbar select{
-    height: 34px;
-    font-size: 12px;
-    padding: 5px 8px;
-  }
-}
-
-
-/* Crypto: compact location select inside table rows */
-#crypto-table .location-select{
+#crypto-table .location-select {
   height: 32px;
   padding: 2px 8px;
   font-size: 12px;
   border-radius: 6px;
-  max-width: 160px;      /* keep narrow so the row fits */
-}
-@media (max-width:480px){
-  #crypto-table .location-select{ max-width: 130px; }
+  max-width: 160px;
 }
 
-/* --- Crypto toolbar: compact 4 buttons in one fixed line --- */
-.viz-card .toolbar {
-  display: flex;
-  flex-wrap: nowrap;          /* stay in one line */
-  justify-content: flex-start;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Compact button style */
-.viz-card .toolbar .btn,
-.viz-card .toolbar button {
-  height: 32px;
-  padding: 4px 8px;
-  font-size: 12px;
-  line-height: 1.1;
-  border-radius: 6px;
-  flex: 1 1 auto;             /* allow them to shrink slightly */
-  min-width: 0;               /* let them compress evenly */
-  white-space: nowrap;        /* prevent text break */
-}
-
-/* Slightly smaller EUR/USD toggles so everything fits neatly */
-.viz-card .toolbar .btn-toggle {
-  flex: 0 0 60px;
-  text-align: center;
-}
-
-/* Button order spacing fix */
-.viz-card .toolbar .btn:first-child {
-  margin-left: 0;
-}
-
-@media (max-width:480px){
-  .viz-card .toolbar {
-    gap: 4px;
-  }
+@media (max-width: 480px) {
   .viz-card .toolbar .btn,
-  .viz-card .toolbar button {
-    height: 30px;
-    padding: 3px 6px;
-    font-size: 11px;
+  .viz-card .toolbar button,
+  .viz-card .toolbar select {
+    height: 34px;
+    font-size: 12px;
+    padding: 5px 8px;
   }
-  .viz-card .toolbar .btn-toggle {
-    flex: 0 0 55px;
+  
+  #crypto-table .location-select {
+    max-width: 130px;
   }
 }
 
@@ -849,21 +957,42 @@
 }
 
 #compras-form .item-compra.item-comprado {
-  background: #fff8c2;            /* soft yellow highlight */
+  background: #fff8c2;
   border-radius: 8px;
   transition: background-color 0.2s ease;
 }
 
-/* Keep text readable on yellow background */
 #compras-form .item-compra.item-comprado .item-nome,
 #compras-form .item-compra.item-comprado .item-nome-custom {
   color: #333;
   font-weight: 600;
 }
 
-/* Optional: give a bit of visual separation */
 #compras-form .item-compra.item-comprado + .item-compra {
   margin-top: 2px;
 }
 
-/*
+/* =========================================================
+   MOBILE CSS MAINTENANCE GUIDE
+   =========================================================
+   
+   Breakpoints used:
+   - 1024px: Desktop sidebar toggle
+   - 768px: Main mobile threshold
+   - 680px: 2-column → 1-column for KPIs
+   - 520px: Form layout compression
+   - 480px: Very small phones
+   
+   Key patterns:
+   - Use CSS variables (--mobile-*) for consistency
+   - Prioritize touch targets (min 44px)
+   - Avoid unnecessary !important (modern CSS preference)
+   - Test on real devices (especially horizontal scroll)
+   
+   Common issues to watch for:
+   - Table horizontal overflow on narrow screens
+   - Chart height constraints for landscape mode
+   - Sticky header visibility with fixed hamburger
+   - Input zoom prevention on iOS
+   
+   ========================================================= */

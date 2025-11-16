@@ -29,7 +29,9 @@ const METRIC_TYPES = Object.freeze({
 const fallbackPercentPlugin = {
   id: 'checkinsPercentLabels',
   afterDatasetsDraw(chart) {
-    const { ctx, data } = chart;
+    const { ctx, data, chartArea } = chart;
+    if (!ctx || !chartArea) return;
+    
     data.datasets.forEach((dataset, datasetIndex) => {
       const total = dataset.total || 0;
       if (!total) return;
@@ -41,11 +43,14 @@ const fallbackPercentPlugin = {
         if (!Number.isFinite(pct)) return;
         const text = `${Math.round(pct)}%`;
         ctx.save();
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '600 11px Montserrat, system-ui, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.6)';
+        ctx.lineWidth = 3;
+        ctx.font = 'bold 13px Montserrat, system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const { x, y } = element.getCenterPoint();
+        ctx.strokeText(text, x, y);
         ctx.fillText(text, x, y);
         ctx.restore();
       });
@@ -226,13 +231,18 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
   const datalabelsConfig = {
     anchor: 'center',
     align: 'center',
-    clamp: true,
+    clamp: false,
     clip: false,
     offset: 0,
-    color: '#0f172a',
+    color: '#ffffff',
+    textStrokeColor: 'rgba(15, 23, 42, 0.6)',
+    textStrokeWidth: 3,
     font: {
-      weight: '600',
-      size: 11
+      weight: 'bold',
+      size: 13
+    },
+    display: function(context) {
+      return context.dataset.data[context.dataIndex] > 0;
     },
     formatter: (value, context) => {
       const total = context.dataset?.total || 0;
@@ -249,6 +259,14 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
     data: { labels: LABELS, datasets },
     options: {
       interaction: { mode: 'index', intersect: false },
+      layout: {
+        padding: {
+          top: 20,
+          bottom: 10,
+          left: 10,
+          right: 10
+        }
+      },
       plugins: {
         legend: { position: 'bottom' },
         tooltip: {

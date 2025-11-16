@@ -900,32 +900,62 @@ async function exportFaturacaoTable(button) {
     doc.text(`Relatório de ${today}`, margin, yPos);
     yPos += 8;
 
-    // Get table HTML
+    // Get table HTML and replace delta symbol
     const table = tableContainer.querySelector('table');
     if (!table) {
       throw new Error('Tabela não encontrada');
     }
 
+    // Clone table and replace delta symbols for better PDF compatibility
+    const tableClone = table.cloneNode(true);
+    tableClone.querySelectorAll('th, td').forEach(cell => {
+      if (cell.textContent.includes('Δ')) {
+        cell.textContent = cell.textContent.replace(/Δ/g, 'Var');
+      }
+    });
+
     // Convert table to PDF using autoTable
+    const borderColor = [148, 163, 184];
+    const headerFill = [226, 232, 240];
+    const zebraFill = [249, 250, 251];
+
     doc.autoTable({
-      html: table,
+      html: tableClone,
       startY: yPos,
       margin: { top: margin, right: margin, bottom: margin, left: margin },
       styles: {
-        fontSize: 9,
+        fontSize: 8,
         halign: 'center',
-        valign: 'middle'
+        valign: 'middle',
+        overflow: 'linebreak',
+        lineWidth: 0.1,
+        lineColor: borderColor
       },
       headStyles: {
-        fillColor: [54, 83, 145],
-        textColor: 255,
-        fontStyle: 'bold'
+        fillColor: headerFill,
+        textColor: [30, 41, 59],
+        fontStyle: 'bold',
+        lineColor: borderColor,
+        lineWidth: 0.1
       },
       bodyStyles: {
-        textColor: 50
+        textColor: 50,
+        lineColor: borderColor,
+        lineWidth: 0.1
       },
       alternateRowStyles: {
-        fillColor: [245, 245, 245]
+        fillColor: zebraFill
+      },
+      tableLineWidth: 0.4,
+      tableLineColor: borderColor,
+      columnStyles: {
+        0: {
+          fontStyle: 'bold',
+          textColor: [30, 41, 59],
+          fillColor: [248, 250, 252],
+          lineColor: borderColor,
+          lineWidth: { right: 0.5 }
+        }
       },
       didDrawPage: (data) => {
         // Add page number
@@ -938,6 +968,15 @@ async function exportFaturacaoTable(button) {
         }
       }
     });
+
+    const lastPage = doc.internal.getNumberOfPages();
+    doc.setPage(lastPage);
+    const lastPageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(120, 120, 120);
+    const generatedLabel = new Date().toLocaleDateString('pt-PT');
+    doc.text(`Gerado a ${generatedLabel}`, margin, lastPageHeight - margin / 2);
 
     const stamp = new Date().toISOString().slice(0, 10);
     const viewName = state.view === 'compare' ? '123vs1248' : state.view;
@@ -958,13 +997,37 @@ async function exportFaturacaoTable(button) {
 }
 
 async function ensureFaturacaoExportLibs() {
+  const loadScript = (src) => {
+    if (!ensureFaturacaoExportLibs.cache) {
+      ensureFaturacaoExportLibs.cache = new Map();
+    }
+    if (ensureFaturacaoExportLibs.cache.has(src)) {
+      return ensureFaturacaoExportLibs.cache.get(src);
+    }
+    const promise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.onload = () => resolve();
+      script.onerror = () => {
+        ensureFaturacaoExportLibs.cache.delete(src);
+        reject(new Error(`Falha ao carregar ${src}`));
+      };
+      document.head.appendChild(script);
+    });
+    ensureFaturacaoExportLibs.cache.set(src, promise);
+    return promise;
+  };
+
   if (!window.jspdf || !window.jspdf.jsPDF) {
-    const module = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    if (module?.jspdf) window.jspdf = module.jspdf;
+    await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    if (window.jspdf?.jsPDF && typeof window.jspdf.jsPDF === 'function') {
+      window.jsPDF = window.jspdf.jsPDF;
+    }
   }
-  
-  // Load autoTable plugin
-  if (!window.jspdf.jsPDF.prototype.autoTable) {
-    await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.41/jspdf.plugin.autotable.min.js');
+
+  if (!window.jspdf?.jsPDF?.prototype?.autoTable) {
+    await loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js');
   }
 }

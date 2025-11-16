@@ -1,12 +1,17 @@
-import { MONTH_LABELS, formatEuro } from './analisev2-core.js';
+import { MONTH_LABELS, formatEuro, VIEW_APTS } from './analisev2-core.js';
 import { getNightlyEntries } from './analisev3-data.js';
 
 const MIN_GAP = 3;
-const APARTMENTS = ['123', '1248'];
 const MIN_DISPLAY_YEAR = 2025;
+const DEFAULT_APARTMENTS = VIEW_APTS?.total || ['123', '1248'];
+const gapState = {
+  view: 'total',
+  entries: []
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="gap-analysis"]')) return;
+  bindGapViewEvents();
   await renderGapAnalysis();
 });
 
@@ -14,22 +19,30 @@ window.addEventListener('analisev2:retry', (event) => {
   if (event.detail?.module === 'gap-analysis') renderGapAnalysis();
 });
 
+function bindGapViewEvents() {
+  window.addEventListener('gap-analysis:set-view', (event) => {
+    const next = event.detail?.view;
+    if (!next) return;
+    gapState.view = next;
+    if (gapState.entries.length) renderGapAnalysisView();
+  });
+}
+
 async function renderGapAnalysis() {
   window.loadingManager?.show('gap-analysis', { type: 'skeleton' });
   try {
     const entries = await getNightlyEntries({ preciseOnly: true });
+    gapState.entries = entries;
     if (!entries.length) {
       setGapSummary('Sem datas com check-in detalhado.');
       setGapTable('');
       setGapSuggestions([]);
       return;
     }
-    const summary = computeGaps(entries);
-    renderTable(summary.rows);
-    renderSummary(summary);
-    renderSuggestions(summary.rows);
+    renderGapAnalysisView();
   } catch (error) {
     window.errorHandler?.handleError('gap-analysis', error, 'renderGapAnalysis', renderGapAnalysis);
+    gapState.entries = [];
     setGapSummary('Erro ao analisar gaps.');
     setGapTable('');
     setGapSuggestions([]);
@@ -38,13 +51,34 @@ async function renderGapAnalysis() {
   }
 }
 
-function computeGaps(entries) {
+function renderGapAnalysisView() {
+  if (!gapState.entries.length) return;
+  const apartments = VIEW_APTS?.[gapState.view] || DEFAULT_APARTMENTS;
+  const summary = computeGaps(gapState.entries, apartments);
+  if (!summary.rows.length) {
+    setGapSummary('Sem lacunas maiores que 2 noites nos últimos meses.');
+    setGapTable('<div class="heatmap-muted">Sem gaps relevantes.</div>');
+    setGapSuggestions([]);
+    return;
+  }
+  renderTable(summary.rows);
+  renderSummary(summary);
+  renderSuggestions(summary.rows);
+}
+
+function computeGaps(entries, apartments = DEFAULT_APARTMENTS) {
+  const allowed = new Set((apartments && apartments.length ? apartments : DEFAULT_APARTMENTS).map(String));
+  const filteredEntries = entries.filter((entry) => allowed.has(String(entry.apartamento ?? entry.apartment ?? '')));
+  if (!filteredEntries.length) {
+    return { rows: [], totalEmpty: 0, totalLost: 0 };
+  }
+
   const occupied = new Set();
   const monthlyRates = new Map();
   let globalValue = 0;
   let globalNights = 0;
 
-  entries.forEach((entry) => {
+  filteredEntries.forEach((entry) => {
     const key = `${entry.apartamento}|${formatDateKey(entry.ano, entry.mes, entry.dia)}`;
     occupied.add(key);
     const monthKey = `${entry.ano}-${pad(entry.mes)}`;
@@ -60,7 +94,7 @@ function computeGaps(entries) {
   const rows = monthKeys.map((key) => {
     const [year, monthStr] = key.split('-').map(Number);
     const avgRate = deriveAvgRate(monthlyRates.get(key), globalValue, globalNights);
-    const emptyNights = countGapsForMonth(year, monthStr, occupied);
+    const emptyNights = countGapsForMonth(year, monthStr, occupied, allowed);
     const lost = emptyNights * avgRate;
     return {
       key,
@@ -81,10 +115,11 @@ function computeGaps(entries) {
   };
 }
 
-function countGapsForMonth(year, month, occupied) {
+function countGapsForMonth(year, month, occupied, apartmentsSet) {
   const days = daysInMonth(year, month);
   let total = 0;
-  APARTMENTS.forEach((apt) => {
+  const targets = apartmentsSet && apartmentsSet.size ? Array.from(apartmentsSet) : DEFAULT_APARTMENTS;
+  targets.forEach((apt) => {
     let run = 0;
     for (let day = 1; day <= days; day++) {
       const dayKey = `${apt}|${formatDateKey(year, month, day)}`;
@@ -118,7 +153,7 @@ function renderTable(rows) {
     setGapTable('<div class="heatmap-muted">Sem gaps relevantes.</div>');
     return;
   }
-  const html = [`<table class="media-faturacao"><thead><tr><th>Mês</th><th>Noites vazias &gt;2</th><th>Rev. perdida</th><th>Ação sugerida</th></tr></thead><tbody>`];
+  const html = [`<table class="media-faturacao"><thead><tr><th>Mês</th><th>Noites vazias &gt;2</th><th>Rec. perdida</th><th>Ação sugerida</th></tr></thead><tbody>`];
   rows.forEach((row) => {
     html.push(`<tr><td>${row.label}</td><td>${row.emptyNights}</td><td>${formatEuro(row.lostRevenue)}</td><td>${row.action}</td></tr>`);
   });

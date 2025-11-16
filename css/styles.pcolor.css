@@ -107,27 +107,42 @@ h4 {
 
 .section-heading {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
   margin-bottom: 1rem;
   position: relative;
 }
 
 .section-heading > div {
   text-align: center;
-  flex: 1;
+  width: 100%;
 }
 
 .section-heading h4 {
   margin: 0;
-  flex: 1;
-  text-align: left;
+  text-align: center;
 }
 
 .section-heading p {
   margin: 4px 0 0;
   color: var(--text-dim);
   font-size: 0.9rem;
+}
+
+.section-heading--centered-action {
+  justify-content: center;
+}
+
+.section-heading--centered-action h4 {
+  text-align: center;
+}
+
+.section-heading--centered-action .btn-export {
+  position: absolute;
+  right: 0;
+  top: 0;
 }
 
 .section-heading--centered {
@@ -301,7 +316,7 @@ body > header.scrolled {
 
 #menu-icon,
 .menu-icon {
-  display: none;
+  display: flex;
   width: 42px;
   height: 42px;
   border-radius: 12px;
@@ -2049,6 +2064,17 @@ body[data-page="diversos-page"] .tab-navigation {
 /* ========================================================================== */
 /*  Charts & Tables                                                           */
 /* ========================================================================== */
+.chart-wrap {
+  overflow: visible !important;
+  position: relative;
+}
+
+.chart-wrap canvas {
+  display: block;
+  max-width: 100%;
+  height: auto !important;
+}
+
 .chart-and-table {
   display: flex;
   flex-direction: column;

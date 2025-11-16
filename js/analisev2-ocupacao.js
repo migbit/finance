@@ -12,17 +12,49 @@ const COLORS = {
 const monthLabels = MONTH_LABELS;
 const MIN_OCCUPANCY_YEAR = 2025;
 
+const fallbackOccLabels = {
+  id: 'ocupacaoPercentLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx, chartArea } = chart;
+    if (!ctx || !chartArea) return;
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      if (!meta?.data) return;
+      meta.data.forEach((element, index) => {
+        const value = dataset.data?.[index];
+        if (!Number.isFinite(value)) return;
+        const pct = Math.round(value);
+        const text = `${pct}%`;
+        ctx.save();
+        ctx.font = 'bold 12px Montserrat, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.6)';
+        ctx.lineWidth = 3;
+        ctx.fillStyle = '#ffffff';
+        const { x, y } = element.getCenterPoint();
+        ctx.strokeText(text, x, y);
+        ctx.fillText(text, x, y);
+        ctx.restore();
+      });
+    });
+  }
+};
+
 const state = {
   view: 'total',
   reservas: [],
   chart: null
 };
 let ocupacaoButtonsController = null;
+const ocupacaoScriptCache = new Map();
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="ocupacao"]')) return;
   bindOcupacaoButtons();
+  bindOcupacaoExportButton();
   await loadReservas();
+  notifyGapView();
 });
 
 window.addEventListener('analisev2:retry', (event) => {
@@ -47,6 +79,7 @@ function bindOcupacaoButtons() {
         b.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
       renderOcupacao();
+      notifyGapView();
     }, { signal });
   });
 }
@@ -122,9 +155,9 @@ function renderOcupacaoChart(agg, latestYear, prevYear) {
   });
 
   const plugins = [];
-  if (typeof ChartDataLabels !== 'undefined') {
-    plugins.push(ChartDataLabels);
-  }
+  const hasDataLabels = typeof ChartDataLabels !== 'undefined';
+  if (hasDataLabels) plugins.push(ChartDataLabels);
+  else plugins.push(fallbackOccLabels);
 
   state.chart = createChart(canvas, {
     type: 'bar',
@@ -133,6 +166,14 @@ function renderOcupacaoChart(agg, latestYear, prevYear) {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
+      layout: {
+        padding: {
+          top: 20,
+          bottom: 10,
+          left: 10,
+          right: 10
+        }
+      },
       scales: {
         y: {
           beginAtZero: true,
@@ -158,15 +199,19 @@ function renderOcupacaoChart(agg, latestYear, prevYear) {
         },
         legend: { position: 'top' },
         datalabels: typeof ChartDataLabels !== 'undefined' ? {
-          color: '#111827',
+          display: true,
+          color: '#ffffff',
           anchor: 'center',
           align: 'center',
           formatter: (value) => `${Math.round(value ?? 0)}%`,
           font: {
-            weight: '600',
-            size: 11
+            weight: 'bold',
+            size: 12
           },
-          clip: false
+          clamp: false,
+          clip: false,
+          textStrokeColor: 'rgba(15, 23, 42, 0.6)',
+          textStrokeWidth: 3
         } : undefined
       }
     },
@@ -283,4 +328,153 @@ function cleanupOcupacaoResources() {
     ocupacaoButtonsController = null;
   }
   resetChart();
+}
+
+function bindOcupacaoExportButton() {
+  const button = document.querySelector('[data-export-target="ocupacao"]');
+  if (!button) return;
+  button.addEventListener('click', () => exportOcupacaoReport(button));
+}
+
+async function exportOcupacaoReport(button) {
+  const chartCanvas = document.getElementById('chart-ocupacao');
+  const gapTable = document.querySelector('#gap-table table');
+  const gapSummary = document.getElementById('gap-summary')?.textContent?.trim() || '';
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'A gerar…';
+    }
+    await ensureOcupacaoExportLibs();
+    const doc = new window.jspdf.jsPDF('p', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let yPos = margin;
+    const generatedLabel = new Date().toLocaleDateString('pt-PT');
+    const viewLabels = {
+      total: 'Total (123 + 1248)',
+      '123': 'Apartamento 123',
+      '1248': 'Apartamento 1248'
+    };
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Taxa de ocupação - ${viewLabels[state.view] || viewLabels.total}`, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 9;
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(90, 90, 90);
+    doc.text('Cobertura mensal e lacunas identificadas.', pageWidth / 2, yPos, { align: 'center' });
+    yPos += 10;
+
+    if (chartCanvas && chartCanvas.offsetHeight > 0) {
+      const chartImage = chartCanvas.toDataURL('image/png');
+      const chartWidth = pageWidth - 2 * margin;
+      const chartHeight = (chartWidth / chartCanvas.width) * chartCanvas.height;
+      if (yPos + chartHeight + 20 > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+      }
+      doc.addImage(chartImage, 'PNG', margin, yPos, chartWidth, chartHeight);
+      yPos += chartHeight + 10;
+    }
+
+    if (gapSummary) {
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'italic');
+      doc.setTextColor(80, 80, 80);
+      const wrapped = doc.splitTextToSize(gapSummary, pageWidth - 2 * margin);
+      doc.text(wrapped, margin, yPos);
+      yPos += wrapped.length * 4 + 4;
+    }
+
+    if (gapTable) {
+      const tableClone = gapTable.cloneNode(true);
+      doc.autoTable({
+        html: tableClone,
+        startY: yPos,
+        margin: { top: margin, right: margin, bottom: margin, left: margin },
+        styles: {
+          fontSize: 8,
+          halign: 'center',
+          valign: 'middle',
+          lineColor: [148, 163, 184],
+          lineWidth: 0.1
+        },
+        headStyles: {
+          fillColor: [226, 232, 240],
+          textColor: [30, 41, 59],
+          fontStyle: 'bold',
+          lineColor: [148, 163, 184],
+          lineWidth: 0.1
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252]
+        }
+      });
+    } else {
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'italic');
+      doc.setTextColor(120, 120, 120);
+      doc.text('Sem gaps relevantes para exportar.', margin, yPos);
+    }
+
+    const lastPage = doc.internal.getNumberOfPages();
+    doc.setPage(lastPage);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Gerado a ${generatedLabel}`, margin, doc.internal.pageSize.getHeight() - margin / 2);
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    const viewName = state.view === 'total' ? 'total' : state.view;
+    doc.save(`export-ocupacao-${viewName}-${stamp}.pdf`);
+  } catch (error) {
+    console.error('Erro ao exportar ocupação', error);
+    if (button) button.textContent = 'Erro';
+    setTimeout(() => {
+      if (button) button.textContent = 'Exportar';
+    }, 2000);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Exportar';
+    }
+  }
+}
+
+async function ensureOcupacaoExportLibs() {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    await loadOcupacaoScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+    if (window.jspdf?.jsPDF && typeof window.jspdf.jsPDF === 'function') {
+      window.jsPDF = window.jspdf.jsPDF;
+    }
+  }
+  if (!window.jspdf?.jsPDF?.prototype?.autoTable) {
+    await loadOcupacaoScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js');
+  }
+}
+
+function loadOcupacaoScript(src) {
+  if (ocupacaoScriptCache.has(src)) return ocupacaoScriptCache.get(src);
+  const promise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.crossOrigin = 'anonymous';
+    script.onload = () => resolve();
+    script.onerror = () => {
+      ocupacaoScriptCache.delete(src);
+      reject(new Error(`Falha ao carregar ${src}`));
+    };
+    document.head.appendChild(script);
+  });
+  ocupacaoScriptCache.set(src, promise);
+  return promise;
+}
+
+function notifyGapView() {
+  window.dispatchEvent(new CustomEvent('gap-analysis:set-view', {
+    detail: { view: state.view }
+  }));
 }
