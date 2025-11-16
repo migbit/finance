@@ -305,7 +305,8 @@ function renderChart(series) {
       backgroundColor: 'rgba(148,163,184,0.15)',
       borderWidth: 1,
       tension: 0.25,
-      spanGaps: true
+      spanGaps: true,
+      datalabels: { display: false }
     });
   }
   if (latestYear) {
@@ -331,12 +332,14 @@ function renderChart(series) {
       borderDash: [6, 6],
       tension: 0,
       spanGaps: true,
-      pointRadius: 0
+      pointRadius: 0,
+      datalabels: { display: false }
     });
   }
 
   const plugins = [];
   if (typeof ChartDataLabels !== 'undefined') plugins.push(ChartDataLabels);
+  const isMobile = window.innerWidth < 768;
 
   state.chart = createChart(canvas, {
     type: 'line',
@@ -344,18 +347,33 @@ function renderChart(series) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 35,
+          right: 15,
+          bottom: 10,
+          left: 10
+        }
+      },
       interaction: { mode: 'index', intersect: false },
       scales: {
         y: {
           beginAtZero: true,
           ticks: {
-            callback: (value) => formatRevpanValue(value)
+            callback: (value) => formatRevpanValue(value),
+            maxTicksLimit: 6,
+            autoSkip: true,
+            font: { size: 10 }
           },
           grid: { color: 'rgba(0,0,0,0.05)' }
         },
-        x: { 
+        x: {
           grid: { display: false },
-          ticks: { autoSkip: false, maxRotation: 0 }
+          ticks: {
+            autoSkip: false,
+            maxRotation: 0,
+            font: { size: 10 }
+          }
         }
       },
       plugins: {
@@ -367,12 +385,25 @@ function renderChart(series) {
             }
           }
         },
-        legend: { position: 'top' },
+        legend: {
+          position: 'top',
+          labels: {
+            font: { size: 11 },
+            padding: 8,
+            boxWidth: 30
+          }
+        },
         datalabels: typeof ChartDataLabels !== 'undefined' ? {
           align: 'top',
           anchor: 'end',
-          formatter: (value) => (value != null ? formatEuro(value) : ''),
-          font: { size: 10, weight: '600' }
+          offset: 6,
+          clip: false,
+          formatter: (value, context) => {
+            if (isMobile) return '';
+            return value != null ? formatEuro(value) : '';
+          },
+          font: { size: 9, weight: '600' },
+          color: '#374151'
         } : undefined
       }
     }

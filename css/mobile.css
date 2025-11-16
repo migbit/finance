@@ -354,6 +354,22 @@
     gap: 0.25rem;
   }
 
+  body#analisev3-page .section-heading--centered-action {
+    align-items: center;
+  }
+
+  body#analisev3-page .section-heading--centered-action .btn-export {
+    position: static;
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+
+  body#analisev3-page #mod-faturacao .section-heading h4,
+  body#analisev3-page #mod-ocupacao .section-heading h4 {
+    color: inherit;
+    display: block;
+  }
+
   body#analisev3-page .chart-toolbar {
     display: flex;
     flex-wrap: wrap;
@@ -417,6 +433,27 @@
     margin-bottom: 0.5rem;
     width: 100%;
     text-align: center;
+  }
+
+body#analisev3-page .page-meta-reload {
+  display: none !important;
+}
+
+
+  body#analisev3-page #mod-heatmap .heatmap-area {
+    padding: 0;
+  }
+
+  body#analisev3-page #mod-heatmap .heatmap-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-left: calc(-1 * var(--mobile-padding));
+    margin-right: calc(-1 * var(--mobile-padding));
+    padding: 0 var(--mobile-padding) var(--mobile-padding);
+  }
+
+  body#analisev3-page #mod-heatmap .heatmap-table {
+    min-width: 760px;
   }
 }
 

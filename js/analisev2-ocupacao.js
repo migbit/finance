@@ -41,6 +41,10 @@ const fallbackOccLabels = {
   }
 };
 
+const ocupacaoMobileQuery = typeof window !== 'undefined' && window.matchMedia
+  ? window.matchMedia('(max-width: 1024px)')
+  : null;
+
 const state = {
   view: 'total',
   reservas: [],
@@ -154,14 +158,15 @@ function renderOcupacaoChart(agg, latestYear, prevYear) {
     pointHoverRadius: 5
   });
 
-  const plugins = [];
+  const hideLabelsOnMobile = shouldHideOcupacaoLabelsOnMobile();
   const hasDataLabels = typeof ChartDataLabels !== 'undefined';
-  if (hasDataLabels) plugins.push(ChartDataLabels);
-  else plugins.push(fallbackOccLabels);
+  const useChartJsDataLabels = hasDataLabels && !hideLabelsOnMobile;
+  const runtimePlugins = (!hideLabelsOnMobile && !hasDataLabels) ? [fallbackOccLabels] : [];
 
   state.chart = createChart(canvas, {
     type: 'bar',
     data: { labels: monthLabels, datasets },
+    plugins: runtimePlugins,
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -198,7 +203,7 @@ function renderOcupacaoChart(agg, latestYear, prevYear) {
           }
         },
         legend: { position: 'top' },
-        datalabels: typeof ChartDataLabels !== 'undefined' ? {
+        datalabels: useChartJsDataLabels ? {
           display: true,
           color: '#ffffff',
           anchor: 'center',
@@ -212,10 +217,11 @@ function renderOcupacaoChart(agg, latestYear, prevYear) {
           clip: false,
           textStrokeColor: 'rgba(15, 23, 42, 0.6)',
           textStrokeWidth: 3
-        } : undefined
+        } : {
+          display: false
+        }
       }
     },
-    plugins
   }, { previousChart: state.chart });
 }
 
@@ -328,6 +334,10 @@ function cleanupOcupacaoResources() {
     ocupacaoButtonsController = null;
   }
   resetChart();
+}
+
+function shouldHideOcupacaoLabelsOnMobile() {
+  return Boolean(ocupacaoMobileQuery?.matches);
 }
 
 function bindOcupacaoExportButton() {

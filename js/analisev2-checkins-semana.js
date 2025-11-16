@@ -58,6 +58,10 @@ const fallbackPercentPlugin = {
   }
 };
 
+const checkinsMobileQuery = typeof window !== 'undefined' && window.matchMedia
+  ? window.matchMedia('(max-width: 1024px)')
+  : null;
+
 const state = {
   view: 'total',
   metric: 'checkins',
@@ -228,6 +232,8 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
   });
 
   const hasDataLabelsPlugin = typeof ChartDataLabels !== 'undefined';
+  const hideLabelsOnMobile = shouldHideCheckinsLabelsOnMobile();
+  const useChartJsDataLabels = hasDataLabelsPlugin && !hideLabelsOnMobile;
   const datalabelsConfig = {
     anchor: 'center',
     align: 'center',
@@ -252,11 +258,12 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
       return `${Math.round(pct)}%`;
     }
   };
-  const runtimePlugins = hasDataLabelsPlugin ? [ChartDataLabels] : [fallbackPercentPlugin];
+  const runtimePlugins = (!hideLabelsOnMobile && !hasDataLabelsPlugin) ? [fallbackPercentPlugin] : [];
 
   state.chart = createChart(canvas, {
     type: 'bar',
     data: { labels: LABELS, datasets },
+    plugins: runtimePlugins,
     options: {
       interaction: { mode: 'index', intersect: false },
       layout: {
@@ -274,7 +281,7 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
             label: (context) => ` ${context.dataset.label}: ${context.parsed.y}`
           }
         },
-        datalabels: hasDataLabelsPlugin ? datalabelsConfig : undefined
+        datalabels: useChartJsDataLabels ? datalabelsConfig : { display: false }
       },
       scales: {
         x: { grid: { display: false } },
@@ -285,8 +292,7 @@ function renderChart({ curr, prev, currentYear, lastYear, color }) {
           border: { display: false }
         }
       }
-    },
-    plugins: runtimePlugins
+    }
   }, { previousChart: state.chart });
 }
 
@@ -319,6 +325,10 @@ function cleanupCheckinsResources() {
     checkinsButtonsController = null;
   }
   destroyCheckinsChart();
+}
+
+function shouldHideCheckinsLabelsOnMobile() {
+  return Boolean(checkinsMobileQuery?.matches);
 }
 
 function withAlpha(color, alpha) {
