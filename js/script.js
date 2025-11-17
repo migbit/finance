@@ -160,7 +160,10 @@ function setupNavInteractions(header) {
   };
 
   if (menuBtn) {
-    menuBtn.addEventListener('click', () => header.classList.toggle('active'));
+    menuBtn.addEventListener('click', () => {
+      header.classList.toggle('active');
+      document.body.classList.toggle('nav-open', header.classList.contains('active'));
+    });
   }
 
   groups.forEach(group => {
@@ -191,6 +194,7 @@ function setupNavInteractions(header) {
     nav.addEventListener('click', (event) => {
       if (event.target.closest('a')) {
         header.classList.remove('active');
+        document.body.classList.remove('nav-open');
       }
     });
   }

@@ -330,10 +330,18 @@
           <div class="revpan-highlight" id="revpan-highlight">A aguardar dados...</div>
         </div>
         <div class="chart-wrap" style="height:320px">
-          <canvas id="chart-revpan"></canvas>
+          <div class="chart-scroll-outer">
+            <div class="chart-scroll-inner">
+              <canvas id="chart-revpan"></canvas>
+            </div>
+          </div>
         </div>
         <div class="chart-wrap revpan-scatter-wrap" style="height:320px">
-          <canvas id="chart-revpan-scatter"></canvas>
+          <div class="chart-scroll-outer">
+            <div class="chart-scroll-inner">
+              <canvas id="chart-revpan-scatter"></canvas>
+            </div>
+          </div>
         </div>
         <p class="revpan-note" id="revpan-scatter-note">Cada ponto cruza Ocupação × RevPAN para identificar meses sub ou sobre precificados.</p>
       </div>
@@ -384,7 +392,11 @@
           </div>
         </div>
         <div class="chart-wrap" style="height:360px">
-          <canvas id="chart-pricing-lab" aria-label="Pricing scatter" role="img"></canvas>
+          <div class="chart-scroll-outer">
+            <div class="chart-scroll-inner">
+              <canvas id="chart-pricing-lab" aria-label="Pricing scatter" role="img"></canvas>
+            </div>
+          </div>
         </div>
         <div class="pricing-legend">
           <span class="legend-item legend-summer">Verão</span>
@@ -416,7 +428,11 @@
           </div>
         </div>
 
-        <div id="heatmap-variacao-analisev2" class="heatmap-area"></div>
+        <div class="heatmap-scroll-outer">
+          <div class="heatmap-scroll-inner">
+            <div id="heatmap-variacao-analisev2" class="heatmap-area"></div>
+          </div>
+        </div>
       </div>
     </section>
 

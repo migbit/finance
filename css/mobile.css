@@ -30,10 +30,11 @@
     width: 100%;
     height: var(--mobile-header-height);
     z-index: 1000;
-    pointer-events: none;
+    pointer-events: auto;
   }
   body > header #menu-icon,
-  body > header .menu-icon {
+  body > header .menu-icon,
+  body > header #nav-menu {
     pointer-events: auto;
   }
 
@@ -50,9 +51,13 @@
     background: #fff;
     box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
     pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
   }
 
-  body > header.active #nav-menu {
+  body > header.active #nav-menu,
+  body.nav-open #nav-menu {
     transform: translateX(0);
   }
 
@@ -73,13 +78,13 @@
   .menu-icon {
     display: flex;
     position: fixed;
-    top: 12px;
+    top: 8px;
     right: 12px;
     width: var(--touch-target-min);
     height: var(--touch-target-min);
     align-items: center;
     justify-content: center;
-    z-index: 1100;
+    z-index: 500;
     border: 0;
     background: #e8e8e8;
     color: #333;
@@ -110,7 +115,7 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    padding: var(--mobile-padding) 0;
+    padding: 8px 0;
     padding-bottom: env(safe-area-inset-bottom);
   }
 
@@ -119,6 +124,7 @@
     display: flex;
     flex-direction: column;
     gap: 0;
+    margin-top: 0;
   }
 
   #nav-menu .nav-group {
@@ -181,7 +187,7 @@
 
   /* Login section styling */
   #login-section {
-    padding: var(--mobile-padding);
+    padding: 8px var(--mobile-padding);
     border-bottom: 2px solid rgba(0, 0, 0, 0.08);
     margin-bottom: 0.5rem;
   }
@@ -435,9 +441,69 @@
     text-align: center;
   }
 
-body#analisev3-page .page-meta-reload {
-  display: none !important;
-}
+  body#analisev3-page .page-meta-reload {
+    display: none !important;
+  }
+
+  body#analisev3-page #mod-pricing-lab .chart-scroll-outer {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  body#analisev3-page #mod-pricing-lab .chart-scroll-inner {
+    min-width: 720px;
+    max-width: 900px;
+    margin: 0 auto;
+    display: inline-block;
+  }
+
+  body#analisev3-page #mod-pricing-lab .chart-scroll-inner canvas {
+    width: 100%;
+    height: auto;
+    max-width: 1200px;
+    display: block;
+  }
+
+  body#analisev3-page #mod-revpan .chart-scroll-outer {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  body#analisev3-page #mod-revpan .chart-scroll-inner {
+    min-width: 720px;
+    max-width: 900px;
+    margin: 0 auto;
+    display: inline-block;
+  }
+
+  body#analisev3-page #mod-revpan .chart-scroll-inner canvas {
+    width: 100%;
+    height: auto;
+    max-width: 1200px;
+    display: block;
+  }
+
+  body#analisev3-page #mod-heatmap .heatmap-scroll-outer {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  body#analisev3-page #mod-heatmap .heatmap-scroll-inner {
+    min-width: 720px;
+    max-width: 900px;
+    margin: 0 auto;
+    display: inline-block;
+  }
+
+  body#analisev3-page #mod-heatmap .heatmap-scroll-inner .heatmap-area {
+    width: 100%;
+  }
 
 
   body#analisev3-page #mod-heatmap .heatmap-area {
