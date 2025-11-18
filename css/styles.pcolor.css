@@ -334,6 +334,13 @@ body > header.scrolled {
   transition: transform 0.2s ease;
 }
 
+@media (min-width: 1025px) {
+  #menu-icon,
+  .menu-icon {
+    display: none;
+  }
+}
+
 #menu-icon:hover,
 .menu-icon:hover {
   transform: scale(1.05);
