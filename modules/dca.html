@@ -54,6 +54,78 @@
   <main class="dca-page">
     <!-- === Título === -->
     <h2 class="page-title center">DCA – Trade Republic</h2>
+    <section class="report-section" id="dca-etf-quotes">
+      <div class="viz-card etf-card">
+        <div class="etf-card-header">
+          <h4>Cotações ETFs</h4>
+          <div class="etf-card-meta">
+            <span id="dca-etf-updated" aria-live="polite">Atualizado a —</span>
+            <button type="button" class="page-meta-reload" id="dca-etf-refresh" aria-label="Recarregar cotações" title="Recarregar cotações">↻</button>
+          </div>
+        </div>
+        <div id="dca-etf-error" class="form-feedback error" aria-live="polite"></div>
+        <div class="etf-quote-grid">
+          <article class="etf-quote-card" data-ticker="VWCE">
+            <header>
+              <span class="etf-ticker">VWCE</span>
+              <span class="etf-name">Vanguard FTSE All-World UCITS</span>
+            </header>
+            <div class="etf-price" id="etf-vwce-price">-</div>
+            <div class="etf-change" id="etf-vwce-change">-</div>
+            <div class="etf-extra" id="etf-vwce-extra">—</div>
+            <div class="etf-positions">
+              <label class="etf-qty-field">
+                <span>Quantidade</span>
+                <input type="number" step="0.0001" min="0" id="etf-vwce-qty" placeholder="0.0000" />
+              </label>
+              <div class="etf-metrics">
+                <div class="etf-metric">
+                  <span>Valor Total</span>
+                  <strong id="etf-vwce-total">-</strong>
+                </div>
+                <div class="etf-metric">
+                  <span>Investido</span>
+                  <strong id="etf-vwce-invested">-</strong>
+                </div>
+                <div class="etf-metric">
+                  <span>Resultado</span>
+                  <strong id="etf-vwce-result">-</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+          <article class="etf-quote-card" data-ticker="AGGH">
+            <header>
+              <span class="etf-ticker">AGGH</span>
+              <span class="etf-name">iShares Core Global Aggregate Bond</span>
+            </header>
+            <div class="etf-price" id="etf-aggh-price">-</div>
+            <div class="etf-change" id="etf-aggh-change">-</div>
+            <div class="etf-extra" id="etf-aggh-extra">—</div>
+            <div class="etf-positions">
+              <label class="etf-qty-field">
+                <span>Quantidade</span>
+                <input type="number" step="0.0001" min="0" id="etf-aggh-qty" placeholder="0.0000" />
+              </label>
+              <div class="etf-metrics">
+                <div class="etf-metric">
+                  <span>Valor Total</span>
+                  <strong id="etf-aggh-total">-</strong>
+                </div>
+                <div class="etf-metric">
+                  <span>Investido</span>
+                  <strong id="etf-aggh-invested">-</strong>
+                </div>
+                <div class="etf-metric">
+                  <span>Resultado</span>
+                  <strong id="etf-aggh-result">-</strong>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
 
     <!-- === Parâmetros & Juro (collapsible) === -->
     <section class="report-section">

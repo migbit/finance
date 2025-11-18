@@ -3,7 +3,8 @@
 import { 
   START_YM, DEFAULTS, TAXA_ANUAL_FIXA,
   ensureMonthsExist, loadParams, saveParams, loadAllDocs, saveRow,
-  loadJuroSaldo, saveJuroSaldo, isAuthenticated, onAuthChange
+  loadJuroSaldo, saveJuroSaldo, isAuthenticated, onAuthChange,
+  ymCompare
 } from './dca-core.js';
 
 import { 
@@ -20,6 +21,7 @@ import {
   updateAdvancedMetrics, updateRebalancingSuggestions,
   exportToCSV
 } from './dca-ui.js';
+import { initEtfQuotes } from './dca-quotes.js';
 
 // ---------- Mobile Menu ----------
 document.addEventListener('DOMContentLoaded', () => {
@@ -53,6 +55,76 @@ const state = {
 };
 
 const feedbackTimers = new Map();
+
+function parseLabelToYM(label) {
+  if (!label || typeof label !== 'string') return { month: null, year: null };
+  const parts = label.split('/');
+  if (parts.length !== 2) return { month: null, year: null };
+  const month = Number(parts[0]);
+  let year = Number(parts[1]);
+  if (Number.isFinite(year)) {
+    year = year >= 0 && year < 100 ? 2000 + year : year;
+  } else {
+    year = null;
+  }
+  return {
+    month: Number.isFinite(month) ? month : null,
+    year: Number.isFinite(year) ? year : null
+  };
+}
+
+function determineDefaultChartRange(labels) {
+  if (!Array.isArray(labels) || labels.length === 0) return null;
+  const targetYear = new Date().getFullYear();
+  let decemberIndex = -1;
+  let lastInTargetYear = -1;
+  let lastBeforeTarget = -1;
+
+  labels.forEach((label, idx) => {
+    const { month, year } = parseLabelToYM(label);
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return;
+    if (year === targetYear) {
+      if (month === 12) decemberIndex = idx;
+      if (idx > lastInTargetYear) lastInTargetYear = idx;
+    } else if (year < targetYear && idx > lastBeforeTarget) {
+      lastBeforeTarget = idx;
+    }
+  });
+
+  let chosenIndex = -1;
+  if (decemberIndex >= 0) chosenIndex = decemberIndex;
+  else if (lastInTargetYear >= 0) chosenIndex = lastInTargetYear;
+  else if (lastBeforeTarget >= 0) chosenIndex = lastBeforeTarget;
+  else chosenIndex = labels.length - 1;
+
+  return chosenIndex + 1;
+}
+
+function getInvestedTotalsUntil(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return { vwce: 0, aggh: 0 };
+  const now = new Date();
+  const targetYM = { y: now.getFullYear(), m: now.getMonth() + 1 };
+  let snapshot = null;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const row = rows[i];
+    const rowYM = { y: row.y, m: row.m };
+    if (ymCompare(rowYM, START_YM) < 0) continue;
+    if (ymCompare(rowYM, targetYM) <= 0) {
+      snapshot = row;
+      break;
+    }
+  }
+  if (!snapshot) return { vwce: 0, aggh: 0 };
+  return {
+    vwce: Number(snapshot.investedCumSWDA ?? 0),
+    aggh: Number(snapshot.investedCumAGGH ?? 0)
+  };
+}
+
+function broadcastInvestedTotals(rows) {
+  const totals = getInvestedTotalsUntil(rows);
+  window.dispatchEvent(new CustomEvent('dca:invested-totals', { detail: totals }));
+}
 
 function showFeedback(targetId, message, tone = 'success', timeout = 3200) {
   const el = document.getElementById(targetId);
@@ -338,6 +410,7 @@ async function boot(skipParamUI = false) {
     const subset = docs.filter(d => d.id <= limId);
     const rows = buildModel(subset, state.params);
     state.rows = rows; // Store rows for chart data
+    broadcastInvestedTotals(rows);
 
     // Initialize charts
     initializeCharts();
@@ -346,8 +419,12 @@ async function boot(skipParamUI = false) {
     const chartData = prepareChartData(rows, state.params);
     if (chartData) {
       state.chartData = chartData;
-      if (!state.chartRange || state.chartRange > chartData.labels.length) {
+      if (!state.chartRange) {
+        state.chartRange = determineDefaultChartRange(chartData.labels) || chartData.labels.length;
+      } else if (state.chartRange > chartData.labels.length) {
         state.chartRange = chartData.labels.length;
+      } else if (state.chartRange < 1) {
+        state.chartRange = 1;
       }
       syncChartRangeControl();
       updatePerformanceChart(chartData, state.chartType, state.chartRange);
@@ -438,11 +515,13 @@ if (document.readyState === 'loading') {
     bindGlobalButtons();
     initJuroModule();
     initializeChartControls();
+    initEtfQuotes();
     boot();
   }, { once: true });
 } else {
   bindGlobalButtons();
   initJuroModule();
   initializeChartControls();
+  initEtfQuotes();
   boot();
 }

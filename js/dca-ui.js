@@ -356,6 +356,7 @@ export function showError(element, message = 'Ocorreu um erro.') {
 
 // ---------- Chart Initialization ----------
 let performanceChart = null;
+const DEFAULT_LINE_WIDTH = 2;
 
 export function initializeCharts() {
   const chartCtx = document.getElementById('performance-chart')?.getContext('2d');
@@ -381,6 +382,14 @@ export function initializeCharts() {
           },
           legend: {
             position: 'bottom'
+          }
+        },
+        elements: {
+          line: {
+            borderWidth: DEFAULT_LINE_WIDTH
+          },
+          point: {
+            radius: 0
           }
         },
         scales: {
@@ -426,6 +435,7 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           fill: true,
           tension: 0.35,
           pointRadius: 0,
+          borderWidth: DEFAULT_LINE_WIDTH,
           spanGaps: false
         },
         {
@@ -435,7 +445,8 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           borderDash: [6, 6],
           fill: false,
           tension: 0.25,
-          pointRadius: 0
+          pointRadius: 0,
+          borderWidth: DEFAULT_LINE_WIDTH
         }
       ];
       
@@ -447,7 +458,8 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           borderDash: [4, 4],
           fill: false,
           tension: 0.25,
-          pointRadius: 0
+          pointRadius: 0,
+          borderWidth: DEFAULT_LINE_WIDTH
         });
       }
       
@@ -459,7 +471,8 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           borderDash: [4, 4],
           fill: false,
           tension: 0.25,
-          pointRadius: 0
+          pointRadius: 0,
+          borderWidth: DEFAULT_LINE_WIDTH
         });
       }
       
@@ -471,7 +484,8 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           borderDash: [4, 4],
           fill: false,
           tension: 0.25,
-          pointRadius: 0
+          pointRadius: 0,
+          borderWidth: DEFAULT_LINE_WIDTH
         });
       }
       
@@ -494,6 +508,7 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           fill: true,
           tension: 0.3,
           pointRadius: 0,
+          borderWidth: DEFAULT_LINE_WIDTH,
           spanGaps: false
         },
         {
@@ -503,7 +518,8 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           backgroundColor: 'rgba(37, 99, 235, 0.12)',
           fill: true,
           tension: 0.3,
-          pointRadius: 0
+          pointRadius: 0,
+          borderWidth: DEFAULT_LINE_WIDTH
         }
       ];
       performanceChart.options.plugins.title.text = 'Contribuições vs Crescimento';
@@ -519,7 +535,8 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           backgroundColor: 'rgba(54, 162, 235, 0.1)',
           fill: true,
           tension: 0.25,
-          pointRadius: 0
+          pointRadius: 0,
+          borderWidth: DEFAULT_LINE_WIDTH
         },
         {
           label: 'Valor AGGH',
@@ -528,7 +545,8 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           backgroundColor: 'rgba(255, 159, 64, 0.1)',
           fill: true,
           tension: 0.25,
-          pointRadius: 0
+          pointRadius: 0,
+          borderWidth: DEFAULT_LINE_WIDTH
         }
       ];
       performanceChart.options.plugins.title.text = 'Distribuição de Ativos';
