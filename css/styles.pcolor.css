@@ -2098,6 +2098,18 @@ body[data-page="diversos-page"] .tab-navigation {
   position: relative;
 }
 
+.chart-scroll-outer,
+.chart-scroll-inner {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-scroll-inner canvas {
+  width: 100%;
+  height: 100% !important;
+  max-width: none;
+}
+
 #mod-pricing-lab .pricing-legend {
   margin-top: 1rem;
   padding: 0.5rem 0;

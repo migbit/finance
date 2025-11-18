@@ -460,10 +460,9 @@
   }
 
   body#analisev3-page #mod-pricing-lab .chart-scroll-inner canvas {
-    width: 100%;
-    height: auto;
-    max-width: 1200px;
-    display: block;
+    min-width: 900px;
+    height: 100%;
+    display: inline-block;
   }
 
   body#analisev3-page #mod-revpan .chart-scroll-outer {
@@ -481,10 +480,24 @@
   }
 
   body#analisev3-page #mod-revpan .chart-scroll-inner canvas {
-    width: 100%;
-    height: auto;
-    max-width: 1200px;
-    display: block;
+    min-width: 900px;
+    height: 100%;
+    display: inline-block;
+  }
+
+  @media (min-width: 1025px) {
+    body#analisev3-page #mod-pricing-lab .chart-scroll-outer,
+    body#analisev3-page #mod-revpan .chart-scroll-outer {
+      overflow: visible;
+    }
+
+    body#analisev3-page #mod-pricing-lab .chart-scroll-inner,
+    body#analisev3-page #mod-revpan .chart-scroll-inner {
+      min-width: auto;
+      max-width: 100%;
+      width: 100%;
+      display: block;
+    }
   }
 
   body#analisev3-page #mod-heatmap .heatmap-scroll-outer {
