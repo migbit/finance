@@ -77,7 +77,7 @@
     </div>
 
     <div class="page-intro">
-      <h2>Análise Apartamentos <span class="title-tag">v3</span></h2>
+      <h2>Análise Apartamentos <span class="title-tag">v3.1</span></h2>
     </div>
     <div class="page-meta page-meta--inline">
       <span id="analisev2-updated" aria-live="polite">Atualizado a —</span>
@@ -89,13 +89,13 @@
     <section id="mod-progresso" class="report-section progresso-container" data-module="progresso">
       <div class="viz-card progress-card">
         <div class="progress-header">
-          <h4>Progresso</h4>
+          <h4>Progresso vs <span id="progress-compare-year">—</span></h4>
         </div>
 
         <div class="chart-toolbar progress-toolbar">
           <div class="toolbar-left segmented segmented--compact" role="tablist" aria-label="Selecionar granularidade do progresso">
-            <button class="chip-btn active" data-progress-granularity="mes" role="tab" aria-pressed="true">Por mês</button>
-            <button class="chip-btn" data-progress-granularity="dia" role="tab" aria-pressed="false">Por dia</button>
+            <button class="chip-btn" data-progress-granularity="mes" role="tab" aria-pressed="false">Por mês</button>
+            <button class="chip-btn active" data-progress-granularity="dia" role="tab" aria-pressed="true">Por dia</button>
           </div>
 
           <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista dos apartamentos">
@@ -255,8 +255,9 @@
 
         <div class="chart-toolbar">
           <div class="toolbar-left segmented segmented--compact" role="tablist" aria-label="Selecionar granularidade">
-            <button class="chip-btn active" data-granularity="mes" role="tab" aria-pressed="true">Por mês</button>
-            <button class="chip-btn" data-granularity="dia" role="tab" aria-pressed="false">Por dias</button>
+            <button class="chip-btn" data-granularity="mes" role="tab" aria-pressed="false">Por mês</button>
+            <button class="chip-btn active" data-granularity="dia" role="tab" aria-pressed="true">Por dias</button>
+            <button class="chip-btn" data-granularity="cumulativo" role="tab" aria-pressed="false">Cumulativo</button>
           </div>
 
           <div class="toolbar-center segmented segmented--primary faturacao-view-switch" role="tablist" aria-label="Selecionar vista de faturação">

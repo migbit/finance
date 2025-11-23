@@ -23,7 +23,7 @@ const VIEW_CONFIG = {
 const state = {
   view: 'total',
   chartType: 'line',
-  granularity: 'mes',
+  granularity: 'dia',
   faturas: [],
   chart: null
 };
@@ -220,12 +220,15 @@ function renderYearComparisonChart(faturas, color) {
 
   const atual = agg.totals[ultimoAno] || Array(12).fill(0);
   const anterior = penultimoAno ? (agg.totals[penultimoAno] || Array(12).fill(0)) : [];
+  const isCumulative = state.granularity === 'cumulativo';
+  const atualSeries = prepareChartSeries(atual, { cumulative: isCumulative });
+  const anteriorSeries = penultimoAno ? prepareChartSeries(anterior, { cumulative: isCumulative }) : [];
 
   const datasets = [];
   if (penultimoAno) {
     datasets.push({
       label: `${penultimoAno}`,
-      data: anterior,
+      data: anteriorSeries,
       borderDash: [4, 4],
       borderWidth: 1.5,
       borderColor: 'rgba(120,120,120,1)',
@@ -238,7 +241,7 @@ function renderYearComparisonChart(faturas, color) {
 
   datasets.push({
     label: `${ultimoAno}`,
-    data: atual,
+    data: atualSeries,
     borderColor: color,
     backgroundColor: withAlpha(color, 0.15),
     borderWidth: 2,
@@ -247,7 +250,7 @@ function renderYearComparisonChart(faturas, color) {
     pointHoverRadius: 7
   });
 
-  const maxValue = Math.max(...atual, ...(anterior.length ? anterior : [0]));
+  const maxValue = Math.max(...atualSeries, ...(anteriorSeries.length ? anteriorSeries : [0]));
   const suggestedMax = maxValue > 0 ? Math.ceil(maxValue * 1.15 / 500) * 500 : undefined;
 
   resetChart();
@@ -290,9 +293,14 @@ function renderComparativoChart(faturas) {
     return;
   }
 
-  const data123 = seq.map(({ year, month }) => agg123.totals[year]?.[month - 1] ?? 0);
-  const data1248 = seq.map(({ year, month }) => agg1248.totals[year]?.[month - 1] ?? 0);
+  let data123 = seq.map(({ year, month }) => agg123.totals[year]?.[month - 1] ?? 0);
+  let data1248 = seq.map(({ year, month }) => agg1248.totals[year]?.[month - 1] ?? 0);
   const labels = seq.map(({ year, month }) => `${monthLabels[month - 1]} ${String(year).slice(-2)}`);
+  const isCumulative = state.granularity === 'cumulativo';
+  if (isCumulative) {
+    data123 = prepareChartSeries(data123, { cumulative: true });
+    data1248 = prepareChartSeries(data1248, { cumulative: true });
+  }
 
   resetChart();
   const canvas = document.getElementById('chart-faturacao-v2');
@@ -694,6 +702,16 @@ function promedioAnual(series, nightsSeries) {
     .filter(v => v != null);
   if (!medias.length) return null;
   return Math.round(medias.reduce((sum, v) => sum + v, 0) / medias.length);
+}
+
+function prepareChartSeries(values, options = {}) {
+  const arr = Array.isArray(values) ? [...values] : [];
+  if (!options.cumulative) return arr;
+  let running = 0;
+  return arr.map((value) => {
+    running += Number(value) || 0;
+    return running;
+  });
 }
 
 function aggregateTotals(faturas, apartments = null) {

@@ -21,9 +21,9 @@ const donutStates = new Map();
 const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 let currentView = 'total';
-let currentGranularity = 'mes';
+let currentGranularity = 'dia';
 let faturasData = [];
-let faturasByGranularity = { mes: [], dia: [] };
+let faturasByGranularity = { dia: [] };
 let filterButtonsController = null;
 let granularityButtonsController = null;
 
@@ -80,6 +80,13 @@ function bindGranularityButtons() {
   updateGranularityButtons();
 }
 
+function updateProgressTitleYear(previousYear) {
+  const yearSpan = document.getElementById('progress-compare-year');
+  if (!yearSpan) return;
+  const year = Number.isFinite(previousYear) ? previousYear : (new Date().getFullYear() - 1);
+  yearSpan.textContent = year;
+}
+
 async function loadFaturasData() {
   window.loadingManager?.show('progresso', { type: 'skeleton' });
   try {
@@ -97,7 +104,7 @@ async function loadFaturasData() {
   } catch (error) {
     window.errorHandler?.handleError('progresso', error, 'loadFaturasData', loadFaturasData);
     faturasData = [];
-    faturasByGranularity = { mes: [], dia: [] };
+    faturasByGranularity = { dia: [] };
     showEmptyState('Sem dados disponíveis');
   } finally {
     window.loadingManager?.hide('progresso');
@@ -112,13 +119,15 @@ function updateProgressoCharts() {
   }
   cleanupDonuts();
 
-  const currentYear = new Date().getFullYear();
   const years = [...new Set(filtered.map(f => Number(f.ano)).filter(Boolean))].sort((a, b) => a - b);
-  const ultimoAno = currentYear;
+  const ultimoAno = years.length ? years[years.length - 1] : new Date().getFullYear();
   const penultimoAno = years.length > 1 ? years[years.length - 2] : (ultimoAno - 1);
+  const cutoffMonth = deriveCutoffMonth();
+
+  updateProgressTitleYear(penultimoAno);
 
   updateParcial(filtered, ultimoAno, penultimoAno);
-  updateAte(filtered, ultimoAno, penultimoAno);
+  updateAte(filtered, ultimoAno, penultimoAno, cutoffMonth);
   updateVs(filtered, ultimoAno, penultimoAno);
   updateAvg(filtered, ultimoAno, years);
 
@@ -153,7 +162,9 @@ function updateGranularityButtons() {
 
 function getFilteredFaturas() {
   const targets = VIEW_APTS[currentView] || VIEW_APTS.total;
-  const dataset = faturasByGranularity[currentGranularity] || faturasByGranularity.mes || [];
+  const dataset = currentGranularity === 'dia'
+    ? (faturasByGranularity.dia || [])
+    : (faturasData || []);
   return dataset.filter(f => targets.includes(String(f.apartamento)));
 }
 
@@ -168,11 +179,11 @@ function updateParcial(faturas, ultimoAno, penultimoAno) {
   });
 }
 
-function updateAte(faturas, ultimoAno, penultimoAno) {
-  const mesAtual = new Date().getMonth() + 1;
-  const atual = somar(faturas, f => Number(f.ano) === ultimoAno && Number(f.mes) < mesAtual);
-  const anterior = somar(faturas, f => Number(f.ano) === penultimoAno && Number(f.mes) < mesAtual);
-  const prevMonth = obterNomeMes(Math.max(1, mesAtual - 1));
+function updateAte(faturas, ultimoAno, penultimoAno, cutoffMonth) {
+  const monthLimit = clampMonth(cutoffMonth);
+  const atual = somar(faturas, f => Number(f.ano) === ultimoAno && Number(f.mes) <= monthLimit);
+  const anterior = somar(faturas, f => Number(f.ano) === penultimoAno && Number(f.mes) <= monthLimit);
+  const prevMonth = obterNomeMes(monthLimit);
   renderMetric('ate', {
     labelText: `Até ${prevMonth}`,
     atual,
@@ -194,29 +205,26 @@ function updateAvg(faturas, ultimoAno, years) {
   const atual = somar(faturas, f => Number(f.ano) === ultimoAno);
   const previousYears = years.filter(y => y < ultimoAno);
 
-  setMetricLabel('label-avg', `${ultimoAno} vs anos anteriores`);
-
   if (!previousYears.length) {
+    setMetricLabel('label-avg', `${ultimoAno} vs anos anteriores`);
     const textEl = document.getElementById('donut-avg-text');
     if (textEl) textEl.textContent = 'Sem anos anteriores para calcular a média';
     makeDonut(document.getElementById('donut-avg'), 0);
     return;
   }
 
-  const totalPrev = previousYears.reduce((acc, ano) => {
-    return acc + somar(faturas, f => Number(f.ano) === ano);
-  }, 0);
-
+  const totalPrev = previousYears.reduce((acc, ano) => acc + somar(faturas, f => Number(f.ano) === ano), 0);
   const mediaAnterior = totalPrev / previousYears.length;
+  const labelText = `${ultimoAno} vs ${previousYears.join(', ')}`;
 
   renderMetric('avg', {
-    labelText: `${ultimoAno} vs anos anteriores`,
+    labelText,
     atual,
     comparacao: mediaAnterior,
     labels: {
       positive: 'Acima da média em',
       negative: 'Abaixo da média em',
-      equal: 'Em linha com a média histórica'
+      equal: 'Em linha com a média'
     }
   });
 }
@@ -288,11 +296,18 @@ function buildGranularityDatasets(base) {
     if (slices && slices.length) perDay.push(...slices);
     else perDay.push(f);
   });
-  return { mes: monthly, dia: perDay };
+  return { dia: perDay };
 }
 
 const cssVar = (name, fallback) =>
   (getComputedStyle(document.documentElement).getPropertyValue(name) || '').trim() || fallback;
+
+function deriveCutoffMonth() {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-based
+  const previousMonth = currentMonth > 1 ? currentMonth - 1 : 12;
+  return clampMonth(previousMonth);
+}
 
 function updateDonut(canvasId, percentSigned, diff) {
   const canvas = document.getElementById(canvasId);
@@ -420,6 +435,12 @@ function triggerDonutPulse(canvas, positive) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function clampMonth(month) {
+  const m = Number(month);
+  if (!Number.isFinite(m)) return 1;
+  return Math.min(12, Math.max(1, Math.round(m)));
 }
 
 function cleanupDonuts() {

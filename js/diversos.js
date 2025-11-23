@@ -331,6 +331,32 @@ function initCompras() {
     const form = document.getElementById('compras-form');
     if (!form) return;
 
+    let comprasToastStack = null;
+    const getToastStack = () => {
+        if (comprasToastStack && document.body.contains(comprasToastStack)) return comprasToastStack;
+        comprasToastStack = document.querySelector('.toast-stack');
+        if (!comprasToastStack) {
+            comprasToastStack = document.createElement('div');
+            comprasToastStack.className = 'toast-stack';
+            document.body.appendChild(comprasToastStack);
+        }
+        return comprasToastStack;
+    };
+
+    const showToast = (message, type = 'success') => {
+        if (!message) return;
+        const stack = getToastStack();
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        stack.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 250);
+        }, 3200);
+    };
+
     const listaCompras = {
         "Produtos Limpeza": [
             "Lixívia tradicional", "Multiusos com Lixívia", "Gel com Lixívia", "CIF",
@@ -419,10 +445,17 @@ function initCompras() {
 
     async function salvarItem(nome, quantidade, local) {
         const ref = doc(db, 'listas_compras', 'lista_atual');
-        await updateDoc(ref, {
-            [`itens.${nome}`]: { quantidade, local },
-            ultimaAtualizacao: Timestamp.now()
-        });
+        try {
+            await updateDoc(ref, {
+                [`itens.${nome}`]: { quantidade, local },
+                ultimaAtualizacao: Timestamp.now()
+            });
+            showToast(`Guardado: ${nome} (${quantidade})`, 'success');
+        } catch (error) {
+            console.error('Erro ao guardar item', error);
+            showToast('Erro ao guardar item', 'error');
+            throw error;
+        }
     }
 
     function populateComprasUI(itens) {
@@ -492,10 +525,16 @@ function initCompras() {
                 div.remove();
                 if (nome) {
                     const ref = doc(db, 'listas_compras', 'lista_atual');
-                    await updateDoc(ref, {
-                        [`itens.${nome}`]: deleteField(),
-                        ultimaAtualizacao: Timestamp.now()
-                    });
+                    try {
+                        await updateDoc(ref, {
+                            [`itens.${nome}`]: deleteField(),
+                            ultimaAtualizacao: Timestamp.now()
+                        });
+                        showToast(`Removido: ${nome}`, 'info');
+                    } catch (error) {
+                        console.error('Erro ao remover item', error);
+                        showToast('Erro ao remover item', 'error');
+                    }
                 }
                 return;
             }
@@ -522,6 +561,7 @@ function initCompras() {
                         await salvarItem(nome, qt, loc);
                     }
                 });
+                showToast('Lista requisitada e guardada', 'success');
             });
         }
 
