@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurações</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+</head>
+<body>
+  <button id="menu-icon" aria-label="Abrir menu">☰</button>
+
+  <header>
+    <nav id="nav-menu"></nav>
+  </header>
+
+  <main>
+    <h1>⚙️ Configurações</h1>
+
+    <section class="card">
+      <h2>💾 Backup de Dados</h2>
+      <p>Exporta todos os dados do Firestore para um ficheiro JSON.</p>
+      <button id="export-all-btn" class="btn-primary">Exportar Todos os Dados</button>
+      <p class="muted" style="margin-top: 12px;">
+        Última exportação: <span id="last-export">Nunca</span>
+      </p>
+    </section>
+  </main>
+
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/settings.js"></script>
+</body>
+</html>

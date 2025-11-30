@@ -3,6 +3,7 @@
 // Importar Firestore
 import { db } from './script.js';
 import { collection, addDoc, getDocs, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { showToast } from './toast.js';
 
 // ---------- MOBILE MENU TOGGLE ----------
 document.addEventListener('DOMContentLoaded', () => {
@@ -61,7 +62,7 @@ caixaForm.addEventListener('submit', async (e) => {
   const caixa = selectCaixa.value; // banco | direita | esquerda
 
   if (!tipo || isNaN(valor) || valor <= 0) {
-    alert('Por favor, selecione um tipo de transação e insira um valor válido.');
+    showToast('Por favor, selecione um tipo de transação e insira um valor válido.', 'warning');
     return;
   }
 
@@ -74,13 +75,13 @@ caixaForm.addEventListener('submit', async (e) => {
     };
 
     await addDoc(collection(db, 'caixa'), docData);
-    alert('Transação registada com sucesso!');
+    showToast('Transação registada com sucesso!', 'success');
     caixaForm.reset();
     setTipoTransacao('');
     carregarRelatorio();
   } catch (e) {
     console.error('Erro ao registar transação: ', e);
-    alert('Ocorreu um erro ao registar a transação.');
+    showToast('Ocorreu um erro ao registar a transação.', 'error');
   }
 });
 
@@ -252,7 +253,7 @@ document.addEventListener('click', async (e) => {
     const newValor = parseFloat(tr.querySelector('.edit-valor').value || '0');
     const newCaixa = tr.querySelector('.edit-caixa').value;
 
-    if (!newValor || newValor <= 0) { alert('Valor inválido'); return; }
+    if (!newValor || newValor <= 0) { showToast('Valor inválido', 'warning'); return; }
 
     const docRef = doc(db, 'caixa', btn.dataset.id);
     const update = {

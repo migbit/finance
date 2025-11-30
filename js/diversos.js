@@ -8,6 +8,7 @@ if (window.__diversosInit) { /* já correu */ }
 else { window.__diversosInit = true; /* segue init */ }
 
 import { db, enviarEmailUrgencia } from './script.js';
+import { showToast } from './toast.js';
 import { 
     collection, 
     addDoc, 
@@ -330,32 +331,6 @@ function initializeMessageSelectors(mensagens) {
 function initCompras() {
     const form = document.getElementById('compras-form');
     if (!form) return;
-
-    let comprasToastStack = null;
-    const getToastStack = () => {
-        if (comprasToastStack && document.body.contains(comprasToastStack)) return comprasToastStack;
-        comprasToastStack = document.querySelector('.toast-stack');
-        if (!comprasToastStack) {
-            comprasToastStack = document.createElement('div');
-            comprasToastStack.className = 'toast-stack';
-            document.body.appendChild(comprasToastStack);
-        }
-        return comprasToastStack;
-    };
-
-    const showToast = (message, type = 'success') => {
-        if (!message) return;
-        const stack = getToastStack();
-        const toast = document.createElement('div');
-        toast.className = `toast toast-${type}`;
-        toast.textContent = message;
-        stack.appendChild(toast);
-        requestAnimationFrame(() => toast.classList.add('show'));
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 250);
-        }, 3200);
-    };
 
     const listaCompras = {
         "Produtos Limpeza": [
