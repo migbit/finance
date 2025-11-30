@@ -267,12 +267,34 @@ export function initEtfQuotes() {
     } else {
       quantityState.set(key, 0);
     }
+    // Update the state on input change (for real-time calculations)
     input.addEventListener('input', () => {
       const raw = Number(input.value);
       const safe = Number.isFinite(raw) && raw >= 0 ? raw : 0;
       quantityState.set(key, safe);
-      persistQuantity(key, safe);
       updatePositionSummary(key);
+    });
+  });
+
+  // Add save button event listeners
+  document.querySelectorAll('.btn-save-qty').forEach(button => {
+    button.addEventListener('click', () => {
+      const etfKey = button.dataset.etf;
+      const input = document.getElementById(`etf-${etfKey}-qty`);
+      if (!input) return;
+
+      const raw = Number(input.value);
+      const safe = Number.isFinite(raw) && raw >= 0 ? raw : 0;
+      quantityState.set(etfKey, safe);
+      persistQuantity(etfKey, safe);
+
+      // Visual feedback
+      button.textContent = '✓ Guardado';
+      button.style.background = '#10b981';
+      setTimeout(() => {
+        button.textContent = 'Guardar';
+        button.style.background = '';
+      }, 2000);
     });
   });
 

@@ -4226,6 +4226,28 @@ body[data-page="analisev3"] .chart-toolbar .segmented button {
   background: #2563eb;
 }
 
+/* DCA Save Quantity Button */
+.btn-save-qty {
+  padding: 6px 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+
+.btn-save-qty:hover {
+  background: #2563eb;
+}
+
+.btn-save-qty:active {
+  transform: scale(0.98);
+}
+
 /* Mobile responsiveness for toasts */
 @media (max-width: 640px) {
   .toast {
