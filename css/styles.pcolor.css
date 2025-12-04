@@ -1324,6 +1324,50 @@ body[data-page="dca"] .donut-card .donut-canvas canvas {
   font-weight: 700;
 }
 
+/* Live data indicator - green tint for current unclosed month */
+.table-dca tbody tr.live-data {
+  background: rgba(16, 185, 129, 0.05) !important;
+  border-left: 3px solid rgba(16, 185, 129, 0.4);
+}
+
+.table-dca tbody tr.live-data:hover {
+  background: rgba(16, 185, 129, 0.1) !important;
+}
+
+/* Closed month indicator - subtle gray tint */
+.table-dca tbody tr.closed-month {
+  opacity: 0.85;
+}
+
+.table-dca tbody tr.closed-month input.cell {
+  background: var(--surface-dim);
+  cursor: not-allowed;
+  color: var(--text-muted);
+}
+
+/* Estimated values indicator - orange/yellow warning tint */
+.table-dca tbody tr.estimated-values {
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-left: 3px solid rgba(245, 158, 11, 0.5);
+}
+
+.table-dca tbody tr.estimated-values:hover {
+  background: rgba(245, 158, 11, 0.12) !important;
+}
+
+/* Reopen button styling */
+.table-dca .btn-reopen {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  opacity: 0.7;
+}
+
+.table-dca .btn-reopen:hover {
+  opacity: 1;
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.5);
+}
+
 .table-dca .num {
   text-align: center;
 }

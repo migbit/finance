@@ -43,9 +43,12 @@ export function diasNoMes(refYYYYMM) {
 }
 
 // ---------- Model Building ----------
-export function buildModel(docs, params) {
+export function buildModel(docs, params, liveData = null) {
   const { pctSWDA, pctAGGH, monthlyContribution } = params;
   const rows = [];
+
+  const now = new Date();
+  const currentYM = { y: now.getFullYear(), m: now.getMonth() + 1 };
 
   let investedCum = 0;
   let investedCumSWDA = 0;
@@ -54,27 +57,37 @@ export function buildModel(docs, params) {
   const months = docs.sort((a,b) => a.id.localeCompare(b.id));
 
   for (const d of months) {
-    let monthlySW = roundMoney(monthlyContribution * (pctSWDA/100));
-    let monthlyAG = roundMoney(monthlyContribution * (pctAGGH/100));
+    const rowYM = { y: d.y, m: d.m };
+    const isCurrent = (rowYM.y === currentYM.y && rowYM.m === currentYM.m);
+    const isClosed = false; // Nunca fechar automaticamente
+
+    const manualMonthly = asNum(d.manual_monthly_contribution);
+    const baseMonthly = manualMonthly != null ? manualMonthly : monthlyContribution;
+
+    const baseSW = roundMoney(baseMonthly * (pctSWDA/100));
+    const baseAG = roundMoney(baseMonthly * (pctAGGH/100));
+
+    const manualSWOverride = asNum(d.manual_inv_swda);
+    const manualAGOverride = asNum(d.manual_inv_aggh);
+    const manualSWExtra = asNum(d.manual_inv_swda_extra) || 0;
+    const manualAGExtra = asNum(d.manual_inv_aggh_extra) || 0;
+
+    let monthlySW = manualSWOverride != null ? manualSWOverride : roundMoney(baseSW + manualSWExtra);
+    let monthlyAG = manualAGOverride != null ? manualAGOverride : roundMoney(baseAG + manualAGExtra);
     let monthlyTotal = roundMoney(monthlySW + monthlyAG);
-    
-    const adjust = roundMoney(monthlyContribution - monthlyTotal);
-    if (adjust !== 0) {
-      if (Math.abs(monthlySW) >= Math.abs(monthlyAG)) {
-        monthlySW = roundMoney(monthlySW + adjust);
-      } else {
-        monthlyAG = roundMoney(monthlyAG + adjust);
-      }
-      monthlyTotal = roundMoney(monthlySW + monthlyAG);
-    }
 
     investedCum = roundMoney(investedCum + monthlyTotal);
     investedCumSWDA = roundMoney(investedCumSWDA + monthlySW);
     investedCumAGGH = roundMoney(investedCumAGGH + monthlyAG);
 
-    const swdaNow = asNum(d.swda_value);
-    const agghNow = asNum(d.aggh_value);
-    const cashNow = asNum(d.cash_interest);
+    // Use only saved values; não injetar juro em curso no mês aberto
+    const swdaNow = asNum(d.manual_swda_value ?? d.swda_value);
+    const agghNow = asNum(d.manual_aggh_value ?? d.aggh_value);
+    // Prefer manual cash_interest; fall back to legacy juro_earned
+    let cashNow = asNum(d.cash_interest);
+    if (cashNow == null) {
+      cashNow = asNum(d.juro_earned);
+    }
 
     const hasAny = (swdaNow != null) || (agghNow != null) || (cashNow != null);
     const totalNow = (swdaNow ?? 0) + (agghNow ?? 0) + (cashNow ?? 0);
@@ -96,29 +109,47 @@ export function buildModel(docs, params) {
       resSWDA, resSWDAPct,
       resAGGH, resAGGHPct,
       hasCurrent: hasAny,
-      cash_interest: asNum(d.cash_interest),
+      manualMonthlyContribution: manualMonthly,
+      monthlyContributionUsed: baseMonthly,
+      monthlySWUsed: monthlySW,
+      monthlyAGUsed: monthlyAG,
+      manualInvSW: manualSWOverride,
+      manualInvAG: manualAGOverride,
+      manualInvSWExtra: manualSWExtra,
+      manualInvAGExtra: manualAGExtra,
+      cash_interest: cashNow,
+      isCurrent,
+      isClosed,
+      isLive: isCurrent && !isClosed,
+      vwce_shares: d.vwce_shares || liveData?.shares?.vwce,
+      aggh_shares: d.aggh_shares || liveData?.shares?.aggh,
+      shares_estimated: d.shares_estimated || false,
+      estimation_note: d.estimation_note || null
     });
   }
   return rows;
 }
 
 // ---------- KPI Calculations ----------
-export function calculateKPIs(rows) {
+export function calculateKPIs(rows, liveData = null) {
   if (!rows || rows.length === 0) return null;
   
-  // Find last row with filled data
-  let lastFilledRow = null;
-  for (let i = rows.length - 1; i >= 0; i--) {
-    if (rows[i].hasCurrent && rows[i].totalNow > 0) {
-      lastFilledRow = rows[i];
-      break;
-    }
+  const lastRow = rows[rows.length - 1];
+  if (!lastRow) return null;
+
+  // Prefer live snapshot (quotes × shares + juro) when available
+  let currentValue = lastRow.totalNow || 0;
+  if (liveData?.quotes && liveData?.shares) {
+    const vwcePrice = liveData.quotes.vwce?.price ?? 0;
+    const agghPrice = liveData.quotes.aggh?.price ?? 0;
+    const vwceVal = (liveData.shares.vwce ?? 0) * vwcePrice;
+    const agghVal = (liveData.shares.aggh ?? 0) * agghPrice;
+    const juroVal = liveData.juroLive ?? 0;
+    const liveTotal = vwceVal + agghVal + juroVal;
+    if (liveTotal > 0) currentValue = liveTotal;
   }
-  
-  if (!lastFilledRow) return null;
-  
-  const totalInvested = lastFilledRow.investedCum;
-  const currentValue = lastFilledRow.totalNow || 0;
+
+  const totalInvested = lastRow.investedCum;
   const result = currentValue - totalInvested;
   const resultPct = totalInvested > 0 ? (result / totalInvested * 100) : 0;
   
@@ -127,7 +158,7 @@ export function calculateKPIs(rows) {
     currentValue,
     result,
     resultPct,
-    lastFilledRow
+    lastFilledRow: lastRow
   };
 }
 
@@ -214,21 +245,33 @@ export function calculateJuroMensal(saldo, refYYYYMM) {
   return saldo * TAXA_ANUAL_FIXA * (dias / 365);
 }
 
-export function somaJuroTabelaDCA(rootElement) {
+export function somaJuroTabelaDCA(rootElement, { excludeCurrentMonth = false } = {}) {
   if (!rootElement) return 0;
   let soma = 0;
 
-  // Sum from inputs
-  rootElement.querySelectorAll('table.table-dca tbody td:nth-child(11) input').forEach(inp => {
-    const v = parseFloat((inp.value || '').toString().replace(',', '.'));
-    if (!isNaN(v)) soma += v;
-  });
-  
-  // Sum from text (if no input)
-  rootElement.querySelectorAll('table.table-dca tbody td:nth-child(11)').forEach(td => {
-    if (td.querySelector('input')) return;
-    const txt = (td.textContent || '').replace(/[^\d,.\-]/g, '').replace(',', '.');
-    const v = parseFloat(txt);
+  const now = new Date();
+  const currentYM = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+
+  rootElement.querySelectorAll('table.table-dca tbody tr').forEach(tr => {
+    // Skip live/current month rows to avoid counting juro em curso
+    if (excludeCurrentMonth) {
+      const ym = tr.dataset?.ym;
+      if (ym === currentYM || tr.classList.contains('live-data') || tr.classList.contains('current-month')) {
+        return;
+      }
+    }
+
+    const cell = tr.querySelector('td:nth-child(11)');
+    if (!cell) return;
+
+    const input = cell.querySelector('input');
+    let v = null;
+    if (input) {
+      v = parseFloat((input.value || '').toString().replace(',', '.'));
+    } else {
+      const txt = (cell.textContent || '').replace(/[^\d,.\-]/g, '').replace(',', '.');
+      v = parseFloat(txt);
+    }
     if (!isNaN(v)) soma += v;
   });
 

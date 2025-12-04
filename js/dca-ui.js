@@ -63,30 +63,56 @@ export function renderTable(rows, wrapElement) {
       tr.dataset.id = r.id;
       tr.dataset.ym = `${r.y}-${pad(r.m)}`;
 
+      // Add special classes for state
+      if (r.isCurrent) tr.classList.add('current-month');
+      if (r.isLive) tr.classList.add('live-data');
+      if (r.shares_estimated) {
+        tr.classList.add('estimated-values');
+        if (r.estimation_note) tr.title = r.estimation_note;
+      }
+
       const clsTotal = r.resTotal != null ? (r.resTotal >= 0 ? 'pos' : 'neg') : '';
       const clsSWDA = r.resSWDA != null ? (r.resSWDA >= 0 ? 'pos' : 'neg') : '';
       const clsAGGH = r.resAGGH != null ? (r.resAGGH >= 0 ? 'pos' : 'neg') : '';
 
+      // Always allow saving/edits
+      const saveBtn = `<button class="btn btn-edit btn-save" type="button" title="Guardar registo" aria-label="Guardar registo">✓</button>`;
+
+      const inputDisabled = '';
+
+      // Month cell with live indicator and estimation warning
+      let monthCell = `${pad(r.m)}/${String(r.y).slice(-2)}`;
+      if (r.isLive) {
+        monthCell += ' <small style="color: #10b981;">●</small>';
+      }
+      if (r.shares_estimated) {
+        monthCell += ' <span style="color: #f59e0b;" title="Valores estimados">⚠️</span>';
+      }
+
       tr.innerHTML = `
-        <td>${pad(r.m)}/${String(r.y).slice(-2)}</td>
+        <td>${monthCell}</td>
         <td class="num">${toEUR(r.investedCum)}</td>
         <td class="num total-block">${r.hasCurrent ? toEUR(r.totalNow) : '-'}</td>
         <td class="num ${clsTotal}">${r.resTotal == null ? '-' : toEUR(r.resTotal)}${fmtPct(r.resTotalPct)}</td>
 
-        <td class="num swda-block" style="background: rgba(54,162,235,0.05); border-left: 3px solid rgba(54,162,235,0.8);">${toEUR(r.investedCumSWDA)}</td>
-        <td class="num swda-block" style="background: rgba(54,162,235,0.05);"><input class="cell swda" type="number" step="0.01" value="${r.swdaNow ?? ''}" /></td>
+        <td class="num swda-block" style="background: rgba(54,162,235,0.05); border-left: 3px solid rgba(54,162,235,0.8); display:flex; align-items:center; gap:4px;">
+          <span title="Investido acumulado VWCE">${toEUR(r.investedCumSWDA)}</span>
+          <button class="btn btn-small btn-add-inv-swda" type="button" title="Adicionar extra neste mês" aria-label="Adicionar extra VWCE" style="padding:1px 5px; min-width: 20px; font-size: 0.9em;">+</button>
+          <input class="inv-swda-extra" type="hidden" value="${r.manualInvSWExtra ?? ''}" />
+        </td>
+        <td class="num swda-block" style="background: rgba(54,162,235,0.05);"><input class="cell swda" type="number" step="0.01" value="${r.swdaNow ?? ''}" ${inputDisabled} /></td>
         <td class="num swda-block ${clsSWDA}" style="background: rgba(54,162,235,0.05); border-right: 3px solid rgba(54,162,235,0.8);">${r.resSWDA == null ? '-' : toEUR(r.resSWDA)}${fmtPct(r.resSWDAPct)}</td>
 
-        <td class="num aggh-block" style="background: rgba(245,133,20,0.05); border-left: 3px solid rgba(245,133,20,0.8);">${toEUR(r.investedCumAGGH)}</td>
-        <td class="num aggh-block" style="background: rgba(245,133,20,0.05);"><input class="cell aggh" type="number" step="0.01" value="${r.agghNow ?? ''}" /></td>
+        <td class="num aggh-block" style="background: rgba(245,133,20,0.05); border-left: 3px solid rgba(245,133,20,0.8); display:flex; align-items:center; gap:4px;">
+          <span title="Investido acumulado AGGH">${toEUR(r.investedCumAGGH)}</span>
+          <button class="btn btn-small btn-add-inv-aggh" type="button" title="Adicionar extra neste mês" aria-label="Adicionar extra AGGH" style="padding:1px 5px; min-width: 20px; font-size: 0.9em;">+</button>
+          <input class="inv-aggh-extra" type="hidden" value="${r.manualInvAGExtra ?? ''}" />
+        </td>
+        <td class="num aggh-block" style="background: rgba(245,133,20,0.05);"><input class="cell aggh" type="number" step="0.01" value="${r.agghNow ?? ''}" ${inputDisabled} /></td>
         <td class="num aggh-block ${clsAGGH}" style="background: rgba(245,133,20,0.05); border-right: 3px solid rgba(245,133,20,0.8);">${r.resAGGH == null ? '-' : toEUR(r.resAGGH)}${fmtPct(r.resAGGHPct)}</td>
 
-        <td class="num"><input class="cell cash" type="number" step="0.01" value="${r.cash_interest ?? ''}" /></td>
-        <td>
-          <button class="btn btn-edit btn-save" type="button" title="Guardar registo" aria-label="Guardar registo">
-            ✓
-          </button>
-        </td>
+        <td class="num"><input class="cell cash" type="number" step="0.01" value="${r.cash_interest ?? ''}" ${inputDisabled} /></td>
+        <td>${saveBtn}</td>
       `;
       tbody.appendChild(tr);
     }

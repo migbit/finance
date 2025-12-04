@@ -1,10 +1,11 @@
 // js/dca-main.js - Main initialization and event binding
 
-import { 
+import {
   START_YM, DEFAULTS, TAXA_ANUAL_FIXA,
   ensureMonthsExist, loadParams, saveParams, loadAllDocs, saveRow,
   loadJuroSaldo, saveJuroSaldo, isAuthenticated, onAuthChange,
-  ymCompare
+  ymCompare, ymToId, getPreviousMonth, ymMin,
+  loadShareQuantities, saveShareQuantities
 } from './dca-core.js';
 
 import { 
@@ -51,10 +52,131 @@ const state = {
   chartType: 'portfolio-growth',
   chartRange: null,
   chartData: null,
-  rebalancingAlertSent: false
+  rebalancingAlertSent: false,
+
+  // NEW: Live data tracking
+  liveData: {
+    quotes: null,        // { vwce: {...}, aggh: {...} }
+    shares: null,        // { vwce: 1.2345, aggh: 0.5678 }
+    saldo: 0,           // Current cash balance
+    juroLive: 0         // Live juro calculation (previous month)
+  }
 };
 
 const feedbackTimers = new Map();
+
+// ---------- Live Data Management ----------
+async function loadLiveData() {
+  try {
+    // Load quotes from global window object (set by dca-quotes.js)
+    const quotes = {
+      vwce: window.dcaQuotes?.vwce || null,
+      aggh: window.dcaQuotes?.aggh || null
+    };
+
+    // Load shares from Firebase
+    const shares = await loadShareQuantities();
+
+    // Load saldo
+    const juroData = await loadJuroSaldo();
+    const saldo = juroData.saldo || 0;
+
+    // Calculate juro for previous month (mês atual - 1)
+    const now = new Date();
+    const prevYM = getPreviousMonth({ y: now.getFullYear(), m: now.getMonth() + 1 });
+    const juroLive = calculateJuroMensal(
+      saldo,
+      `${prevYM.y}-${String(prevYM.m).padStart(2, '0')}`
+    );
+
+    return { quotes, shares, saldo, juroLive };
+  } catch (err) {
+    console.error('Error loading live data:', err);
+    return {
+      quotes: null,
+      shares: { vwce: 0, aggh: 0 },
+      saldo: 0,
+      juroLive: 0
+    };
+  }
+}
+
+function updateLiveCalculations() {
+  if (!state.liveData.shares) return;
+
+  // Recalculate juro
+  const now = new Date();
+  const prevYM = getPreviousMonth({ y: now.getFullYear(), m: now.getMonth() + 1 });
+  const prevYMStr = `${prevYM.y}-${String(prevYM.m).padStart(2, '0')}`;
+  state.liveData.juroLive = calculateJuroMensal(state.liveData.saldo, prevYMStr);
+
+  // Update UI
+  updateJuroDisplay();
+
+  // Rebuild model and refresh
+  boot(true);
+}
+
+function updateJuroDisplay() {
+  const saldoDisplay = document.getElementById('juro-saldo-display');
+  const mensalDisplay = document.getElementById('juro-mensal-display');
+  const acumDisplay = document.getElementById('juro-acumulado-display');
+
+  if (saldoDisplay) {
+    const saldoValue = Number(state.liveData.saldo || 0);
+    if (saldoDisplay.tagName === 'INPUT') {
+      saldoDisplay.value = saldoValue.toFixed(2);
+    } else {
+      saldoDisplay.textContent = saldoValue.toLocaleString('pt-PT', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }) + ' €';
+    }
+  }
+
+  if (mensalDisplay) {
+    mensalDisplay.textContent = state.liveData.juroLive.toLocaleString('pt-PT', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + ' €';
+  }
+
+  // Calculate total accumulated juro from table
+  const obsRoot = document.getElementById('dca-table-wrap');
+  const totalJuro = somaJuroTabelaDCA(obsRoot, { excludeCurrentMonth: true });
+  if (acumDisplay) {
+    acumDisplay.textContent = totalJuro.toLocaleString('pt-PT', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }) + ' €';
+  }
+
+  // Keep saldo inline input in sync (if present)
+  const saldoInput = document.getElementById('juro-saldo-display');
+  if (saldoInput && saldoInput.tagName === 'INPUT') {
+    saldoInput.value = Number(state.liveData.saldo || 0).toFixed(2);
+  }
+}
+
+// ---------- Month Closure UI ----------
+function showMonthClosureBanner(monthYM) {
+  const banner = document.getElementById('month-closure-banner');
+  const label = document.getElementById('month-to-close-label');
+
+  if (banner && label) {
+    const monthName = new Date(monthYM.y, monthYM.m - 1).toLocaleDateString('pt-PT', {
+      month: 'long',
+      year: 'numeric'
+    });
+    label.textContent = monthName;
+    banner.style.display = 'block';
+  }
+}
+
+function hideMonthClosureBanner() {
+  const banner = document.getElementById('month-closure-banner');
+  if (banner) banner.style.display = 'none';
+}
 
 function parseLabelToYM(label) {
   if (!label || typeof label !== 'string') return { month: null, year: null };
@@ -241,7 +363,6 @@ async function initJuroModule() {
   const taxaInp = document.getElementById('juro-taxa');
   const mensalLbl = document.getElementById('juro-mensal');
   const acumLbl = document.getElementById('juro-acumulado');
-  const endDateInp = document.getElementById('end-date');
 
   if (!saldoInp || !taxaInp || !mensalLbl || !acumLbl) return;
 
@@ -260,8 +381,10 @@ async function initJuroModule() {
 
   const updateJuro = debounce(() => {
     const saldo = parseFloat((saldoInp.value || '').toString().replace(',', '.')) || 0;
-    const dias = diasNoMes(endDateInp?.value);
-    const mensal = calculateJuroMensal(saldo, endDateInp?.value);
+    const now = new Date();
+    const prevYM = getPreviousMonth({ y: now.getFullYear(), m: now.getMonth() + 1 });
+    const prevYMStr = `${prevYM.y}-${String(prevYM.m).padStart(2, '0')}`;
+    const mensal = calculateJuroMensal(saldo, prevYMStr);
     
     mensalLbl.textContent = mensal.toLocaleString('pt-PT', { 
       minimumFractionDigits: 2, 
@@ -269,7 +392,7 @@ async function initJuroModule() {
     }) + ' €';
 
     const obsRoot = document.getElementById('dca-table-wrap');
-    const soma = somaJuroTabelaDCA(obsRoot);
+    const soma = somaJuroTabelaDCA(obsRoot, { excludeCurrentMonth: true });
     acumLbl.textContent = soma.toLocaleString('pt-PT', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
@@ -278,7 +401,6 @@ async function initJuroModule() {
 
   ['input', 'change'].forEach(evt => {
     saldoInp.addEventListener(evt, updateJuro);
-    endDateInp?.addEventListener(evt, updateJuro);
   });
 
   // Observe table changes
@@ -313,41 +435,76 @@ function bindTableSaveHandler() {
   wrap.__boundSave = true;
 
   wrap.addEventListener('click', async (ev) => {
-    const b = ev.target.closest('.btn-save');
-    if (!b) return;
-    
-    const tr = b.closest('tr');
-    const id = tr?.dataset?.id;
-    if (!id) return;
+    // Handle + extra buttons
+    const addSW = ev.target.closest('.btn-add-inv-swda');
+    if (addSW) {
+      const tr = addSW.closest('tr');
+      const input = tr?.querySelector('.inv-swda-extra');
+      if (input) {
+        const val = prompt('Adicionar extra VWCE para este mês (valor único):', input.value || '');
+        if (val !== null) input.value = val;
+      }
+      return;
+    }
+    const addAG = ev.target.closest('.btn-add-inv-aggh');
+    if (addAG) {
+      const tr = addAG.closest('tr');
+      const input = tr?.querySelector('.inv-aggh-extra');
+      if (input) {
+        const val = prompt('Adicionar extra AGGH para este mês (valor único):', input.value || '');
+        if (val !== null) input.value = val;
+      }
+      return;
+    }
 
-    const swda = parseFloat(tr.querySelector('.swda')?.value) || null;
-    const aggh = parseFloat(tr.querySelector('.aggh')?.value) || null;
-    const cash = parseFloat(tr.querySelector('.cash')?.value) || null;
+    // Handle save button
+    const saveBtn = ev.target.closest('.btn-save');
+    if (saveBtn) {
+      const tr = saveBtn.closest('tr');
+      const id = tr?.dataset?.id;
+      if (!id) return;
 
-    try {
-      b.textContent = '⏳';
-      b.disabled = true;
-      
-      await saveRow(id, {
-        swda_value: swda,
-        aggh_value: aggh,
-        cash_interest: cash
-      });
+      const manualSW = null;
+      const manualAG = null;
+      const extraSW = parseFloat(tr.querySelector('.inv-swda-extra')?.value);
+      const extraAG = parseFloat(tr.querySelector('.inv-aggh-extra')?.value);
 
-      b.textContent = '✅';
-      setTimeout(() => {
-        b.textContent = '✓';
-        b.disabled = false;
-      }, 1000);
+      const swda = parseFloat(tr.querySelector('.swda')?.value) || null;
+      const aggh = parseFloat(tr.querySelector('.aggh')?.value) || null;
+      const cash = parseFloat(tr.querySelector('.cash')?.value) || null;
 
-      await boot(true);
-    } catch (err) {
-      b.textContent = '❌';
-      b.disabled = false;
-      alert(err.message || 'Erro ao gravar. Tente novamente.');
-      setTimeout(() => {
-        b.textContent = '✓';
-      }, 2000);
+      try {
+        saveBtn.textContent = '⏳';
+        saveBtn.disabled = true;
+
+        await saveRow(id, {
+          swda_value: swda,
+          aggh_value: aggh,
+          cash_interest: cash,
+          manual_inv_swda: Number.isFinite(manualSW) ? manualSW : null,
+          manual_inv_aggh: Number.isFinite(manualAG) ? manualAG : null,
+          manual_inv_swda_extra: Number.isFinite(extraSW) ? extraSW : null,
+          manual_inv_aggh_extra: Number.isFinite(extraAG) ? extraAG : null,
+          manual_swda_value: swda,
+          manual_aggh_value: aggh
+        });
+
+        saveBtn.textContent = '✅';
+        setTimeout(() => {
+          saveBtn.textContent = '✓';
+          saveBtn.disabled = false;
+        }, 1000);
+
+        await boot(true);
+      } catch (err) {
+        saveBtn.textContent = '❌';
+        saveBtn.disabled = false;
+        alert(err.message || 'Erro ao gravar. Tente novamente.');
+        setTimeout(() => {
+          saveBtn.textContent = '✓';
+        }, 2000);
+      }
+      return;
     }
   });
 }
@@ -363,9 +520,9 @@ function bindGlobalButtons() {
     });
   }
   
-  // Toggle Params/Juro button
+  // Toggle Params button (ID changed from params-juro-container to params-container)
   const toggleParamsBtn = document.getElementById('btn-toggle-params');
-  const paramsContainer = document.getElementById('params-juro-container');
+  const paramsContainer = document.getElementById('params-container');
   if (toggleParamsBtn && paramsContainer && !toggleParamsBtn.__bound) {
     toggleParamsBtn.__bound = true;
     toggleParamsBtn.addEventListener('click', () => {
@@ -395,7 +552,7 @@ async function boot(skipParamUI = false) {
 
   try {
     const wrapEl = document.getElementById('dca-table-wrap');
-    
+
     if (!skipParamUI) {
       if (wrapEl) showLoading(wrapEl, 'A carregar dados...');
       state.params = await loadParams();
@@ -403,12 +560,23 @@ async function boot(skipParamUI = false) {
       updateScenarios(null, state.params);
     }
 
+    const now = new Date();
+
+    // NEW: Load live data
+    state.liveData = await loadLiveData();
+    updateJuroDisplay();
+
     await ensureMonthsExist(state.params.endYM);
     const docs = await loadAllDocs();
 
-    const limId = `${state.params.endYM.y}-${String(state.params.endYM.m).padStart(2,'0')}`;
+    // Só considerar meses até ao mês corrente (ou endYM se for mais cedo)
+    const nowYM = { y: now.getFullYear(), m: now.getMonth() + 1 };
+    const viewLimit = ymMin(state.params.endYM, nowYM);
+    const limId = `${viewLimit.y}-${String(viewLimit.m).padStart(2,'0')}`;
     const subset = docs.filter(d => d.id <= limId);
-    const rows = buildModel(subset, state.params);
+
+    // MODIFIED: Pass liveData to buildModel
+    const rows = buildModel(subset, state.params, state.liveData);
     state.rows = rows; // Store rows for chart data
     broadcastInvestedTotals(rows);
 
@@ -439,12 +607,14 @@ async function boot(skipParamUI = false) {
       renderTable(rows, wrapEl);
       bindTableSaveHandler();
       applyYearVisibility(state.showOthers);
+      // Recalculate juro acumulado depois da tabela estar disponível
+      updateJuroDisplay();
     }
 
     // Calculate and update KPIs
-    const kpis = calculateKPIs(rows);
+    const kpis = calculateKPIs(rows, state.liveData);
     const obsRoot = document.getElementById('dca-table-wrap');
-    const totalInterest = somaJuroTabelaDCA(obsRoot);
+    const totalInterest = somaJuroTabelaDCA(obsRoot, { excludeCurrentMonth: true });
     updateKPIs(kpis, totalInterest);
 
     // Calculate and update advanced metrics
@@ -466,7 +636,8 @@ async function boot(skipParamUI = false) {
 
     // Update scenarios
     if (kpis && kpis.lastFilledRow) {
-      const scenarios = calculateScenarios(kpis.lastFilledRow, state.params);
+      const scenarioRow = { ...kpis.lastFilledRow, totalNow: kpis.currentValue };
+      const scenarios = calculateScenarios(scenarioRow, state.params);
       updateScenarios(scenarios, state.params);
     } else {
       updateScenarios(null, state.params);
@@ -502,6 +673,37 @@ document.getElementById('btn-save-params')?.addEventListener('click', async () =
   } catch (err) {
     showFeedback('params-feedback', err.message || 'Erro ao gravar parâmetros.', 'error');
   }
+});
+
+document.getElementById('btn-save-saldo')?.addEventListener('click', async () => {
+  const input = document.getElementById('juro-saldo-display');
+  if (!input) return;
+
+  const newSaldo = parseFloat(input.value);
+  if (!Number.isFinite(newSaldo) || newSaldo < 0) {
+    alert('Saldo inválido. Por favor, introduza um valor válido.');
+    return;
+  }
+
+  try {
+    await saveJuroSaldo(newSaldo);
+    state.liveData.saldo = newSaldo;
+    updateLiveCalculations();
+  } catch (err) {
+    alert(err.message || 'Erro ao guardar saldo.');
+  }
+});
+
+// ---------- Listen for Quote Updates ----------
+window.addEventListener('dca:quotes-updated', (event) => {
+  state.liveData.quotes = event.detail;
+  updateLiveCalculations();
+});
+
+// ---------- Listen for Share Updates ----------
+window.addEventListener('dca:shares-updated', (event) => {
+  state.liveData.shares = event.detail;
+  updateLiveCalculations();
 });
 
 // ---------- Window Resize Handler ----------

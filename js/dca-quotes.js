@@ -1,3 +1,5 @@
+import { loadShareQuantities, saveShareQuantities } from './dca-core.js';
+
 const ETF_CONFIG = [
   {
     key: 'vwce',
@@ -21,7 +23,6 @@ const ETF_CONFIG = [
 const AV_API_URL = 'https://www.alphavantage.co/query';
 const AV_API_KEY = '48DFSR9ON8Q0E8NU';
 
-const quantityStorageKey = (key) => `dca_etf_qty_${key}`;
 const quoteCacheKey = 'dca_etf_quotes_cache_v1';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -31,22 +32,30 @@ const quantityState = new Map();
 
 const currencyFormatters = new Map();
 
-function readStoredQuantity(key) {
+// Load shares from Firebase
+async function loadStoredQuantities() {
   try {
-    const raw = localStorage.getItem(quantityStorageKey(key));
-    if (raw == null) return null;
-    const value = Number(raw);
-    return Number.isFinite(value) ? value : null;
-  } catch {
-    return null;
+    return await loadShareQuantities();
+  } catch (err) {
+    console.error('Error loading share quantities:', err);
+    return { vwce: 0, aggh: 0 };
   }
 }
 
-function persistQuantity(key, value) {
+// Save shares to Firebase
+async function persistQuantities() {
   try {
-    localStorage.setItem(quantityStorageKey(key), String(value));
-  } catch {
-    // ignore storage issues
+    const shares = {
+      vwce: quantityState.get('vwce') || 0,
+      aggh: quantityState.get('aggh') || 0
+    };
+    await saveShareQuantities(shares);
+
+    // Dispatch event to notify dca-main.js
+    window.dispatchEvent(new CustomEvent('dca:shares-updated', { detail: shares }));
+  } catch (err) {
+    console.error('Error saving share quantities:', err);
+    throw err;
   }
 }
 
@@ -191,14 +200,25 @@ window.addEventListener('dca:invested-totals', (event) => {
 
 function applyQuotes(quotesMap) {
   if (!quotesMap) return;
+
+  // Build global quotes object
+  const globalQuotes = {};
+
   ETF_CONFIG.forEach(({ key }) => {
     const data = quotesMap.get(key);
     if (data) {
       quoteState.set(key, data);
+      globalQuotes[key] = data;
     }
     updateCardUI(key, data);
     updatePositionSummary(key);
   });
+
+  // Expose quotes globally for dca-main.js to access
+  window.dcaQuotes = globalQuotes;
+
+  // Dispatch event to notify dca-main.js
+  window.dispatchEvent(new CustomEvent('dca:quotes-updated', { detail: globalQuotes }));
 }
 
 async function fetchQuoteForSymbol(cfg) {
@@ -246,7 +266,7 @@ async function fetchQuotes() {
   };
 }
 
-export function initEtfQuotes() {
+export async function initEtfQuotes() {
   const section = document.getElementById('dca-etf-quotes');
   if (!section) return;
 
@@ -256,11 +276,14 @@ export function initEtfQuotes() {
 
   let isLoading = false;
 
+  // Load shares from Firebase
+  const storedShares = await loadStoredQuantities();
+
   // Initialize quantity inputs
   ETF_CONFIG.forEach(({ key }) => {
     const input = document.getElementById(`etf-${key}-qty`);
     if (!input) return;
-    const stored = readStoredQuantity(key);
+    const stored = storedShares[key];
     if (stored != null) {
       quantityState.set(key, stored);
       input.value = stored;
@@ -278,7 +301,7 @@ export function initEtfQuotes() {
 
   // Add save button event listeners
   document.querySelectorAll('.btn-save-qty').forEach(button => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       const etfKey = button.dataset.etf;
       const input = document.getElementById(`etf-${etfKey}-qty`);
       if (!input) return;
@@ -286,15 +309,28 @@ export function initEtfQuotes() {
       const raw = Number(input.value);
       const safe = Number.isFinite(raw) && raw >= 0 ? raw : 0;
       quantityState.set(etfKey, safe);
-      persistQuantity(etfKey, safe);
 
-      // Visual feedback
-      button.textContent = '✓ Guardado';
-      button.style.background = '#10b981';
-      setTimeout(() => {
-        button.textContent = 'Guardar';
-        button.style.background = '';
-      }, 2000);
+      try {
+        // Save to Firebase
+        await persistQuantities();
+
+        // Visual feedback
+        button.textContent = '✓ Guardado';
+        button.style.background = '#10b981';
+        setTimeout(() => {
+          button.textContent = 'Guardar';
+          button.style.background = '';
+        }, 2000);
+      } catch (err) {
+        // Error feedback
+        button.textContent = '✗ Erro';
+        button.style.background = '#ef4444';
+        setTimeout(() => {
+          button.textContent = 'Guardar';
+          button.style.background = '';
+        }, 2000);
+        alert('Erro ao guardar quantidades. Tente novamente.');
+      }
     });
   });
 
