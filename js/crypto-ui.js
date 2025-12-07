@@ -606,8 +606,6 @@ class CryptoPortfolioApp {
 
   async ensureMonthlyAssetSnapshot(){
     const now = new Date();
-    if (now.getDate() !== 1) return;
-
     const monthId = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const alreadyCaptured = this.state.monthlyAssetSnapshots.some(s => s.month === monthId);
     if (alreadyCaptured) return;
@@ -647,13 +645,13 @@ class CryptoPortfolioApp {
 
   formatSignedQuantity(value){
     if (!isFinite(value) || value === 0) return FORMATTERS.quantity.format(0);
-    const sign = value > 0 ? '+' : 'âˆ’';
+    const sign = value > 0 ? '+' : '-';
     return `${sign}${FORMATTERS.quantity.format(Math.abs(value))}`;
   }
 
   formatSignedCurrency(value){
     if (!isFinite(value) || value === 0) return FORMATTERS.eur.format(0);
-    const sign = value > 0 ? '+' : 'âˆ’';
+    const sign = value > 0 ? '+' : '-';
     const formatted = FORMATTERS.eur.format(Math.abs(value));
     return `${sign}${formatted}`;
   }
@@ -672,7 +670,6 @@ class CryptoPortfolioApp {
     }
 
     const months = snapshots.map(s => s.month);
-    const baselineAssets = snapshots[0]?.assets || {};
     const assetsSet = new Set();
     snapshots.forEach(s => {
       Object.keys(s.assets || {}).forEach(asset => assetsSet.add(asset));
@@ -696,6 +693,14 @@ class CryptoPortfolioApp {
 
     const snapshotMap = new Map(snapshots.map(s => [s.month, s]));
     const latestMonth = months[months.length - 1];
+    const totalsByMonth = new Map();
+    snapshots.forEach(s => {
+      const totalValue = Object.values(s.assets || {}).reduce((sum, asset) => {
+        return sum + Number(asset.valueEUR || 0);
+      }, 0);
+      totalsByMonth.set(s.month, totalValue);
+    });
+
     const rowsHtml = Array.from(assetsSet)
       .map(asset => ({
         asset,
@@ -703,13 +708,11 @@ class CryptoPortfolioApp {
       }))
       .sort((a, b) => (b.latestValue || 0) - (a.latestValue || 0))
       .map(asset => {
-        const baseline = baselineAssets[asset.asset] || { quantity: 0, valueEUR: 0 };
-        const baselineQty = Number(baseline.quantity || 0);
-        const baselineValue = Number(baseline.valueEUR || 0);
-
         const cells = months.map((month, idx) => {
           const snapshot = snapshotMap.get(month);
           const data = snapshot?.assets?.[asset.asset];
+          const previousMonth = idx > 0 ? months[idx - 1] : null;
+          const previousData = previousMonth ? snapshotMap.get(previousMonth)?.assets?.[asset.asset] : null;
           if (!data){
             return '<td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>';
           }
@@ -723,8 +726,10 @@ class CryptoPortfolioApp {
               <td>&mdash;</td>
             `;
           }
-          const deltaQty = qty - baselineQty;
-          const deltaValue = value - baselineValue;
+          const prevQty = Number(previousData?.quantity || 0);
+          const prevValue = Number(previousData?.valueEUR || 0);
+          const deltaQty = qty - prevQty;
+          const deltaValue = value - prevValue;
           const qtyClass = deltaQty > 0 ? 'pos' : deltaQty < 0 ? 'neg' : '';
           const valueClass = deltaValue > 0 ? 'pos' : deltaValue < 0 ? 'neg' : '';
           return `
@@ -738,7 +743,22 @@ class CryptoPortfolioApp {
         return `<tr><td><b>${this.escape(asset.asset)}</b></td>${cells}</tr>`;
       }).join('');
 
-    body.innerHTML = rowsHtml;
+    const totalRowCells = months.map((month, idx) => {
+      const totalValue = totalsByMonth.get(month) || 0;
+      const prevMonth = idx > 0 ? months[idx - 1] : null;
+      const prevTotal = prevMonth ? totalsByMonth.get(prevMonth) || 0 : null;
+      const deltaValue = prevTotal !== null ? totalValue - prevTotal : null;
+      const valueCell = `<td>${FORMATTERS.eur.format(totalValue)}</td>`;
+      const qtyCell = '<td>&mdash;</td>';
+      const deltaQtyCell = '<td>&mdash;</td>';
+      const deltaValueCell = deltaValue === null
+        ? '<td>&mdash;</td>'
+        : `<td class="${deltaValue > 0 ? 'pos' : deltaValue < 0 ? 'neg' : ''}">${this.formatSignedCurrency(deltaValue)}</td>`;
+      return `${qtyCell}${valueCell}${deltaQtyCell}${deltaValueCell}`;
+    }).join('');
+    const totalRowHtml = `<tr><td><b>Total</b></td>${totalRowCells}</tr>`;
+
+    body.innerHTML = rowsHtml + totalRowHtml;
   }
 
   getAssetInvestedAmounts(asset, location) {

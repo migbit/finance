@@ -618,7 +618,7 @@ async function boot(skipParamUI = false) {
     updateKPIs(kpis, totalInterest);
 
     // Calculate and update advanced metrics
-    const advancedMetrics = calculateAdvancedMetrics(rows, state.params);
+    const advancedMetrics = calculateAdvancedMetrics(rows, state.params, state.liveData);
     updateAdvancedMetrics(advancedMetrics);
 
     // Calculate rebalancing suggestions
