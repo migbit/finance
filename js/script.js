@@ -20,6 +20,7 @@ const NAV_GROUPS = [
       { label: '📄 Faturas', key: 'faturas', slug: 'modules/faturas.html', module: true },
       { label: '🆕 Análise', key: 'analisev3', slug: 'modules/analisev3.html', module: true },
       { label: '🧳 Taxa Turística', key: 'tmt', slug: 'modules/tmt.html', module: true },
+      { label: '📝 Questionário', key: 'questionario', slug: 'modules/questionario.html', module: true },
       { label: '📋 Diversos', key: 'diversos', slug: 'modules/diversos.html', module: true },
       { label: '🛟 Backup', key: 'settings', slug: 'modules/settings.html', module: true }
     ]
@@ -49,6 +50,7 @@ const ACTIVE_KEY_MATCHERS = [
   { key: 'faturas', patterns: ['faturas'] },
   { key: 'tmt', patterns: ['tmt'] },
   { key: 'diversos', patterns: ['diversos'] },
+  { key: 'questionario', patterns: ['questionario'] },
   { key: 'settings', patterns: ['settings'] },
   { key: 'caixa', patterns: ['caixa'] },
   { key: 'iva', patterns: ['iva'] },

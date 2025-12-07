@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Questionário</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#000000">
+  <style>
+    body[data-page="questionario"] main {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-6);
+    }
+
+    .question-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+      align-items: start;
+    }
+
+    .question-grid--textarea {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    .question-grid .field,
+    .filters-bar .field {
+      margin: 0;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filters-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 16px;
+    }
+
+    .kpi-card .kpi-sub small {
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      margin-top: 6px;
+      width: fit-content;
+    }
+
+    .status-pill .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .qualitative-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .tag-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .tag-chip {
+      background: var(--p4);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .tag-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .tag-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      background: var(--surface);
+      box-shadow: var(--shadow-1);
+      display: grid;
+      gap: 6px;
+    }
+
+    .tag-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+    }
+
+    .muted {
+      color: var(--text-dim);
+    }
+
+    .table-wrap small {
+      color: var(--text-dim);
+    }
+
+    .empty-state {
+      padding: 12px;
+      text-align: center;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    @media (max-width: 680px) {
+      body[data-page="questionario"] main {
+        padding: var(--space-4);
+      }
+    }
+  </style>
+</head>
+<body id="questionario-page" data-page="questionario">
+  <button id="menu-icon" aria-label="Open menu">☰</button>
+
+  <header>
+    <nav id="nav-menu">
+      <div id="login-section" class="login-block">
+        <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+        <span id="user-info" class="user-visible" style="display:none;">
+          <a href="#" id="user-name">👤 Username</a>
+        </span>
+      </div>
+      <div class="nav-links">
+        <div class="nav-group" data-nav-group>
+          <button class="nav-link nav-link--trigger" data-nav-toggle aria-haspopup="true" aria-expanded="false">
+            🏠 Apartamentos
+          </button>
+          <div class="nav-dropdown" role="menu">
+            <a href="faturas.html" role="menuitem">📄 Faturas</a>
+            <a href="analisev3.html" role="menuitem">📊 Análise</a>
+            <a href="tmt.html" role="menuitem">🧳 Taxa Turística</a>
+            <a href="questionario.html" class="active" role="menuitem">📝 Questionário</a>
+            <a href="diversos.html" role="menuitem">📋 Diversos</a>
+            <a href="settings.html" role="menuitem">🛟 Backup</a>
+          </div>
+        </div>
+        <div class="nav-group" data-nav-group>
+          <button class="nav-link nav-link--trigger" data-nav-toggle aria-haspopup="true" aria-expanded="false">
+            💼 Contabilidade
+          </button>
+          <div class="nav-dropdown" role="menu">
+            <a href="caixa.html" role="menuitem">💰 Caixa</a>
+            <a href="iva.html" role="menuitem">📑 IVA Estrangeiro</a>
+            <a href="pallco.html" role="menuitem">🏢 PALLCO</a>
+            <a href="carlos.html" role="menuitem">🧾 Carlos – Faturas</a>
+          </div>
+        </div>
+        <div class="nav-group" data-nav-group>
+          <button class="nav-link nav-link--trigger" data-nav-toggle aria-haspopup="true" aria-expanded="false">
+            📊 Investimentos
+          </button>
+          <div class="nav-dropdown" role="menu">
+            <a href="dca.html" role="menuitem">📈 DCA</a>
+            <a href="crypto.html" role="menuitem">🚀 Cripto</a>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="page-intro">
+      <h2>Questionário de Hóspedes</h2>
+      <p class="muted">Inserir respostas, acompanhar métricas e identificar padrões de feedback.</p>
+    </div>
+
+    <section class="report-section">
+      <div class="section-heading">
+        <h4>Registar resposta manual</h4>
+        <p>Adicionar uma nova submissão do formulário Google Forms.</p>
+      </div>
+      <form id="resposta-form">
+        <div class="question-grid">
+          <div class="field">
+            <label for="input-apartamento">Apartamento</label>
+            <select id="input-apartamento" required>
+              <option value="">Selecionar</option>
+              <option value="123">123</option>
+              <option value="1248">1248</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="input-idioma">Idioma</label>
+            <select id="input-idioma" required>
+              <option value="">Selecionar</option>
+              <option value="Português">Português</option>
+              <option value="Inglês">Inglês</option>
+              <option value="Espanhol">Espanhol</option>
+              <option value="Francês">Francês</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="input-data">Data</label>
+            <input type="date" id="input-data" required>
+          </div>
+          <div class="field">
+            <label for="input-tags">Tags / padrões (opcional)</label>
+            <select id="input-tags" multiple size="3"></select>
+            <small class="muted">Seleciona padrões já criados.</small>
+          </div>
+        </div>
+
+        <h4 style="margin:16px 0 8px; text-align:left;">Perguntas quantitativas</h4>
+        <div class="question-grid">
+          <div class="field">
+            <label for="q-avaliacao">Avaliação global (1-10)</label>
+            <input type="number" id="q-avaliacao" min="1" max="10" required>
+          </div>
+          <div class="field">
+            <label for="q-comunicacao">Comunicação (1-5)</label>
+            <input type="number" id="q-comunicacao" min="1" max="5" required>
+          </div>
+          <div class="field">
+            <label for="q-limpeza-quartos">Limpeza - Quartos (1-5)</label>
+            <input type="number" id="q-limpeza-quartos" min="1" max="5" required>
+          </div>
+          <div class="field">
+            <label for="q-limpeza-wc">Limpeza - Casa de banho (1-5)</label>
+            <input type="number" id="q-limpeza-wc" min="1" max="5" required>
+          </div>
+          <div class="field">
+            <label for="q-limpeza-cozinha">Limpeza - Cozinha (1-5)</label>
+            <input type="number" id="q-limpeza-cozinha" min="1" max="5" required>
+          </div>
+          <div class="field">
+            <label for="q-limpeza-comuns">Limpeza - Áreas comuns (1-5)</label>
+            <input type="number" id="q-limpeza-comuns" min="1" max="5" required>
+          </div>
+          <div class="field">
+            <label for="q-conforto-colchao">Conforto - Colchão (1-5)</label>
+            <input type="number" id="q-conforto-colchao" min="1" max="5" required>
+          </div>
+          <div class="field">
+            <label for="q-conforto-almofadas">Conforto - Almofadas (1-5)</label>
+            <input type="number" id="q-conforto-almofadas" min="1" max="5" required>
+          </div>
+          <div class="field">
+            <label for="q-conforto-temperatura">Conforto - Temperatura do quarto (1-5)</label>
+            <input type="number" id="q-conforto-temperatura" min="1" max="5" required>
+          </div>
+        </div>
+
+        <h4 style="margin:16px 0 8px; text-align:left;">Perguntas qualitativas</h4>
+        <div class="question-grid question-grid--textarea">
+          <div class="field">
+            <label for="t-problemas">Problemas de limpeza/manutenção</label>
+            <textarea id="t-problemas" placeholder="Detalhes de limpeza ou manutenção"></textarea>
+          </div>
+          <div class="field">
+            <label for="t-ruidos">Ruídos durante a estadia</label>
+            <textarea id="t-ruidos" placeholder="Que ruídos foram reportados?"></textarea>
+          </div>
+          <div class="field">
+            <label for="t-avarias">Equipamentos que não funcionaram</label>
+            <textarea id="t-avarias" placeholder="Equipamentos com avaria"></textarea>
+          </div>
+          <div class="field">
+            <label for="t-faltas">Equipamentos em falta</label>
+            <textarea id="t-faltas" placeholder="O que faltou"></textarea>
+          </div>
+          <div class="field">
+            <label for="t-positivos">O que mais gostaram</label>
+            <textarea id="t-positivos" placeholder="Pontos fortes da estadia"></textarea>
+          </div>
+          <div class="field">
+            <label for="t-sugestoes">Sugestões de melhoria</label>
+            <textarea id="t-sugestoes" placeholder="Ideias e melhorias"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="cancelar-edicao" class="ghost" style="display:none;">Cancelar edição</button>
+          <button type="submit" class="primary" id="submit-resposta">Guardar resposta</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="report-section">
+      <div class="section-heading">
+        <h4>Filtros</h4>
+        <p>Filtra por apartamento e período para atualizar métricas, gráficos e feedback.</p>
+      </div>
+      <div class="filters-bar">
+        <div class="field">
+          <label for="filtro-apartamento">Apartamento</label>
+          <select id="filtro-apartamento">
+            <option value="all">Todos</option>
+            <option value="123">123</option>
+            <option value="1248">1248</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="filtro-periodo">Período</label>
+          <select id="filtro-periodo">
+            <option value="30">Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+            <option value="365">Últimos 12 meses</option>
+            <option value="all">Tudo</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="section-heading">
+        <h4>Métricas principais</h4>
+        <p>Médias calculadas a partir das respostas filtradas.</p>
+      </div>
+      <div class="kpis-grid metrics-grid" id="metrics-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Avaliação Global (1-10)</div>
+          <div class="kpi-value" id="kpi-global">—</div>
+          <div class="status-pill" id="kpi-global-status">
+            <span class="dot" style="background: var(--border);"></span>
+            <span id="kpi-global-text" class="muted">Sem dados</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Comunicação</div>
+          <div class="kpi-value" id="kpi-comunicacao">—</div>
+          <div class="kpi-sub"><small>Escala 1-5</small></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Limpeza Geral</div>
+          <div class="kpi-value" id="kpi-limpeza">—</div>
+          <div class="kpi-sub"><small>Média Quartos, WC, Cozinha, Áreas comuns</small></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Conforto Geral</div>
+          <div class="kpi-value" id="kpi-conforto">—</div>
+          <div class="kpi-sub"><small>Média Colchão, Almofadas, Temperatura</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="section-heading">
+        <h4>Gráficos</h4>
+        <p>Evolução temporal e comparação entre categorias.</p>
+      </div>
+      <div class="charts-grid">
+        <div class="viz-card">
+          <h4>Evolução da avaliação global</h4>
+          <div class="chart-wrap" style="height:280px;">
+            <canvas id="chart-evolucao"></canvas>
+          </div>
+        </div>
+        <div class="viz-card">
+          <h4>Limpeza por categoria</h4>
+          <div class="chart-wrap" style="height:280px;">
+            <canvas id="chart-limpeza"></canvas>
+          </div>
+        </div>
+        <div class="viz-card">
+          <h4>Conforto por categoria</h4>
+          <div class="chart-wrap" style="height:280px;">
+            <canvas id="chart-conforto"></canvas>
+          </div>
+        </div>
+        <div class="viz-card" id="chart-apartamento-card" style="display:none;">
+          <h4>Comparação entre apartamentos</h4>
+          <div class="chart-wrap" style="height:260px;">
+            <canvas id="chart-apartamentos"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="section-heading">
+        <h4>Feedback qualitativo</h4>
+        <p>Entradas de texto para revisão e follow-up.</p>
+      </div>
+      <div class="qualitative-controls">
+        <div class="field" style="min-width:220px;">
+          <label for="filtro-categoria">Filtrar por categoria</label>
+          <select id="filtro-categoria">
+            <option value="all">Todas</option>
+            <option value="problemas_limpeza">Problemas de limpeza/manutenção</option>
+            <option value="ruidos">Ruídos</option>
+            <option value="equipamentos_avariados">Equipamentos avariados</option>
+            <option value="equipamentos_falta">Equipamentos em falta</option>
+            <option value="pontos_positivos">O que mais gostaram</option>
+            <option value="sugestoes">Sugestões</option>
+          </select>
+        </div>
+        <div id="qualitativo-count" class="muted"></div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Apartamento</th>
+              <th>Idioma</th>
+              <th>Categoria</th>
+              <th>Texto</th>
+              <th>Tags</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="qualitativo-body">
+            <tr><td colspan="7" class="muted">A carregar respostas…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="section-heading">
+        <h4>Padrões identificados</h4>
+        <p>Cria tags e associa-as às respostas para agrupar feedback recorrente.</p>
+      </div>
+      <form id="tag-form" class="question-grid" style="margin-bottom:12px;">
+        <div class="field">
+          <label for="tag-nome">Nome da tag</label>
+          <input type="text" id="tag-nome" placeholder="Ex: Ruído da rua">
+        </div>
+        <div class="field">
+          <label for="tag-categoria">Categoria</label>
+          <select id="tag-categoria">
+            <option value="ruidos">Ruídos</option>
+            <option value="problemas_limpeza">Limpeza/Manutenção</option>
+            <option value="equipamentos_avariados">Equipamentos avariados</option>
+            <option value="equipamentos_falta">Equipamentos em falta</option>
+            <option value="pontos_positivos">Pontos positivos</option>
+            <option value="sugestoes">Sugestões</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="tag-apartamento">Apartamento</label>
+          <select id="tag-apartamento">
+            <option value="ambos">Ambos</option>
+            <option value="123">123</option>
+            <option value="1248">1248</option>
+          </select>
+        </div>
+        <div class="field" style="align-self:end;">
+          <button type="submit" class="primary" style="width:100%;">Criar tag</button>
+        </div>
+      </form>
+      <div id="tag-list" class="tag-grid">
+        <div class="empty-state">Ainda não existem tags.</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/questionario.js"></script>
+</body>
+</html>
