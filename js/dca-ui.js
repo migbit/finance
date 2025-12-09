@@ -119,6 +119,7 @@ export function renderTable(rows, wrapElement) {
 
     const groupWrap = document.createElement('div');
     groupWrap.className = 'year-group';
+    groupWrap.dataset.year = y;
     groupWrap.appendChild(h);
     groupWrap.appendChild(table);
     wrapElement.appendChild(groupWrap);
@@ -160,22 +161,32 @@ export function highlightCurrentMonthRow(wrapElement) {
 // ---------- Year Visibility Toggle ----------
 export function applyYearVisibility(showOthers) {
   const currentYear = new Date().getFullYear();
-  const groups = Array.from(document.querySelectorAll('#dca-table-wrap .year-group'));
-
-  for (const g of groups) {
-    const yTxt = g.querySelector('h3')?.textContent || '';
-    const y = Number(yTxt.trim());
-    if (!Number.isFinite(y)) continue;
-
-    if (y === currentYear) {
-      g.style.display = '';
-    } else {
-      g.style.display = showOthers ? '' : 'none';
-    }
-  }
+  const groups = Array.from(document.querySelectorAll('#dca-table-wrap .year-group'))
+    .map(el => {
+      const yearStr = el.dataset.year || el.querySelector('h3')?.textContent || '';
+      return { el, year: Number(String(yearStr).trim()) };
+    })
+    .filter(item => Number.isFinite(item.year));
 
   const btn = document.getElementById('toggle-others');
-  if (btn) btn.textContent = showOthers ? 'Ocultar anos' : 'Expandir anos';
+  if (groups.length === 0) {
+    if (btn) btn.textContent = showOthers ? 'Ocultar anos' : 'Expandir anos';
+    return;
+  }
+
+  // Fallback to the latest available year if the current calendar year is missing
+  const anchorYear = groups.some(g => g.year === currentYear)
+    ? currentYear
+    : Math.max(...groups.map(g => g.year));
+
+  groups.forEach(({ el, year }) => {
+    el.style.display = (year === anchorYear || showOthers) ? '' : 'none';
+  });
+
+  if (btn) {
+    btn.textContent = showOthers ? 'Ocultar anos' : 'Expandir anos';
+    btn.setAttribute('aria-expanded', showOthers ? 'true' : 'false');
+  }
 }
 
 // ---------- KPI Updates ----------
