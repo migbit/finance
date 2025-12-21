@@ -535,126 +535,23 @@
     min-width: 760px;
   }
 
-  /* Datas page (Isabel) */
-  body[data-page="datas"] main {
-    padding: calc(var(--mobile-header-height) + 14px) 10px 12px !important;
-    gap: 12px !important;
-  }
-
+  /* Datas page - mobile adjustments */
   body[data-page="datas"] .page-intro p.muted {
-    display: none !important;
+    display: none;
   }
 
-  body[data-page="datas"] .tab-navigation {
-    display: flex !important;
-    gap: 8px !important;
-    padding: 8px 4px !important;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    justify-content: flex-start;
-  }
-
-  body[data-page="datas"] .tab-navigation .tab-btn {
-    flex: 0 0 auto;
-    padding: 10px 12px !important;
-    font-size: 0.95rem !important;
-    border-radius: 14px;
-  }
-
-  /* Datas: scope tabs (Anual/Mensal) should fit side-by-side */
+  /* Datas: scope tabs (Anual/Mensal) - grid layout on mobile */
   body[data-page="datas"] #datas-scope-tabs {
-    display: grid !important;
+    display: grid;
     grid-template-columns: 1fr 1fr;
-    overflow: visible !important;
-    padding: 8px 0 !important;
-    gap: 10px !important;
+    overflow: visible;
+    gap: var(--space-2);
   }
 
   body[data-page="datas"] #datas-scope-tabs .tab-btn {
     width: 100%;
     justify-content: center;
     text-align: center;
-    flex: 1 1 auto;
-  }
-
-  body[data-page="datas"] .toolbar {
-    padding: 10px !important;
-    gap: 10px !important;
-    justify-items: start !important;
-  }
-
-  body[data-page="datas"] .toolbar-left,
-  body[data-page="datas"] .toolbar-right {
-    gap: 8px !important;
-    justify-items: start !important;
-  }
-
-  body[data-page="datas"] .field-inline {
-    gap: 8px !important;
-    justify-content: flex-start !important;
-  }
-
-  body[data-page="datas"] .datas-deadline-row {
-    gap: 10px !important;
-  }
-
-  body[data-page="datas"] .list-card-header {
-    padding: 10px !important;
-    gap: 8px !important;
-  }
-
-  body[data-page="datas"] .list-card-header .actions,
-  body[data-page="datas"] .list-card-header [data-add-company],
-  body[data-page="datas"] .list-card-header [data-print-table] {
-    display: none !important;
-  }
-
-  body[data-page="datas"] .actions {
-    width: 100%;
-    justify-content: flex-start !important;
-  }
-
-  body[data-page="datas"] .btn {
-    padding: 10px 12px !important;
-  }
-
-  body[data-page="datas"] .table-wrap {
-    margin: 0 -10px !important;
-    padding: 0 10px 12px !important;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  body[data-page="datas"] table {
-    min-width: 0 !important;
-    width: 100% !important;
-  }
-
-  body[data-page="datas"] th,
-  body[data-page="datas"] td {
-    padding: 6px 6px !important;
-  }
-
-  body[data-page="datas"] td:first-child,
-  body[data-page="datas"] th:first-child {
-    white-space: normal !important;
-    min-width: 160px;
-  }
-}
-
-@media (max-width: 480px) {
-  body[data-page="datas"] main {
-    padding: calc(var(--mobile-header-height) + 12px) 8px 10px !important;
-  }
-
-  body[data-page="datas"] th,
-  body[data-page="datas"] td {
-    padding: 5px 6px !important;
-    font-size: 13px;
-  }
-
-  body[data-page="datas"] .tab-navigation .tab-btn {
-    padding: 9px 10px !important;
-    font-size: 0.9rem !important;
   }
 }
 
@@ -1011,10 +908,70 @@
   }
 }
 
-/* ===== Hide fixed tab navigation on mobile ===== */
+/* ===== Hide fixed tab navigation on mobile (except specific pages) ===== */
 @media (max-width: 768px) {
   .tab-navigation {
+    display: none;
+  }
+
+  /* Datas page keeps ALL its tab navigation visible (scope + obligations) */
+  body[data-page="datas"] .tab-navigation {
+    display: flex;
+  }
+
+}
+
+/* Datas: compact annual table also on tablets (<=1024px) */
+@media (max-width: 1024px) {
+  body[data-page="datas"] .list-card-header .actions {
     display: none !important;
+  }
+
+  body[data-page="datas"] table[data-kind="annual"] {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed;
+  }
+
+  body[data-page="datas"] table[data-kind="annual"] th:last-child,
+  body[data-page="datas"] table[data-kind="annual"] td:last-child {
+    display: none !important; /* hide Ações on smaller screens */
+  }
+
+  body[data-page="datas"] table[data-kind="annual"] th:first-child,
+  body[data-page="datas"] table[data-kind="annual"] td:first-child {
+    white-space: normal !important;
+    min-width: 0 !important;
+  }
+
+  body[data-page="datas"] table[data-kind="annual"] th:nth-child(2),
+  body[data-page="datas"] table[data-kind="annual"] td:nth-child(2) {
+    width: 38px;
+    white-space: nowrap !important;
+  }
+
+  /* Move checkbox next to the company name (avoid large empty gap) */
+  body[data-page="datas"] table[data-kind="annual"] thead th:nth-child(2) {
+    display: none !important;
+  }
+
+  body[data-page="datas"] table[data-kind="annual"] tbody tr:not(.section-row) {
+    position: relative;
+  }
+
+  body[data-page="datas"] table[data-kind="annual"] tbody tr:not(.section-row) td:nth-child(2) {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    text-align: left;
+  }
+
+  body[data-page="datas"] table[data-kind="annual"] tbody tr:not(.section-row) td:first-child {
+    padding-left: 40px !important;
   }
 }
 

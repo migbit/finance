@@ -156,6 +156,14 @@ function createModal({ title, subtitle, bodyHtml, primaryLabel, dangerLabel, del
   document.body.appendChild(modal);
   requestAnimationFrame(() => modal.classList.add('show'));
 
+  // Focus trap: get all focusable elements
+  const dialog = modal.querySelector('.datas-modal-dialog');
+  const getFocusableElements = () => {
+    return Array.from(dialog.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    ));
+  };
+
   let onKey = null;
   const close = () => {
     modal.classList.remove('show');
@@ -166,13 +174,47 @@ function createModal({ title, subtitle, bodyHtml, primaryLabel, dangerLabel, del
   modal.addEventListener('click', (event) => {
     if (event.target.closest('[data-modal-close]')) close();
   });
+
   onKey = (event) => {
-    if (event.key === 'Escape') close();
+    if (event.key === 'Escape') {
+      close();
+      return;
+    }
+
+    // Focus trap: keep focus within modal when using Tab
+    if (event.key === 'Tab') {
+      const focusable = getFocusableElements();
+      if (focusable.length === 0) return;
+
+      const firstEl = focusable[0];
+      const lastEl = focusable[focusable.length - 1];
+
+      if (event.shiftKey) {
+        // Shift+Tab: if on first element, go to last
+        if (document.activeElement === firstEl) {
+          event.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        // Tab: if on last element, go to first
+        if (document.activeElement === lastEl) {
+          event.preventDefault();
+          firstEl.focus();
+        }
+      }
+    }
   };
   document.addEventListener('keydown', onKey);
 
   const cancelBtn = modal.querySelector('[data-modal-cancel]');
   cancelBtn?.addEventListener('click', close);
+
+  // Set initial focus to first input or primary button
+  requestAnimationFrame(() => {
+    const firstInput = dialog.querySelector('input:not([type="checkbox"]):not([disabled])');
+    const primaryBtn = dialog.querySelector('[data-modal-primary]');
+    (firstInput || primaryBtn)?.focus();
+  });
 
   return { modal, close };
 }
@@ -357,7 +399,7 @@ function buildObligationPanelHtml(scope, key, label) {
 function buildAnnualTableHtml(rowsPending, rowsCompleted) {
   const cols = 3;
   return `
-    <table>
+    <table data-kind="annual">
       <thead>
         <tr>
           <th>Empresa</th>
@@ -378,7 +420,7 @@ function buildAnnualTableHtml(rowsPending, rowsCompleted) {
 function buildMonthlyTableHtml(rowsPending, rowsCompleted) {
   const cols = 2 + MONTHS.length;
   return `
-    <table>
+    <table data-kind="monthly">
       <thead>
         <tr>
           <th>Empresa</th>
@@ -572,6 +614,21 @@ function bindPanelEvents(panelState) {
   });
 
   panelEl.addEventListener('click', (event) => {
+    // Mobile shortcut: tap company name (annual) to edit
+    const companyRow = event.target.closest('tr[data-company-id]');
+    if (companyRow && !event.target.closest('button') && !event.target.closest('input[type="checkbox"]')) {
+      const table = companyRow.closest('table');
+      const firstCell = event.target.closest('td');
+      if (table?.dataset.kind === 'annual' && firstCell === companyRow.querySelector('td')) {
+        const companyId = companyRow.dataset.companyId;
+        const company = companies.find((c) => c.id === companyId);
+        if (company) {
+          openEditCompanyModal(company);
+          return;
+        }
+      }
+    }
+
     const addBtn = event.target.closest('[data-add-company]');
     if (addBtn) {
       event.preventDefault();
