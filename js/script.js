@@ -36,6 +36,13 @@ const NAV_GROUPS = [
     ]
   },
   {
+    label: '👩 Isabel',
+    key: 'isabel',
+    links: [
+      { label: '📅 Datas', key: 'datas', slug: 'modules/datas.html', module: true }
+    ]
+  },
+  {
     label: '📊 Investimentos',
     key: 'investimentos',
     links: [
@@ -56,6 +63,7 @@ const ACTIVE_KEY_MATCHERS = [
   { key: 'iva', patterns: ['iva'] },
   { key: 'pallco', patterns: ['pallco'] },
   { key: 'carlos', patterns: ['carlos'] },
+  { key: 'datas', patterns: ['datas'] },
   { key: 'dca', patterns: ['dca'] },
   { key: 'crypto', patterns: ['crypto'] }
 ];

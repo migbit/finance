@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Datas</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#000000">
+  <style>
+    body[data-page="datas"] main {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-6);
+      display: grid;
+      gap: 16px;
+    }
+
+    body[data-page="datas"] .page-intro {
+      display: grid;
+      gap: 6px;
+    }
+
+    body[data-page="datas"] .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: start;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: var(--shadow-1);
+    }
+
+    body[data-page="datas"] .toolbar-left {
+      display: grid;
+      gap: 12px;
+      align-items: start;
+    }
+
+    body[data-page="datas"] .toolbar-right {
+      display: grid;
+      gap: 10px;
+      align-items: start;
+      justify-items: end;
+    }
+
+    body[data-page="datas"] .field-inline {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+
+    body[data-page="datas"] .datas-deadline-row {
+      gap: 12px;
+      align-items: center;
+    }
+
+    body[data-page="datas"] select,
+    body[data-page="datas"] input[type="date"],
+    body[data-page="datas"] input[type="text"] {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+
+    body[data-page="datas"] select:hover,
+    body[data-page="datas"] input[type="date"]:hover,
+    body[data-page="datas"] input[type="text"]:hover {
+      border-color: var(--secondary);
+    }
+
+    body[data-page="datas"] select:focus,
+    body[data-page="datas"] input[type="date"]:focus,
+    body[data-page="datas"] input[type="text"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(95, 107, 122, 0.1);
+    }
+
+    body[data-page="datas"] .split-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    body[data-page="datas"] .list-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      box-shadow: var(--shadow-1);
+      overflow: hidden;
+      display: grid;
+    }
+
+    body[data-page="datas"] .list-card-header {
+      padding: 12px 12px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    body[data-page="datas"] .list-card-header h4 {
+      margin: 0;
+    }
+
+    body[data-page="datas"] .btn {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 700;
+      box-shadow: var(--shadow-1);
+    }
+
+    body[data-page="datas"] .btn:hover {
+      filter: brightness(1.05);
+    }
+
+    body[data-page="datas"] .btn-primary {
+      background: var(--p4);
+    }
+
+    body[data-page="datas"] .table-wrap {
+      overflow: auto;
+      padding: 8px 10px 12px;
+    }
+
+    body[data-page="datas"] table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+    }
+
+    body[data-page="datas"] th,
+    body[data-page="datas"] td {
+      border-bottom: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    body[data-page="datas"] th {
+      font-size: 0.9rem;
+      color: var(--text-dim);
+      font-weight: 800;
+      background: rgba(255,255,255,0.02);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    body[data-page="datas"] tr.is-complete {
+      opacity: 0.55;
+    }
+
+    body[data-page="datas"] .section-row td {
+      font-weight: 900;
+      color: var(--text-dim);
+      padding-top: 14px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    body[data-page="datas"] .actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    body[data-page="datas"] .datas-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease;
+    }
+
+    body[data-page="datas"] .datas-modal-overlay.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    body[data-page="datas"] .datas-modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+    }
+
+    body[data-page="datas"] .datas-modal-dialog {
+      position: relative;
+      width: min(520px, calc(100vw - 24px));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--surface);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    body[data-page="datas"] .datas-modal-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    body[data-page="datas"] .datas-modal-title h3 {
+      margin: 0;
+    }
+
+    body[data-page="datas"] .datas-modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    body[data-page="datas"] .muted {
+      color: var(--text-dim);
+    }
+
+    @media (max-width: 768px) {
+      body[data-page="datas"] .toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      body[data-page="datas"] .toolbar-right {
+        justify-items: start;
+      }
+    }
+
+    @media (max-width: 900px) {
+      body[data-page="datas"] table {
+        min-width: 620px;
+      }
+    }
+
+    @media (max-width: 680px) {
+      body[data-page="datas"] main {
+        padding: var(--space-4);
+      }
+    }
+
+    @media print {
+      body[data-page="datas"] .toolbar,
+      body[data-page="datas"] .btn,
+      body[data-page="datas"] .tab-navigation,
+      body[data-page="datas"] .page-intro,
+      body[data-page="datas"] .list-card-header,
+      header,
+      #menu-icon {
+        display: none !important;
+      }
+
+      body[data-page="datas"] main {
+        max-width: 100%;
+        padding: 0;
+      }
+
+      body[data-page="datas"] .list-card {
+        border: none;
+        box-shadow: none;
+        page-break-inside: avoid;
+        margin-bottom: 20px;
+      }
+
+      body[data-page="datas"] .table-wrap {
+        overflow: visible;
+        padding: 0;
+      }
+
+      body[data-page="datas"] table {
+        page-break-inside: auto;
+        border: 1px solid #000;
+        min-width: 100%;
+      }
+
+      body[data-page="datas"] tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+      }
+
+      body[data-page="datas"] thead {
+        display: table-header-group;
+      }
+
+      body[data-page="datas"] th,
+      body[data-page="datas"] td {
+        border: 1px solid #000;
+        padding: 6px 8px;
+        font-size: 11pt;
+      }
+
+      body[data-page="datas"] th {
+        background: #f0f0f0 !important;
+        font-weight: 700;
+      }
+
+      @page {
+        margin: 1.5cm;
+        size: A4;
+      }
+    }
+  </style>
+</head>
+
+<body data-page="datas">
+  <button id="menu-icon" aria-label="Open menu">☰</button>
+
+  <header>
+    <nav id="nav-menu">
+      <div id="login-section" class="login-block">
+        <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+        <span id="user-info" class="user-visible" style="display:none;">
+          <a href="#" id="user-name">👤 Username</a>
+        </span>
+      </div>
+      <div class="nav-links"></div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="page-intro">
+      <h2>Datas</h2>
+      <p class="muted">Checklists de obrigações.</p>
+    </div>
+
+    <div class="tab-navigation" id="datas-scope-tabs">
+      <button class="tab-btn active" data-scope="annual">Anual</button>
+      <button class="tab-btn" data-scope="monthly">Mensal</button>
+    </div>
+
+    <section id="datas-scope-annual" data-scope-panel="annual"></section>
+    <section id="datas-scope-monthly" data-scope-panel="monthly" style="display:none;"></section>
+  </main>
+
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/datas.js"></script>
+</body>
+</html>
