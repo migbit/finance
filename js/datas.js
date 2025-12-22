@@ -26,7 +26,7 @@ const OBLIGATIONS = {
   monthly: [
     { key: 'dmr', label: 'DMR' },
     { key: 'seguranca_social', label: 'Segurança Social' },
-    { key: 'sft', label: 'SFT' },
+    { key: 'saft', label: 'SAF-T' },
     { key: 'retencao_irs', label: 'Retenção IRS' },
     { key: 'modelo30', label: 'Modelo 30' }
   ]
@@ -90,6 +90,79 @@ const companiesRef = doc(storeCol, COMPANIES_DOC_ID);
 
 let companies = [];
 const panelStateByKey = new Map(); // `${scope}:${obligationKey}` -> state
+
+function getAnnualDefaultDeadlineYMD(obligationKey, year) {
+  const y = Number(year);
+  if (!y) return '';
+  switch (obligationKey) {
+    case 'modelo22':
+    case 'irs':
+    case 'ies':
+      return `${y}-06-30`;
+    case 'inventario':
+      return `${y}-01-31`;
+    default:
+      return '';
+  }
+}
+
+function initMonthlyColumnHover() {
+  if (document.body?.dataset?.page !== 'datas') return;
+
+  const HOVER_CLASS = 'is-col-hover';
+  let currentTable = null;
+  let currentCol = -1;
+
+  const clear = () => {
+    if (!currentTable) return;
+    currentTable.querySelectorAll(`.${HOVER_CLASS}`).forEach((el) => el.classList.remove(HOVER_CLASS));
+    currentTable = null;
+    currentCol = -1;
+  };
+
+  const applyColumn = (table, colIndex) => {
+    if (!table || colIndex == null || colIndex < 0) return;
+    if (currentTable === table && currentCol === colIndex) return;
+
+    if (currentTable && currentTable !== table) {
+      clear();
+    } else if (currentTable) {
+      currentTable.querySelectorAll(`.${HOVER_CLASS}`).forEach((el) => el.classList.remove(HOVER_CLASS));
+    }
+
+    currentTable = table;
+    currentCol = colIndex;
+
+    const rows = Array.from(table.rows || []);
+    rows.forEach((row) => {
+      const cell = row.cells?.[colIndex];
+      if (cell) cell.classList.add(HOVER_CLASS);
+    });
+
+    if (!table.dataset.colHoverBound) {
+      table.dataset.colHoverBound = '1';
+      table.addEventListener('mouseleave', clear);
+    }
+  };
+
+  document.addEventListener('mouseover', (event) => {
+    const cell = event.target.closest('td, th');
+    const table = cell?.closest('table[data-kind="monthly"]');
+    if (!cell || !table) {
+      if (currentTable) clear();
+      return;
+    }
+
+    const colIndex = cell.cellIndex;
+    const totalCols = table.rows?.[0]?.cells?.length ?? 0;
+
+    // Ignore first column (Empresa) and last column (Ações)
+    if (colIndex <= 0) return;
+    if (totalCols && colIndex === totalCols - 1) return;
+
+    applyColumn(table, colIndex);
+  });
+}
 
 function normalizeId(input) {
   return String(input || '')
@@ -259,8 +332,8 @@ async function ensureObligationDoc(scope, key, year) {
 
   const base = { scope, key, year, updatedAt: new Date() };
   const payload = scope === 'annual'
-    ? { ...base, completedByCompany: {}, deadline: '' }
-    : { ...base, monthsByCompany: {}, completedByCompany: {} };
+    ? { ...base, completedByCompany: {}, completedAtByCompany: {}, deadline: getAnnualDefaultDeadlineYMD(key, year) }
+    : { ...base, monthsByCompany: {}, monthsAtByCompany: {} };
 
   await setDoc(ref, payload, { merge: true });
   return ref;
@@ -280,9 +353,48 @@ function getMonthlyMonths(docData, companyId) {
   return map;
 }
 
+function getMonthlyMonthDoneAt(docData, companyId, month) {
+  const map = docData?.monthsAtByCompany?.[companyId];
+  if (!map || typeof map !== 'object') return '';
+  const v = map[String(month)];
+  return typeof v === 'string' ? v : '';
+}
+
 function isMonthlyCompanyComplete(docData, companyId) {
   const months = getMonthlyMonths(docData, companyId);
   return MONTHS.every((m) => Boolean(months[String(m.key)]));
+}
+
+function getAnnualDoneAt(docData, companyId) {
+  const map = docData?.completedAtByCompany;
+  if (!map || typeof map !== 'object') return '';
+  const v = map[String(companyId)];
+  return typeof v === 'string' ? v : '';
+}
+
+function ymdTodayLocal() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDateDDMM(ymd) {
+  const date = parseLocalYMD(ymd);
+  if (!date) return '';
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}`;
+}
+
+function formatDateDDMMYYYY(ymd) {
+  const date = parseLocalYMD(ymd);
+  if (!date) return '';
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yy = date.getFullYear();
+  return `${dd}/${mm}/${yy}`;
 }
 
 function renderScopePanel(scope, mountEl) {
@@ -311,7 +423,6 @@ function renderScopePanel(scope, mountEl) {
       key: o.key,
       label: o.label,
       year: DEFAULT_YEAR,
-      showOlder: false,
       ref: null,
       unsubscribe: null,
       docData: null,
@@ -332,17 +443,40 @@ function renderScopePanel(scope, mountEl) {
 }
 
 function buildObligationPanelHtml(scope, key, label) {
-  const yearId = `year-${scope}-${key}`;
-  const olderId = `older-${scope}-${key}`;
   const activeTableId = `table-${scope}-${key}-active`;
   const suspendedTableId = `table-${scope}-${key}-suspended`;
   const showSuspended = scope === 'annual' && key === 'modelo22';
   const deadlineId = `deadline-${scope}-${key}`;
 
+  if (scope === 'monthly') {
+    return `
+      <div class="split-grid" style="margin-top: 14px;">
+        <div class="list-card" data-company-state="active">
+          <div class="list-card-header datas-monthly-header">
+            <div class="datas-monthly-left"></div>
+            <h4 class="datas-monthly-title">${escapeHtml(label)}</h4>
+            <div class="actions datas-monthly-actions">
+              <button type="button" class="btn" data-print-table="${activeTableId}">Imprimir</button>
+              <select data-year-select aria-label="Ano">
+                <option value="${DEFAULT_YEAR}">${DEFAULT_YEAR}</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap" id="${activeTableId}" data-table-wrap>
+            <div class="muted">A carregar…</div>
+          </div>
+          <div class="datas-table-footer">
+            <button type="button" class="btn btn-primary" data-add-company>+ Adicionar</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const yearId = `year-${scope}-${key}`;
   return `
     <div class="toolbar">
       <div class="toolbar-left">
-        <div class="field-inline"><strong>Obrigação:</strong> <span>${escapeHtml(label)}</span></div>
         ${scope === 'annual' ? `
           <div class="field-inline datas-deadline-row">
             <label for="${deadlineId}"><strong>Entregar até</strong></label>
@@ -358,18 +492,15 @@ function buildObligationPanelHtml(scope, key, label) {
             <option value="${DEFAULT_YEAR}">${DEFAULT_YEAR}</option>
           </select>
         </div>
-        <div class="field-inline">
-          <input type="checkbox" id="${olderId}" data-show-older />
-          <label for="${olderId}">Mostrar anos anteriores</label>
-        </div>
       </div>
     </div>
 
     <div class="split-grid" style="margin-top: 14px;">
       <div class="list-card" data-company-state="active">
-        <div class="list-card-header">
-          <h4>Empresas em Atividade</h4>
-          <div class="actions">
+        <div class="list-card-header datas-annual-header">
+          <div class="datas-annual-left"></div>
+          <h4 class="datas-annual-title">${escapeHtml(label)}</h4>
+          <div class="actions datas-annual-actions">
             <button type="button" class="btn btn-primary" data-add-company>+ Adicionar</button>
             <button type="button" class="btn" data-print-table="${activeTableId}">Imprimir</button>
           </div>
@@ -439,16 +570,25 @@ function buildMonthlyTableHtml(rowsPending, rowsCompleted) {
 }
 
 function renderTableInto(wrapEl, scope, docData, list) {
+  if (wrapEl) wrapEl.setAttribute('data-kind', scope);
   const pending = [];
   const completed = [];
 
   list.forEach((company) => {
     if (scope === 'annual') {
       const done = isAnnualCompanyComplete(docData, company.id);
+      const doneAt = done ? getAnnualDoneAt(docData, company.id) : '';
+      const doneAtShort = doneAt ? formatDateDDMM(doneAt) : '';
+      const doneAtLong = doneAt ? formatDateDDMMYYYY(doneAt) : '';
       const row = `
         <tr data-company-id="${company.id}" class="${done ? 'is-complete' : ''}">
           <td>${escapeHtml(company.name)}</td>
-          <td><input type="checkbox" data-annual-check ${done ? 'checked' : ''} /></td>
+          <td>
+            <div class="datas-checkcell">
+              <input type="checkbox" data-annual-check ${done ? 'checked' : ''} />
+              ${doneAtShort ? `<small class="muted datas-checkcell-date" title="${escapeHtml(doneAtLong)}">${escapeHtml(doneAtShort)}</small>` : ''}
+            </div>
+          </td>
           <td style="text-align:right;"><button type="button" class="btn" data-edit-company>Editar</button></td>
         </tr>
       `;
@@ -463,7 +603,17 @@ function renderTableInto(wrapEl, scope, docData, list) {
         <td>${escapeHtml(company.name)}</td>
         ${MONTHS.map((m) => {
           const checked = Boolean(months[String(m.key)]);
-          return `<td><input type="checkbox" data-month="${m.key}" ${checked ? 'checked' : ''} /></td>`;
+          const doneAt = checked ? getMonthlyMonthDoneAt(docData, company.id, m.key) : '';
+          const doneAtShort = doneAt ? formatDateDDMM(doneAt) : '';
+          const doneAtLong = doneAt ? formatDateDDMMYYYY(doneAt) : '';
+          return `
+            <td>
+              <div class="datas-checkcell">
+                <input type="checkbox" data-month="${m.key}" ${checked ? 'checked' : ''} />
+                ${doneAtShort ? `<small class="muted datas-checkcell-date" title="${escapeHtml(doneAtLong)}">${escapeHtml(doneAtShort)}</small>` : ''}
+              </div>
+            </td>
+          `;
         }).join('')}
         <td style="text-align:right;"><button type="button" class="btn" data-edit-company>Editar</button></td>
       </tr>
@@ -505,7 +655,22 @@ function attachDocListener(panelState) {
     .then((ref) => {
       panelState.ref = ref;
       panelState.unsubscribe = onSnapshot(ref, (snap) => {
-        panelState.docData = snap.data() || null;
+        const data = snap.data() || null;
+        panelState.docData = data;
+
+        // Backfill default annual deadlines if missing/empty (non-destructive)
+        if (scope === 'annual' && data) {
+          const current = String(data.deadline || '').trim();
+          if (!current) {
+            const fallback = getAnnualDefaultDeadlineYMD(key, year);
+            if (fallback) {
+              updateDoc(ref, { deadline: fallback, updatedAt: new Date() }).catch((err) => {
+                console.warn('Erro a aplicar prazo por defeito:', err);
+              });
+            }
+          }
+        }
+
         refreshPanel(panelState);
       }, (err) => {
         console.error('Erro ao ler Firestore:', err);
@@ -522,7 +687,7 @@ function attachDocListener(panelState) {
 function updateYearSelectOptions(panelState) {
   const select = panelState.panelEl.querySelector('[data-year-select]');
   if (!select) return;
-  const years = panelState.showOlder ? yearsRange() : [DEFAULT_YEAR];
+  const years = yearsRange();
   const currentValue = String(panelState.year);
 
   select.innerHTML = years.map((y) => `<option value="${y}">${y}</option>`).join('');
@@ -556,7 +721,8 @@ function updateDeadlineUI(panelState) {
   const status = panelState.panelEl.querySelector('[data-deadline-status]');
   if (!input || !status) return;
 
-  const ymd = String(panelState.docData?.deadline || '').trim();
+  const stored = String(panelState.docData?.deadline || '').trim();
+  const ymd = stored || getAnnualDefaultDeadlineYMD(panelState.key, panelState.year);
   if (document.activeElement !== input) input.value = ymd;
 
   if (!ymd) {
@@ -586,13 +752,6 @@ function updateDeadlineUI(panelState) {
 
 function bindPanelEvents(panelState) {
   const panelEl = panelState.panelEl;
-
-  const olderToggle = panelEl.querySelector('[data-show-older]');
-  olderToggle?.addEventListener('change', () => {
-    panelState.showOlder = Boolean(olderToggle.checked);
-    updateYearSelectOptions(panelState);
-    attachDocListener(panelState);
-  });
 
   const yearSelect = panelEl.querySelector('[data-year-select]');
   yearSelect?.addEventListener('change', () => {
@@ -646,19 +805,24 @@ function bindPanelEvents(panelState) {
       return;
     }
 
-    const printBtn = event.target.closest('[data-print-table]');
-    if (printBtn) {
-      const targetId = printBtn.getAttribute('data-print-table');
-      const wrap = document.getElementById(targetId);
-      if (wrap) {
-        const listCard = printBtn.closest('.list-card');
-        const listTitle = listCard?.querySelector('h4')?.textContent?.trim() || 'Tabela';
-        const scopeLabel = panelState.scope === 'annual' ? 'Anual' : 'Mensal';
-        const title = `${panelState.label} — ${panelState.year} — ${scopeLabel} — ${listTitle}`;
-        wrap.setAttribute('data-print-title', title);
-        printWrap(wrap, panelState);
-      }
-    }
+	    const printBtn = event.target.closest('[data-print-table]');
+	    if (printBtn) {
+	      const targetId = printBtn.getAttribute('data-print-table');
+	      const wrap = document.getElementById(targetId);
+	      if (wrap) {
+	        const listCard = printBtn.closest('.list-card');
+	        const state = listCard?.getAttribute('data-company-state') || '';
+	        let listTitle = listCard?.querySelector('h4')?.textContent?.trim() || 'Tabela';
+	        if (state === 'active') listTitle = 'Empresas em Atividade';
+	        if (state === 'suspended') listTitle = 'Suspensas';
+	        const scopeLabel = panelState.scope === 'annual' ? 'Anual' : 'Mensal';
+	        const parts = [panelState.label, String(panelState.year), scopeLabel];
+	        if (listTitle && listTitle !== panelState.label) parts.push(listTitle);
+	        const title = parts.join(' — ');
+	        wrap.setAttribute('data-print-title', title);
+	        printWrap(wrap, panelState);
+	      }
+	    }
   });
 
   panelEl.addEventListener('change', async (event) => {
@@ -671,21 +835,25 @@ function bindPanelEvents(panelState) {
 
     try {
       if (panelState.scope === 'annual' && input.hasAttribute('data-annual-check')) {
+        const checked = Boolean(input.checked);
         await updateDoc(panelState.ref, {
-          [`completedByCompany.${companyId}`]: Boolean(input.checked),
+          [`completedByCompany.${companyId}`]: checked,
+          [`completedAtByCompany.${companyId}`]: checked ? ymdTodayLocal() : '',
           updatedAt: new Date()
         });
-        showToast(input.checked ? 'Marcado como concluído.' : 'Marcado como pendente.', 'success');
+        showToast(checked ? 'Marcado como concluído.' : 'Marcado como pendente.', 'success');
         return;
       }
 
       const month = Number(input.getAttribute('data-month'));
       if (!month || month < 1 || month > 12) return;
+      const checked = Boolean(input.checked);
       await updateDoc(panelState.ref, {
-        [`monthsByCompany.${companyId}.${month}`]: Boolean(input.checked),
+        [`monthsByCompany.${companyId}.${month}`]: checked,
+        [`monthsAtByCompany.${companyId}.${month}`]: checked ? ymdTodayLocal() : '',
         updatedAt: new Date()
       });
-      showToast(input.checked ? 'Mês concluído.' : 'Mês desmarcado.', 'success');
+      showToast(checked ? 'Mês concluído.' : 'Mês desmarcado.', 'success');
     } catch (err) {
       console.error('Erro a atualizar:', err);
       showToast('Erro ao guardar no Firebase.', 'error');
@@ -1021,6 +1189,8 @@ async function init() {
   const annualMount = document.getElementById('datas-scope-annual');
   const monthlyMount = document.getElementById('datas-scope-monthly');
   if (!annualMount || !monthlyMount) return;
+
+  initMonthlyColumnHover();
 
   await ensureCompaniesDoc();
 

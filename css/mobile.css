@@ -923,7 +923,12 @@
 
 /* Datas: compact annual table also on tablets (<=1024px) */
 @media (max-width: 1024px) {
-  body[data-page="datas"] .list-card-header .actions {
+  body[data-page="datas"] .list-card-header [data-add-company],
+  body[data-page="datas"] .list-card-header [data-print-table] {
+    display: none !important;
+  }
+
+  body[data-page="datas"] .datas-table-footer [data-add-company] {
     display: none !important;
   }
 
@@ -942,36 +947,28 @@
   body[data-page="datas"] table[data-kind="annual"] td:first-child {
     white-space: normal !important;
     min-width: 0 !important;
+    width: 65% !important;
+    padding-right: 0 !important;
   }
 
   body[data-page="datas"] table[data-kind="annual"] th:nth-child(2),
   body[data-page="datas"] table[data-kind="annual"] td:nth-child(2) {
-    width: 38px;
+    width: 24px;
+    min-width: 24px;
+    max-width: 24px;
     white-space: nowrap !important;
+    text-align: center;
+    padding-left: 4px !important;
+    padding-right: 0 !important;
   }
 
-  /* Move checkbox next to the company name (avoid large empty gap) */
-  body[data-page="datas"] table[data-kind="annual"] thead th:nth-child(2) {
-    display: none !important;
+  body[data-page="datas"] table[data-kind="annual"] th:nth-child(2) {
+    text-align: center !important;
+    padding-left: 0 !important;
   }
 
-  body[data-page="datas"] table[data-kind="annual"] tbody tr:not(.section-row) {
-    position: relative;
-  }
-
-  body[data-page="datas"] table[data-kind="annual"] tbody tr:not(.section-row) td:nth-child(2) {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: auto !important;
-    padding: 0 !important;
+  body[data-page="datas"] table[data-kind="annual"] tbody tr:not(.section-row) td:nth-child(2) input[type="checkbox"] {
     margin: 0 !important;
-    text-align: left;
-  }
-
-  body[data-page="datas"] table[data-kind="annual"] tbody tr:not(.section-row) td:first-child {
-    padding-left: 40px !important;
   }
 }
 
