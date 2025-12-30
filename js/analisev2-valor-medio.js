@@ -105,8 +105,7 @@ function renderValorMedio() {
     return;
   }
 
-  const latestYear = years[years.length - 1];
-  const prevYear = years.length > 1 ? years[years.length - 2] : null;
+  const { latestYear, prevYear } = deriveReferenceYears(years);
   if (!aggregate.avgs[latestYear]) {
     showValorMedioEmptyState('Sem dados para este ano.');
     return;
@@ -125,7 +124,6 @@ function renderValorMedioComparativo() {
 
   const agg123 = aggregateAverages(data123);
   const agg1248 = aggregateAverages(data1248);
-  const currentYear = new Date().getFullYear();
   const year123 = selectLatestYear(agg123.years);
   const year1248 = selectLatestYear(agg1248.years);
 
@@ -304,7 +302,20 @@ function aggregateAverages(entries) {
 
 function selectLatestYear(list) {
   if (!Array.isArray(list) || !list.length) return null;
-  return list[list.length - 1];
+  const sorted = [...list].map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const nowYear = new Date().getFullYear();
+  const eligible = sorted.filter((year) => year <= nowYear);
+  return eligible.length ? eligible[eligible.length - 1] : sorted[sorted.length - 1];
+}
+
+function deriveReferenceYears(years) {
+  const latestYear = selectLatestYear(years);
+  if (!latestYear) return { latestYear: null, prevYear: null };
+  const sorted = [...years].map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const idx = sorted.indexOf(latestYear);
+  const prevYear = idx > 0 ? sorted[idx - 1] : null;
+  return { latestYear, prevYear };
 }
 
 function createMonthlyBuckets() {

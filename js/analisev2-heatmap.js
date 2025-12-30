@@ -95,7 +95,7 @@ function renderHeatmap(rows) {
   });
 
   const years = Object.keys(totals).map(Number).sort((a, b) => a - b);
-  const validYears = years.filter(year => totals[year - 1]);
+  const validYears = years.filter(year => year <= currYear && totals[year - 1]);
   if (!validYears.length) {
     setHeatmapContent('<div class="heatmap-wrap"><div class="heatmap-muted">Sem base do ano anterior para calcular variação.</div></div>');
     return;
@@ -199,7 +199,8 @@ function idealTextOn(hex) {
 function generateHeatmapInsights(totals, years, currYear, currMonth) {
   const insights = [];
   if (!Array.isArray(years) || !years.length) return insights;
-  const latestYear = years[years.length - 1];
+  const eligibleYears = years.filter((year) => Number(year) <= currYear);
+  const latestYear = eligibleYears.length ? eligibleYears[eligibleYears.length - 1] : years[years.length - 1];
   const comparisonYear = latestYear - 1;
   if (!totals[latestYear] || !totals[comparisonYear]) return insights;
 

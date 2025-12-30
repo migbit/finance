@@ -215,8 +215,7 @@ function renderYearComparisonChart(faturas, color) {
     return;
   }
 
-  const ultimoAno = years[years.length - 1];
-  const penultimoAno = years.length > 1 ? years[years.length - 2] : null;
+  const { ultimoAno, penultimoAno } = deriveReferenceYears(years);
 
   const atual = agg.totals[ultimoAno] || Array(12).fill(0);
   const anterior = penultimoAno ? (agg.totals[penultimoAno] || Array(12).fill(0)) : [];
@@ -356,6 +355,25 @@ function renderComparativoChart(faturas) {
   }, { previousChart: state.chart });
 }
 
+function deriveReferenceYears(years) {
+  const sorted = (Array.isArray(years) ? [...years] : [])
+    .map(Number)
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  if (!sorted.length) {
+    const nowYear = new Date().getFullYear();
+    return { ultimoAno: nowYear, penultimoAno: nowYear - 1 };
+  }
+
+  const nowYear = new Date().getFullYear();
+  const eligible = sorted.filter(year => year <= nowYear);
+  const ultimoAno = eligible.length ? eligible[eligible.length - 1] : sorted[sorted.length - 1];
+
+  const idx = sorted.indexOf(ultimoAno);
+  const penultimoAno = idx > 0 ? sorted[idx - 1] : null;
+  return { ultimoAno, penultimoAno };
+}
+
 function renderTabelaTotal(faturas, targetId) {
   const container = document.getElementById(targetId);
   if (!container) return;
@@ -373,6 +391,7 @@ function renderTabelaTotal(faturas, targetId) {
   years.forEach(year => { mostraMedia[year] = nights[year].some(v => v > 0); });
 
   const colors = ['#f9fafb', '#eef6ff', '#fef7ed', '#eefcf3', '#f6f0ff'];
+  const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
   const yoyCell = (curr, prev, bg) => {
@@ -420,7 +439,7 @@ function renderTabelaTotal(faturas, targetId) {
       html += `<td style="background:${bg};text-align:center">${euroInt(totalMes)}</td>`;
 
       if (idx > 0) {
-        if (year === years[years.length - 1] && (monthIdx + 1) > currentMonth) {
+        if (year === currentYear && (monthIdx + 1) > currentMonth) {
           html += `<td style="background:${bg};text-align:center;color:#999">—</td>`;
         } else {
           const prev = totals[years[idx - 1]]?.[monthIdx] ?? 0;

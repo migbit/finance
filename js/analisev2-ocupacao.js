@@ -122,9 +122,24 @@ function renderOcupacao() {
     renderEmpty('Sem dados suficientes.');
     return;
   }
-  const latestYear = years[years.length - 1];
-  const prevYear = years.length > 1 ? years[years.length - 2] : null;
+  const { latestYear, prevYear } = deriveReferenceYears(years);
   renderOcupacaoChart(ocupacao, latestYear, prevYear);
+}
+
+function deriveReferenceYears(years) {
+  const sorted = (Array.isArray(years) ? [...years] : [])
+    .map(Number)
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  if (!sorted.length) return { latestYear: null, prevYear: null };
+
+  const nowYear = new Date().getFullYear();
+  const eligible = sorted.filter((year) => year <= nowYear);
+  const latestYear = eligible.length ? eligible[eligible.length - 1] : sorted[sorted.length - 1];
+
+  const idx = sorted.indexOf(latestYear);
+  const prevYear = idx > 0 ? sorted[idx - 1] : null;
+  return { latestYear, prevYear };
 }
 
 function renderOcupacaoChart(agg, latestYear, prevYear) {

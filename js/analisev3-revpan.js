@@ -295,8 +295,7 @@ function renderChart(series) {
   const canvas = document.getElementById('chart-revpan');
   if (!canvas || typeof Chart === 'undefined') return;
   const datasets = [];
-  const latestYear = series.years[series.years.length - 1];
-  const prevYear = series.years.length > 1 ? series.years[series.years.length - 2] : null;
+  const { latestYear, prevYear } = deriveReferenceYears(series.years);
   if (prevYear) {
     datasets.push({
       label: `${prevYear}`,
@@ -420,7 +419,7 @@ function renderHighlight(series) {
     `;
     return;
   }
-  const latestYear = series.years[series.years.length - 1];
+  const latestYear = selectLatestYear(series.years);
   if (!latestYear) {
     info.innerHTML = '<p>Sem dados recentes para RevPAN.</p>';
     return;
@@ -431,7 +430,7 @@ function renderHighlight(series) {
     return;
   }
   const lastMetric = latestMetrics.reduce((acc, metric) => (!acc || metric.month > acc.month ? metric : acc), null);
-  const prevYear = series.years.length > 1 ? series.years[series.years.length - 2] : null;
+  const { prevYear } = deriveReferenceYears(series.years);
   const prevValue = prevYear && lastMetric ? series.map.get(prevYear)?.[lastMetric.month - 1] : null;
   const insights = [];
   const snapshot = buildSnapshotInsight(lastMetric, prevValue, prevYear);
@@ -477,7 +476,20 @@ function withAlpha(color, alpha) {
 
 function selectLatestYear(list) {
   if (!Array.isArray(list) || !list.length) return null;
-  return list[list.length - 1];
+  const sorted = [...list].map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const nowYear = new Date().getFullYear();
+  const eligible = sorted.filter((year) => year <= nowYear);
+  return eligible.length ? eligible[eligible.length - 1] : sorted[sorted.length - 1];
+}
+
+function deriveReferenceYears(years) {
+  const latestYear = selectLatestYear(years);
+  if (!latestYear) return { latestYear: null, prevYear: null };
+  const sorted = [...years].map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  const idx = sorted.indexOf(latestYear);
+  const prevYear = idx > 0 ? sorted[idx - 1] : null;
+  return { latestYear, prevYear };
 }
 
 function formatRevpanValue(value) {
@@ -531,7 +543,10 @@ function calculateTargetRevpan(metrics = []) {
 
 function calculateYtdRevpan(metrics = []) {
   if (!metrics.length) return null;
-  const latestYear = Math.max(...metrics.map((m) => m.year));
+  const nowYear = new Date().getFullYear();
+  const yearCandidates = metrics.map((m) => m.year).filter(Number.isFinite);
+  const eligible = yearCandidates.filter((year) => year <= nowYear);
+  const latestYear = eligible.length ? Math.max(...eligible) : Math.max(...yearCandidates);
   if (!Number.isFinite(latestYear)) return null;
   const latestYearRows = metrics.filter((m) => m.year === latestYear);
   if (!latestYearRows.length) return null;

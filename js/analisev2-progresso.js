@@ -119,9 +119,7 @@ function updateProgressoCharts() {
   }
   cleanupDonuts();
 
-  const years = [...new Set(filtered.map(f => Number(f.ano)).filter(Boolean))].sort((a, b) => a - b);
-  const ultimoAno = years.length ? years[years.length - 1] : new Date().getFullYear();
-  const penultimoAno = years.length > 1 ? years[years.length - 2] : (ultimoAno - 1);
+  const { years, ultimoAno, penultimoAno } = deriveReferenceYears(filtered);
   const cutoffMonth = deriveCutoffMonth();
 
   updateProgressTitleYear(penultimoAno);
@@ -132,6 +130,22 @@ function updateProgressoCharts() {
   updateAvg(filtered, ultimoAno, years);
 
   updateUpdatedAt(formatTimestamp(new Date()));
+}
+
+function deriveReferenceYears(faturas) {
+  const years = [...new Set((faturas || []).map(f => Number(f.ano)).filter(Number.isFinite))]
+    .sort((a, b) => a - b);
+  const nowYear = new Date().getFullYear();
+
+  const eligible = years.filter(y => y <= nowYear);
+  const ultimoAno = eligible.length
+    ? eligible[eligible.length - 1]
+    : (years.length ? years[years.length - 1] : nowYear);
+
+  const idx = years.indexOf(ultimoAno);
+  const penultimoAno = idx > 0 ? years[idx - 1] : (ultimoAno - 1);
+
+  return { years, ultimoAno, penultimoAno };
 }
 
 function showEmptyState(message) {
