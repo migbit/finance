@@ -72,11 +72,85 @@
         .tab-content.active {
             display: block;
         }
+
+        /* Obras (sub-tabs) */
+        .obras-tab-navigation {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0 16px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 8px;
+        }
+        .obras-tab-btn {
+            padding: 10px 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--text-dim);
+            transition: all 0.2s;
+        }
+        .obras-tab-btn:hover {
+            background: var(--p4);
+            color: var(--p2);
+        }
+        .obras-tab-btn.active {
+            background: var(--p2);
+            color: white;
+            border-bottom: 2px solid var(--p2);
+        }
+        .obras-tab-content { display: none; }
+        .obras-tab-content.active { display: block; }
+        .obras-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        .obras-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: grid;
+            gap: 8px;
+        }
+        .obras-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--card);
+        }
+        .obras-item-text {
+            flex: 1;
+            min-width: 0;
+            word-break: break-word;
+        }
+        .obras-item-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .obras-empty {
+            color: var(--text-dim);
+            font-style: italic;
+            padding: 8px 0;
+        }
         @media (max-width: 768px) {
             .tab-navigation {
                 gap: 4px;
             }
             .tab-btn {
+                padding: 8px 12px;
+                font-size: 0.85rem;
+            }
+            .obras-tab-btn {
                 padding: 8px 12px;
                 font-size: 0.85rem;
             }
@@ -135,6 +209,7 @@
             <option value="compras">🛒 Compras</option>
             <option value="hospedes">👥 Hóspedes</option>
             <option value="reparacoes">🔧 Reparações</option>
+            <option value="obras">🧱 Obras</option>
         </select>
         </div>
 
@@ -145,6 +220,7 @@
             <button class="tab-btn" data-tab="compras">🛒 Compras</button>
             <button class="tab-btn" data-tab="hospedes">👥 Hóspedes</button>
             <button class="tab-btn" data-tab="reparacoes">🔧 Reparações</button>
+            <button class="tab-btn" data-tab="obras">🧱 Obras</button>
         </div>
 
         <!-- === MENSAGENS === -->
@@ -393,6 +469,111 @@
                     <h3>Lista de Reparações</h3>
                     <div id="lista-reparacoes">
                         <!-- Lista de reparações será exibida aqui -->
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- === OBRAS === -->
+        <div id="tab-obras" class="tab-content">
+            <section class="report-section">
+                <div class="viz-card">
+                    <h3>Obras</h3>
+
+                    <div class="obras-tab-navigation" id="obras-tabs">
+                        <button class="obras-tab-btn active" data-obras-tab="exterior">Exterior</button>
+                        <button class="obras-tab-btn" data-obras-tab="escadas-exteriores">Escadas exteriores</button>
+                        <button class="obras-tab-btn" data-obras-tab="hall-entrada">Hall entrada</button>
+                        <button class="obras-tab-btn" data-obras-tab="corredor-rc">Corredor r/c</button>
+                        <button class="obras-tab-btn" data-obras-tab="quarto-rc">Quarto r/c</button>
+                        <button class="obras-tab-btn" data-obras-tab="dispensa">Dispensa</button>
+                        <button class="obras-tab-btn" data-obras-tab="wc-rc">WC r/c</button>
+                        <button class="obras-tab-btn" data-obras-tab="cozinha">Cozinha</button>
+                        <button class="obras-tab-btn" data-obras-tab="sala">Sala</button>
+                        <button class="obras-tab-btn" data-obras-tab="terraco">Terraço</button>
+                        <button class="obras-tab-btn" data-obras-tab="escadaria-interior">Escadaria interior</button>
+                        <button class="obras-tab-btn" data-obras-tab="corredor-1">Corredor 1</button>
+                        <button class="obras-tab-btn" data-obras-tab="quarto-1-fr">Quarto 1 fr</button>
+                        <button class="obras-tab-btn" data-obras-tab="quarto-1-centro">Quarto 1 centro</button>
+                        <button class="obras-tab-btn" data-obras-tab="quarto-1-trazeiras">Quarto 1 trazeiras</button>
+                        <button class="obras-tab-btn" data-obras-tab="sotao">Sotão</button>
+                        <button class="obras-tab-btn" data-obras-tab="compras">Compras</button>
+                        <button class="obras-tab-btn" data-obras-tab="preparacao">Preparação</button>
+                    </div>
+
+                    <div id="obras-contents">
+                        <div class="obras-tab-content active" data-obras-content="exterior">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="exterior">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-exterior"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="escadas-exteriores">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="escadas-exteriores">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-escadas-exteriores"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="hall-entrada">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="hall-entrada">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-hall-entrada"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="corredor-rc">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="corredor-rc">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-corredor-rc"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="quarto-rc">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="quarto-rc">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-quarto-rc"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="dispensa">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="dispensa">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-dispensa"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="wc-rc">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="wc-rc">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-wc-rc"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="cozinha">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="cozinha">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-cozinha"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="sala">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="sala">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-sala"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="terraco">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="terraco">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-terraco"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="escadaria-interior">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="escadaria-interior">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-escadaria-interior"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="corredor-1">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="corredor-1">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-corredor-1"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="quarto-1-fr">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="quarto-1-fr">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-quarto-1-fr"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="quarto-1-centro">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="quarto-1-centro">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-quarto-1-centro"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="quarto-1-trazeiras">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="quarto-1-trazeiras">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-quarto-1-trazeiras"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="sotao">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="sotao">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-sotao"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="compras">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="compras">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-compras"></ul>
+                        </div>
+                        <div class="obras-tab-content" data-obras-content="preparacao">
+                            <div class="obras-actions"><button type="button" class="btn obras-add-btn" data-obras-section="preparacao">Adicionar</button></div>
+                            <ul class="obras-list" id="obras-list-preparacao"></ul>
+                        </div>
                     </div>
                 </div>
             </section>

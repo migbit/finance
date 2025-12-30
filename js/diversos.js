@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCarlosFaturas();
     initIvaEstrangeiro();
     initPallco();
+    initObras();
 });
 
 // ========================================
@@ -108,6 +109,171 @@ function escapeHtml(s) {
 
 function escapeAttr(s) {
     return escapeHtml(s);
+}
+
+// ========================================
+// OBRAS (CHECKLISTS) MODULE
+// ========================================
+function initObras() {
+    const tabRoot = document.getElementById('tab-obras');
+    if (!tabRoot) return;
+
+    const COLLECTION_NAME = 'obras_checklists';
+    const SECTIONS = [
+        'exterior',
+        'escadas-exteriores',
+        'hall-entrada',
+        'corredor-rc',
+        'quarto-rc',
+        'dispensa',
+        'wc-rc',
+        'cozinha',
+        'sala',
+        'terraco',
+        'escadaria-interior',
+        'corredor-1',
+        'quarto-1-fr',
+        'quarto-1-centro',
+        'quarto-1-trazeiras',
+        'sotao',
+        'compras',
+        'preparacao'
+    ];
+
+    const tabsWrap = tabRoot.querySelector('#obras-tabs');
+    const contentsWrap = tabRoot.querySelector('#obras-contents');
+
+    function activateSection(sectionKey) {
+        if (!tabsWrap || !contentsWrap) return;
+
+        tabsWrap.querySelectorAll('.obras-tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-obras-tab') === sectionKey);
+        });
+        contentsWrap.querySelectorAll('.obras-tab-content').forEach(panel => {
+            panel.classList.toggle('active', panel.getAttribute('data-obras-content') === sectionKey);
+        });
+    }
+
+    if (tabsWrap) {
+        tabsWrap.addEventListener('click', (e) => {
+            const btn = e.target.closest('.obras-tab-btn');
+            if (!btn) return;
+            const sectionKey = btn.getAttribute('data-obras-tab');
+            if (!sectionKey) return;
+            activateSection(sectionKey);
+        });
+    }
+
+    function renderSectionList(sectionKey, rows) {
+        const ul = document.getElementById(`obras-list-${sectionKey}`);
+        if (!ul) return;
+
+        ul.innerHTML = '';
+
+        if (!rows || rows.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'obras-empty';
+            li.textContent = 'Sem itens.';
+            ul.appendChild(li);
+            return;
+        }
+
+        rows.forEach(row => {
+            const li = document.createElement('li');
+            li.className = 'obras-item';
+
+            const text = document.createElement('div');
+            text.className = 'obras-item-text';
+            text.textContent = row.text || '';
+
+            const actions = document.createElement('div');
+            actions.className = 'obras-item-actions';
+
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'btn obras-delete-btn';
+            del.textContent = 'Apagar';
+            del.setAttribute('data-obras-delete-id', row.id);
+
+            actions.appendChild(del);
+            li.append(text, actions);
+            ul.appendChild(li);
+        });
+    }
+
+    function renderAll(items) {
+        SECTIONS.forEach(sectionKey => {
+            renderSectionList(sectionKey, items[sectionKey] || []);
+        });
+    }
+
+    function buildEmptySections() {
+        const items = {};
+        SECTIONS.forEach(sectionKey => (items[sectionKey] = []));
+        return items;
+    }
+
+    // Add / delete handlers
+    tabRoot.addEventListener('click', async (e) => {
+        const addBtn = e.target.closest('.obras-add-btn');
+        if (addBtn) {
+            const section = addBtn.getAttribute('data-obras-section');
+            if (!section) return;
+
+            const descricao = window.prompt('Descrição:');
+            const text = (descricao || '').trim();
+            if (!text) return;
+
+            try {
+                await addDoc(collection(db, COLLECTION_NAME), {
+                    section,
+                    text,
+                    createdAt: Timestamp.now()
+                });
+                showToast('Adicionado.', 'success');
+            } catch (error) {
+                console.error('Erro ao adicionar item de obras', error);
+                showToast('Erro ao adicionar.', 'error');
+            }
+            return;
+        }
+
+        const delBtn = e.target.closest('.obras-delete-btn');
+        if (delBtn) {
+            const id = delBtn.getAttribute('data-obras-delete-id');
+            if (!id) return;
+
+            try {
+                await deleteDoc(doc(db, COLLECTION_NAME, id));
+                showToast('Apagado.', 'info');
+            } catch (error) {
+                console.error('Erro ao apagar item de obras', error);
+                showToast('Erro ao apagar.', 'error');
+            }
+        }
+    });
+
+    // Live sync (one listener for everything; grouped client-side)
+    const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
+    onSnapshot(q, (snap) => {
+        const items = buildEmptySections();
+        snap.forEach((docSnap) => {
+            const data = docSnap.data() || {};
+            const section = String(data.section || '').trim();
+            if (!items[section]) return;
+            items[section].push({
+                id: docSnap.id,
+                text: data.text || ''
+            });
+        });
+        renderAll(items);
+    }, (error) => {
+        console.error('Erro no onSnapshot de obras', error);
+        showToast('Erro ao sincronizar obras.', 'error');
+    });
+
+    // Default active section
+    activateSection('exterior');
 }
 
 // ========================================

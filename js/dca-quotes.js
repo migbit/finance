@@ -16,9 +16,7 @@ const ETF_CONFIG = [
     altSymbols: ['AGGH.DE'],
     currency: 'EUR',
     exchange: 'XETRA',
-    exchangeFullName: 'Deutsche Börse',
-    fallbackPrice: 50.85, // Preço manual quando APIs falham - atualiza manualmente quando necessário
-    allowManualEdit: true
+    exchangeFullName: 'Deutsche Börse'
   }
 ];
 
@@ -146,7 +144,7 @@ function updateCardUI(key, data) {
 
   priceEl.textContent = formatCurrency(data.price, data.currency || 'EUR');
 
-  if (data.isManual || !Number.isFinite(data.changePct)) {
+  if (!Number.isFinite(data.changePct)) {
     changeEl.textContent = '—';
     changeEl.classList.remove('pos', 'neg');
   } else {
@@ -161,11 +159,7 @@ function updateCardUI(key, data) {
   }
 
   const parts = [];
-  if (data.isManual) {
-    parts.push('Preço manual');
-  } else {
-    if (data.exchange) parts.push(data.exchange);
-  }
+  if (data.exchange) parts.push(data.exchange);
   if (data.currency) parts.push(`Moeda ${data.currency}`);
   extraEl.textContent = parts.length ? parts.join(' • ') : '—';
 }
@@ -218,30 +212,6 @@ function applyQuotes(quotesMap) {
 
   ETF_CONFIG.forEach(({ key }) => {
     const data = quotesMap.get(key);
-
-    // Check if there's a manual price in localStorage (don't overwrite it)
-    const manualPriceKey = `dca_${key}_manual_price`;
-    const storedManualPrice = localStorage.getItem(manualPriceKey);
-
-    if (storedManualPrice) {
-      const parsed = Number(storedManualPrice);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        const cfg = ETF_CONFIG.find(c => c.key === key);
-        const manualData = {
-          price: parsed,
-          changePct: null,
-          changeValue: null,
-          currency: cfg?.currency || 'EUR',
-          exchange: cfg?.exchangeFullName || cfg?.exchange || '',
-          isManual: true
-        };
-        quoteState.set(key, manualData);
-        globalQuotes[key] = manualData;
-        updateCardUI(key, manualData);
-        updatePositionSummary(key);
-        return; // Skip fetched quote for this ETF
-      }
-    }
 
     // No manual price, use fetched data
     if (data) {
@@ -358,25 +328,6 @@ async function fetchQuoteFromYahoo(cfg) {
 async function fetchQuoteForSymbol(cfg) {
   let lastError = null;
 
-  // Check for manual price in localStorage first (for AGGH)
-  if (cfg.allowManualEdit) {
-    const manualPriceKey = `dca_${cfg.key}_manual_price`;
-    const storedPrice = localStorage.getItem(manualPriceKey);
-    if (storedPrice) {
-      const parsed = Number(storedPrice);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return {
-          price: parsed,
-          changePct: null,
-          changeValue: null,
-          currency: cfg.currency,
-          exchange: cfg.exchangeFullName || cfg.exchange,
-          isManual: true
-        };
-      }
-    }
-  }
-
   const symbols = resolveSymbols(cfg);
 
   // Try Alpha Vantage first (for each candidate symbol)
@@ -397,19 +348,6 @@ async function fetchQuoteForSymbol(cfg) {
       console.warn(`Yahoo Finance falhou para ${symbol}:`, err.message);
       lastError = err;
     }
-  }
-
-  // Last resort: use fallback price if available
-  if (cfg.fallbackPrice != null && Number.isFinite(cfg.fallbackPrice)) {
-    console.warn(`A usar preço manual para ${cfg.label}: ${cfg.fallbackPrice} ${cfg.currency}`);
-    return {
-      price: cfg.fallbackPrice,
-      changePct: null,
-      changeValue: null,
-      currency: cfg.currency,
-      exchange: cfg.exchangeFullName || cfg.exchange,
-      isManual: true
-    };
   }
 
   // All options exhausted - throw error
@@ -497,74 +435,6 @@ export async function initEtfQuotes() {
       }
     });
   });
-
-  // Add edit price button for AGGH
-  const editAgghPriceBtn = document.getElementById('btn-edit-aggh-price');
-  console.log('Edit AGGH price button:', editAgghPriceBtn);
-
-  if (editAgghPriceBtn) {
-    editAgghPriceBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      console.log('Edit button clicked!');
-
-      const currentPrice = quoteState.get('aggh')?.price || 50.85;
-      console.log('Current AGGH price:', currentPrice);
-
-      const newPrice = prompt(`Editar preço manual do AGGH\n\nPreço atual: ${currentPrice.toFixed(2)} €\n\nIntroduz o novo preço:`, currentPrice.toFixed(2));
-
-      if (newPrice === null) {
-        console.log('User cancelled');
-        return;
-      }
-
-      const parsed = Number(newPrice);
-      console.log('Parsed new price:', parsed);
-
-      if (!Number.isFinite(parsed) || parsed <= 0) {
-        alert('Preço inválido. Deve ser um número positivo.');
-        return;
-      }
-
-      // Save to localStorage
-      const manualPriceKey = 'dca_aggh_manual_price';
-      localStorage.setItem(manualPriceKey, parsed.toString());
-      console.log('Saved to localStorage:', manualPriceKey, parsed);
-
-      // Update the quote state
-      quoteState.set('aggh', {
-        price: parsed,
-        changePct: null,
-        changeValue: null,
-        currency: 'EUR',
-        exchange: 'Deutsche Börse',
-        isManual: true
-      });
-      console.log('Updated quoteState:', quoteState.get('aggh'));
-
-      // Update UI
-      updateCardUI('aggh', quoteState.get('aggh'));
-      updatePositionSummary('aggh');
-      console.log('UI updated');
-
-      // Dispatch event to notify dca-main.js
-      const globalQuotes = {
-        vwce: quoteState.get('vwce'),
-        aggh: quoteState.get('aggh')
-      };
-      window.dcaQuotes = globalQuotes;
-      window.dispatchEvent(new CustomEvent('dca:quotes-updated', { detail: globalQuotes }));
-      console.log('Event dispatched');
-
-      // Visual feedback
-      editAgghPriceBtn.textContent = '✓';
-      setTimeout(() => {
-        editAgghPriceBtn.textContent = '✏️';
-      }, 1500);
-    });
-    console.log('Event listener added to edit button');
-  } else {
-    console.error('Edit AGGH price button not found!');
-  }
 
   // Ensure summaries render even before quotes load
   ETF_CONFIG.forEach(({ key }) => updatePositionSummary(key));
