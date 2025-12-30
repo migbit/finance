@@ -197,27 +197,38 @@ function parseLabelToYM(label) {
 
 function determineDefaultChartRange(labels) {
   if (!Array.isArray(labels) || labels.length === 0) return null;
-  const targetYear = new Date().getFullYear();
-  let decemberIndex = -1;
-  let lastInTargetYear = -1;
-  let lastBeforeTarget = -1;
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-12
+
+  let currentMonthIndex = -1;
+  let closestBeforeIndex = -1;
+  let lastAvailableIndex = labels.length - 1;
 
   labels.forEach((label, idx) => {
     const { month, year } = parseLabelToYM(label);
     if (!Number.isFinite(year) || !Number.isFinite(month)) return;
-    if (year === targetYear) {
-      if (month === 12) decemberIndex = idx;
-      if (idx > lastInTargetYear) lastInTargetYear = idx;
-    } else if (year < targetYear && idx > lastBeforeTarget) {
-      lastBeforeTarget = idx;
+
+    // Exact match for current month/year
+    if (year === currentYear && month === currentMonth) {
+      currentMonthIndex = idx;
+    }
+    // Closest month before or equal to current month
+    else if (year < currentYear || (year === currentYear && month < currentMonth)) {
+      closestBeforeIndex = idx;
     }
   });
 
+  // Priority: current month → closest before → last available
   let chosenIndex = -1;
-  if (decemberIndex >= 0) chosenIndex = decemberIndex;
-  else if (lastInTargetYear >= 0) chosenIndex = lastInTargetYear;
-  else if (lastBeforeTarget >= 0) chosenIndex = lastBeforeTarget;
-  else chosenIndex = labels.length - 1;
+  if (currentMonthIndex >= 0) {
+    chosenIndex = currentMonthIndex;
+  } else if (closestBeforeIndex >= 0) {
+    chosenIndex = closestBeforeIndex;
+  } else {
+    chosenIndex = lastAvailableIndex;
+  }
 
   return chosenIndex + 1;
 }

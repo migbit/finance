@@ -226,6 +226,27 @@ export function updateProgressBar(progress) {
   if (pctEl) pctEl.textContent = `${progress.percentage.toFixed(1)}%`;
   if (investedEl) investedEl.textContent = toEUR(progress.invested);
   if (targetEl) targetEl.textContent = toEUR(progress.totalTarget);
+
+  // Update months remaining display
+  const monthsRemainingEl = document.getElementById('progress-months-remaining');
+  if (monthsRemainingEl && progress.monthsRemaining != null) {
+    const years = Math.floor(progress.monthsRemaining / 12);
+    const months = progress.monthsRemaining % 12;
+
+    let text = 'Faltam ';
+    if (years > 0) {
+      text += `${years} ${years === 1 ? 'ano' : 'anos'}`;
+      if (months > 0) {
+        text += ` e ${months} ${months === 1 ? 'mês' : 'meses'}`;
+      }
+    } else if (months > 0) {
+      text += `${months} ${months === 1 ? 'mês' : 'meses'}`;
+    } else {
+      text = 'Meta atingida!';
+    }
+
+    monthsRemainingEl.textContent = text;
+  }
 }
 
 // ---------- Goal Status ----------

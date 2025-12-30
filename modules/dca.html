@@ -103,7 +103,10 @@
               <span class="etf-ticker">AGGH</span>
               <span class="etf-name">iShares Core Global Aggregate Bond</span>
             </header>
-            <div class="etf-price" id="etf-aggh-price">-</div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="etf-price" id="etf-aggh-price">-</div>
+              <button type="button" id="btn-edit-aggh-price" style="background: none; border: none; cursor: pointer; padding: 4px; opacity: 0.6; font-size: 0.9rem;" title="Editar preço manual">✏️</button>
+            </div>
             <div class="etf-change" id="etf-aggh-change">-</div>
             <div class="etf-extra" id="etf-aggh-extra">—</div>
             <div class="etf-positions">
@@ -267,6 +270,9 @@
           <div class="progress-footer" style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-dim);">
             <span id="progress-invested">0 €</span>
             <span id="progress-target">0 €</span>
+          </div>
+          <div style="text-align: center; margin-top: 0.5rem; font-size: 0.85rem;">
+            <span id="progress-months-remaining" style="color: var(--p2); font-weight: 600;">--</span>
           </div>
         </div>
 

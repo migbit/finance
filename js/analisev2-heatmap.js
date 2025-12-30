@@ -75,16 +75,31 @@ function renderHeatmap(rows) {
     totals[ano][mes] = (totals[ano][mes] || 0) + valor;
   });
 
+  const today = new Date();
+  const currYear = today.getFullYear();
+  const currMonth = today.getMonth() + 1;
+  const currDay = today.getDate();
+
+  const perDay = {};
+  Object.entries(totals).forEach(([yearKey, months]) => {
+    const year = Number(yearKey);
+    perDay[year] = {};
+    Object.entries(months || {}).forEach(([monthKey, total]) => {
+      const month = Number(monthKey);
+      const denom =
+        year === currYear && month === currMonth
+          ? currDay
+          : daysInMonth(year, month);
+      perDay[year][month] = denom > 0 ? Number(total) / denom : null;
+    });
+  });
+
   const years = Object.keys(totals).map(Number).sort((a, b) => a - b);
   const validYears = years.filter(year => totals[year - 1]);
   if (!validYears.length) {
     setHeatmapContent('<div class="heatmap-wrap"><div class="heatmap-muted">Sem base do ano anterior para calcular variação.</div></div>');
     return;
   }
-
-  const today = new Date();
-  const currYear = today.getFullYear();
-  const currMonth = today.getMonth() + 1;
 
   let html = `
     <div class="heatmap-wrap">
@@ -105,8 +120,8 @@ function renderHeatmap(rows) {
         html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
         return;
       }
-      const prev = totals[year - 1]?.[month] ?? null;
-      const curr = totals[year]?.[month] ?? null;
+      const prev = perDay[year - 1]?.[month] ?? null;
+      const curr = perDay[year]?.[month] ?? null;
       const pct = computeDelta(prev, curr);
       if (pct === null) {
         html += `<td class="heatmap-cell" style="background:#f5f5f5"></td>`;
@@ -121,7 +136,7 @@ function renderHeatmap(rows) {
 
   html += '</tbody></table>';
 
-  const insights = generateHeatmapInsights(totals, validYears, currYear, currMonth);
+  const insights = generateHeatmapInsights(perDay, validYears, currYear, currMonth);
   if (insights.length) {
     html += `
       <div class="heatmap-insights">
@@ -133,6 +148,13 @@ function renderHeatmap(rows) {
 
   html += '</div>';
   setHeatmapContent(html);
+}
+
+function daysInMonth(year, month) {
+  const safeYear = Number(year);
+  const safeMonth = Number(month);
+  if (!safeYear || !safeMonth || safeMonth < 1 || safeMonth > 12) return 0;
+  return new Date(safeYear, safeMonth, 0).getDate();
 }
 
 function computeDelta(prev, curr) {
@@ -188,7 +210,8 @@ function generateHeatmapInsights(totals, years, currYear, currMonth) {
   for (let month = startMonth; month <= endMonth; month++) {
     const currValue = totals[latestYear]?.[month];
     const prevValue = totals[comparisonYear]?.[month];
-    if (!currValue || !prevValue) continue;
+    if (typeof currValue !== 'number' || typeof prevValue !== 'number') continue;
+    if (prevValue === 0) continue;
     const delta = ((currValue - prevValue) / prevValue) * 100;
     monthDeltas.push({ month, delta, currValue, prevValue });
   }
@@ -201,7 +224,7 @@ function generateHeatmapInsights(totals, years, currYear, currMonth) {
       insights.push({
         type: 'warning',
         priority: 1,
-        message: `🚨 ${MONTH_LABELS[month - 1]}: Receita -${Math.abs(delta).toFixed(0)}% vs ano passado`
+        message: `🚨 ${MONTH_LABELS[month - 1]}: Receita/dia -${Math.abs(delta).toFixed(0)}% vs ano passado`
       });
     }
   });
@@ -212,7 +235,7 @@ function generateHeatmapInsights(totals, years, currYear, currMonth) {
       insights.push({
         type: 'success',
         priority: 2,
-        message: `✅ ${MONTH_LABELS[month - 1]}: Receita +${delta.toFixed(0)}% vs ano passado`
+        message: `✅ ${MONTH_LABELS[month - 1]}: Receita/dia +${delta.toFixed(0)}% vs ano passado`
       });
     }
   });
@@ -224,13 +247,13 @@ function generateHeatmapInsights(totals, years, currYear, currMonth) {
       insights.push({
         type: 'info',
         priority: 3,
-        message: `📊 Variação média recente: +${avgDelta.toFixed(0)}% vs ano passado`
+        message: `📊 Variação média recente (receita/dia): +${avgDelta.toFixed(0)}% vs ano passado`
       });
     } else {
       insights.push({
         type: 'info',
         priority: 3,
-        message: `📊 Variação média recente: ${avgDelta.toFixed(0)}% vs ano passado`
+        message: `📊 Variação média recente (receita/dia): ${avgDelta.toFixed(0)}% vs ano passado`
       });
     }
   }

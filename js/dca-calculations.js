@@ -140,13 +140,22 @@ export function calculateKPIs(rows, liveData = null) {
   // Prefer live snapshot (quotes × shares + juro) when available
   let currentValue = lastRow.totalNow || 0;
   if (liveData?.quotes && liveData?.shares) {
-    const vwcePrice = liveData.quotes.vwce?.price ?? 0;
-    const agghPrice = liveData.quotes.aggh?.price ?? 0;
-    const vwceVal = (liveData.shares.vwce ?? 0) * vwcePrice;
-    const agghVal = (liveData.shares.aggh ?? 0) * agghPrice;
-    const juroVal = liveData.juroLive ?? 0;
-    const liveTotal = vwceVal + agghVal + juroVal;
-    if (liveTotal > 0) currentValue = liveTotal;
+    const vwceShares = liveData.shares.vwce ?? 0;
+    const agghShares = liveData.shares.aggh ?? 0;
+    const vwcePrice = liveData.quotes.vwce?.price;
+    const agghPrice = liveData.quotes.aggh?.price;
+    const vwceHasPrice = vwceShares <= 0 || Number.isFinite(vwcePrice);
+    const agghHasPrice = agghShares <= 0 || Number.isFinite(agghPrice);
+    if (!vwceHasPrice || !agghHasPrice) {
+      // Don't apply partial live snapshot: it would understate the portfolio.
+      // The UI can be completed via the manual price input (AGGH) or API recovery.
+    } else {
+      const vwceVal = vwceShares * (vwcePrice ?? 0);
+      const agghVal = agghShares * (agghPrice ?? 0);
+      const juroVal = liveData.juroLive ?? 0;
+      const liveTotal = vwceVal + agghVal + juroVal;
+      if (liveTotal > 0) currentValue = liveTotal;
+    }
   }
 
   const totalInvested = lastRow.investedCum;
@@ -194,18 +203,22 @@ export function calculateProgress(params) {
   
   const totalMonths = monthsBetween(START_YM, params.endYM).length;
   const totalTarget = totalMonths * params.monthlyContribution;
-  
+
   let invested = 0;
   const investedMonths = monthsBetween(START_YM, clampedEnd).length;
   invested = investedMonths * params.monthlyContribution;
-  
+
+  // Calculate months remaining
+  const monthsRemaining = monthsBetween(nowYM, params.endYM).length;
+
   const percentage = totalTarget > 0 ? (invested / totalTarget * 100) : 0;
-  
+
   return {
     invested,
     totalTarget,
     percentage: Math.min(percentage, 100),
-    remaining: Math.max(0, totalTarget - invested)
+    remaining: Math.max(0, totalTarget - invested),
+    monthsRemaining: monthsRemaining
   };
 }
 
@@ -484,10 +497,15 @@ function calculateTimeWeightedReturn(rows, params) {
 
 const liveTotalValue = (liveData) => {
   if (!liveData?.quotes || !liveData?.shares) return null;
-  const vwcePrice = liveData.quotes.vwce?.price ?? 0;
-  const agghPrice = liveData.quotes.aggh?.price ?? 0;
-  const vwceVal = (liveData.shares.vwce ?? 0) * vwcePrice;
-  const agghVal = (liveData.shares.aggh ?? 0) * agghPrice;
+  const vwceShares = liveData.shares.vwce ?? 0;
+  const agghShares = liveData.shares.aggh ?? 0;
+  const vwcePrice = liveData.quotes.vwce?.price;
+  const agghPrice = liveData.quotes.aggh?.price;
+  const vwceHasPrice = vwceShares <= 0 || Number.isFinite(vwcePrice);
+  const agghHasPrice = agghShares <= 0 || Number.isFinite(agghPrice);
+  if (!vwceHasPrice || !agghHasPrice) return null;
+  const vwceVal = vwceShares * (vwcePrice ?? 0);
+  const agghVal = agghShares * (agghPrice ?? 0);
   const juroVal = liveData.juroLive ?? 0;
   const total = vwceVal + agghVal + juroVal;
   return total > 0 ? total : null;

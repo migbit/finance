@@ -52,6 +52,23 @@ function formatEuro(v) {
   .replace(/\./g, ' ') + ' €';
 }
 
+function toISODateLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function parsePtDateToISODateLocal(ptDate) {
+  const m = String(ptDate || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return '';
+  const day = Number(m[1]);
+  const month = Number(m[2]);
+  const year = Number(m[3]);
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) return '';
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 
 // Submeter transação
 caixaForm.addEventListener('submit', async (e) => {
@@ -123,11 +140,12 @@ async function carregarRelatorio() {
 
     const trRow = (t) => {
       const date = t._date.toLocaleDateString('pt-PT');
+      const dateYmd = toISODateLocal(t._date);
       const v = t._valor;
       const valorClass = v >= 0 ? 'valor-positivo' : 'valor-negativo';
       const formattedValor = formatEuro(Math.abs(v));
         return `
-        <tr data-id="${t.id}">
+        <tr data-id="${t.id}" data-date-ymd="${dateYmd}">
         <td>${date}</td>
         <td>${t.tipo}</td>
         <td class="${valorClass} formatted-number">${v >= 0 ? '' : '-'}${formattedValor}</td>
@@ -201,6 +219,9 @@ document.addEventListener('click', async (e) => {
     const currentValorTxt = tds[2].textContent.trim().replace(/[+€.\s]/g,'').replace(',', '.');
     const negative = tds[2].textContent.includes('-');
     const currentValor = (negative ? -1 : 1) * parseFloat(currentValorTxt || '0');
+    const currentDateYmd = tr.dataset.dateYmd || parsePtDateToISODateLocal(currentDate);
+
+    const dateInput = `<input type="date" class="edit-date" value="${currentDateYmd}" style="width:140px;">`;
 
     const tipoSel = `
       <select class="edit-tipo">
@@ -219,7 +240,7 @@ document.addEventListener('click', async (e) => {
 
     tr.setAttribute('data-old-html', tr.innerHTML);
     tr.innerHTML = `
-      <td>${currentDate}</td>
+      <td>${dateInput}</td>
       <td>${tipoSel}</td>
       <td>${valorInput}</td>
       <td>
@@ -249,17 +270,22 @@ document.addEventListener('click', async (e) => {
 
   if (action === 'save') {
     const tr = e.target.closest('tr');
+    const dateYmd = tr.querySelector('.edit-date')?.value || '';
     const newTipo  = tr.querySelector('.edit-tipo').value;
     const newValor = parseFloat(tr.querySelector('.edit-valor').value || '0');
     const newCaixa = tr.querySelector('.edit-caixa').value;
 
+    if (!dateYmd) { showToast('Data inválida', 'warning'); return; }
     if (!newValor || newValor <= 0) { showToast('Valor inválido', 'warning'); return; }
 
     const docRef = doc(db, 'caixa', btn.dataset.id);
+    const [year, month, day] = dateYmd.split('-').map(Number);
+    const newTimestamp = new Date(year, (month || 1) - 1, day || 1, 12, 0, 0, 0);
     const update = {
       tipo: newTipo,
       valor: newTipo === 'Entrada' ? Math.abs(newValor) : -Math.abs(newValor),
-      caixa: newCaixa
+      caixa: newCaixa,
+      timestamp: newTimestamp
     };
 
     await updateDoc(docRef, update);
