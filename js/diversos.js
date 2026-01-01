@@ -132,6 +132,7 @@ function initObras() {
         'terraco',
         'escadaria-interior',
         'corredor-1',
+        'quartos',
         'quarto-1-fr',
         'quarto-1-centro',
         'quarto-1-trazeiras',
@@ -208,6 +209,7 @@ function initObras() {
         SECTIONS.forEach(sectionKey => {
             renderSectionList(sectionKey, items[sectionKey] || []);
         });
+        updateTabCounts(items);
     }
 
     function buildEmptySections() {
@@ -277,6 +279,18 @@ function initObras() {
 
     // Default active section
     activateSection('exterior');
+
+    function updateTabCounts(items) {
+        if (!tabsWrap) return;
+        tabsWrap.querySelectorAll('.obras-tab-btn').forEach(btn => {
+            const sectionKey = btn.getAttribute('data-obras-tab');
+            if (!sectionKey) return;
+            const label = btn.getAttribute('data-obras-label') || btn.textContent.trim();
+            if (!btn.getAttribute('data-obras-label')) btn.setAttribute('data-obras-label', label);
+            const count = Array.isArray(items?.[sectionKey]) ? items[sectionKey].length : 0;
+            btn.textContent = `${count} ${label}`;
+        });
+    }
 }
 
 // ========================================
