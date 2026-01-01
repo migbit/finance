@@ -135,6 +135,9 @@ function initObras() {
         'quarto-1-fr',
         'quarto-1-centro',
         'quarto-1-trazeiras',
+        'wc-1-andar',
+        'escritorio',
+        'wc-pai',
         'sotao',
         'compras',
         'preparacao'
