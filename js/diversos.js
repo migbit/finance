@@ -288,7 +288,7 @@ function initObras() {
             const label = btn.getAttribute('data-obras-label') || btn.textContent.trim();
             if (!btn.getAttribute('data-obras-label')) btn.setAttribute('data-obras-label', label);
             const count = Array.isArray(items?.[sectionKey]) ? items[sectionKey].length : 0;
-            btn.textContent = `${count} ${label}`;
+            btn.textContent = `${label} (${count})`;
         });
     }
 }
