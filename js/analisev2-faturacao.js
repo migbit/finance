@@ -215,23 +215,44 @@ function renderYearComparisonChart(faturas, color) {
     return;
   }
 
-  const { ultimoAno, penultimoAno } = deriveReferenceYears(years);
+  let { ultimoAno, penultimoAno } = pickChartYears(agg, years);
+  if (ultimoAno && !penultimoAno) {
+    penultimoAno = findPrevYearWithData(agg.totals, ultimoAno);
+  }
 
   const atual = agg.totals[ultimoAno] || Array(12).fill(0);
   const anterior = penultimoAno ? (agg.totals[penultimoAno] || Array(12).fill(0)) : [];
+  const extraYear = 2024;
+  const includeExtraYear = extraYear !== ultimoAno && extraYear !== penultimoAno;
+  const extra = includeExtraYear ? (agg.totals[extraYear] || Array(12).fill(0)) : [];
   const isCumulative = state.granularity === 'cumulativo';
   const atualSeries = prepareChartSeries(atual, { cumulative: isCumulative });
   const anteriorSeries = penultimoAno ? prepareChartSeries(anterior, { cumulative: isCumulative }) : [];
+  const extraSeries = includeExtraYear ? prepareChartSeries(extra, { cumulative: isCumulative }) : [];
 
   const datasets = [];
-  if (penultimoAno) {
+  if (includeExtraYear) {
     datasets.push({
-      label: `${penultimoAno}`,
-      data: anteriorSeries,
+      label: `${extraYear}`,
+      data: extraSeries,
       borderDash: [4, 4],
       borderWidth: 1.5,
       borderColor: 'rgba(120,120,120,1)',
       backgroundColor: 'rgba(120,120,120,0.1)',
+      tension: 0.1,
+      pointRadius: 4,
+      pointHoverRadius: 6
+    });
+  }
+
+  if (penultimoAno) {
+    datasets.push({
+      label: `${penultimoAno}`,
+      data: anteriorSeries,
+      borderDash: [6, 3],
+      borderWidth: 1.5,
+      borderColor: 'rgba(99,102,241,1)',
+      backgroundColor: 'rgba(99,102,241,0.08)',
       tension: 0.1,
       pointRadius: 4,
       pointHoverRadius: 6
@@ -249,7 +270,11 @@ function renderYearComparisonChart(faturas, color) {
     pointHoverRadius: 7
   });
 
-  const maxValue = Math.max(...atualSeries, ...(anteriorSeries.length ? anteriorSeries : [0]));
+  const maxValue = Math.max(
+    ...atualSeries,
+    ...(anteriorSeries.length ? anteriorSeries : [0]),
+    ...(extraSeries.length ? extraSeries : [0])
+  );
   const suggestedMax = maxValue > 0 ? Math.ceil(maxValue * 1.15 / 500) * 500 : undefined;
 
   resetChart();
@@ -372,6 +397,35 @@ function deriveReferenceYears(years) {
   const idx = sorted.indexOf(ultimoAno);
   const penultimoAno = idx > 0 ? sorted[idx - 1] : null;
   return { ultimoAno, penultimoAno };
+}
+
+function pickChartYears(agg, fallbackYears) {
+  const dataYears = agg?.dataYears?.length ? agg.dataYears : (fallbackYears || []);
+  const nowYear = new Date().getFullYear();
+  const eligible = dataYears.map(Number).filter(Number.isFinite).filter((year) => year <= nowYear);
+  const sorted = (eligible.length ? eligible : dataYears)
+    .map(Number)
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  if (!sorted.length) {
+    return deriveReferenceYears(fallbackYears);
+  }
+  const ultimoAno = sorted[sorted.length - 1];
+  const penultimoAno = sorted.length > 1 ? sorted[sorted.length - 2] : null;
+  return { ultimoAno, penultimoAno };
+}
+
+function findPrevYearWithData(totals = {}, startYear) {
+  const target = Number(startYear);
+  if (!Number.isFinite(target)) return null;
+  const candidates = Object.keys(totals)
+    .map(Number)
+    .filter((year) => Number.isFinite(year) && year < target)
+    .sort((a, b) => b - a);
+  for (const year of candidates) {
+    if ((totals[year] || []).some((value) => Number(value) > 0)) return year;
+  }
+  return null;
 }
 
 function renderTabelaTotal(faturas, targetId) {
@@ -766,7 +820,8 @@ function aggregateTotals(faturas, apartments = null) {
     nights[year] = nightsMap.get(year) ? [...nightsMap.get(year)] : Array(12).fill(0);
     years.push(year);
   }
-  return { totals, nights, years };
+  const dataYears = years.filter((year) => totals[year].some((value) => value > 0));
+  return { totals, nights, years, dataYears };
 }
 
 function distributeByDay(f, callback) {
@@ -776,7 +831,7 @@ function distributeByDay(f, callback) {
 
   const start = parseLocalDate(f.checkIn);
   if (!(start instanceof Date) || Number.isNaN(start.getTime())) return false;
-  if (start.getFullYear() < 2025) return false;
+  if (start.getFullYear() < BASE_YEAR) return false;
 
   const nightlyValue = valorFatura(f) / nights;
   for (let i = 0; i < nights; i++) {

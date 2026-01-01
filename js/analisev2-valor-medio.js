@@ -22,7 +22,7 @@ const COLORS = {
 };
 
 const monthLabels = MONTH_LABELS;
-const MIN_VALOR_MEDIO_YEAR = 2025;
+const MIN_VALOR_MEDIO_YEAR = 2024;
 
 const state = {
   view: 'total',

@@ -10,7 +10,7 @@ const COLORS = {
 };
 
 const monthLabels = MONTH_LABELS;
-const MIN_OCCUPANCY_YEAR = 2025;
+const MIN_OCCUPANCY_YEAR = 2024;
 
 const fallbackOccLabels = {
   id: 'ocupacaoPercentLabels',

@@ -20,14 +20,16 @@ const ETF_CONFIG = [
   }
 ];
 
-// Alpha Vantage endpoint & key (provided by user)
+// Alpha Vantage endpoint & keys (provided by user)
 const AV_API_URL = 'https://www.alphavantage.co/query';
-const AV_API_KEY = '48DFSR9ON8Q0E8NU';
+const AV_API_KEYS = [
+  '48DFSR9ON8Q0E8NU',
+  'VB08YNZDP88G4IVB',
+  'FRHGLINBHSUFUAOP'
+];
 
 const quoteCacheKey = 'dca_etf_quotes_cache_v1';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-const YAHOO_FINANCE_URL = 'https://query1.finance.yahoo.com/v8/finance/chart';
 
 const quoteState = new Map();
 const investedTotals = new Map();
@@ -241,88 +243,53 @@ function resolveSymbols(cfg) {
 }
 
 async function fetchQuoteFromAlphaVantage(symbol, cfg) {
-  const url = `${AV_API_URL}?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${AV_API_KEY}`;
-  const response = await fetch(url, { cache: 'no-store' });
-  if (!response.ok) {
-    throw new Error(`Alpha Vantage respondeu com ${response.status}`);
-  }
-  const data = await response.json();
-  const quote = data?.['Global Quote'];
-  if (!quote || Object.keys(quote).length === 0) {
-    throw new Error(`Sem dados da Alpha Vantage para ${symbol}`);
-  }
+  let lastRateLimit = null;
+  let lastError = null;
 
-  const price = parseNumber(quote['05. price']);
-  const changeValue = parseNumber(quote['09. change']);
-  const changePctRaw = quote['10. change percent'] || quote['10. change percent.'];
-  const changePct =
-    changePctRaw != null
-      ? parseNumber(changePctRaw)
-      : (price && changeValue ? (changeValue / (price - changeValue)) * 100 : null);
-
-  if (!Number.isFinite(price) || price <= 0) {
-    throw new Error(`Preço inválido da Alpha Vantage para ${symbol}`);
-  }
-
-  return {
-    price,
-    changePct,
-    changeValue,
-    currency: cfg.currency,
-    exchange: cfg.exchangeFullName || cfg.exchange
-  };
-}
-
-async function fetchQuoteFromYahoo(cfg) {
-  const yahooSymbol = cfg.symbol;
-  const params = new URLSearchParams({
-    interval: '1d',
-    range: '1d',
-    includePrePost: 'false',
-    events: 'div,splits'
-  });
-  const url = `${YAHOO_FINANCE_URL}/${encodeURIComponent(yahooSymbol)}?${params.toString()}`;
-
-  const response = await fetch(url, {
-    cache: 'no-store',
-    headers: {
-      'Accept': 'application/json'
+  for (const apiKey of AV_API_KEYS) {
+    const url = `${AV_API_URL}?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${apiKey}`;
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) {
+      lastError = new Error(`Alpha Vantage respondeu com ${response.status}`);
+      continue;
     }
-  });
+    const data = await response.json();
+    if (data?.Note || data?.Information) {
+      lastRateLimit = data?.Note || data?.Information;
+      continue;
+    }
+    const quote = data?.['Global Quote'];
+    if (!quote || Object.keys(quote).length === 0) {
+      lastError = new Error(`Sem dados da Alpha Vantage para ${symbol}`);
+      continue;
+    }
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    console.error(`Yahoo Finance HTTP ${response.status}:`, errorText);
-    throw new Error(`Yahoo Finance respondeu com ${response.status}`);
+    const price = parseNumber(quote['05. price']);
+    const changeValue = parseNumber(quote['09. change']);
+    const changePctRaw = quote['10. change percent'] || quote['10. change percent.'];
+    const changePct =
+      changePctRaw != null
+        ? parseNumber(changePctRaw)
+        : (price && changeValue ? (changeValue / (price - changeValue)) * 100 : null);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      lastError = new Error(`Preço inválido da Alpha Vantage para ${symbol}`);
+      continue;
+    }
+
+    return {
+      price,
+      changePct,
+      changeValue,
+      currency: cfg.currency,
+      exchange: cfg.exchangeFullName || cfg.exchange
+    };
   }
 
-  const data = await response.json();
-  const result = data?.chart?.result?.[0];
-
-  if (!result) {
-    console.error('Yahoo Finance resposta:', data);
-    throw new Error(`Sem dados no Yahoo Finance para ${yahooSymbol}`);
+  if (lastRateLimit) {
+    throw new Error(`Limite da Alpha Vantage atingido. Tenta novamente em alguns minutos. (${lastRateLimit})`);
   }
-
-  const meta = result.meta;
-  const price = meta?.regularMarketPrice;
-  const previousClose = meta?.chartPreviousClose || meta?.previousClose;
-
-  if (!price) {
-    console.error('Yahoo Finance meta:', meta);
-    throw new Error(`Preço não disponível no Yahoo Finance para ${yahooSymbol}`);
-  }
-
-  const changeValue = previousClose ? price - previousClose : null;
-  const changePct = previousClose ? ((price - previousClose) / previousClose) * 100 : null;
-
-  return {
-    price,
-    changePct,
-    changeValue,
-    currency: meta?.currency || cfg.currency,
-    exchange: meta?.exchangeName || cfg.exchangeFullName || cfg.exchange
-  };
+  throw lastError || new Error(`Não foi possível obter cotação da Alpha Vantage para ${symbol}`);
 }
 
 async function fetchQuoteForSymbol(cfg) {
@@ -336,16 +303,6 @@ async function fetchQuoteForSymbol(cfg) {
       return await fetchQuoteFromAlphaVantage(symbol, cfg);
     } catch (err) {
       console.warn(`Alpha Vantage falhou para ${symbol}:`, err.message);
-      lastError = err;
-    }
-  }
-
-  // Fallback to Yahoo Finance (try each candidate symbol)
-  for (const symbol of symbols) {
-    try {
-      return await fetchQuoteFromYahoo({ ...cfg, symbol });
-    } catch (err) {
-      console.warn(`Yahoo Finance falhou para ${symbol}:`, err.message);
       lastError = err;
     }
   }
@@ -475,10 +432,6 @@ export async function initEtfQuotes() {
       }
       const cacheFresh = cached && (now - cached.timestamp) < CACHE_TTL_MS;
       if (cacheFresh && !force) {
-        return;
-      }
-      if (cacheFresh && force) {
-        setError('Última atualização foi há menos de 5 minutos. Aguarda para recarregar novamente.');
         return;
       }
 

@@ -22,7 +22,7 @@ const VIEW_LABELS = {
   compare: 'Comparação'
 };
 
-const MIN_REVPAN_YEAR = 2025;
+const MIN_REVPAN_YEAR = 2024;
 const OCCUPANCY_TARGET = 75;
 const TARGET_REVPAN_RATIO = 0.75;
 

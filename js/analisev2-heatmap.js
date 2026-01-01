@@ -95,9 +95,22 @@ function renderHeatmap(rows) {
   });
 
   const years = Object.keys(totals).map(Number).sort((a, b) => a - b);
-  const validYears = years.filter(year => year <= currYear && totals[year - 1]);
+  const allYears = years.filter(year => year <= currYear && year !== 2024);
+  const compareYears = allYears.filter(year => totals[year - 1]);
+  let validYears = [];
+  if (compareYears.length) {
+    validYears = [...compareYears];
+    const earliestCompare = Math.min(...compareYears);
+    const prevYear = earliestCompare - 1;
+    if (allYears.includes(prevYear) && !validYears.includes(prevYear)) {
+      validYears.unshift(prevYear);
+    }
+  } else {
+    validYears = allYears.slice(-1);
+  }
+  validYears = Array.from(new Set(validYears)).sort((a, b) => a - b);
   if (!validYears.length) {
-    setHeatmapContent('<div class="heatmap-wrap"><div class="heatmap-muted">Sem base do ano anterior para calcular variação.</div></div>');
+    setHeatmapContent('<div class="heatmap-wrap"><div class="heatmap-muted">Sem dados suficientes para o heatmap.</div></div>');
     return;
   }
 
