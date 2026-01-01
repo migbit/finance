@@ -46,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ---------- State ----------
 const state = {
   params: { ...DEFAULTS },
-  showOthers: false,
+  showPastYears: false,
+  showFutureYears: false,
   isLoading: false,
   rows: [],
   chartType: 'portfolio-growth',
@@ -201,8 +202,12 @@ function determineDefaultChartRange(labels) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1; // 1-12
+  const target = new Date(currentYear, currentMonth - 1, 1);
+  target.setMonth(target.getMonth() + 3);
+  const targetYear = target.getFullYear();
+  const targetMonth = target.getMonth() + 1;
 
-  let currentMonthIndex = -1;
+  let targetIndex = -1;
   let closestBeforeIndex = -1;
   let lastAvailableIndex = labels.length - 1;
 
@@ -210,20 +215,20 @@ function determineDefaultChartRange(labels) {
     const { month, year } = parseLabelToYM(label);
     if (!Number.isFinite(year) || !Number.isFinite(month)) return;
 
-    // Exact match for current month/year
-    if (year === currentYear && month === currentMonth) {
-      currentMonthIndex = idx;
+    // Exact match for target month/year (current + 3 months)
+    if (year === targetYear && month === targetMonth) {
+      targetIndex = idx;
     }
-    // Closest month before or equal to current month
-    else if (year < currentYear || (year === currentYear && month < currentMonth)) {
+    // Closest month before or equal to target
+    else if (year < targetYear || (year === targetYear && month < targetMonth)) {
       closestBeforeIndex = idx;
     }
   });
 
-  // Priority: current month → closest before → last available
+  // Priority: target month → closest before → last available
   let chosenIndex = -1;
-  if (currentMonthIndex >= 0) {
-    chosenIndex = currentMonthIndex;
+  if (targetIndex >= 0) {
+    chosenIndex = targetIndex;
   } else if (closestBeforeIndex >= 0) {
     chosenIndex = closestBeforeIndex;
   } else {
@@ -522,12 +527,30 @@ function bindTableSaveHandler() {
 
 // ---------- Toggle Years Button ----------
 function bindGlobalButtons() {
-  const btn = document.getElementById('toggle-others');
-  if (btn && !btn.__bound) {
-    btn.__bound = true;
-    btn.addEventListener('click', () => {
-      state.showOthers = !state.showOthers;
-      applyYearVisibility(state.showOthers);
+  const pastBtn = document.getElementById('toggle-past-years');
+  if (pastBtn && !pastBtn.__bound) {
+    pastBtn.__bound = true;
+    pastBtn.addEventListener('click', () => {
+      state.showPastYears = !state.showPastYears;
+      applyYearVisibility({ showPastYears: state.showPastYears, showFutureYears: state.showFutureYears });
+    });
+  }
+
+  const futureBtn = document.getElementById('toggle-future-years');
+  if (futureBtn && !futureBtn.__bound) {
+    futureBtn.__bound = true;
+    futureBtn.addEventListener('click', async () => {
+      state.showFutureYears = !state.showFutureYears;
+      if (state.showFutureYears) {
+        const endDateVal = document.getElementById('end-date')?.value;
+        if (endDateVal) {
+          const [ey, em] = endDateVal.split('-').map(Number);
+          if (Number.isFinite(ey) && Number.isFinite(em)) {
+            state.params = { ...state.params, endYM: { y: ey, m: em } };
+          }
+        }
+      }
+      await boot(true);
     });
   }
   
@@ -580,22 +603,27 @@ async function boot(skipParamUI = false) {
     await ensureMonthsExist(state.params.endYM);
     const docs = await loadAllDocs();
 
-    // Só considerar meses até ao mês corrente (ou endYM se for mais cedo)
+    // Por defeito, mostrar o ano corrente completo (Jan–Dez). Se "anos futuros" estiver ativo,
+    // mostrar até à data final (endYM).
     const nowYM = { y: now.getFullYear(), m: now.getMonth() + 1 };
-    const viewLimit = ymMin(state.params.endYM, nowYM);
+    const yearEndYM = { y: nowYM.y, m: 12 };
+    const viewLimit = state.showFutureYears ? state.params.endYM : ymMin(state.params.endYM, yearEndYM);
     const limId = `${viewLimit.y}-${String(viewLimit.m).padStart(2,'0')}`;
     const subset = docs.filter(d => d.id <= limId);
+    const chartLimitId = `${state.params.endYM.y}-${String(state.params.endYM.m).padStart(2,'0')}`;
+    const chartDocs = docs.filter(d => d.id <= chartLimitId);
 
     // MODIFIED: Pass liveData to buildModel
     const rows = buildModel(subset, state.params, state.liveData);
-    state.rows = rows; // Store rows for chart data
+    const chartRows = buildModel(chartDocs, state.params, state.liveData);
+    state.rows = rows; // Store rows for table/export
     broadcastInvestedTotals(rows);
 
     // Initialize charts
     initializeCharts();
     
     // Update charts with data
-    const chartData = prepareChartData(rows, state.params);
+    const chartData = prepareChartData(chartRows, state.params);
     if (chartData) {
       state.chartData = chartData;
       if (!state.chartRange) {
@@ -617,7 +645,7 @@ async function boot(skipParamUI = false) {
     if (wrapEl) {
       renderTable(rows, wrapEl);
       bindTableSaveHandler();
-      applyYearVisibility(state.showOthers);
+      applyYearVisibility({ showPastYears: state.showPastYears, showFutureYears: state.showFutureYears });
       // Recalculate juro acumulado depois da tabela estar disponível
       updateJuroDisplay();
     }

@@ -168,9 +168,18 @@ export function applyYearVisibility(showOthers) {
     })
     .filter(item => Number.isFinite(item.year));
 
-  const btn = document.getElementById('toggle-others');
+  const showPastYears = typeof showOthers === 'object' && showOthers !== null
+    ? !!showOthers.showPastYears
+    : false;
+  const showFutureYears = typeof showOthers === 'object' && showOthers !== null
+    ? !!showOthers.showFutureYears
+    : false;
+
+  const pastBtn = document.getElementById('toggle-past-years');
+  const futureBtn = document.getElementById('toggle-future-years');
   if (groups.length === 0) {
-    if (btn) btn.textContent = showOthers ? 'Ocultar anos' : 'Expandir anos';
+    if (pastBtn) pastBtn.textContent = showPastYears ? 'Ocultar anos passados' : 'Expandir anos passados';
+    if (futureBtn) futureBtn.textContent = showFutureYears ? 'Ocultar anos futuros' : 'Expandir anos futuros';
     return;
   }
 
@@ -180,12 +189,25 @@ export function applyYearVisibility(showOthers) {
     : Math.max(...groups.map(g => g.year));
 
   groups.forEach(({ el, year }) => {
-    el.style.display = (year === anchorYear || showOthers) ? '' : 'none';
+    const visible = year === anchorYear
+      || (showPastYears && year < anchorYear)
+      || (showFutureYears && year > anchorYear);
+    el.style.display = visible ? '' : 'none';
   });
 
-  if (btn) {
-    btn.textContent = showOthers ? 'Ocultar anos' : 'Expandir anos';
-    btn.setAttribute('aria-expanded', showOthers ? 'true' : 'false');
+  const hasPast = groups.some(g => g.year < anchorYear);
+  const hasFuture = groups.some(g => g.year > anchorYear);
+
+  if (pastBtn) {
+    pastBtn.textContent = showPastYears ? 'Ocultar anos passados' : 'Expandir anos passados';
+    pastBtn.setAttribute('aria-expanded', showPastYears ? 'true' : 'false');
+    pastBtn.disabled = !hasPast && !showPastYears;
+  }
+
+  if (futureBtn) {
+    futureBtn.textContent = showFutureYears ? 'Ocultar anos futuros' : 'Expandir anos futuros';
+    futureBtn.setAttribute('aria-expanded', showFutureYears ? 'true' : 'false');
+    futureBtn.disabled = false;
   }
 }
 
@@ -201,12 +223,17 @@ export function updateKPIs(kpis, totalInterest) {
   }
   
   document.getElementById('kpi-total-invested').textContent = toEUR(kpis.totalInvested);
-  document.getElementById('kpi-current-value').textContent = toEUR(kpis.currentValue);
-  document.getElementById('kpi-result').textContent = toEUR(kpis.result);
+  document.getElementById('kpi-current-value').textContent = kpis.currentValue == null ? '-' : toEUR(kpis.currentValue);
+  document.getElementById('kpi-result').textContent = kpis.result == null ? '-' : toEUR(kpis.result);
   
   const pctEl = document.getElementById('kpi-result-pct');
-  pctEl.textContent = `(${kpis.resultPct >= 0 ? '+' : ''}${kpis.resultPct.toFixed(2)}%)`;
-  pctEl.className = `kpi-sub ${kpis.result >= 0 ? 'pos' : 'neg'}`;
+  if (kpis.resultPct == null) {
+    pctEl.textContent = '';
+    pctEl.className = 'kpi-sub';
+  } else {
+    pctEl.textContent = `(${kpis.resultPct >= 0 ? '+' : ''}${kpis.resultPct.toFixed(2)}%)`;
+    pctEl.className = `kpi-sub ${kpis.result >= 0 ? 'pos' : 'neg'}`;
+  }
   
   document.getElementById('kpi-total-interest').textContent = toEUR(totalInterest || 0);
 }

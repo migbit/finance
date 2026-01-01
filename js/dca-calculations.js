@@ -136,10 +136,14 @@ export function calculateKPIs(rows, liveData = null) {
   
   const lastRow = rows[rows.length - 1];
   if (!lastRow) return null;
+  const currentRow = rows.find(row => row.isCurrent);
+  const lastFilledRow = [...rows].reverse().find(row => row.hasCurrent);
+  const investedAnchor = currentRow || lastFilledRow || lastRow;
+  const hasCurrentData = !!currentRow?.hasCurrent;
 
   // Prefer live snapshot (quotes × shares + juro) when available
-  let currentValue = lastRow.totalNow || 0;
-  if (liveData?.quotes && liveData?.shares) {
+  let currentValue = hasCurrentData ? (currentRow.totalNow || 0) : null;
+  if (hasCurrentData && liveData?.quotes && liveData?.shares) {
     const vwceShares = liveData.shares.vwce ?? 0;
     const agghShares = liveData.shares.aggh ?? 0;
     const vwcePrice = liveData.quotes.vwce?.price;
@@ -158,16 +162,18 @@ export function calculateKPIs(rows, liveData = null) {
     }
   }
 
-  const totalInvested = lastRow.investedCum;
-  const result = currentValue - totalInvested;
-  const resultPct = totalInvested > 0 ? (result / totalInvested * 100) : 0;
+  const totalInvested = investedAnchor.investedCum;
+  const result = currentValue == null ? null : currentValue - totalInvested;
+  const resultPct = currentValue == null
+    ? null
+    : (totalInvested > 0 ? (result / totalInvested * 100) : 0);
   
   return {
     totalInvested,
     currentValue,
     result,
     resultPct,
-    lastFilledRow: lastRow
+    lastFilledRow: lastFilledRow || currentRow || lastRow
   };
 }
 
@@ -230,6 +236,9 @@ export function calculateGoalStatus(kpis, progress) {
   
   // Use the actual result percentage from KPIs (same as Resultado KPI)
   const diffPct = kpis.resultPct;
+  if (diffPct == null) {
+    return { icon: '⏳', text: 'A aguardar dados do mês atual', color: 'var(--text-dim)' };
+  }
   
   if (diffPct >= 5) {
     return { 
@@ -367,19 +376,17 @@ export function prepareChartData(rows, params) {
     });
   });
   
-  const effectiveLength = lastActualIndex >= 0 ? (lastActualIndex + 1) : rows.length;
-
   return {
-    labels: labels.slice(0, effectiveLength),
+    labels,
     datasets: {
-      portfolioValue: portfolioValue.slice(0, effectiveLength),
-      contributions: contributions.slice(0, effectiveLength),
-      swdaValues: swdaValues.slice(0, effectiveLength),
-      agghValues: agghValues.slice(0, effectiveLength),
-      monthlyReturns: monthlyReturns.slice(0, effectiveLength),
-      scenarioConservative: scenarioConservative.slice(0, effectiveLength),
-      scenarioModerate: scenarioModerate.slice(0, effectiveLength),
-      scenarioOptimistic: scenarioOptimistic.slice(0, effectiveLength)
+      portfolioValue,
+      contributions,
+      swdaValues,
+      agghValues,
+      monthlyReturns,
+      scenarioConservative,
+      scenarioModerate,
+      scenarioOptimistic
     },
     scenarioRates,
     summary: {
@@ -447,12 +454,6 @@ export function calculateAdvancedMetrics(rows, params, liveData = null) {
   
   const filledRows = adjustedRows.filter(row => row.hasCurrent && row.totalNow > 0);
   if (filledRows.length < 2) return null;
-
-  // Require mínimo de 6 meses de dados para evitar valores irreais
-  const first = filledRows[0];
-  const last = filledRows[filledRows.length - 1];
-  const monthsDiff = (last.y - first.y) * 12 + (last.m - first.m);
-  if (monthsDiff < 6) return null;
 
   // Time-Weighted Return (TWR)
   const twr = calculateTimeWeightedReturn(filledRows, params);
