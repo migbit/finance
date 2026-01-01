@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DCA Revolut</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="icon" href="../favicon.ico" type="image/x-icon" />
+  <link rel="manifest" href="../manifest.json">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+
+<body data-page="dca-revolut">
+  <!-- Hamburger icon (always visible on mobile) -->
+  <button id="menu-icon" aria-label="Open menu">☰</button>
+
+  <!-- Header / Nav -->
+  <header>
+    <nav id="nav-menu">
+      <ul>
+        <!-- Login/User section at top -->
+        <li id="login-section" class="login-block">
+          <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+          <span id="user-info" class="user-visible" style="display:none;">
+            <a href="#" id="user-name">👤 Username</a>
+          </span>
+        </li>
+
+        <li class="separator"></li>
+
+        <!-- Secção: Apartamentos -->
+        <li class="menu-title">Apartamentos</li>
+        <li><a href="faturas.html">📄 Faturas</a></li>
+        <li><a href="analisev3.html">📊 Análise</a></li>
+        <li><a href="analise123.html">🏠 123</a></li>
+        <li><a href="analise1248.html">🏠 1248</a></li>
+        <li><a href="analise123vs1248.html">⚖️ 123 vs 1248</a></li>
+        <li><a href="caixa.html">💰 Caixa</a></li>
+        <li><a href="tmt.html">🧳 Taxa Turística</a></li>
+        <li><a href="diversos.html">📋 Diversos</a></li>
+        <li><a href="settings.html">🛟 Backup</a></li>
+
+        <li class="separator"></li>
+
+        <!-- Secção: Investimentos -->
+        <li class="menu-title">Investimentos</li>
+        <li><a href="dca.html">📈 DCA TR</a></li>
+        <li><a href="dca-revolut.html" class="active">📈 DCA Revolut</a></li>
+        <li><a href="crypto.html">🚀 Cripto</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="dca-page">
+    <h2 class="page-title center">DCA Revolut</h2>
+
+    <section class="report-section">
+      <div class="viz-card params-card">
+        <h4>Parâmetros</h4>
+        <div class="table-wrap">
+          <table class="table-dca params-table">
+            <thead>
+              <tr>
+                <th class="num">Data final</th>
+                <th class="num">Contribuição Mensal</th>
+                <th style="width:140px">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="num"><input id="revolut-end-date" type="date" /></td>
+                <td class="num">
+                  <span id="revolut-monthly" style="font-weight:600;">50 €</span>
+                </td>
+                <td style="text-align:right">
+                  <button id="revolut-save-params" type="button" class="primary" aria-label="Gravar parâmetros">Guardar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="progress-section" style="margin-top: 1.5rem;">
+          <div class="progress-header" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+            <span style="font-weight: 600; color: var(--text-dim);">Progresso até ao mês final</span>
+            <span style="font-weight: 700; color: var(--p2);" id="revolut-progress-percentage">0%</span>
+          </div>
+          <div class="progress-bar-container" style="height: 32px; background: #e5e7eb; border-radius: 16px; overflow: hidden; position: relative;">
+            <div class="progress-bar-fill" id="revolut-progress-bar-fill" style="height: 100%; background: linear-gradient(90deg, #1a8f5d 0%, #16a34a 100%); width: 0%; transition: width 0.6s ease; display: flex; align-items: center; justify-content: flex-end; padding-right: 12px;">
+              <span style="color: white; font-weight: 700; font-size: 0.85rem;" id="revolut-progress-bar-text"></span>
+            </div>
+          </div>
+          <div class="progress-footer" style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-dim);">
+            <span id="revolut-progress-invested">0 €</span>
+            <span id="revolut-progress-target">0 €</span>
+          </div>
+          <div style="text-align: center; margin-top: 0.5rem; font-size: 0.85rem;">
+            <span id="revolut-progress-remaining" style="color: var(--p2); font-weight: 600;">Faltam 0 €</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="viz-card">
+        <h4>Gráfico</h4>
+        <div class="chart-container">
+          <canvas id="revolut-chart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="viz-card">
+        <h4>Registo Mensal</h4>
+        <div class="table-wrap" id="revolut-table-wrap"><!-- tabela via JS --></div>
+        <div class="center" style="margin-top: 1rem; display:flex; gap:0.75rem; justify-content:center;">
+          <button id="toggle-past-years" type="button">Expandir anos passados</button>
+          <button id="toggle-future-years" type="button">Expandir anos futuros</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../js/dca-revolut.js"></script>
+</body>
+</html>

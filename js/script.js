@@ -46,13 +46,15 @@ const NAV_GROUPS = [
     label: '📊 Investimentos',
     key: 'investimentos',
     links: [
-      { label: '📈 DCA', key: 'dca', slug: 'modules/dca.html', module: true },
+      { label: '📈 DCA TR', key: 'dca', slug: 'modules/dca.html', module: true },
+      { label: '📈 DCA Revolut', key: 'dca-revolut', slug: 'modules/dca-revolut.html', module: true },
       { label: '🚀 Cripto', key: 'crypto', slug: 'modules/crypto.html', module: true }
     ]
   }
 ];
 
 const ACTIVE_KEY_MATCHERS = [
+  { key: 'dca-revolut', patterns: ['dca-revolut'] },
   { key: 'analisev3', patterns: ['analisev3'] },
   { key: 'faturas', patterns: ['faturas'] },
   { key: 'tmt', patterns: ['tmt'] },
