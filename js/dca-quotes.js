@@ -34,6 +34,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const quoteState = new Map();
 const investedTotals = new Map();
 const quantityState = new Map();
+let hasCurrentMonthData = false;
 
 const currencyFormatters = new Map();
 
@@ -184,7 +185,7 @@ function updatePositionSummary(key) {
   totalEl.textContent = Number.isFinite(totalValue) ? formatCurrency(totalValue, currency) : '-';
   investedEl.textContent = formatCurrency(invested, currency);
 
-  if (Number.isFinite(totalValue)) {
+  if (Number.isFinite(totalValue) && hasCurrentMonthData) {
     const result = totalValue - (invested || 0);
     resultEl.textContent = formatCurrency(result, currency);
     resultEl.classList.toggle('pos', result >= 0);
@@ -197,6 +198,9 @@ function updatePositionSummary(key) {
 
 window.addEventListener('dca:invested-totals', (event) => {
   const detail = event?.detail || {};
+  if (typeof detail.hasCurrentData === 'boolean') {
+    hasCurrentMonthData = detail.hasCurrentData;
+  }
   ETF_CONFIG.forEach(({ key }) => {
     const raw = detail?.[key];
     if (raw != null) {

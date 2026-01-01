@@ -259,9 +259,17 @@ function getInvestedTotalsUntil(rows) {
   };
 }
 
+function hasCurrentMonthData(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return false;
+  const currentRow = rows.find(row => row.isCurrent);
+  return !!currentRow?.hasCurrent;
+}
+
 function broadcastInvestedTotals(rows) {
   const totals = getInvestedTotalsUntil(rows);
-  window.dispatchEvent(new CustomEvent('dca:invested-totals', { detail: totals }));
+  window.dispatchEvent(new CustomEvent('dca:invested-totals', {
+    detail: { ...totals, hasCurrentData: hasCurrentMonthData(rows) }
+  }));
 }
 
 function showFeedback(targetId, message, tone = 'success', timeout = 3200) {
