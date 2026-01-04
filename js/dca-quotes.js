@@ -34,7 +34,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const quoteState = new Map();
 const investedTotals = new Map();
 const quantityState = new Map();
-let hasCurrentMonthData = false;
+const quantityUpdatedAt = new Map();
 
 const currencyFormatters = new Map();
 
@@ -49,13 +49,13 @@ async function loadStoredQuantities() {
 }
 
 // Save shares to Firebase
-async function persistQuantities() {
+async function persistQuantities(updatedKey) {
   try {
     const shares = {
       vwce: quantityState.get('vwce') || 0,
       aggh: quantityState.get('aggh') || 0
     };
-    await saveShareQuantities(shares);
+    await saveShareQuantities(shares, { updatedKey });
 
     // Dispatch event to notify dca-main.js
     window.dispatchEvent(new CustomEvent('dca:shares-updated', { detail: shares }));
@@ -185,7 +185,7 @@ function updatePositionSummary(key) {
   totalEl.textContent = Number.isFinite(totalValue) ? formatCurrency(totalValue, currency) : '-';
   investedEl.textContent = formatCurrency(invested, currency);
 
-  if (Number.isFinite(totalValue) && hasCurrentMonthData) {
+  if (Number.isFinite(totalValue) && hasQuantityUpdateThisMonth(key)) {
     const result = totalValue - (invested || 0);
     resultEl.textContent = formatCurrency(result, currency);
     resultEl.classList.toggle('pos', result >= 0);
@@ -198,9 +198,6 @@ function updatePositionSummary(key) {
 
 window.addEventListener('dca:invested-totals', (event) => {
   const detail = event?.detail || {};
-  if (typeof detail.hasCurrentData === 'boolean') {
-    hasCurrentMonthData = detail.hasCurrentData;
-  }
   ETF_CONFIG.forEach(({ key }) => {
     const raw = detail?.[key];
     if (raw != null) {
@@ -209,6 +206,16 @@ window.addEventListener('dca:invested-totals', (event) => {
     updatePositionSummary(key);
   });
 });
+
+function hasQuantityUpdateThisMonth(key) {
+  const updatedAt = quantityUpdatedAt.get(key);
+  if (!updatedAt) return false;
+  const updatedDate = updatedAt instanceof Date ? updatedAt : new Date(updatedAt);
+  if (Number.isNaN(updatedDate.getTime())) return false;
+  const now = new Date();
+  return updatedDate.getFullYear() === now.getFullYear()
+    && updatedDate.getMonth() === now.getMonth();
+}
 
 function applyQuotes(quotesMap) {
   if (!quotesMap) return;
@@ -353,6 +360,10 @@ export async function initEtfQuotes() {
     } else {
       quantityState.set(key, 0);
     }
+    const updatedKey = `${key}UpdatedAt`;
+    if (storedShares[updatedKey]) {
+      quantityUpdatedAt.set(key, storedShares[updatedKey]);
+    }
     // Update the state on input change (for real-time calculations)
     input.addEventListener('input', () => {
       const raw = Number(input.value);
@@ -375,7 +386,9 @@ export async function initEtfQuotes() {
 
       try {
         // Save to Firebase
-        await persistQuantities();
+        await persistQuantities(etfKey);
+        quantityUpdatedAt.set(etfKey, new Date());
+        updatePositionSummary(etfKey);
 
         // Visual feedback
         button.textContent = '✓ Guardado';

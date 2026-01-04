@@ -232,6 +232,14 @@ export function isCurrentMonth(ym) {
 
 // ---------- Month Closure Functions ----------
 // ---------- Share Quantity Storage ----------
+function normalizeTimestamp(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value?.toDate === 'function') return value.toDate();
+  const asDate = new Date(value);
+  return Number.isNaN(asDate.getTime()) ? null : asDate;
+}
+
 export async function loadShareQuantities() {
   try {
     const snap = await getDoc(SHARES_DOC);
@@ -239,7 +247,10 @@ export async function loadShareQuantities() {
       const data = snap.data();
       return {
         vwce: Number(data.vwce) || 0,
-        aggh: Number(data.aggh) || 0
+        aggh: Number(data.aggh) || 0,
+        updatedAt: normalizeTimestamp(data.updatedAt),
+        vwceUpdatedAt: normalizeTimestamp(data.vwceUpdatedAt),
+        agghUpdatedAt: normalizeTimestamp(data.agghUpdatedAt)
       };
     }
 
@@ -257,20 +268,28 @@ export async function loadShareQuantities() {
       return shares;
     }
 
-    return { vwce: 0, aggh: 0 };
+    return { vwce: 0, aggh: 0, updatedAt: null, vwceUpdatedAt: null, agghUpdatedAt: null };
   } catch (err) {
     console.error('Error loading shares:', err);
-    return { vwce: 0, aggh: 0 };
+    return { vwce: 0, aggh: 0, updatedAt: null, vwceUpdatedAt: null, agghUpdatedAt: null };
   }
 }
 
-export async function saveShareQuantities(shares) {
+export async function saveShareQuantities(shares, options = {}) {
   try {
-    await setDoc(SHARES_DOC, {
+    const now = new Date();
+    const payload = {
       vwce: Number(shares.vwce) || 0,
       aggh: Number(shares.aggh) || 0,
-      updatedAt: new Date()
-    });
+      updatedAt: now
+    };
+    if (options.updatedKey === 'vwce') {
+      payload.vwceUpdatedAt = now;
+    }
+    if (options.updatedKey === 'aggh') {
+      payload.agghUpdatedAt = now;
+    }
+    await setDoc(SHARES_DOC, payload, { merge: true });
   } catch (err) {
     console.error('Error saving shares:', err);
     throw new Error('Erro ao guardar quantidades.');
