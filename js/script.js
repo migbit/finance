@@ -50,6 +50,13 @@ const NAV_GROUPS = [
       { label: '📈 DCA Revolut', key: 'dca-revolut', slug: 'modules/dca-revolut.html', module: true },
       { label: '🚀 Cripto', key: 'crypto', slug: 'modules/crypto.html', module: true }
     ]
+  },
+  {
+    label: '🙋 Miguel',
+    key: 'miguel',
+    links: [
+      { label: '🏋️ Ginásio', key: 'ginasio', slug: 'modules/ginasio.html', module: true }
+    ]
   }
 ];
 
@@ -67,7 +74,8 @@ const ACTIVE_KEY_MATCHERS = [
   { key: 'carlos', patterns: ['carlos'] },
   { key: 'datas', patterns: ['datas'] },
   { key: 'dca', patterns: ['dca'] },
-  { key: 'crypto', patterns: ['crypto'] }
+  { key: 'crypto', patterns: ['crypto'] },
+  { key: 'ginasio', patterns: ['ginasio'] }
 ];
 
 function resolveHref(slug, isModulePage) {

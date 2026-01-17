@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ginásio</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="manifest" href="../manifest.json">
+  <style>
+    .ginasio-page {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .gym-controls {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+    .gym-controls label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-weight: 600;
+    }
+    .gym-workout {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+    .gym-machine-card {
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: var(--surface-soft);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .gym-machine-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem 1.2rem;
+    }
+    .gym-machine-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .gym-machine-meta {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+    .gym-series-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .gym-series-table th,
+    .gym-series-table td {
+      padding: 0.6rem 0.5rem;
+      text-align: left;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+    }
+    .gym-series-table td[data-total-cell="true"] .gym-total {
+      display: none;
+    }
+    .gym-recommendations {
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px dashed rgba(148, 163, 184, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .gym-recommendations textarea {
+      height: var(--ctrl-h);
+      min-height: var(--ctrl-h);
+      resize: none;
+      line-height: 1.2;
+    }
+    .gym-series-table th {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--text-dim);
+    }
+    .gym-series-table td:last-child,
+    .gym-series-table th:last-child {
+      text-align: right;
+    }
+    .gym-series-table input,
+    .gym-series-table select {
+      width: 100%;
+      min-width: 110px;
+    }
+    .gym-total {
+      display: block;
+      margin-top: 0.3rem;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+    .gym-empty {
+      padding: 1rem;
+      border-radius: 12px;
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-dim);
+      font-size: 0.95rem;
+    }
+    .gym-summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .gym-summary-card {
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 14px;
+      padding: 0.9rem 1rem;
+      background: #fff;
+    }
+    .gym-summary-header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem 1rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+    }
+    .gym-summary-actions {
+      display: inline-flex;
+      gap: 0.6rem;
+      align-items: center;
+    }
+    .gym-summary-header strong {
+      font-size: 1rem;
+    }
+    .gym-summary-card pre {
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: "Courier New", monospace;
+      font-size: 0.9rem;
+      background: rgba(148, 163, 184, 0.12);
+      border-radius: 10px;
+      padding: 0.75rem;
+    }
+    @media (max-width: 720px) {
+      .gym-series-table {
+        display: block;
+      }
+      .gym-series-table thead {
+        display: none;
+      }
+      .gym-series-table tbody,
+      .gym-series-table tr,
+      .gym-series-table td {
+        display: block;
+        width: 100%;
+      }
+      .gym-series-table tr {
+        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        padding: 0.6rem 0;
+      }
+      .gym-series-table td {
+        border-bottom: none;
+        padding: 0.35rem 0;
+      }
+      .gym-series-table td:last-child {
+        text-align: left;
+      }
+    }
+  </style>
+</head>
+<body data-page="ginasio">
+  <button id="menu-icon" aria-label="Abrir menu">☰</button>
+  <header>
+    <nav id="nav-menu"></nav>
+  </header>
+
+  <main class="ginasio-page">
+    <h2 class="page-title center">Ginásio</h2>
+
+    <section class="report-section">
+      <div class="viz-card">
+        <h4>Selecionar treino</h4>
+        <div class="gym-controls">
+          <label>
+            Ginásio
+            <select id="gym-select">
+              <option value="">Selecionar</option>
+              <option value="Dragão">Dragão</option>
+              <option value="Constituição">Constituição</option>
+              <option value="Arrábida">Arrábida</option>
+            </select>
+          </label>
+          <label>
+            Tipo de treino
+            <select id="training-select" disabled>
+              <option value="">Selecionar</option>
+              <option value="Pernas">Pernas</option>
+              <option value="Costas">Costas</option>
+              <option value="Peito">Peito</option>
+            </select>
+          </label>
+          <label>
+            Data
+            <input type="date" id="session-date">
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="viz-card">
+        <h4>Máquinas e séries</h4>
+        <div id="gym-workout" class="gym-workout"></div>
+        <div style="display:flex; justify-content:flex-end; margin-top:1rem;">
+          <button type="button" class="primary" id="gym-save">Guardar treino</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="viz-card">
+        <div class="gym-summary-header">
+          <h4>Resumo por data</h4>
+          <button type="button" id="summaries-refresh">Atualizar</button>
+        </div>
+        <div id="gym-summaries" class="gym-summary-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/ginasio.js"></script>
+</body>
+</html>
