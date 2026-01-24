@@ -66,6 +66,12 @@
       text-align: left;
       border-bottom: 1px solid rgba(148, 163, 184, 0.25);
     }
+    .gym-series-rule {
+      display: inline-block;
+      margin-left: 0.6rem;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
     .gym-series-table td[data-total-cell="true"] .gym-total {
       display: none;
     }
@@ -82,6 +88,51 @@
       min-height: var(--ctrl-h);
       resize: none;
       line-height: 1.2;
+    }
+    #gym-machine-note {
+      height: var(--ctrl-h);
+      min-height: var(--ctrl-h);
+      resize: none;
+      line-height: 1.2;
+    }
+    .gym-rules {
+      margin-top: 0.8rem;
+      padding-top: 0.8rem;
+      border-top: 1px dashed rgba(148, 163, 184, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.92rem;
+      color: var(--text-dim);
+    }
+    .gym-rules-series {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .gym-rule-note {
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .gym-rest-wrap {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 0.6rem;
+    }
+    .gym-rest-btn {
+      padding: 0 0.7rem;
+      height: var(--ctrl-h);
+      border-radius: 999px;
+      font-size: 0.85rem;
+    }
+    .gym-progress-badge {
+      background: #ef4444;
+      color: #fff;
+      border-radius: 999px;
+      padding: 0.15rem 0.6rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
     }
     .gym-series-table th {
       font-size: 0.85rem;
@@ -219,6 +270,39 @@
         <div id="gym-workout" class="gym-workout"></div>
         <div style="display:flex; justify-content:flex-end; margin-top:1rem;">
           <button type="button" class="primary" id="gym-save">Guardar treino</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="viz-card">
+        <h4>Adicionar máquina</h4>
+        <div class="gym-controls">
+          <label>
+            Nome da máquina
+            <input type="text" id="gym-machine-name" placeholder="Ex: Leg press 45º">
+          </label>
+          <label>
+            Resistência inicial (kg)
+            <input type="number" id="gym-machine-resistance" step="0.1" placeholder="Opcional">
+          </label>
+          <label>
+            Alternativa a
+            <select id="gym-machine-base">
+              <option value="">Nova máquina</option>
+            </select>
+          </label>
+        </div>
+        <div id="gym-series-list" style="margin-top:1rem;"></div>
+        <div style="display:flex; gap:0.6rem; margin-top:0.6rem; flex-wrap:wrap;">
+          <button type="button" id="gym-add-series">Adicionar série</button>
+          <button type="button" class="primary" id="gym-add-machine">Guardar máquina</button>
+        </div>
+        <div style="margin-top:1rem;">
+          <label>
+            Notas
+            <textarea id="gym-machine-note" rows="1" placeholder="Notas para esta máquina..."></textarea>
+          </label>
         </div>
       </div>
     </section>
