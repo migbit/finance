@@ -303,8 +303,8 @@ const WORKOUT_TEMPLATES = {
       },
       {
         id: 'calf-leg-press-arrabida',
-        name: 'Calf Raises na Leg Press 45º',
-        initialResistance: 75.7,
+        name: 'Calf Raises Leg Press',
+        initialResistance: null,
         series: [
           { baseWeight: 0, targetReps: 10, rir: '1-2' },
           { baseWeight: 0, targetReps: 10, rir: '1-2' },
@@ -613,6 +613,7 @@ const state = {
 
 const baseWeightTimers = new Map();
 const recommendedTimers = new Map();
+const restTimerIntervals = new Map();
 
 function formatWeight(value) {
   if (value === null || Number.isNaN(value)) return '';
@@ -633,9 +634,9 @@ function getSessionId(gym, treino, date) {
   return `${normalizeKey(date)}-${normalizeKey(gym)}-${normalizeKey(treino)}`;
 }
 
-function getBaseWeightId(gym, machineId, variantId, seriesIndex) {
+function getBaseWeightId(machineId, variantId, seriesIndex) {
   const variantKey = variantId ? normalizeKey(variantId) : 'base';
-  return `${normalizeKey(gym)}-${normalizeKey(machineId)}-${variantKey}-s${seriesIndex}`;
+  return `${normalizeKey(machineId)}-${variantKey}-s${seriesIndex}`;
 }
 
 function getSeriesKey(machineId, variantId, seriesIndex) {
@@ -755,11 +756,9 @@ function createRirSelect(value) {
 }
 
 async function saveBaseWeight(machineId, variantId, seriesIndex, baseWeight) {
-  if (!state.gym) return;
-  const docId = getBaseWeightId(state.gym, machineId, variantId, seriesIndex);
+  const docId = getBaseWeightId(machineId, variantId, seriesIndex);
   const ref = doc(collection(db, 'ginasio_pesos'), docId);
   await setDoc(ref, {
-    gym: state.gym,
     machineId,
     variantId: variantId || '',
     seriesIndex,
@@ -1055,6 +1054,10 @@ function startRestTimer(machine, variantId, seconds, label, button) {
 }
 
 function runRestTimer(key, machine, variantId, label, button) {
+  if (restTimerIntervals.has(key)) {
+    clearInterval(restTimerIntervals.get(key));
+    restTimerIntervals.delete(key);
+  }
   const updateLabel = () => {
     const endAt = Number(localStorage.getItem(key) || 0);
     const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
@@ -1063,9 +1066,14 @@ function runRestTimer(key, machine, variantId, label, button) {
       if (button) button.textContent = `Descanso ${label}`;
       showToast(`Descanso terminado: ${machine.name}`, 'success');
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Descanso terminado', { body: machine.name });
+        navigator.serviceWorker?.ready
+          .then(reg => reg.showNotification('Descanso terminado', { body: machine.name }))
+          .catch(() => new Notification('Descanso terminado', { body: machine.name }));
       }
-      clearInterval(timer);
+      if (restTimerIntervals.has(key)) {
+        clearInterval(restTimerIntervals.get(key));
+        restTimerIntervals.delete(key);
+      }
       return;
     }
     if (button) {
@@ -1076,6 +1084,7 @@ function runRestTimer(key, machine, variantId, label, button) {
   };
   updateLabel();
   const timer = setInterval(updateLabel, 1000);
+  restTimerIntervals.set(key, timer);
 }
 
 function parseRestLabel(label) {
@@ -1416,8 +1425,7 @@ async function loadBaseWeights(gym) {
     state.baseWeights = {};
     return;
   }
-  const q = query(collection(db, 'ginasio_pesos'), where('gym', '==', gym));
-  const snap = await getDocs(q);
+  const snap = await getDocs(collection(db, 'ginasio_pesos'));
   const weights = {};
   snap.forEach(docSnap => {
     const data = docSnap.data();
@@ -1462,7 +1470,6 @@ async function loadLastReps(gym, treino) {
   }
   const q = query(
     collection(db, 'ginasio_treinos'),
-    where('gym', '==', gym),
     where('treino', '==', treino)
   );
   const snap = await getDocs(q);
