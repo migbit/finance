@@ -23,6 +23,9 @@ const OBLIGATIONS = {
     { key: 'ies', label: 'IES' },
     { key: 'inventario', label: 'Inventário' }
   ],
+  quarterly: [
+    { key: 'iva', label: 'IVA' }
+  ],
   monthly: [
     { key: 'dmr', label: 'DMR' },
     { key: 'seguranca_social', label: 'Segurança Social' },
@@ -45,6 +48,13 @@ const MONTHS = [
   { key: 10, label: 'Out' },
   { key: 11, label: 'Nov' },
   { key: 12, label: 'Dez' }
+];
+
+const QUARTERS = [
+  { key: 1, label: 'T1' },
+  { key: 2, label: 'T2' },
+  { key: 3, label: 'T3' },
+  { key: 4, label: 'T4' }
 ];
 
 const INITIAL_ACTIVE = [
@@ -147,7 +157,7 @@ function initMonthlyColumnHover() {
 
   document.addEventListener('mouseover', (event) => {
     const cell = event.target.closest('td, th');
-    const table = cell?.closest('table[data-kind="monthly"]');
+    const table = cell?.closest('table[data-kind="monthly"], table[data-kind="quarterly"]');
     if (!cell || !table) {
       if (currentTable) clear();
       return;
@@ -333,7 +343,9 @@ async function ensureObligationDoc(scope, key, year) {
   const base = { scope, key, year, updatedAt: new Date() };
   const payload = scope === 'annual'
     ? { ...base, completedByCompany: {}, completedAtByCompany: {}, deadline: getAnnualDefaultDeadlineYMD(key, year) }
-    : { ...base, monthsByCompany: {}, monthsAtByCompany: {} };
+    : scope === 'monthly'
+      ? { ...base, monthsByCompany: {}, monthsAtByCompany: {} }
+      : { ...base, quartersByCompany: {}, quartersAtByCompany: {} };
 
   await setDoc(ref, payload, { merge: true });
   return ref;
@@ -363,6 +375,24 @@ function getMonthlyMonthDoneAt(docData, companyId, month) {
 function isMonthlyCompanyComplete(docData, companyId) {
   const months = getMonthlyMonths(docData, companyId);
   return MONTHS.every((m) => Boolean(months[String(m.key)]));
+}
+
+function getQuarterlyQuarters(docData, companyId) {
+  const map = docData?.quartersByCompany?.[companyId];
+  if (!map || typeof map !== 'object') return {};
+  return map;
+}
+
+function getQuarterlyDoneAt(docData, companyId, quarter) {
+  const map = docData?.quartersAtByCompany?.[companyId];
+  if (!map || typeof map !== 'object') return '';
+  const v = map[String(quarter)];
+  return typeof v === 'string' ? v : '';
+}
+
+function isQuarterlyCompanyComplete(docData, companyId) {
+  const quarters = getQuarterlyQuarters(docData, companyId);
+  return QUARTERS.every((q) => Boolean(quarters[String(q.key)]));
 }
 
 function getAnnualDoneAt(docData, companyId) {
@@ -448,7 +478,7 @@ function buildObligationPanelHtml(scope, key, label) {
   const showSuspended = scope === 'annual' && key === 'modelo22';
   const deadlineId = `deadline-${scope}-${key}`;
 
-  if (scope === 'monthly') {
+  if (scope === 'monthly' || scope === 'quarterly') {
     return `
       <div class="split-grid" style="margin-top: 14px;">
         <div class="list-card" data-company-state="active">
@@ -569,6 +599,27 @@ function buildMonthlyTableHtml(rowsPending, rowsCompleted) {
   `;
 }
 
+function buildQuarterlyTableHtml(rowsPending, rowsCompleted) {
+  const cols = 2 + QUARTERS.length;
+  return `
+    <table data-kind="quarterly">
+      <thead>
+        <tr>
+          <th>Empresa</th>
+          ${QUARTERS.map((q) => `<th>${q.label}</th>`).join('')}
+          <th style="text-align:right;">Ações</th>
+        </tr>
+      </thead>
+      <tbody data-section="pending">
+        ${rowsPending || `<tr><td colspan="${cols}" class="muted" style="padding: 12px 10px;">Sem empresas.</td></tr>`}
+      </tbody>
+      <tbody data-section="completed">
+        ${rowsCompleted ? `<tr class="section-row"><td colspan="${cols}">Concluídas</td></tr>${rowsCompleted}` : ''}
+      </tbody>
+    </table>
+  `;
+}
+
 function renderTableInto(wrapEl, scope, docData, list) {
   if (wrapEl) wrapEl.setAttribute('data-kind', scope);
   const pending = [];
@@ -596,36 +647,67 @@ function renderTableInto(wrapEl, scope, docData, list) {
       return;
     }
 
-    const months = getMonthlyMonths(docData, company.id);
-    const isComplete = isMonthlyCompanyComplete(docData, company.id);
-    const row = `
-      <tr data-company-id="${company.id}" class="${isComplete ? 'is-complete' : ''}">
-        <td>${escapeHtml(company.name)}</td>
-        ${MONTHS.map((m) => {
-          const checked = Boolean(months[String(m.key)]);
-          const doneAt = checked ? getMonthlyMonthDoneAt(docData, company.id, m.key) : '';
-          const doneAtShort = doneAt ? formatDateDDMM(doneAt) : '';
-          const doneAtLong = doneAt ? formatDateDDMMYYYY(doneAt) : '';
-          return `
-            <td>
-              <div class="datas-checkcell">
-                <input type="checkbox" data-month="${m.key}" ${checked ? 'checked' : ''} />
-                ${doneAtShort ? `<small class="muted datas-checkcell-date" title="${escapeHtml(doneAtLong)}">${escapeHtml(doneAtShort)}</small>` : ''}
-              </div>
-            </td>
-          `;
-        }).join('')}
-        <td style="text-align:right;"><button type="button" class="btn" data-edit-company>Editar</button></td>
-      </tr>
-    `;
-    (isComplete ? completed : pending).push(row);
+    if (scope === 'monthly') {
+      const months = getMonthlyMonths(docData, company.id);
+      const isComplete = isMonthlyCompanyComplete(docData, company.id);
+      const row = `
+        <tr data-company-id="${company.id}" class="${isComplete ? 'is-complete' : ''}">
+          <td>${escapeHtml(company.name)}</td>
+          ${MONTHS.map((m) => {
+            const checked = Boolean(months[String(m.key)]);
+            const doneAt = checked ? getMonthlyMonthDoneAt(docData, company.id, m.key) : '';
+            const doneAtShort = doneAt ? formatDateDDMM(doneAt) : '';
+            const doneAtLong = doneAt ? formatDateDDMMYYYY(doneAt) : '';
+            return `
+              <td>
+                <div class="datas-checkcell">
+                  <input type="checkbox" data-month="${m.key}" ${checked ? 'checked' : ''} />
+                  ${doneAtShort ? `<small class="muted datas-checkcell-date" title="${escapeHtml(doneAtLong)}">${escapeHtml(doneAtShort)}</small>` : ''}
+                </div>
+              </td>
+            `;
+          }).join('')}
+          <td style="text-align:right;"><button type="button" class="btn" data-edit-company>Editar</button></td>
+        </tr>
+      `;
+      (isComplete ? completed : pending).push(row);
+      return;
+    }
+
+    if (scope === 'quarterly') {
+      const quarters = getQuarterlyQuarters(docData, company.id);
+      const isComplete = isQuarterlyCompanyComplete(docData, company.id);
+      const row = `
+        <tr data-company-id="${company.id}" class="${isComplete ? 'is-complete' : ''}">
+          <td>${escapeHtml(company.name)}</td>
+          ${QUARTERS.map((q) => {
+            const checked = Boolean(quarters[String(q.key)]);
+            const doneAt = checked ? getQuarterlyDoneAt(docData, company.id, q.key) : '';
+            const doneAtShort = doneAt ? formatDateDDMM(doneAt) : '';
+            const doneAtLong = doneAt ? formatDateDDMMYYYY(doneAt) : '';
+            return `
+              <td>
+                <div class="datas-checkcell">
+                  <input type="checkbox" data-quarter="${q.key}" ${checked ? 'checked' : ''} />
+                  ${doneAtShort ? `<small class="muted datas-checkcell-date" title="${escapeHtml(doneAtLong)}">${escapeHtml(doneAtShort)}</small>` : ''}
+                </div>
+              </td>
+            `;
+          }).join('')}
+          <td style="text-align:right;"><button type="button" class="btn" data-edit-company>Editar</button></td>
+        </tr>
+      `;
+      (isComplete ? completed : pending).push(row);
+    }
   });
 
   const pendingHtml = pending.join('');
   const completedHtml = completed.join('');
   wrapEl.innerHTML = scope === 'annual'
     ? buildAnnualTableHtml(pendingHtml, completedHtml)
-    : buildMonthlyTableHtml(pendingHtml, completedHtml);
+    : scope === 'monthly'
+      ? buildMonthlyTableHtml(pendingHtml, completedHtml)
+      : buildQuarterlyTableHtml(pendingHtml, completedHtml);
 }
 
 function refreshPanel(panelState) {
@@ -815,7 +897,11 @@ function bindPanelEvents(panelState) {
 	        let listTitle = listCard?.querySelector('h4')?.textContent?.trim() || 'Tabela';
 	        if (state === 'active') listTitle = 'Empresas em Atividade';
 	        if (state === 'suspended') listTitle = 'Suspensas';
-	        const scopeLabel = panelState.scope === 'annual' ? 'Anual' : 'Mensal';
+        const scopeLabel = panelState.scope === 'annual'
+          ? 'Anual'
+          : panelState.scope === 'monthly'
+            ? 'Mensal'
+            : 'Trimestral';
 	        const parts = [panelState.label, String(panelState.year), scopeLabel];
 	        if (listTitle && listTitle !== panelState.label) parts.push(listTitle);
 	        const title = parts.join(' — ');
@@ -845,15 +931,30 @@ function bindPanelEvents(panelState) {
         return;
       }
 
-      const month = Number(input.getAttribute('data-month'));
-      if (!month || month < 1 || month > 12) return;
-      const checked = Boolean(input.checked);
-      await updateDoc(panelState.ref, {
-        [`monthsByCompany.${companyId}.${month}`]: checked,
-        [`monthsAtByCompany.${companyId}.${month}`]: checked ? ymdTodayLocal() : '',
-        updatedAt: new Date()
-      });
-      showToast(checked ? 'Mês concluído.' : 'Mês desmarcado.', 'success');
+      if (panelState.scope === 'monthly') {
+        const month = Number(input.getAttribute('data-month'));
+        if (!month || month < 1 || month > 12) return;
+        const checked = Boolean(input.checked);
+        await updateDoc(panelState.ref, {
+          [`monthsByCompany.${companyId}.${month}`]: checked,
+          [`monthsAtByCompany.${companyId}.${month}`]: checked ? ymdTodayLocal() : '',
+          updatedAt: new Date()
+        });
+        showToast(checked ? 'Mês concluído.' : 'Mês desmarcado.', 'success');
+        return;
+      }
+
+      if (panelState.scope === 'quarterly') {
+        const quarter = String(input.getAttribute('data-quarter') || '').trim();
+        if (!quarter || !QUARTERS.some((q) => String(q.key) === quarter)) return;
+        const checked = Boolean(input.checked);
+        await updateDoc(panelState.ref, {
+          [`quartersByCompany.${companyId}.${quarter}`]: checked,
+          [`quartersAtByCompany.${companyId}.${quarter}`]: checked ? ymdTodayLocal() : '',
+          updatedAt: new Date()
+        });
+        showToast(checked ? 'Trimestre concluído.' : 'Trimestre desmarcado.', 'success');
+      }
     } catch (err) {
       console.error('Erro a atualizar:', err);
       showToast('Erro ao guardar no Firebase.', 'error');
@@ -1166,29 +1267,34 @@ function printWrap(wrapEl, panelState) {
 }
 
 function bindScopeTabs() {
-  const scopeTabs = document.querySelectorAll('#datas-scope-tabs .tab-btn');
-  const annual = document.querySelector('[data-scope-panel="annual"]');
-  const monthly = document.querySelector('[data-scope-panel="monthly"]');
+  const tabsWrap = document.getElementById('datas-scope-tabs');
+  const panels = Array.from(document.querySelectorAll('[data-scope-panel]'));
+  if (!tabsWrap) return;
 
-  scopeTabs.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const scope = btn.dataset.scope;
-      scopeTabs.forEach((b) => b.classList.toggle('active', b === btn));
-      if (scope === 'annual') {
-        annual.style.display = '';
-        monthly.style.display = 'none';
-      } else {
-        annual.style.display = 'none';
-        monthly.style.display = '';
-      }
+  const showScope = (scope) => {
+    panels.forEach((panel) => {
+      panel.style.display = panel.dataset.scopePanel === scope ? '' : 'none';
     });
+    tabsWrap.querySelectorAll('.tab-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.scope === scope);
+    });
+  };
+
+  tabsWrap.addEventListener('click', (event) => {
+    const btn = event.target.closest('.tab-btn[data-scope]');
+    if (!btn) return;
+    showScope(btn.dataset.scope);
   });
+
+  const initial = tabsWrap.querySelector('.tab-btn.active')?.dataset.scope || tabsWrap.querySelector('.tab-btn')?.dataset.scope;
+  if (initial) showScope(initial);
 }
 
 async function init() {
   const annualMount = document.getElementById('datas-scope-annual');
   const monthlyMount = document.getElementById('datas-scope-monthly');
-  if (!annualMount || !monthlyMount) return;
+  const quarterlyMount = document.getElementById('datas-scope-quarterly');
+  if (!annualMount || !monthlyMount || !quarterlyMount) return;
 
   initMonthlyColumnHover();
 
@@ -1210,6 +1316,7 @@ async function init() {
   });
 
   renderScopePanel('annual', annualMount);
+  renderScopePanel('quarterly', quarterlyMount);
   renderScopePanel('monthly', monthlyMount);
   bindScopeTabs();
 

@@ -238,7 +238,8 @@
 	      padding: var(--space-2) var(--space-2) var(--space-3);
 	    }
 
-	    body[data-page="datas"] .table-wrap[data-kind="monthly"] {
+	    body[data-page="datas"] .table-wrap[data-kind="monthly"],
+	    body[data-page="datas"] .table-wrap[data-kind="quarterly"] {
 	      max-height: min(70vh, 640px);
 	      overflow-y: auto;
 	      position: relative;
@@ -246,7 +247,8 @@
 	      padding-top: 0;
 	    }
 
-	    body[data-page="datas"] table[data-kind="monthly"] thead th {
+	    body[data-page="datas"] table[data-kind="monthly"] thead th,
+	    body[data-page="datas"] table[data-kind="quarterly"] thead th {
 	      position: sticky;
 	      top: 0;
 	      z-index: 1000;
@@ -293,7 +295,8 @@
       box-shadow: inset 3px 0 0 rgba(102, 126, 234, 0.6);
     }
 
-    body[data-page="datas"] table[data-kind="monthly"] td.is-col-hover {
+    body[data-page="datas"] table[data-kind="monthly"] td.is-col-hover,
+    body[data-page="datas"] table[data-kind="quarterly"] td.is-col-hover {
       background: rgba(102, 126, 234, 0.08);
     }
 
@@ -579,10 +582,12 @@
 
     <div class="tab-navigation" id="datas-scope-tabs">
       <button class="tab-btn active" data-scope="annual">Anual</button>
+      <button class="tab-btn" data-scope="quarterly">Trimestral</button>
       <button class="tab-btn" data-scope="monthly">Mensal</button>
     </div>
 
     <section id="datas-scope-annual" data-scope-panel="annual"></section>
+    <section id="datas-scope-quarterly" data-scope-panel="quarterly" style="display:none;"></section>
     <section id="datas-scope-monthly" data-scope-panel="monthly" style="display:none;"></section>
   </main>
 
