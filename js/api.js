@@ -9,6 +9,14 @@ import {
   deleteDoc
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
+function getLocalStorageSafe() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 export class EnhancedStorage {
   static PREFIXES = {
     PRICE: 'price_usd_',
@@ -18,17 +26,19 @@ export class EnhancedStorage {
   };
 
   static setWithTTL(key, value, ttlMs) {
+    const store = getLocalStorageSafe();
+    if (!store) return false;
     const item = {
       value,
       expires: Date.now() + ttlMs
     };
     try {
-      localStorage.setItem(key, JSON.stringify(item));
+      store.setItem(key, JSON.stringify(item));
       return true;
     } catch (err) {
       this.clearExpired();
       try {
-        localStorage.setItem(key, JSON.stringify(item));
+        store.setItem(key, JSON.stringify(item));
         return true;
       } catch {
         console.warn('EnhancedStorage: unable to persist item', err);
@@ -38,12 +48,14 @@ export class EnhancedStorage {
   }
 
   static getWithTTL(key) {
+    const store = getLocalStorageSafe();
+    if (!store) return null;
     try {
-      const itemStr = localStorage.getItem(key);
+      const itemStr = store.getItem(key);
       if (!itemStr) return null;
       const item = JSON.parse(itemStr);
       if (item.expires && Date.now() > item.expires) {
-        localStorage.removeItem(key);
+        store.removeItem(key);
         return null;
       }
       return item.value;
@@ -53,12 +65,14 @@ export class EnhancedStorage {
   }
 
   static clearExpired() {
+    const store = getLocalStorageSafe();
+    if (!store) return;
     const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
+    for (let i = 0; i < store.length; i++) {
+      const key = store.key(i);
       if (!key) continue;
       try {
-        const itemStr = localStorage.getItem(key);
+        const itemStr = store.getItem(key);
         if (!itemStr) continue;
         const item = JSON.parse(itemStr);
         if (item.expires && Date.now() > item.expires) {
@@ -68,15 +82,17 @@ export class EnhancedStorage {
         // skip invalid JSON
       }
     }
-    keysToRemove.forEach(key => localStorage.removeItem(key));
+    keysToRemove.forEach(key => store.removeItem(key));
   }
 
   static getCacheSize() {
+    const store = getLocalStorageSafe();
+    if (!store) return '0.00';
     let total = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
+    for (let i = 0; i < store.length; i++) {
+      const key = store.key(i);
       if (!key) continue;
-      total += key.length + localStorage.getItem(key)?.length || 0;
+      total += key.length + store.getItem(key)?.length || 0;
     }
     return (total / 1024).toFixed(2);
   }
@@ -121,8 +137,16 @@ export class EnhancedStorage {
 
 export const Storage = {
   PREFIXES: { PRICE: 'price_usd_', COINGECKO_ID: 'cg_id_' },
-  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem(k, v); return true; } catch { return false; } },
+  get: (k) => {
+    const store = getLocalStorageSafe();
+    if (!store) return null;
+    try { return store.getItem(k); } catch { return null; }
+  },
+  set: (k, v) => {
+    const store = getLocalStorageSafe();
+    if (!store) return false;
+    try { store.setItem(k, v); return true; } catch { return false; }
+  },
   getJSON(k) {
     const s = this.get(k);
     try { return s ? JSON.parse(s) : null; } catch { return null; }

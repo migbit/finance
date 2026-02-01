@@ -63,8 +63,17 @@ exports.binancePortfolio = onRequest(
     cors: true,
     secrets: [BINANCE_KEY, BINANCE_SECRET],
   },
-  async (_req, res) => {
+  async (req, res) => {
     try {
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+      res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+      res.set("Vary", "Origin");
+      if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+      }
+
       // 1) Fetch Spot + Earn (with pagination on Earn)
       const [account, flexRows, lockedRows] = await Promise.all([
         signed("/api/v3/account"),
