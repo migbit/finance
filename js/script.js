@@ -383,7 +383,12 @@ function enviarEmailUrgencia(apartamento, descricao) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    const manifestHref = manifestLink?.getAttribute('href') || null;
+    const manifestUrl = manifestHref ? new URL(manifestHref, window.location.href) : null;
+    const swBase = manifestUrl ? new URL('./', manifestUrl) : new URL('./', window.location.href);
+    const swUrl = new URL('sw.js', swBase);
+    navigator.serviceWorker.register(swUrl, { scope: swBase.pathname })
       .then(reg => console.log('SW registered', reg.scope))
       .catch(err => console.error('SW registration failed:', err));
   });
