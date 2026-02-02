@@ -18,6 +18,7 @@ const VALUES_COL = collection(db, 'dca_revolut');
 const state = {
   endYM: null,
   values: {},
+  invested: {},
   showPastYears: false,
   showFutureYears: false,
   chart: null
@@ -75,14 +76,16 @@ async function loadValues() {
   try {
     const q = query(VALUES_COL, orderBy('id', 'asc'));
     const snap = await getDocs(q);
-    const out = {};
+    const out = { values: {}, invested: {} };
     snap.forEach((docSnap) => {
       const data = docSnap.data();
-      if (data?.id) out[data.id] = data.value ?? null;
+      if (!data?.id) return;
+      out.values[data.id] = data.value ?? null;
+      out.invested[data.id] = data.invested ?? null;
     });
     return out;
   } catch {
-    return {};
+    return { values: {}, invested: {} };
   }
 }
 
@@ -98,12 +101,44 @@ async function saveValue(id, value) {
   }, { merge: true });
 }
 
+async function saveInvested(id, invested) {
+  const ym = parseYMString(id);
+  if (!ym) return;
+  await setDoc(doc(VALUES_COL, id), {
+    id,
+    y: ym.y,
+    m: ym.m,
+    invested: invested ?? null,
+    updated_at: Date.now()
+  }, { merge: true });
+}
+
 function formatMonthLabel(ym) {
   const date = new Date(ym.y, ym.m - 1, 1);
   return date.toLocaleDateString('pt-PT', {
     month: 'short',
     year: 'numeric'
   });
+}
+
+function buildInvestedTotals(months) {
+  const totals = {};
+  let running = 0;
+
+  months.forEach((ym, index) => {
+    const id = ymToId(ym);
+    const override = state.invested[id];
+    if (Number.isFinite(override)) {
+      running = override;
+    } else if (index === 0 && running === 0) {
+      running = MONTHLY_INV;
+    } else {
+      running += MONTHLY_INV;
+    }
+    totals[id] = running;
+  });
+
+  return totals;
 }
 
 function buildTable(months) {
@@ -130,6 +165,8 @@ function buildTable(months) {
   `;
   table.appendChild(thead);
 
+  const investedTotals = buildInvestedTotals(months);
+
   const years = Array.from(rowsByYear.keys()).sort((a, b) => a - b);
   years.forEach((year) => {
     const tbody = document.createElement('tbody');
@@ -138,8 +175,7 @@ function buildTable(months) {
 
     rowsByYear.get(year).forEach((ym) => {
       const id = ymToId(ym);
-      const monthIndex = months.findIndex((entry) => entry.y === ym.y && entry.m === ym.m);
-      const investedTotal = MONTHLY_INV * (monthIndex + 1);
+      const investedTotal = investedTotals[id] ?? 0;
       const storedValue = state.values[id];
       const hasValue = Number.isFinite(storedValue);
       const diff = hasValue ? storedValue - investedTotal : null;
@@ -148,15 +184,24 @@ function buildTable(months) {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${formatMonthLabel(ym)}</td>
-        <td class="num">${investedTotal.toFixed(2)} €</td>
         <td class="num">
           <input
             type="number"
             step="0.01"
             min="0"
-            class="revolut-value-input"
+            class="revolut-invested-input cell"
             data-id="${id}"
-            data-invested="${investedTotal.toFixed(2)}"
+            data-default="${investedTotal.toFixed(2)}"
+            placeholder="${investedTotal.toFixed(2)}"
+          />
+        </td>
+        <td class="num">
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            class="revolut-value-input cell"
+            data-id="${id}"
             placeholder="0.00"
           />
         </td>
@@ -186,6 +231,18 @@ function applyValuesToInputs() {
     const value = state.values[id];
     input.value = Number.isFinite(value) ? Number(value).toFixed(2) : '';
   });
+
+  const investedInputs = document.querySelectorAll('.revolut-invested-input');
+  investedInputs.forEach((input) => {
+    const id = input.dataset.id;
+    if (!id) return;
+    const value = state.invested[id];
+    if (Number.isFinite(value)) {
+      input.value = Number(value).toFixed(2);
+    } else {
+      input.value = input.dataset.default ?? '';
+    }
+  });
 }
 
 function bindInputHandlers() {
@@ -209,6 +266,27 @@ function bindInputHandlers() {
       }
     });
   });
+
+  document.querySelectorAll('.revolut-invested-input').forEach((input) => {
+    input.addEventListener('change', async () => {
+      const id = input.dataset.id;
+      if (!id) return;
+      const value = Number(input.value);
+      if (!Number.isFinite(value) || value < 0) {
+        input.value = '';
+        delete state.invested[id];
+      } else {
+        state.invested[id] = value;
+      }
+      try {
+        await saveInvested(id, state.invested[id] ?? null);
+        render();
+      } catch (err) {
+        console.error('Erro ao gravar valor investido Revolut:', err);
+        showToast('Erro ao gravar valor investido.', 'error');
+      }
+    });
+  });
 }
 
 function updateChart(months) {
@@ -218,13 +296,14 @@ function updateChart(months) {
   const labels = [];
   const investedSeries = [];
   const valueSeries = [];
+  const investedTotals = buildInvestedTotals(months);
 
   months.forEach((ym, index) => {
     const id = ymToId(ym);
     const value = state.values[id];
     if (!Number.isFinite(value)) return;
     labels.push(formatMonthLabel(ym));
-    const investedTotal = MONTHLY_INV * (index + 1);
+    const investedTotal = investedTotals[id] ?? (MONTHLY_INV * (index + 1));
     investedSeries.push(investedTotal);
     valueSeries.push(value);
   });
@@ -293,8 +372,10 @@ function updateProgress(months) {
 
   if (!pctEl || !fillEl || !textEl || !investedEl || !targetEl || !remainingEl) return;
 
+  const investedTotals = buildInvestedTotals(months);
   const totalMonths = months.length;
-  const totalTarget = MONTHLY_INV * totalMonths;
+  const lastId = totalMonths > 0 ? ymToId(months[totalMonths - 1]) : null;
+  const totalTarget = lastId ? (investedTotals[lastId] ?? 0) : 0;
 
   const now = new Date();
   const currentYM = { y: now.getFullYear(), m: now.getMonth() + 1 };
@@ -305,7 +386,8 @@ function updateProgress(months) {
     }
   });
 
-  const investedSoFar = currentIndex >= 0 ? MONTHLY_INV * (currentIndex + 1) : 0;
+  const currentId = currentIndex >= 0 ? ymToId(months[currentIndex]) : null;
+  const investedSoFar = currentId ? (investedTotals[currentId] ?? 0) : 0;
   const remaining = Math.max(0, totalTarget - investedSoFar);
   const percentage = totalTarget > 0 ? (investedSoFar / totalTarget * 100) : 0;
 
@@ -440,7 +522,9 @@ async function init() {
   const params = await loadParams();
   state.endYM = parseYMString(params?.endYM) || params?.endYM || getDefaultEndYM();
   if (!state.endYM?.y) state.endYM = getDefaultEndYM();
-  state.values = await loadValues();
+  const loaded = await loadValues();
+  state.values = loaded.values || {};
+  state.invested = loaded.invested || {};
 
   bindEndDateInput();
   bindParamsButtons();
