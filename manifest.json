@@ -1,8 +1,8 @@
 {
-  "id": "/finance/v2/",
+  "id": "/finance/",
   "name": "Migbit Finance",
   "short_name": "Finance",
-  "start_url": "./index.html?v=2",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",

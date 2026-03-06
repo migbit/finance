@@ -76,16 +76,22 @@ async function loadValues() {
   try {
     const q = query(VALUES_COL, orderBy('id', 'asc'));
     const snap = await getDocs(q);
-    const out = { values: {}, invested: {} };
+    const out = { values: {}, invested: {}, investedMode: {} };
     snap.forEach((docSnap) => {
       const data = docSnap.data();
       if (!data?.id) return;
       out.values[data.id] = data.value ?? null;
-      out.invested[data.id] = data.invested ?? null;
+      if (Number.isFinite(data.invested_monthly)) {
+        out.invested[data.id] = data.invested_monthly;
+        out.investedMode[data.id] = 'monthly';
+      } else {
+        out.invested[data.id] = data.invested ?? null;
+        out.investedMode[data.id] = Number.isFinite(data.invested) ? 'legacy' : 'default';
+      }
     });
     return out;
   } catch {
-    return { values: {}, invested: {} };
+    return { values: {}, invested: {}, investedMode: {} };
   }
 }
 
@@ -108,21 +114,31 @@ async function saveInvested(id, invested) {
     id,
     y: ym.y,
     m: ym.m,
-    invested: invested ?? null,
+    invested: null,
+    invested_monthly: invested ?? null,
     updated_at: Date.now()
   }, { merge: true });
 }
 
-function normalizeInvestedEntries(rawInvested, months) {
+function normalizeInvestedEntries(rawInvested, investedMode, months) {
   const normalized = {};
   let runningLegacyTotal = 0;
 
   months.forEach((ym) => {
     const id = ymToId(ym);
     const rawValue = rawInvested?.[id];
+    const mode = investedMode?.[id] ?? 'default';
 
     if (!Number.isFinite(rawValue)) {
       runningLegacyTotal += MONTHLY_INV;
+      return;
+    }
+
+    if (mode === 'monthly') {
+      if (rawValue !== MONTHLY_INV) {
+        normalized[id] = rawValue;
+      }
+      runningLegacyTotal += rawValue;
       return;
     }
 
@@ -546,7 +562,7 @@ async function init() {
   const months = monthsBetween(START_YM, state.endYM);
   const loaded = await loadValues();
   state.values = loaded.values || {};
-  state.invested = normalizeInvestedEntries(loaded.invested || {}, months);
+  state.invested = normalizeInvestedEntries(loaded.invested || {}, loaded.investedMode || {}, months);
 
   bindEndDateInput();
   bindParamsButtons();
