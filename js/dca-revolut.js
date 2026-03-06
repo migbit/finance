@@ -113,6 +113,31 @@ async function saveInvested(id, invested) {
   }, { merge: true });
 }
 
+function normalizeInvestedEntries(rawInvested, months) {
+  const normalized = {};
+  let runningLegacyTotal = 0;
+
+  months.forEach((ym) => {
+    const id = ymToId(ym);
+    const rawValue = rawInvested?.[id];
+
+    if (!Number.isFinite(rawValue)) {
+      runningLegacyTotal += MONTHLY_INV;
+      return;
+    }
+
+    const monthlyAmount = Math.max(0, rawValue - runningLegacyTotal);
+
+    if (monthlyAmount !== MONTHLY_INV) {
+      normalized[id] = monthlyAmount;
+    }
+
+    runningLegacyTotal += monthlyAmount;
+  });
+
+  return normalized;
+}
+
 function formatMonthLabel(ym) {
   const date = new Date(ym.y, ym.m - 1, 1);
   return date.toLocaleDateString('pt-PT', {
@@ -125,16 +150,10 @@ function buildInvestedTotals(months) {
   const totals = {};
   let running = 0;
 
-  months.forEach((ym, index) => {
+  months.forEach((ym) => {
     const id = ymToId(ym);
-    const override = state.invested[id];
-    if (Number.isFinite(override)) {
-      running = override;
-    } else if (index === 0 && running === 0) {
-      running = MONTHLY_INV;
-    } else {
-      running += MONTHLY_INV;
-    }
+    const monthlyAmount = Number.isFinite(state.invested[id]) ? state.invested[id] : MONTHLY_INV;
+    running += monthlyAmount;
     totals[id] = running;
   });
 
@@ -191,8 +210,8 @@ function buildTable(months) {
             min="0"
             class="revolut-invested-input cell"
             data-id="${id}"
-            data-default="${investedTotal.toFixed(2)}"
-            placeholder="${investedTotal.toFixed(2)}"
+            data-default="${MONTHLY_INV.toFixed(2)}"
+            placeholder="${MONTHLY_INV.toFixed(2)}"
           />
         </td>
         <td class="num">
@@ -274,6 +293,8 @@ function bindInputHandlers() {
       const value = Number(input.value);
       if (!Number.isFinite(value) || value < 0) {
         input.value = '';
+        delete state.invested[id];
+      } else if (value === MONTHLY_INV) {
         delete state.invested[id];
       } else {
         state.invested[id] = value;
@@ -522,9 +543,10 @@ async function init() {
   const params = await loadParams();
   state.endYM = parseYMString(params?.endYM) || params?.endYM || getDefaultEndYM();
   if (!state.endYM?.y) state.endYM = getDefaultEndYM();
+  const months = monthsBetween(START_YM, state.endYM);
   const loaded = await loadValues();
   state.values = loaded.values || {};
-  state.invested = loaded.invested || {};
+  state.invested = normalizeInvestedEntries(loaded.invested || {}, months);
 
   bindEndDateInput();
   bindParamsButtons();
