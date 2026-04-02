@@ -11,6 +11,7 @@ const STAY_BUCKETS = [
   { key: '5-6', label: '5-6 noites', min: 5, max: 6 },
   { key: '7+', label: '7+ noites', min: 7, max: Infinity }
 ];
+const EXTRA_GUEST_CHANGE_DATE = new Date(2026, 0, 1);
 
 function clampGuestsCount(row) {
   const adults = Number(row.hospedesAdultos || 0);
@@ -26,8 +27,28 @@ function calcExtraGuestsValue(row) {
   const nights = Number(row.noites || 0);
   if (year < 2025) return 0;
   if (year === 2025 && month < 6) return 0;
-  if (guests <= 6 || nights <= 0) return 0;
-  return (guests - 6) * 20 * nights;
+  if (nights <= 0) return 0;
+  const includedGuests = getIncludedGuestsLimit(row);
+  if (guests <= includedGuests) return 0;
+  return (guests - includedGuests) * 20 * nights;
+}
+
+function getIncludedGuestsLimit(row) {
+  const stayDate = getStayStartDate(row);
+  if (stayDate && stayDate >= EXTRA_GUEST_CHANGE_DATE) return 4;
+  return 5;
+}
+
+function getStayStartDate(row) {
+  if (typeof row?.checkIn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(row.checkIn)) {
+    const [year, month, day] = row.checkIn.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  const year = Number(row?.ano);
+  const month = Number(row?.mes);
+  const day = Number(row?.dia || 1);
+  if (!year || !month) return null;
+  return new Date(year, month - 1, day);
 }
 
 const state = {
@@ -563,7 +584,7 @@ function renderHospedesTip(rows) {
     entry.share > best.share ? entry : best, insights.stats[0]);
   const baseText = `${dominant.bucket} hóspedes representam ${dominant.share.toFixed(1)}% das reservas.`;
   const extraText = insights.extraTotal
-    ? `Hóspedes extra (>6) já renderam ${formatEuro(insights.extraTotal)} em taxas este ano.`
+    ? `Hóspedes extra já renderam ${formatEuro(insights.extraTotal)} em taxas este ano.`
     : 'Ainda não foram cobradas taxas de hóspedes extra.';
   let hint = '';
   if (dominant.bucket >= 7) {
