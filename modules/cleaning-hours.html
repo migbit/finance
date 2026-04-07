@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Horas de Limpeza</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#000000">
+  <style>
+    body[data-page="cleaning-hours"] main {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: var(--space-6);
+    }
+
+    .page-intro {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .page-intro p {
+      color: var(--text-dim);
+    }
+
+    .hours-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .field-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-weight: 600;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 42px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    .field small {
+      color: var(--text-dim);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .hours-link-box {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      background: var(--p4);
+      border: 1px solid var(--border);
+    }
+
+    .hours-link-box a,
+    .hours-link-box code {
+      word-break: break-all;
+    }
+
+    .filters-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 14px;
+    }
+
+    .hours-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .sync-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: #fff;
+    }
+
+    .sync-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: #e9f7ef;
+      color: #166534;
+    }
+
+    .sync-pill.is-warning {
+      background: #fff7ed;
+      color: #9a3412;
+    }
+
+    .sync-pill.is-neutral {
+      background: #eef2f7;
+      color: #475569;
+    }
+
+    .sync-meta {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .kpi-card {
+      padding: 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: var(--shadow-1);
+      text-align: center;
+    }
+
+    .kpi-card strong {
+      display: block;
+      font-size: 1.6rem;
+      margin-top: 4px;
+    }
+
+    .table-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table-wrap th,
+    .table-wrap td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .table-wrap th {
+      background: var(--th-bg);
+      font-size: 0.9rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 20px 12px;
+      font-style: italic;
+    }
+
+    .link-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .link-item {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: var(--radius-md);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .link-item-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: #e9f7ef;
+      color: #166534;
+    }
+
+    .pill.is-off {
+      background: #fef2f2;
+      color: #991b1b;
+    }
+
+    @media (max-width: 900px) {
+      body[data-page="cleaning-hours"] main {
+        padding: var(--space-4);
+      }
+
+      .hours-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body id="cleaning-hours-page" data-page="cleaning-hours">
+  <button id="menu-icon" aria-label="Open menu">☰</button>
+
+  <header>
+    <nav id="nav-menu">
+      <div id="login-section" class="login-block">
+        <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
+        <span id="user-info" class="user-visible" style="display:none;">
+          <a href="#" id="user-name">👤 Username</a>
+        </span>
+      </div>
+      <div class="nav-links"></div>
+    </nav>
+  </header>
+
+  <main>
+    <div class="page-intro">
+      <h2>Horas de Limpeza</h2>
+      <p>Criar links simples para a funcionária e acompanhar os registos gravados no Firebase.</p>
+    </div>
+
+    <section class="hours-grid">
+      <div class="viz-card">
+        <h4>Novo link de acesso</h4>
+        <form id="cleaning-access-form" class="field-grid">
+          <div class="field">
+            <label for="employee-name">Nome da funcionária</label>
+            <input id="employee-name" name="employee-name" type="text" required placeholder="Ex.: Ana">
+          </div>
+
+          <div class="field">
+            <label for="employee-id">ID interno</label>
+            <input id="employee-id" name="employee-id" type="text" required placeholder="Ex.: ana-limpeza">
+            <small>Usado para identificar os registos da funcionária.</small>
+          </div>
+
+          <div class="field">
+            <label for="employee-hourly-rate">Valor por hora (€)</label>
+            <input id="employee-hourly-rate" name="employee-hourly-rate" type="number" min="0" step="0.01" placeholder="Ex.: 7.50">
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn">Criar ou renovar link</button>
+          </div>
+        </form>
+
+        <div id="generated-link-box" class="hours-link-box" hidden>
+          <strong>Link para enviar</strong>
+          <a id="generated-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+          <div class="form-actions">
+            <button type="button" id="copy-generated-link" class="btn">Copiar link</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="viz-card">
+        <h4>Links ativos</h4>
+        <div id="access-list" class="link-list">
+          <div class="empty-state">A carregar...</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="viz-card">
+        <h4>Registos</h4>
+
+        <div class="filters-bar">
+          <div class="field">
+            <label for="hours-filter-employee">Funcionária</label>
+            <select id="hours-filter-employee">
+              <option value="">Todas</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="hours-filter-year">Ano</label>
+            <select id="hours-filter-year"></select>
+          </div>
+
+          <div class="field">
+            <label for="hours-filter-month">Mês</label>
+            <select id="hours-filter-month"></select>
+          </div>
+
+          <div class="field">
+            <label for="hours-filter-apartment">Apartamento</label>
+            <select id="hours-filter-apartment">
+              <option value="">Todos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sync-bar">
+          <div id="hours-sync-pill" class="sync-pill is-neutral">A sincronizar...</div>
+          <div id="hours-sync-meta" class="sync-meta"></div>
+        </div>
+
+        <div id="hours-summary" class="hours-summary"></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Funcionária</th>
+                <th>Horas</th>
+                <th>Apartamento</th>
+                <th>Valor</th>
+                <th>Aprovação</th>
+                <th>Origem</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="hours-entries-body">
+              <tr><td colspan="8" class="empty-state">A carregar...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/cleaning-hours-admin.js"></script>
+</body>
+</html>
