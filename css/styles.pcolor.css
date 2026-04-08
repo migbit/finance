@@ -1859,6 +1859,22 @@ body[data-page="faturas"] .analysis-toolbar__info span {
   color: rgba(255,255,255,0.8);
 }
 
+body[data-page="faturas"] .detalhes-table tbody tr.fatura-row-apt-123 {
+  background: rgba(54, 162, 235, 0.10);
+}
+
+body[data-page="faturas"] .detalhes-table tbody tr.fatura-row-apt-123:hover {
+  background: rgba(54, 162, 235, 0.16);
+}
+
+body[data-page="faturas"] .detalhes-table tbody tr.fatura-row-apt-1248 {
+  background: rgba(245, 133, 20, 0.10);
+}
+
+body[data-page="faturas"] .detalhes-table tbody tr.fatura-row-apt-1248:hover {
+  background: rgba(245, 133, 20, 0.16);
+}
+
 /* ========================================================================== */
 /*  Tab Navigation                                                            */
 /* ========================================================================== */

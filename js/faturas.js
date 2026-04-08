@@ -652,6 +652,13 @@ function toggleDetalhes(button, htmlContent) {
 
 function gerarHTMLDetalhesFaturacao(detalhes) {
   const rows = (detalhes || []).map(d => {
+    const apartamento = String(d.apartamento || '').trim();
+    const rowClass = apartamento === '123'
+      ? 'fatura-row fatura-row-apt-123'
+      : apartamento === '1248'
+        ? 'fatura-row fatura-row-apt-1248'
+        : 'fatura-row';
+
     // Data curta DD-MM
     const dataStr = (d.timestamp && d.timestamp.seconds)
       ? new Date(d.timestamp.seconds * 1000)
@@ -705,7 +712,7 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
       : '—';
 
     return `
-      <tr>
+      <tr class="${rowClass}">
         <td>${dataStr}</td>
         <td>${d.numeroFatura || '—'}</td>
         <td>${euroInt(d.valorTransferencia || 0)}</td>
