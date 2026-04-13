@@ -22,6 +22,11 @@ const accessList = document.getElementById('access-list');
 const generatedLinkBox = document.getElementById('generated-link-box');
 const generatedLinkAnchor = document.getElementById('generated-link');
 const copyGeneratedLinkBtn = document.getElementById('copy-generated-link');
+const manualEntryForm = document.getElementById('manual-hours-form');
+const manualEntryEmployee = document.getElementById('manual-entry-employee');
+const manualEntryDate = document.getElementById('manual-entry-date');
+const manualEntryHours = document.getElementById('manual-entry-hours');
+const manualEntryApartment = document.getElementById('manual-entry-apartment');
 
 const filterEmployee = document.getElementById('hours-filter-employee');
 const filterYear = document.getElementById('hours-filter-year');
@@ -46,9 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
   populateMonthSelect();
   filterYear.value = String(now.getFullYear());
   filterMonth.value = String(now.getMonth() + 1).padStart(2, '0');
+  if (manualEntryDate) manualEntryDate.value = now.toISOString().slice(0, 10);
 
   accessForm?.addEventListener('submit', handleCreateOrRenewAccess);
   copyGeneratedLinkBtn?.addEventListener('click', copyGeneratedLink);
+  manualEntryForm?.addEventListener('submit', handleManualEntry);
   filterEmployee?.addEventListener('change', renderEntries);
   filterYear?.addEventListener('change', renderEntries);
   filterMonth?.addEventListener('change', renderEntries);
@@ -133,6 +140,7 @@ function renderAccessList() {
   if (!accessList) return;
 
   populateEmployeeFilter();
+  populateManualEmployeeSelect();
   populateApartmentFilter();
 
   if (!accessRows.length) {
@@ -286,10 +294,67 @@ function populateApartmentFilter() {
   filterApartment.value = current;
 }
 
+function populateManualEmployeeSelect() {
+  if (!manualEntryEmployee) return;
+
+  const current = manualEntryEmployee.value;
+  const options = accessRows
+    .map((row) => `<option value="${escapeAttr(row.employeeId)}">${escapeHtml(row.employeeName || row.employeeId)}</option>`)
+    .join('');
+
+  manualEntryEmployee.innerHTML = options;
+  if (current && accessRows.some((row) => row.employeeId === current)) {
+    manualEntryEmployee.value = current;
+  }
+}
+
 async function copyGeneratedLink() {
   if (!lastGeneratedLink) return;
   await navigator.clipboard.writeText(lastGeneratedLink);
   showToast('Link copiado.', 'success');
+}
+
+async function handleManualEntry(event) {
+  event.preventDefault();
+
+  const employeeId = manualEntryEmployee?.value || '';
+  const date = manualEntryDate?.value || '';
+  const hours = Number(String(manualEntryHours?.value || '').replace(',', '.'));
+  const apartment = manualEntryApartment?.value || '';
+
+  if (!employeeId || !date || !Number.isFinite(hours) || hours < 0 || !['123', '1248', 'Ambos'].includes(apartment)) {
+    showToast('Preenche os dados da entrada manual.', 'warning');
+    return;
+  }
+
+  const employee = accessRows.find((row) => row.employeeId === employeeId);
+  if (!employee) {
+    showToast('Funcionária inválida.', 'warning');
+    return;
+  }
+
+  try {
+    await setDoc(doc(db, ENTRIES_COLLECTION, `${employeeId}__${date}`), {
+      employeeId,
+      employeeName: employee.employeeName || employeeId,
+      date,
+      hours,
+      apartment,
+      approved: true,
+      approvedAt: serverTimestamp(),
+      source: 'admin_manual',
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp()
+    }, { merge: true });
+
+    manualEntryForm?.reset();
+    if (manualEntryDate) manualEntryDate.value = new Date().toISOString().slice(0, 10);
+    if (manualEntryEmployee) manualEntryEmployee.value = employeeId;
+    showToast('Entrada manual adicionada e aprovada.', 'success');
+  } catch (error) {
+    console.error(error);
+    showToast('Erro ao adicionar entrada manual.', 'error');
+  }
 }
 
 function buildShareUrl(shareToken) {
