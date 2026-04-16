@@ -110,7 +110,7 @@ function syncMeta(payload) {
 
   allowedApartments = Array.isArray(payload.allowedApartments) && payload.allowedApartments.length
     ? payload.allowedApartments
-    : ['123', '1248'];
+    : ['123', '1248', 'Ambos', 'Ferro 123', 'Ferro 1248', 'Ferro Ambos'];
   syncApartmentButtons();
 }
 
@@ -133,9 +133,12 @@ function handleApartmentToggle(event) {
 function syncApartmentButtons() {
   apartmentToggle?.querySelectorAll('[data-apartment]').forEach((button) => {
     const value = button.getAttribute('data-apartment') || '';
-    const isAllowed = value === 'Ambos'
-      ? allowedApartments.includes('123') && allowedApartments.includes('1248')
-      : allowedApartments.includes(value);
+    const isAllowed =
+      value === 'Ambos'
+        ? allowedApartments.includes('123') && allowedApartments.includes('1248')
+        : value === 'Ferro Ambos'
+          ? allowedApartments.includes('Ferro 123') && allowedApartments.includes('Ferro 1248')
+          : allowedApartments.includes(value);
 
     button.disabled = !isAllowed;
     button.classList.toggle('is-active', value === selectedApartment);
@@ -144,7 +147,13 @@ function syncApartmentButtons() {
   if (selectedApartment === 'Ambos' && !(allowedApartments.includes('123') && allowedApartments.includes('1248'))) {
     selectedApartment = '';
   }
-  if ((selectedApartment === '123' || selectedApartment === '1248') && !allowedApartments.includes(selectedApartment)) {
+  if (selectedApartment === 'Ferro Ambos' && !(allowedApartments.includes('Ferro 123') && allowedApartments.includes('Ferro 1248'))) {
+    selectedApartment = '';
+  }
+  if (
+    ['123', '1248', 'Ferro 123', 'Ferro 1248'].includes(selectedApartment) &&
+    !allowedApartments.includes(selectedApartment)
+  ) {
     selectedApartment = '';
   }
 }

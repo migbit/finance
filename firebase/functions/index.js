@@ -11,6 +11,7 @@ if (!admin.apps.length) {
 const firestore = admin.firestore();
 const ACCESS_COLLECTION = "cleaning_hours_access";
 const ENTRIES_COLLECTION = "cleaning_hours_entries";
+const DEFAULT_ALLOWED_APARTMENTS = ["123", "1248", "Ambos", "Ferro 123", "Ferro 1248", "Ferro Ambos"];
 
 // ---- Secrets (must be set via `firebase functions:secrets:set ...`)
 const BINANCE_KEY = defineSecret("BINANCE_KEY");
@@ -91,15 +92,23 @@ function sanitizeApartment(apartment, allowedApartments) {
   const value = String(apartment || "").trim();
   if (!value) return "";
 
-  const allowed = Array.isArray(allowedApartments)
-    ? allowedApartments.map((item) => String(item || "").trim()).filter(Boolean)
-    : [];
-
-  if (value === "Ambos") {
-    return allowed.includes("123") && allowed.includes("1248") ? "Ambos" : null;
+  const allowed = new Set(DEFAULT_ALLOWED_APARTMENTS);
+  if (Array.isArray(allowedApartments)) {
+    allowedApartments
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .forEach((item) => allowed.add(item));
   }
 
-  if (allowed.length && !allowed.includes(value)) {
+  if (value === "Ambos") {
+    return allowed.has("123") && allowed.has("1248") ? "Ambos" : null;
+  }
+
+  if (value === "Ferro Ambos") {
+    return allowed.has("Ferro 123") && allowed.has("Ferro 1248") ? "Ferro Ambos" : null;
+  }
+
+  if (!allowed.has(value)) {
     return null;
   }
 
@@ -360,7 +369,10 @@ exports.cleaningHours = onRequest(
         res.status(200).json({
           employeeId: access.employeeId,
           employeeName: access.employeeName || access.employeeId,
-          allowedApartments: Array.isArray(access.allowedApartments) ? access.allowedApartments : [],
+          allowedApartments: Array.from(new Set([
+            ...DEFAULT_ALLOWED_APARTMENTS,
+            ...(Array.isArray(access.allowedApartments) ? access.allowedApartments : [])
+          ])),
           today: date,
           entry: entrySnap.exists ? { id: entrySnap.id, ...entrySnap.data() } : null,
           recentEntries,

@@ -117,7 +117,7 @@ async function handleCreateOrRenewAccess(event) {
     employeeId,
     employeeName,
     hourlyRate: Number.isFinite(hourlyRate) ? hourlyRate : 0,
-    allowedApartments: ['123', '1248'],
+    allowedApartments: ['123', '1248', 'Ambos', 'Ferro 123', 'Ferro 1248', 'Ferro Ambos'],
     shareToken,
     tokenHash,
     active: true,
@@ -160,7 +160,7 @@ function renderAccessList() {
           </div>
           <span class="pill ${row.active === false ? 'is-off' : ''}">${row.active === false ? 'Inativo' : 'Ativo'}</span>
         </div>
-        <div><strong>Apartamentos:</strong> 123 e 1248</div>
+        <div><strong>Apartamentos:</strong> 123, 1248, Ambos, Ferro 123, Ferro 1248, Ferro Ambos</div>
         <div><strong>Valor/hora:</strong> ${formatEuroNumber(row.hourlyRate || 0)} €</div>
         <div><strong>Link:</strong> <a href="${escapeAttr(shareUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shareUrl)}</a></div>
         <div class="form-actions">
@@ -282,6 +282,9 @@ function populateApartmentFilter() {
   values.add('123');
   values.add('1248');
   values.add('Ambos');
+  values.add('Ferro 123');
+  values.add('Ferro 1248');
+  values.add('Ferro Ambos');
   entryRows.forEach((row) => {
     if (row.apartment) values.add(row.apartment);
   });
@@ -322,7 +325,7 @@ async function handleManualEntry(event) {
   const hours = Number(String(manualEntryHours?.value || '').replace(',', '.'));
   const apartment = manualEntryApartment?.value || '';
 
-  if (!employeeId || !date || !Number.isFinite(hours) || hours < 0 || !['123', '1248', 'Ambos'].includes(apartment)) {
+  if (!employeeId || !date || !Number.isFinite(hours) || hours < 0 || !['123', '1248', 'Ambos', 'Ferro 123', 'Ferro 1248', 'Ferro Ambos'].includes(apartment)) {
     showToast('Preenche os dados da entrada manual.', 'warning');
     return;
   }
@@ -391,6 +394,8 @@ function getSplitHours(row, apartment) {
   const hours = Number(row.hours) || 0;
   if (row.apartment === apartment) return hours;
   if (row.apartment === 'Ambos') return hours / 2;
+  if (row.apartment === `Ferro ${apartment}`) return hours;
+  if (row.apartment === 'Ferro Ambos') return hours / 2;
   return 0;
 }
 
@@ -609,10 +614,10 @@ async function editEntry(entryId) {
     return;
   }
 
-  const newApartment = window.prompt('Apartamento (123, 1248 ou Ambos):', row.apartment || '');
+  const newApartment = window.prompt('Apartamento (123, 1248, Ambos, Ferro 123, Ferro 1248 ou Ferro Ambos):', row.apartment || '');
   if (newApartment === null) return;
   const apartment = String(newApartment).trim();
-  if (!['123', '1248', 'Ambos'].includes(apartment)) {
+  if (!['123', '1248', 'Ambos', 'Ferro 123', 'Ferro 1248', 'Ferro Ambos'].includes(apartment)) {
     showToast('Apartamento inválido.', 'warning');
     return;
   }
