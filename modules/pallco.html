@@ -62,7 +62,9 @@
             <option value="Diversos">Diversos</option>
           </select>
           <input type="number" id="pallco-valor" placeholder="Valor (€)" step="0.01" required>
-          <button type="submit" class="btn">Adicionar</button>
+          <button type="submit" id="pallco-submit" class="btn">Adicionar</button>
+          <button type="button" id="pallco-cancel-edit" class="btn" style="display:none;">Cancelar</button>
+          <span id="pallco-editing-hint" style="display:none; color: var(--text-dim);">A editar movimento</span>
         </form>
       </div>
     </section>

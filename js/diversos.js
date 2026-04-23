@@ -1448,6 +1448,9 @@ function initPallco() {
   const inpData = document.getElementById('pallco-data');
   const inpDesc = document.getElementById('pallco-descricao');
   const inpValor = document.getElementById('pallco-valor');
+  const submitBtn = document.getElementById('pallco-submit');
+  const cancelEditBtn = document.getElementById('pallco-cancel-edit');
+  const editingHint = document.getElementById('pallco-editing-hint');
   const monthsWrap = document.getElementById('pallco-months');
   const olderWrap = document.getElementById('pallco-older-wrap');
   const toggleOlderBtn = document.getElementById('pallco-toggle-older');
@@ -1455,6 +1458,33 @@ function initPallco() {
   if (!form || !monthsWrap) return;
 
   const COLL = _collection(db, 'pallco');
+  let editingRowId = null;
+  let editingRow = null;
+
+  function resetFormState() {
+    editingRowId = null;
+    editingRow = null;
+    form.reset();
+    if (submitBtn) submitBtn.textContent = 'Adicionar';
+    if (cancelEditBtn) cancelEditBtn.style.display = 'none';
+    if (editingHint) editingHint.style.display = 'none';
+  }
+
+  function enterEditMode(row) {
+    editingRowId = row.id;
+    editingRow = row;
+    if (inpData) inpData.value = row.data || '';
+    if (inpDesc) inpDesc.value = row.descricao || '';
+    if (inpValor) inpValor.value = Number(row.valor || 0).toFixed(2);
+    if (submitBtn) submitBtn.textContent = 'Guardar';
+    if (cancelEditBtn) cancelEditBtn.style.display = '';
+    if (editingHint) editingHint.style.display = '';
+    inpData?.focus();
+  }
+
+  cancelEditBtn?.addEventListener('click', () => {
+    resetFormState();
+  });
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1469,18 +1499,27 @@ function initPallco() {
 
     const monthKey = dataStr.slice(0, 7); // YYYY-MM
     try {
-      await _addDoc(COLL, {
+      const payload = {
         data: dataStr,
         descricao,
         valor: Math.round(valor * 100) / 100,
         month: monthKey,
-        ts: Date.now()
-      });
-      form.reset();
+        ts: editingRow?.ts || Date.now()
+      };
+
+      if (editingRowId) {
+        await updateDoc(doc(db, 'pallco', editingRowId), payload);
+        showToast('Movimento atualizado.', 'success');
+      } else {
+        await _addDoc(COLL, payload);
+        showToast('Movimento adicionado.', 'success');
+      }
+
+      resetFormState();
       await loadPallco();
     } catch (err) {
       console.error(err);
-      alert('Erro ao adicionar movimento.');
+      alert(editingRowId ? 'Erro ao atualizar movimento.' : 'Erro ao adicionar movimento.');
     }
   });
 
@@ -1508,6 +1547,7 @@ function initPallco() {
   }
 
   function renderPallco(rows) {
+    monthsWrap.__pallcoRows = rows;
     monthsWrap.innerHTML = '';
 
     if (!rows.length) {
@@ -1554,21 +1594,23 @@ function initPallco() {
     <col>
     <col>
     <col>
+    <col style="width: 1%;">
   </colgroup>
   <thead>
     <tr class="pallco-month-header-row">
-      <th colspan="3" class="center">${niceMonth}</th>
+      <th colspan="4" class="center">${niceMonth}</th>
     </tr>
     <tr>
       <th>Data</th>
       <th>Descrição</th>
       <th class="right">Valor (€)</th>
+      <th class="center">Ações</th>
     </tr>
   </thead>
   <tbody></tbody>
   <tfoot>
     <tr class="pallco-total-row">
-      <td colspan="2"></td>
+      <td colspan="3"></td>
       <td class="right"><strong>${euro2(totalMonth)}</strong></td>
     </tr>
   </tfoot>
@@ -1587,6 +1629,10 @@ function initPallco() {
           <td>${escapeHtml(r.data || '')}</td>
           <td>${escapeHtml(r.descricao || '')}</td>
           <td class="right">${euro2(r.valor || 0)}</td>
+          <td class="center">
+            <button type="button" class="btn btn-edit" data-pallco-edit="${escapeAttr(r.id)}" title="Editar" aria-label="Editar">&#9998;</button>
+            <button type="button" class="btn" data-pallco-delete="${escapeAttr(r.id)}" title="Apagar" aria-label="Apagar">Apagar</button>
+          </td>
         `;
         tbody.appendChild(tr);
 
@@ -1626,6 +1672,38 @@ function initPallco() {
       }
     }
   }
+
+  monthsWrap.addEventListener('click', async (event) => {
+    const editBtn = event.target.closest('[data-pallco-edit]');
+    if (editBtn) {
+      const rowId = editBtn.getAttribute('data-pallco-edit');
+      if (!rowId) return;
+      const targetRow = monthsWrap.__pallcoRows?.find(row => row.id === rowId);
+      if (!targetRow) return;
+      enterEditMode(targetRow);
+      return;
+    }
+
+    const deleteBtn = event.target.closest('[data-pallco-delete]');
+    if (!deleteBtn) return;
+
+    const rowId = deleteBtn.getAttribute('data-pallco-delete');
+    const targetRow = monthsWrap.__pallcoRows?.find(row => row.id === rowId);
+    if (!rowId || !targetRow) return;
+
+    const confirmed = window.confirm(`Apagar o movimento de ${targetRow.data || 'sem data'}?`);
+    if (!confirmed) return;
+
+    try {
+      await deleteDoc(doc(db, 'pallco', rowId));
+      if (editingRowId === rowId) resetFormState();
+      showToast('Movimento apagado.', 'info');
+      await loadPallco();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao apagar movimento.');
+    }
+  });
 
   // primeira carga
   loadPallco();
