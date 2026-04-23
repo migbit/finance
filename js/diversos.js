@@ -1590,12 +1590,6 @@ function initPallco() {
       const table = document.createElement('table');
       table.className = 'table pallco-table';
       table.innerHTML = `
-  <colgroup>
-    <col>
-    <col>
-    <col>
-    <col style="width: 1%;">
-  </colgroup>
   <thead>
     <tr class="pallco-month-header-row">
       <th colspan="4" class="center">${niceMonth}</th>
@@ -1630,8 +1624,10 @@ function initPallco() {
           <td>${escapeHtml(r.descricao || '')}</td>
           <td class="right">${euro2(r.valor || 0)}</td>
           <td class="center">
-            <button type="button" class="btn btn-edit" data-pallco-edit="${escapeAttr(r.id)}" title="Editar" aria-label="Editar">&#9998;</button>
-            <button type="button" class="btn" data-pallco-delete="${escapeAttr(r.id)}" title="Apagar" aria-label="Apagar">Apagar</button>
+            <div class="pallco-actions">
+              <button type="button" class="btn btn-edit" data-pallco-edit="${escapeAttr(r.id)}" title="Editar" aria-label="Editar">&#9998;</button>
+              <button type="button" class="btn" data-pallco-delete="${escapeAttr(r.id)}" title="Apagar" aria-label="Apagar">Apagar</button>
+            </div>
           </td>
         `;
         tbody.appendChild(tr);

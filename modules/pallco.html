@@ -9,6 +9,98 @@
   <link rel="stylesheet" href="../css/mobile.css">
   <link rel="icon" href="../favicon.ico" type="image/x-icon">
   <link rel="manifest" href="../manifest.json">
+  <style>
+    #pallco-page .viz-card .table-wrap {
+      overflow-x: auto;
+    }
+
+    #pallco-page .viz-card .table-wrap table.pallco-table {
+      width: 100%;
+      min-width: 0;
+      table-layout: fixed;
+    }
+
+    #pallco-page .pallco-table td,
+    #pallco-page .pallco-table th {
+      vertical-align: middle;
+    }
+
+    #pallco-page .pallco-table th:nth-child(1),
+    #pallco-page .pallco-table td:nth-child(1) {
+      width: 120px;
+    }
+
+    #pallco-page .pallco-table th:nth-child(3),
+    #pallco-page .pallco-table td:nth-child(3) {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    #pallco-page .pallco-table th:nth-child(4),
+    #pallco-page .pallco-table td:nth-child(4) {
+      width: 130px;
+      min-width: 130px;
+    }
+
+    #pallco-page .pallco-table th:nth-child(2),
+    #pallco-page .pallco-table td:nth-child(2) {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    #pallco-page .pallco-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    #pallco-page .pallco-actions .btn {
+      min-width: 0;
+    }
+
+    @media (max-width: 1024px) {
+      #pallco-page .pallco-table th,
+      #pallco-page .pallco-table td {
+        white-space: normal;
+      }
+
+      #pallco-page .pallco-table th:nth-child(4),
+      #pallco-page .pallco-table td:nth-child(4) {
+        width: 110px;
+        min-width: 110px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      #pallco-page .pallco-table th:nth-child(1),
+      #pallco-page .pallco-table td:nth-child(1) {
+        width: 94px;
+      }
+
+      #pallco-page .pallco-table th:nth-child(3),
+      #pallco-page .pallco-table td:nth-child(3) {
+        width: 92px;
+        min-width: 92px;
+      }
+
+      #pallco-page .pallco-table th:nth-child(4),
+      #pallco-page .pallco-table td:nth-child(4) {
+        width: 88px;
+        min-width: 88px;
+      }
+
+      #pallco-page .pallco-actions {
+        flex-direction: column;
+      }
+
+      #pallco-page .pallco-actions .btn {
+        width: 100%;
+        padding-left: 6px;
+        padding-right: 6px;
+      }
+    }
+  </style>
 </head>
 <body id="pallco-page" data-page="pallco-page">
   <button id="menu-icon" aria-label="Open menu">☰</button>
