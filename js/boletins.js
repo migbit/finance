@@ -24,6 +24,8 @@ const els = {
   guestName: document.getElementById('guest-name'),
   language: document.getElementById('guest-language'),
   guestCount: document.getElementById('guest-count'),
+  checkinDate: document.getElementById('checkin-date'),
+  checkoutDate: document.getElementById('checkout-date'),
   generatedBox: document.getElementById('generated-link'),
   generatedUrl: document.getElementById('generated-url'),
   copyGenerated: document.getElementById('copy-generated-link'),
@@ -48,9 +50,16 @@ async function handleCreateBoletim(event) {
   const guestName = els.guestName.value.trim();
   const language = els.language.value;
   const expectedGuests = Number(els.guestCount.value);
+  const checkinDate = els.checkinDate.value;
+  const checkoutDate = els.checkoutDate.value;
 
-  if (!guestName || !language || !Number.isFinite(expectedGuests) || expectedGuests < 1) {
-    showToast('Preenche o nome, língua e número de hóspedes.', 'warning');
+  if (!guestName || !language || !Number.isFinite(expectedGuests) || expectedGuests < 1 || !checkinDate || !checkoutDate) {
+    showToast('Preenche o nome, língua, número de hóspedes e datas.', 'warning');
+    return;
+  }
+
+  if (checkoutDate <= checkinDate) {
+    showToast('A data de check-out tem de ser posterior ao check-in.', 'warning');
     return;
   }
 
@@ -63,6 +72,8 @@ async function handleCreateBoletim(event) {
       guestName,
       language,
       expectedGuests,
+      checkinDate,
+      checkoutDate,
       sentToAuthorities: false,
       createdAt: now,
       updatedAt: now
@@ -84,7 +95,7 @@ async function handleCreateBoletim(event) {
 
 async function loadBoletins() {
   if (!els.body) return;
-  els.body.innerHTML = '<tr><td colspan="8" class="empty-state">A carregar boletins...</td></tr>';
+  els.body.innerHTML = '<tr><td colspan="9" class="empty-state">A carregar boletins...</td></tr>';
 
   try {
     const q = query(collection(db, COLLECTION), orderBy('createdAt', 'desc'));
@@ -105,14 +116,14 @@ async function loadBoletins() {
     renderBoletins();
   } catch (err) {
     console.error('Erro ao carregar boletins', err);
-    els.body.innerHTML = '<tr><td colspan="8" class="empty-state">Erro ao carregar boletins.</td></tr>';
+    els.body.innerHTML = '<tr><td colspan="9" class="empty-state">Erro ao carregar boletins.</td></tr>';
     showToast('Não foi possível carregar os boletins.', 'error');
   }
 }
 
 function renderBoletins() {
   if (!state.boletins.length) {
-    els.body.innerHTML = '<tr><td colspan="8" class="empty-state">Ainda não existem boletins.</td></tr>';
+    els.body.innerHTML = '<tr><td colspan="9" class="empty-state">Ainda não existem boletins.</td></tr>';
     return;
   }
 
@@ -128,6 +139,7 @@ function renderBoletins() {
       <tr>
         <td>${escapeHtml(date)}</td>
         <td>${escapeHtml(item.guestName || 'Sem nome')}</td>
+        <td>${escapeHtml(formatStay(item.checkinDate, item.checkoutDate))}</td>
         <td><span class="status-badge ${statusClass}">${status}</span></td>
         <td>${item.guestSubmissions || 0}/${Number(item.expectedGuests || 0)}</td>
         <td>
@@ -152,7 +164,7 @@ function renderBoletins() {
         </td>
       </tr>
       <tr id="${detailsId}" hidden>
-        <td colspan="8">${renderGuestDetails(item.guests || [])}</td>
+        <td colspan="9">${renderGuestDetails(item.guests || [])}</td>
       </tr>
     `;
   }).join('');
@@ -264,6 +276,18 @@ function formatDateTime(value) {
   });
 }
 
+function formatStay(checkinDate, checkoutDate) {
+  if (!checkinDate && !checkoutDate) return '-';
+  return `${formatDateOnly(checkinDate)} - ${formatDateOnly(checkoutDate)}`;
+}
+
+function formatDateOnly(value) {
+  if (!value) return '-';
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('pt-PT');
+}
+
 function toMillis(value) {
   const date = value?.toDate ? value.toDate() : value ? new Date(value) : null;
   return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
@@ -279,6 +303,8 @@ function renderGuestDetails(guests) {
       <td>${escapeHtml(formatDateTime(guest.submittedAt))}</td>
       <td>${escapeHtml(`${guest.firstName || ''} ${guest.lastName || ''}`.trim())}</td>
       <td>${escapeHtml(guest.birthDate || '-')}</td>
+      <td>${escapeHtml(formatDateOnly(guest.checkinDate))}</td>
+      <td>${escapeHtml(formatDateOnly(guest.checkoutDate))}</td>
       <td>${escapeHtml(formatDocumentType(guest.documentType))}</td>
       <td>${escapeHtml(guest.documentNumber || '-')}</td>
       <td>${escapeHtml(formatCountry(guest.countryOrigin))}</td>
@@ -295,6 +321,8 @@ function renderGuestDetails(guests) {
             <th>Submetido</th>
             <th>Nome</th>
             <th>Nascimento</th>
+            <th>Check-in</th>
+            <th>Check-out</th>
             <th>Documento</th>
             <th>Número</th>
             <th>Origem</th>

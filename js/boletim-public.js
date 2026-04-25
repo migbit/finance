@@ -114,7 +114,9 @@ const COPY = {
     other: 'Outro',
     progressTitle: 'Estado do grupo',
     guestLabel: 'Hóspede',
-    emptySlot: 'Por preencher'
+    emptySlot: 'Por preencher',
+    checkin: 'Check-in',
+    checkout: 'Check-out'
   },
   en: {
     title: 'Guest check-in',
@@ -138,7 +140,9 @@ const COPY = {
     other: 'Other',
     progressTitle: 'Group status',
     guestLabel: 'Guest',
-    emptySlot: 'Not filled yet'
+    emptySlot: 'Not filled yet',
+    checkin: 'Check-in',
+    checkout: 'Check-out'
   },
   fr: {
     title: 'Check-in invité',
@@ -162,7 +166,9 @@ const COPY = {
     other: 'Autre',
     progressTitle: 'Statut du groupe',
     guestLabel: 'Invité',
-    emptySlot: 'À remplir'
+    emptySlot: 'À remplir',
+    checkin: 'Arrivée',
+    checkout: 'Départ'
   },
   es: {
     title: 'Check-in de huésped',
@@ -186,7 +192,9 @@ const COPY = {
     other: 'Otro',
     progressTitle: 'Estado del grupo',
     guestLabel: 'Huésped',
-    emptySlot: 'Por rellenar'
+    emptySlot: 'Por rellenar',
+    checkin: 'Entrada',
+    checkout: 'Salida'
   }
 };
 
@@ -205,7 +213,8 @@ const els = {
   countryResidence: document.getElementById('country-residence'),
   documentCountry: document.getElementById('document-country'),
   declaration: document.getElementById('declaration'),
-  progress: document.getElementById('guest-progress')
+  progress: document.getElementById('guest-progress'),
+  stayDates: document.getElementById('stay-dates')
 };
 
 const state = {
@@ -213,6 +222,8 @@ const state = {
   language: 'en',
   previousOrigin: '',
   expectedGuests: 1,
+  checkinDate: '',
+  checkoutDate: '',
   summaries: []
 };
 
@@ -237,9 +248,12 @@ async function init() {
     const boletim = snap.data();
     state.language = COPY[boletim.language] ? boletim.language : 'en';
     state.expectedGuests = Math.max(1, Number(boletim.expectedGuests || 1));
+    state.checkinDate = boletim.checkinDate || '';
+    state.checkoutDate = boletim.checkoutDate || '';
     applyLanguage(state.language);
     populateCountries();
     els.subtitle.textContent = `${COPY[state.language].subtitle} ${boletim.guestName ? `(${boletim.guestName})` : ''}`;
+    renderStayDates();
     await loadGuestSummaries();
     renderProgress();
     els.form.hidden = false;
@@ -275,6 +289,8 @@ async function handleSubmit(event) {
     countryOrigin: els.countryOrigin.value,
     countryResidence: els.countryResidence.value,
     documentCountry: els.documentCountry.value,
+    checkinDate: state.checkinDate,
+    checkoutDate: state.checkoutDate,
     declarationAccepted: els.declaration.checked,
     submittedAt: Timestamp.now(),
     userAgent: navigator.userAgent || ''
@@ -336,6 +352,20 @@ function renderProgress() {
 
   els.progress.innerHTML = `<h2>${t.progressTitle}</h2>${slots.join('')}`;
   els.progress.hidden = false;
+}
+
+function renderStayDates() {
+  const t = COPY[state.language];
+  if (!state.checkinDate && !state.checkoutDate) {
+    els.stayDates.hidden = true;
+    return;
+  }
+
+  els.stayDates.innerHTML = `
+    <span class="stay-date">${t.checkin}: ${escapeHtml(formatDateOnly(state.checkinDate, state.language))}</span>
+    <span class="stay-date">${t.checkout}: ${escapeHtml(formatDateOnly(state.checkoutDate, state.language))}</span>
+  `;
+  els.stayDates.hidden = false;
 }
 
 function handleOriginChange() {
@@ -407,6 +437,13 @@ function setMessage(message, type = '') {
 function toMillis(value) {
   const date = value?.toDate ? value.toDate() : value ? new Date(value) : null;
   return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
+}
+
+function formatDateOnly(value, lang = 'en') {
+  if (!value) return '-';
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(lang);
 }
 
 function escapeHtml(value) {

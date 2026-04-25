@@ -45,6 +45,23 @@
       margin: 0;
     }
 
+    .stay-dates {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .stay-date {
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfe;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
     .checkin-grid {
       display: grid;
       gap: 14px;
@@ -174,6 +191,7 @@
       <div class="checkin-header">
         <h1 id="page-title">Check-in</h1>
         <p id="page-subtitle">Loading...</p>
+        <div id="stay-dates" class="stay-dates" hidden></div>
       </div>
 
       <div id="guest-progress" class="guest-progress" hidden></div>

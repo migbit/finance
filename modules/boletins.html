@@ -159,6 +159,14 @@
             <label for="guest-count">Número de hóspedes</label>
             <input id="guest-count" type="number" min="1" max="30" value="1" required>
           </div>
+          <div class="field">
+            <label for="checkin-date">Check-in</label>
+            <input id="checkin-date" type="date" required>
+          </div>
+          <div class="field">
+            <label for="checkout-date">Check-out</label>
+            <input id="checkout-date" type="date" required>
+          </div>
         </div>
         <div class="boletins-actions">
           <button class="primary" type="submit">Gerar link</button>
@@ -182,6 +190,7 @@
             <tr>
               <th>Data</th>
               <th>Nome</th>
+              <th>Estadia</th>
               <th>Estado</th>
               <th>Hóspedes</th>
               <th>Enviado</th>
@@ -191,7 +200,7 @@
             </tr>
           </thead>
           <tbody id="boletins-body">
-            <tr><td colspan="8" class="empty-state">A carregar boletins...</td></tr>
+            <tr><td colspan="9" class="empty-state">A carregar boletins...</td></tr>
           </tbody>
         </table>
       </div>

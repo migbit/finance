@@ -17,6 +17,8 @@ service cloud.firestore {
             'countryOrigin',
             'countryResidence',
             'documentCountry',
+            'checkinDate',
+            'checkoutDate',
             'declarationAccepted',
             'submittedAt',
             'userAgent'
@@ -29,6 +31,8 @@ service cloud.firestore {
           && request.resource.data.countryOrigin is string
           && request.resource.data.countryResidence is string
           && request.resource.data.documentCountry is string
+          && request.resource.data.checkinDate is string
+          && request.resource.data.checkoutDate is string
           && request.resource.data.declarationAccepted == true;
       }
 
