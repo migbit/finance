@@ -19,6 +19,7 @@ const NAV_GROUPS = [
     links: [
       { label: '📄 Faturas', key: 'faturas', slug: 'modules/faturas.html', module: true },
       { label: '🆕 Análise', key: 'analisev3', slug: 'modules/analisev3.html', module: true },
+      { label: '🛂 Boletins', key: 'boletins', slug: 'modules/boletins.html', module: true },
       { label: '🧳 Taxa Turística', key: 'tmt', slug: 'modules/tmt.html', module: true },
       { label: '📝 Questionário', key: 'questionario', slug: 'modules/questionario.html', module: true },
       { label: '🧹 Horas Limpeza', key: 'cleaning-hours', slug: 'modules/cleaning-hours.html', module: true },
@@ -64,6 +65,7 @@ const NAV_GROUPS = [
 const ACTIVE_KEY_MATCHERS = [
   { key: 'dca-revolut', patterns: ['dca-revolut'] },
   { key: 'analisev3', patterns: ['analisev3'] },
+  { key: 'boletins', patterns: ['boletins'] },
   { key: 'faturas', patterns: ['faturas'] },
   { key: 'tmt', patterns: ['tmt'] },
   { key: 'diversos', patterns: ['diversos'] },

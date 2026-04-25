@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check-in</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <meta name="theme-color" content="#f8f9fb">
+  <style>
+    body.public-checkin {
+      min-height: 100vh;
+      background: #f8f9fb;
+    }
+
+    .public-checkin main {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 22px 16px 34px;
+    }
+
+    .checkin-shell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 22px;
+      box-shadow: var(--shadow-1);
+    }
+
+    .checkin-header {
+      margin-bottom: 20px;
+    }
+
+    .checkin-header h1 {
+      font-size: 1.45rem;
+      line-height: 1.25;
+      margin: 0 0 8px;
+      text-align: left;
+    }
+
+    .checkin-header p {
+      color: var(--text-dim);
+      margin: 0;
+    }
+
+    .checkin-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .checkin-grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .declaration {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfe;
+      margin-top: 14px;
+      color: var(--text);
+      font-size: 0.92rem;
+    }
+
+    .declaration input {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--primary);
+      margin-top: 2px;
+    }
+
+    .checkin-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      margin-top: 18px;
+    }
+
+    .checkin-message {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      background: #fbfcfe;
+    }
+
+    .checkin-message.success {
+      color: #166534;
+      border-color: #bbf7d0;
+      background: #f0fdf4;
+    }
+
+    .checkin-message.error {
+      color: #991b1b;
+      border-color: #fecaca;
+      background: #fef2f2;
+    }
+
+    @media (max-width: 640px) {
+      .checkin-shell {
+        padding: 18px;
+      }
+
+      .checkin-grid.two {
+        grid-template-columns: 1fr;
+      }
+
+      .checkin-actions button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body class="public-checkin">
+  <main>
+    <section class="checkin-shell">
+      <div class="checkin-header">
+        <h1 id="page-title">Check-in</h1>
+        <p id="page-subtitle">Loading...</p>
+      </div>
+
+      <form id="guest-form" hidden>
+        <div class="checkin-grid two">
+          <div class="field">
+            <label for="first-name" data-i18n="firstName">Name</label>
+            <input id="first-name" type="text" autocomplete="given-name" required>
+          </div>
+          <div class="field">
+            <label for="last-name" data-i18n="lastName">Last name</label>
+            <input id="last-name" type="text" autocomplete="family-name" required>
+          </div>
+        </div>
+
+        <div class="checkin-grid two">
+          <div class="field">
+            <label for="birth-date" data-i18n="birthDate">Date of birth</label>
+            <input id="birth-date" type="date" required>
+          </div>
+          <div class="field">
+            <label for="document-type" data-i18n="documentType">Identification type</label>
+            <select id="document-type" required></select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="document-number" data-i18n="documentNumber">Identification number</label>
+          <input id="document-number" type="text" autocomplete="off" required>
+        </div>
+
+        <div class="checkin-grid two">
+          <div class="field">
+            <label for="country-origin" data-i18n="countryOrigin">Country of origin</label>
+            <select id="country-origin" required></select>
+          </div>
+          <div class="field">
+            <label for="country-residence" data-i18n="countryResidence">Country of residence</label>
+            <select id="country-residence" required></select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="document-country" data-i18n="documentCountry">Country of origin of the identification document</label>
+          <select id="document-country" required></select>
+        </div>
+
+        <label class="declaration">
+          <input id="declaration" type="checkbox" required>
+          <span data-i18n="declaration">I declare the veracity of the data provided and I am aware of the legal basis which requires me to provide the data included on this form.</span>
+        </label>
+
+        <div class="checkin-actions">
+          <button id="submit-guest" class="primary" type="submit">Submit</button>
+        </div>
+      </form>
+
+      <div id="checkin-message" class="checkin-message"></div>
+    </section>
+  </main>
+
+  <script type="module" src="../js/boletim-public.js"></script>
+</body>
+</html>
