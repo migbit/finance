@@ -95,6 +95,7 @@ const COPY = {
   pt: {
     title: 'Check-in de hóspede',
     subtitle: 'Preencha os dados necessários para o boletim de alojamento.',
+    staySubtitle: 'Estadia de {start} até {end}',
     firstName: 'Nome',
     lastName: 'Apelido',
     birthDate: 'Data de nascimento',
@@ -121,6 +122,7 @@ const COPY = {
   en: {
     title: 'Guest check-in',
     subtitle: 'Fill in the information required for the accommodation bulletin.',
+    staySubtitle: 'Stay from {start} to {end}',
     firstName: 'Name',
     lastName: 'Last name',
     birthDate: 'Date of birth',
@@ -147,6 +149,7 @@ const COPY = {
   fr: {
     title: 'Check-in invité',
     subtitle: "Remplissez les informations nécessaires au bulletin d'hébergement.",
+    staySubtitle: 'Séjour du {start} au {end}',
     firstName: 'Prénom',
     lastName: 'Nom',
     birthDate: 'Date de naissance',
@@ -173,6 +176,7 @@ const COPY = {
   es: {
     title: 'Check-in de huésped',
     subtitle: 'Rellene los datos necesarios para el boletín de alojamiento.',
+    staySubtitle: 'Estancia del {start} al {end}',
     firstName: 'Nombre',
     lastName: 'Apellido',
     birthDate: 'Fecha de nacimiento',
@@ -252,7 +256,7 @@ async function init() {
     state.checkoutDate = boletim.checkoutDate || '';
     applyLanguage(state.language);
     populateCountries();
-    els.subtitle.textContent = `${COPY[state.language].subtitle} ${boletim.guestName ? `(${boletim.guestName})` : ''}`;
+    els.subtitle.textContent = formatStaySubtitle();
     renderStayDates();
     await loadGuestSummaries();
     renderProgress();
@@ -368,6 +372,17 @@ function renderStayDates() {
   els.stayDates.hidden = false;
 }
 
+function formatStaySubtitle() {
+  const t = COPY[state.language];
+  if (!state.checkinDate || !state.checkoutDate) {
+    return t.subtitle;
+  }
+
+  return t.staySubtitle
+    .replace('{start}', formatLongDate(state.checkinDate, state.language))
+    .replace('{end}', formatLongDate(state.checkoutDate, state.language));
+}
+
 function handleOriginChange() {
   const value = els.countryOrigin.value;
   const shouldSyncResidence = !els.countryResidence.dataset.touched || els.countryResidence.value === state.previousOrigin;
@@ -444,6 +459,17 @@ function formatDateOnly(value, lang = 'en') {
   const date = new Date(`${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString(lang);
+}
+
+function formatLongDate(value, lang = 'en') {
+  if (!value) return '-';
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(lang, {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
 }
 
 function escapeHtml(value) {
