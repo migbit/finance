@@ -4,7 +4,9 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   getFirestore,
+  setDoc,
   Timestamp
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
@@ -109,7 +111,10 @@ const COPY = {
     loading: 'A carregar...',
     passport: 'Passaporte',
     idCard: 'Cartão de cidadão / identificação',
-    other: 'Outro'
+    other: 'Outro',
+    progressTitle: 'Estado do grupo',
+    guestLabel: 'Hóspede',
+    emptySlot: 'Por preencher'
   },
   en: {
     title: 'Guest check-in',
@@ -130,7 +135,10 @@ const COPY = {
     loading: 'Loading...',
     passport: 'Passport',
     idCard: 'ID card',
-    other: 'Other'
+    other: 'Other',
+    progressTitle: 'Group status',
+    guestLabel: 'Guest',
+    emptySlot: 'Not filled yet'
   },
   fr: {
     title: 'Check-in invité',
@@ -151,7 +159,10 @@ const COPY = {
     loading: 'Chargement...',
     passport: 'Passeport',
     idCard: "Carte d'identité",
-    other: 'Autre'
+    other: 'Autre',
+    progressTitle: 'Statut du groupe',
+    guestLabel: 'Invité',
+    emptySlot: 'À remplir'
   },
   es: {
     title: 'Check-in de huésped',
@@ -172,7 +183,10 @@ const COPY = {
     loading: 'Cargando...',
     passport: 'Pasaporte',
     idCard: 'Documento de identidad',
-    other: 'Otro'
+    other: 'Otro',
+    progressTitle: 'Estado del grupo',
+    guestLabel: 'Huésped',
+    emptySlot: 'Por rellenar'
   }
 };
 
@@ -190,13 +204,16 @@ const els = {
   countryOrigin: document.getElementById('country-origin'),
   countryResidence: document.getElementById('country-residence'),
   documentCountry: document.getElementById('document-country'),
-  declaration: document.getElementById('declaration')
+  declaration: document.getElementById('declaration'),
+  progress: document.getElementById('guest-progress')
 };
 
 const state = {
   token: new URLSearchParams(window.location.search).get('t') || '',
   language: 'en',
-  previousOrigin: ''
+  previousOrigin: '',
+  expectedGuests: 1,
+  summaries: []
 };
 
 document.addEventListener('DOMContentLoaded', init);
@@ -219,9 +236,12 @@ async function init() {
 
     const boletim = snap.data();
     state.language = COPY[boletim.language] ? boletim.language : 'en';
+    state.expectedGuests = Math.max(1, Number(boletim.expectedGuests || 1));
     applyLanguage(state.language);
     populateCountries();
     els.subtitle.textContent = `${COPY[state.language].subtitle} ${boletim.guestName ? `(${boletim.guestName})` : ''}`;
+    await loadGuestSummaries();
+    renderProgress();
     els.form.hidden = false;
     setMessage('');
     bindEvents();
@@ -261,7 +281,15 @@ async function handleSubmit(event) {
   };
 
   try {
-    await addDoc(collection(db, COLLECTION, state.token, 'guests'), payload);
+    const guestRef = await addDoc(collection(db, COLLECTION, state.token, 'guests'), payload);
+    const summary = {
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      submittedAt: payload.submittedAt
+    };
+    await setDoc(doc(db, COLLECTION, state.token, 'guest_summaries', guestRef.id), summary);
+    state.summaries.push(summary);
+    renderProgress();
     els.form.reset();
     els.countryResidence.dataset.touched = '';
     els.documentCountry.dataset.touched = '';
@@ -279,6 +307,35 @@ async function handleSubmit(event) {
   } finally {
     els.submit.disabled = false;
   }
+}
+
+async function loadGuestSummaries() {
+  const snap = await getDocs(collection(db, COLLECTION, state.token, 'guest_summaries'));
+  state.summaries = snap.docs
+    .map((docSnap) => docSnap.data())
+    .sort((a, b) => toMillis(a.submittedAt) - toMillis(b.submittedAt));
+}
+
+function renderProgress() {
+  const t = COPY[state.language];
+  const slots = [];
+  const total = Math.max(state.expectedGuests, state.summaries.length || 0);
+
+  for (let index = 0; index < total; index += 1) {
+    const summary = state.summaries[index];
+    const name = summary
+      ? `${summary.firstName || ''} ${summary.lastName || ''}`.trim()
+      : t.emptySlot;
+    slots.push(`
+      <div class="guest-slot">
+        <strong>${t.guestLabel} ${index + 1}</strong>
+        <span>${escapeHtml(name || t.emptySlot)}</span>
+      </div>
+    `);
+  }
+
+  els.progress.innerHTML = `<h2>${t.progressTitle}</h2>${slots.join('')}`;
+  els.progress.hidden = false;
 }
 
 function handleOriginChange() {
@@ -345,6 +402,11 @@ function setMessage(message, type = '') {
   els.message.className = `checkin-message ${type}`.trim();
   els.message.innerHTML = message || '';
   els.message.hidden = !message;
+}
+
+function toMillis(value) {
+  const date = value?.toDate ? value.toDate() : value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
 }
 
 function escapeHtml(value) {

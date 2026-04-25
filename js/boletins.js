@@ -186,7 +186,9 @@ async function deleteBoletim(id, name) {
 
   try {
     const guestsSnap = await getDocs(collection(db, COLLECTION, id, 'guests'));
+    const summariesSnap = await getDocs(collection(db, COLLECTION, id, 'guest_summaries'));
     await Promise.all(guestsSnap.docs.map((guestDoc) => deleteDoc(guestDoc.ref)));
+    await Promise.all(summariesSnap.docs.map((summaryDoc) => deleteDoc(summaryDoc.ref)));
     await deleteDoc(doc(db, COLLECTION, id));
     state.boletins = state.boletins.filter((item) => item.id !== id);
     renderBoletins();

@@ -50,6 +50,45 @@
       gap: 14px;
     }
 
+    .guest-progress {
+      display: grid;
+      gap: 8px;
+      margin: 0 0 18px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .guest-progress h2 {
+      text-align: left;
+      font-size: 1rem;
+      margin: 0;
+      padding: 0;
+    }
+
+    .guest-slot {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      font-size: 0.92rem;
+    }
+
+    .guest-slot strong {
+      white-space: nowrap;
+    }
+
+    .guest-slot span {
+      color: var(--text-dim);
+      text-align: right;
+      overflow-wrap: anywhere;
+    }
+
     .checkin-grid.two {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -116,6 +155,16 @@
       .checkin-actions button {
         width: 100%;
       }
+
+      .guest-slot {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .guest-slot span {
+        text-align: left;
+      }
     }
   </style>
 </head>
@@ -126,6 +175,8 @@
         <h1 id="page-title">Check-in</h1>
         <p id="page-subtitle">Loading...</p>
       </div>
+
+      <div id="guest-progress" class="guest-progress" hidden></div>
 
       <form id="guest-form" hidden>
         <div class="checkin-grid two">
