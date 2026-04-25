@@ -13,6 +13,7 @@ import {
 import { showToast } from './toast.js';
 
 const COLLECTION = 'alojamento_boletins';
+const PUBLIC_FORM_URL = 'https://apartments-a4b17.web.app/modules/boletim.html';
 
 const state = {
   boletins: []
@@ -226,7 +227,9 @@ async function handleSentChange(event) {
 }
 
 function buildPublicLink(token) {
-  return new URL(`boletim.html?t=${encodeURIComponent(token)}`, window.location.href).href;
+  const url = new URL(PUBLIC_FORM_URL);
+  url.searchParams.set('t', token);
+  return url.href;
 }
 
 function createToken() {
