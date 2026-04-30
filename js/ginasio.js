@@ -614,6 +614,10 @@ const state = {
 const baseWeightTimers = new Map();
 const recommendedTimers = new Map();
 const restTimerIntervals = new Map();
+const LOCAL_DRAFT_CURRENT_KEY = 'ginasio-current-draft-v1';
+const LOCAL_DRAFT_PREFIX = 'ginasio-session-draft-v1';
+let localDraftTimer = null;
+let localDraftDirty = false;
 
 function formatWeight(value) {
   if (value === null || Number.isNaN(value)) return '';
@@ -632,6 +636,94 @@ function normalizeKey(text) {
 
 function getSessionId(gym, treino, date) {
   return `${normalizeKey(date)}-${normalizeKey(gym)}-${normalizeKey(treino)}`;
+}
+
+function getLocalDraftKey(gym, treino, date) {
+  if (!gym || !treino || !date) return '';
+  return `${LOCAL_DRAFT_PREFIX}-${getSessionId(gym, treino, date)}`;
+}
+
+function readLocalJson(key) {
+  if (!key) return null;
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    console.warn('[ginasio] erro ao ler rascunho local:', err);
+    return null;
+  }
+}
+
+function writeLocalJson(key, value) {
+  if (!key) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (err) {
+    console.warn('[ginasio] erro ao guardar rascunho local:', err);
+  }
+}
+
+function removeLocalKey(key) {
+  if (!key) return;
+  try {
+    localStorage.removeItem(key);
+  } catch (err) {
+    console.warn('[ginasio] erro ao remover rascunho local:', err);
+  }
+}
+
+function saveCurrentSelection() {
+  setStateFromInputs();
+  if (!state.gym && !state.treino && !state.date) return;
+  writeLocalJson(LOCAL_DRAFT_CURRENT_KEY, {
+    gym: state.gym,
+    treino: state.treino,
+    date: state.date,
+    updatedAt: Date.now()
+  });
+}
+
+function restoreCurrentSelection() {
+  const current = readLocalJson(LOCAL_DRAFT_CURRENT_KEY);
+  if (!current) return;
+  if (current.gym && gymSelect) gymSelect.value = current.gym;
+  if (current.treino && trainingSelect) trainingSelect.value = current.treino;
+  if (current.date && dateInput) dateInput.value = current.date;
+}
+
+function readLocalDraft(gym, treino, date) {
+  const draft = readLocalJson(getLocalDraftKey(gym, treino, date));
+  if (!draft?.session?.machines) return null;
+  return draft;
+}
+
+function persistLocalDraft() {
+  setStateFromInputs();
+  saveCurrentSelection();
+  if (!state.gym || !state.treino || !state.date) return;
+  if (!workoutWrap?.querySelector('.gym-machine-card')) return;
+  const session = buildSessionFromDom();
+  writeLocalJson(getLocalDraftKey(state.gym, state.treino, state.date), {
+    session,
+    updatedAt: Date.now()
+  });
+}
+
+function scheduleLocalDraftSave() {
+  localDraftDirty = true;
+  if (localDraftTimer) clearTimeout(localDraftTimer);
+  localDraftTimer = setTimeout(() => {
+    persistLocalDraft();
+  }, 250);
+}
+
+function clearLocalDraft(gym, treino, date) {
+  if (localDraftTimer) {
+    clearTimeout(localDraftTimer);
+    localDraftTimer = null;
+  }
+  removeLocalKey(getLocalDraftKey(gym, treino, date));
+  localDraftDirty = false;
 }
 
 function getBaseWeightId(machineId, variantId, seriesIndex) {
@@ -1188,6 +1280,7 @@ function renderMachine(machine) {
         } else {
           progressBadge.style.display = 'none';
         }
+        scheduleLocalDraftSave();
       }
     });
   }
@@ -1416,6 +1509,14 @@ async function loadSession() {
     state.session = null;
     showToast('Erro ao carregar treino do Firebase.', 'error');
   }
+  const localDraft = readLocalDraft(state.gym, state.treino, state.date);
+  if (localDraft) {
+    state.session = localDraft.session;
+    localDraftDirty = true;
+    showToast('Rascunho local do treino recuperado.', 'success', 1800);
+  } else {
+    localDraftDirty = false;
+  }
   renderWorkout();
   resetAddMachineForm();
 }
@@ -1623,6 +1724,8 @@ async function saveSession() {
     }, { merge: true });
 
     state.session = { ...session };
+    clearLocalDraft(session.gym, session.treino, session.date);
+    saveCurrentSelection();
     showToast('Treino gravado com sucesso.', 'success');
     await loadSummaries();
   } catch (err) {
@@ -1635,6 +1738,7 @@ async function deleteSessionById(docId) {
   try {
     await deleteDoc(doc(collection(db, 'ginasio_treinos'), docId));
     await deleteDoc(doc(collection(db, 'ginasio_resumos'), docId));
+    clearLocalDraft(state.gym, state.treino, state.date);
     state.session = null;
     showToast('Treino apagado.', 'success');
     await loadSummaries();
@@ -1720,6 +1824,7 @@ async function loadSummaries() {
 }
 
 function init() {
+  restoreCurrentSelection();
   if (dateInput && !dateInput.value) {
     dateInput.value = new Date().toISOString().slice(0, 10);
   }
@@ -1727,10 +1832,29 @@ function init() {
 
   gymSelect.addEventListener('change', () => {
     trainingSelect.disabled = !gymSelect.value;
+    saveCurrentSelection();
     loadSession();
   });
-  trainingSelect.addEventListener('change', loadSession);
-  dateInput.addEventListener('change', loadSession);
+  trainingSelect.addEventListener('change', () => {
+    saveCurrentSelection();
+    loadSession();
+  });
+  dateInput.addEventListener('change', () => {
+    saveCurrentSelection();
+    loadSession();
+  });
+  workoutWrap.addEventListener('input', scheduleLocalDraftSave);
+  workoutWrap.addEventListener('change', () => {
+    setTimeout(scheduleLocalDraftSave, 0);
+  });
+  window.addEventListener('pagehide', () => {
+    if (localDraftDirty) persistLocalDraft();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && localDraftDirty) {
+      persistLocalDraft();
+    }
+  });
   saveBtn.addEventListener('click', saveSession);
   summariesRefreshBtn.addEventListener('click', loadSummaries);
   if (machineAddSeriesBtn) {
