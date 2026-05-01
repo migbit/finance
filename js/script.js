@@ -34,6 +34,7 @@ const NAV_GROUPS = [
       { label: '💰 Caixa', key: 'caixa', slug: 'modules/caixa.html', module: true },
       { label: '📑 IVA Estrangeiro', key: 'iva', slug: 'modules/iva.html', module: true },
       { label: '🏢 PALLCO', key: 'pallco', slug: 'modules/pallco.html', module: true },
+      { label: '📭 Faturas em Falta', key: 'faturas-em-falta', slug: 'modules/faturas-em-falta.html', module: true },
       { label: '🧾 Carlos – Faturas', key: 'carlos', slug: 'modules/carlos.html', module: true }
     ]
   },
@@ -66,6 +67,7 @@ const ACTIVE_KEY_MATCHERS = [
   { key: 'dca-revolut', patterns: ['dca-revolut'] },
   { key: 'analisev3', patterns: ['analisev3'] },
   { key: 'boletins', patterns: ['boletins'] },
+  { key: 'faturas-em-falta', patterns: ['faturas-em-falta'] },
   { key: 'faturas', patterns: ['faturas'] },
   { key: 'tmt', patterns: ['tmt'] },
   { key: 'diversos', patterns: ['diversos'] },

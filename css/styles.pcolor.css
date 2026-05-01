@@ -1621,6 +1621,32 @@ body[data-page="caixa"] main {
   transform: translateY(1px);
 }
 
+body[data-page="faturas-em-falta"] .missing-invoice-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 0 0 1rem;
+}
+
+body[data-page="faturas-em-falta"] .missing-invoice-form .form-group {
+  flex: 1 1 180px;
+}
+
+body[data-page="faturas-em-falta"] .missing-invoice-form input {
+  width: 100%;
+}
+
+body[data-page="faturas-em-falta"] .missing-invoice-form button {
+  flex: 0 0 auto;
+}
+
+body[data-page="faturas-em-falta"] .missing-invoice-delete {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
 .report-section .viz-card:first-of-type {
   padding-top: 16px;
   padding-bottom: 16px;

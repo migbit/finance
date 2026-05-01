@@ -8,7 +8,7 @@ async function exportAllData() {
   showToast('A exportar dados...', 'info', 10000);
 
   try {
-    const collections = ['faturas', 'caixa', 'cryptoportfolio_investments', 'cryptoportfolio_monthly_totals', 'cryptoportfolio_apy', 'dca_data', 'reparacoes'];
+    const collections = ['faturas', 'faturasEmFalta', 'caixa', 'cryptoportfolio_investments', 'cryptoportfolio_monthly_totals', 'cryptoportfolio_apy', 'dca_data', 'reparacoes'];
     const exportData = {
       exportDate: new Date().toISOString(),
       version: '1.0',
