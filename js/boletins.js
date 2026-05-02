@@ -29,7 +29,8 @@ const els = {
   generatedBox: document.getElementById('generated-link'),
   generatedUrl: document.getElementById('generated-url'),
   copyGenerated: document.getElementById('copy-generated-link'),
-  body: document.getElementById('boletins-body')
+  body: document.getElementById('boletins-body'),
+  sentBody: document.getElementById('boletins-sent-body')
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -40,8 +41,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function bindEvents() {
   els.form?.addEventListener('submit', handleCreateBoletim);
   els.copyGenerated?.addEventListener('click', () => copyText(els.generatedUrl.value));
-  els.body?.addEventListener('click', handleTableClick);
-  els.body?.addEventListener('change', handleSentChange);
+  [els.body, els.sentBody].forEach((body) => {
+    body?.addEventListener('click', handleTableClick);
+    body?.addEventListener('change', handleSentChange);
+  });
 }
 
 async function handleCreateBoletim(event) {
@@ -96,6 +99,9 @@ async function handleCreateBoletim(event) {
 async function loadBoletins() {
   if (!els.body) return;
   els.body.innerHTML = '<tr><td colspan="9" class="empty-state">A carregar boletins...</td></tr>';
+  if (els.sentBody) {
+    els.sentBody.innerHTML = '<tr><td colspan="9" class="empty-state">A carregar boletins...</td></tr>';
+  }
 
   try {
     const q = query(collection(db, COLLECTION), orderBy('createdAt', 'desc'));
@@ -117,6 +123,9 @@ async function loadBoletins() {
   } catch (err) {
     console.error('Erro ao carregar boletins', err);
     els.body.innerHTML = '<tr><td colspan="9" class="empty-state">Erro ao carregar boletins.</td></tr>';
+    if (els.sentBody) {
+      els.sentBody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro ao carregar boletins.</td></tr>';
+    }
     showToast('Não foi possível carregar os boletins.', 'error');
   }
 }
@@ -124,10 +133,28 @@ async function loadBoletins() {
 function renderBoletins() {
   if (!state.boletins.length) {
     els.body.innerHTML = '<tr><td colspan="9" class="empty-state">Ainda não existem boletins.</td></tr>';
+    if (els.sentBody) {
+      els.sentBody.innerHTML = '<tr><td colspan="9" class="empty-state">Ainda não existem boletins enviados.</td></tr>';
+    }
     return;
   }
 
-  els.body.innerHTML = state.boletins.map((item) => {
+  const pending = state.boletins.filter((item) => !item.sentToAuthorities);
+  const sent = state.boletins.filter((item) => item.sentToAuthorities);
+
+  els.body.innerHTML = pending.length
+    ? renderBoletimRows(pending)
+    : '<tr><td colspan="9" class="empty-state">Não existem boletins por enviar.</td></tr>';
+
+  if (els.sentBody) {
+    els.sentBody.innerHTML = sent.length
+      ? renderBoletimRows(sent)
+      : '<tr><td colspan="9" class="empty-state">Ainda não existem boletins enviados.</td></tr>';
+  }
+}
+
+function renderBoletimRows(boletins) {
+  return boletins.map((item) => {
     const date = formatDateTime(item.createdAt);
     const status = item.guestSubmissions > 0 ? 'Preenchido' : 'Por preencher';
     const statusClass = item.guestSubmissions > 0 ? 'done' : 'pending';
@@ -229,6 +256,7 @@ async function handleSentChange(event) {
     });
     const item = state.boletins.find((row) => row.id === id);
     if (item) item.sentToAuthorities = sentToAuthorities;
+    renderBoletins();
     showToast(sentToAuthorities ? 'Marcado como enviado.' : 'Marcado como não enviado.', 'success');
   } catch (err) {
     console.error('Erro ao atualizar envio', err);

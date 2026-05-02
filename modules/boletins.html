@@ -181,8 +181,8 @@
 
     <section class="report-section">
       <div class="section-heading">
-        <h4>Boletins criados</h4>
-        <p>Ordenado da data mais recente para a mais antiga.</p>
+        <h4>Por enviar</h4>
+        <p>Boletins ainda não marcados como enviados.</p>
       </div>
       <div class="table-wrap">
         <table class="boletins-table">
@@ -200,6 +200,33 @@
             </tr>
           </thead>
           <tbody id="boletins-body">
+            <tr><td colspan="9" class="empty-state">A carregar boletins...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <div class="section-heading">
+        <h4>Enviados</h4>
+        <p>Boletins já marcados como enviados às autoridades.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="boletins-table">
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Nome</th>
+              <th>Estadia</th>
+              <th>Estado</th>
+              <th>Hóspedes</th>
+              <th>Enviado</th>
+              <th>Dados</th>
+              <th>Link</th>
+              <th>Apagar</th>
+            </tr>
+          </thead>
+          <tbody id="boletins-sent-body">
             <tr><td colspan="9" class="empty-state">A carregar boletins...</td></tr>
           </tbody>
         </table>
