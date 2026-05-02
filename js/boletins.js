@@ -14,6 +14,8 @@ import { showToast } from './toast.js';
 
 const COLLECTION = 'alojamento_boletins';
 const PUBLIC_FORM_URL = 'https://apartments-a4b17.web.app/modules/boletim.html';
+const BOLETINS_COLSPAN = 9;
+const SEND_DEADLINE_BUSINESS_DAYS = 3;
 
 const state = {
   boletins: []
@@ -98,9 +100,9 @@ async function handleCreateBoletim(event) {
 
 async function loadBoletins() {
   if (!els.body) return;
-  els.body.innerHTML = '<tr><td colspan="9" class="empty-state">A carregar boletins...</td></tr>';
+  els.body.innerHTML = renderEmptyRow('A carregar boletins...');
   if (els.sentBody) {
-    els.sentBody.innerHTML = '<tr><td colspan="9" class="empty-state">A carregar boletins...</td></tr>';
+    els.sentBody.innerHTML = renderEmptyRow('A carregar boletins...');
   }
 
   try {
@@ -122,9 +124,9 @@ async function loadBoletins() {
     renderBoletins();
   } catch (err) {
     console.error('Erro ao carregar boletins', err);
-    els.body.innerHTML = '<tr><td colspan="9" class="empty-state">Erro ao carregar boletins.</td></tr>';
+    els.body.innerHTML = renderEmptyRow('Erro ao carregar boletins.');
     if (els.sentBody) {
-      els.sentBody.innerHTML = '<tr><td colspan="9" class="empty-state">Erro ao carregar boletins.</td></tr>';
+      els.sentBody.innerHTML = renderEmptyRow('Erro ao carregar boletins.');
     }
     showToast('Não foi possível carregar os boletins.', 'error');
   }
@@ -132,30 +134,29 @@ async function loadBoletins() {
 
 function renderBoletins() {
   if (!state.boletins.length) {
-    els.body.innerHTML = '<tr><td colspan="9" class="empty-state">Ainda não existem boletins.</td></tr>';
+    els.body.innerHTML = renderEmptyRow('Ainda não existem boletins.');
     if (els.sentBody) {
-      els.sentBody.innerHTML = '<tr><td colspan="9" class="empty-state">Ainda não existem boletins enviados.</td></tr>';
+      els.sentBody.innerHTML = renderEmptyRow('Ainda não existem boletins enviados.');
     }
     return;
   }
 
-  const pending = state.boletins.filter((item) => !item.sentToAuthorities);
-  const sent = state.boletins.filter((item) => item.sentToAuthorities);
+  const pending = sortByCheckinDate(state.boletins.filter((item) => !item.sentToAuthorities));
+  const sent = sortByCheckinDate(state.boletins.filter((item) => item.sentToAuthorities));
 
   els.body.innerHTML = pending.length
     ? renderBoletimRows(pending)
-    : '<tr><td colspan="9" class="empty-state">Não existem boletins por enviar.</td></tr>';
+    : renderEmptyRow('Não existem boletins por enviar.');
 
   if (els.sentBody) {
     els.sentBody.innerHTML = sent.length
       ? renderBoletimRows(sent)
-      : '<tr><td colspan="9" class="empty-state">Ainda não existem boletins enviados.</td></tr>';
+      : renderEmptyRow('Ainda não existem boletins enviados.');
   }
 }
 
 function renderBoletimRows(boletins) {
   return boletins.map((item) => {
-    const date = formatDateTime(item.createdAt);
     const status = item.guestSubmissions > 0 ? 'Preenchido' : 'Por preencher';
     const statusClass = item.guestSubmissions > 0 ? 'done' : 'pending';
     const link = buildPublicLink(item.id);
@@ -164,9 +165,9 @@ function renderBoletimRows(boletins) {
 
     return `
       <tr>
-        <td>${escapeHtml(date)}</td>
         <td>${escapeHtml(item.guestName || 'Sem nome')}</td>
         <td>${escapeHtml(formatStay(item.checkinDate, item.checkoutDate))}</td>
+        <td>${renderSendDeadline(item.checkinDate, item.sentToAuthorities)}</td>
         <td><span class="status-badge ${statusClass}">${status}</span></td>
         <td>${item.guestSubmissions || 0}/${Number(item.expectedGuests || 0)}</td>
         <td>
@@ -191,10 +192,29 @@ function renderBoletimRows(boletins) {
         </td>
       </tr>
       <tr id="${detailsId}" hidden>
-        <td colspan="9">${renderGuestDetails(item.guests || [])}</td>
+        <td colspan="${BOLETINS_COLSPAN}">${renderGuestDetails(item.guests || [])}</td>
       </tr>
     `;
   }).join('');
+}
+
+function renderEmptyRow(message) {
+  return `<tr><td colspan="${BOLETINS_COLSPAN}" class="empty-state">${escapeHtml(message)}</td></tr>`;
+}
+
+function sortByCheckinDate(boletins) {
+  return [...boletins].sort((a, b) => {
+    const dateDiff = toDateOnlyMillis(a.checkinDate) - toDateOnlyMillis(b.checkinDate);
+    return dateDiff || toDateOnlyMillis(a.checkoutDate) - toDateOnlyMillis(b.checkoutDate);
+  });
+}
+
+function renderSendDeadline(checkinDate, sentToAuthorities) {
+  const deadline = addBusinessDays(checkinDate, SEND_DEADLINE_BUSINESS_DAYS);
+  if (!deadline) return '-';
+
+  const overdueClass = !sentToAuthorities && deadline < startOfToday() ? ' overdue' : '';
+  return `<span class="deadline-date${overdueClass}">${escapeHtml(formatDateOnlyFromDate(deadline))}</span>`;
 }
 
 function handleTableClick(event) {
@@ -313,7 +333,103 @@ function formatDateOnly(value) {
   if (!value) return '-';
   const date = new Date(`${value}T12:00:00`);
   if (Number.isNaN(date.getTime())) return value;
+  return formatDateOnlyFromDate(date);
+}
+
+function formatDateOnlyFromDate(date) {
   return date.toLocaleDateString('pt-PT');
+}
+
+function toDateOnlyMillis(value) {
+  if (!value) return Number.MAX_SAFE_INTEGER;
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? Number.MAX_SAFE_INTEGER : date.getTime();
+}
+
+function parseDateOnly(value) {
+  if (!value) return null;
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfToday() {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return today;
+}
+
+function addBusinessDays(startDate, businessDays) {
+  const date = parseDateOnly(startDate);
+  if (!date) return null;
+
+  let addedDays = 0;
+  while (addedDays < businessDays) {
+    date.setDate(date.getDate() + 1);
+    if (isBusinessDay(date)) addedDays += 1;
+  }
+  return date;
+}
+
+function isBusinessDay(date) {
+  const day = date.getDay();
+  return day !== 0 && day !== 6 && !isPortuguesePublicHoliday(date);
+}
+
+function isPortuguesePublicHoliday(date) {
+  return getPortuguesePublicHolidayKeys(date.getFullYear()).has(toDateKey(date));
+}
+
+function getPortuguesePublicHolidayKeys(year) {
+  const easter = getEasterDate(year);
+  const goodFriday = addCalendarDays(easter, -2);
+  const corpusChristi = addCalendarDays(easter, 60);
+
+  return new Set([
+    `${year}-01-01`,
+    `${year}-04-25`,
+    `${year}-05-01`,
+    `${year}-06-10`,
+    `${year}-06-24`,
+    `${year}-08-15`,
+    `${year}-10-05`,
+    `${year}-11-01`,
+    `${year}-12-01`,
+    `${year}-12-08`,
+    `${year}-12-25`,
+    toDateKey(goodFriday),
+    toDateKey(corpusChristi)
+  ]);
+}
+
+function getEasterDate(year) {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(year, month - 1, day, 12);
+}
+
+function addCalendarDays(date, days) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function toDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function toMillis(value) {

@@ -84,6 +84,15 @@
       accent-color: var(--ok);
     }
 
+    .deadline-date {
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .deadline-date.overdue {
+      color: var(--bad);
+    }
+
     .boletins-table td {
       vertical-align: middle;
     }
@@ -188,9 +197,9 @@
         <table class="boletins-table">
           <thead>
             <tr>
-              <th>Data</th>
               <th>Nome</th>
               <th>Estadia</th>
+              <th>Enviar até</th>
               <th>Estado</th>
               <th>Hóspedes</th>
               <th>Enviado</th>
@@ -215,9 +224,9 @@
         <table class="boletins-table">
           <thead>
             <tr>
-              <th>Data</th>
               <th>Nome</th>
               <th>Estadia</th>
+              <th>Enviar até</th>
               <th>Estado</th>
               <th>Hóspedes</th>
               <th>Enviado</th>
