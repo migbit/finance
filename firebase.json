@@ -25,6 +25,20 @@
         }
       },
       {
+        "source": "/api/coingecko/price",
+        "function": {
+          "functionId": "coingeckoPrice",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/api/coingecko/search",
+        "function": {
+          "functionId": "coingeckoSearch",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "/api/cleaning-hours",
         "function": {
           "functionId": "cleaningHours",

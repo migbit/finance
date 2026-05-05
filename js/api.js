@@ -192,12 +192,17 @@ export class Coingecko {
     return p && p.usd > 0 && (Date.now() - p.ts) < CONFIG.COINGECKO.PRICE_TTL_MS;
   }
 
+  static buildUrl(baseUrl, params) {
+    const query = new URLSearchParams(params);
+    return `${baseUrl}?${query.toString()}`;
+  }
+
   static async resolveId(symbol) {
     const key = Storage.PREFIXES.COINGECKO_ID + symbol.toUpperCase();
     const cached = Storage.get(key);
     if (cached) return cached;
 
-    const r = await ApiService.fetchWithRetry(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(symbol)}`);
+    const r = await ApiService.fetchWithRetry(this.buildUrl(CONFIG.COINGECKO.SEARCH_URL, { query: symbol }));
     const data = await r.json();
     const coins = data?.coins || [];
     const exact = coins.find(c => c.symbol?.toUpperCase() === symbol.toUpperCase());
@@ -208,7 +213,7 @@ export class Coingecko {
   }
 
   static async fetchUSD(id) {
-    const r = await ApiService.fetchWithRetry(`https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(id)}&vs_currencies=usd`);
+    const r = await ApiService.fetchWithRetry(this.buildUrl(CONFIG.COINGECKO.PRICE_URL, { ids: id, vs_currencies: 'usd' }));
     const j = await r.json();
     return Number(j?.[id]?.usd || 0);
   }
@@ -252,7 +257,7 @@ export class Coingecko {
       const ids = batchPairs.map(([, id]) => id).filter(Boolean);
       if (!ids.length) continue;
       try {
-        const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids.join(',')}&vs_currencies=usd`;
+        const url = this.buildUrl(CONFIG.COINGECKO.PRICE_URL, { ids: ids.join(','), vs_currencies: 'usd' });
         const response = await ApiService.fetchWithRetry(url);
         const data = await response.json();
         const ts = Date.now();

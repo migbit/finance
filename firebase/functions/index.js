@@ -12,6 +12,8 @@ const firestore = admin.firestore();
 const ACCESS_COLLECTION = "cleaning_hours_access";
 const ENTRIES_COLLECTION = "cleaning_hours_entries";
 const DEFAULT_ALLOWED_APARTMENTS = ["123", "1248", "Ambos", "Ferro 123", "Ferro 1248", "Ferro Ambos"];
+const COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3";
+const coingeckoCache = new Map();
 
 // ---- Secrets (must be set via `firebase functions:secrets:set ...`)
 const BINANCE_KEY = defineSecret("BINANCE_KEY");
@@ -205,6 +207,124 @@ async function fetchAllSimpleEarn(path) {
   }
   return rows;
 }
+
+async function fetchJsonWithCache(cacheKey, url, ttlMs) {
+  const cached = coingeckoCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) {
+    return cached.data;
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "apartments-finance-dashboard/1.0",
+      },
+    });
+    const text = await response.text();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch (_) {
+      data = { error: text };
+    }
+    if (!response.ok) {
+      throw new Error(`CoinGecko ${response.status}: ${text.slice(0, 200)}`);
+    }
+    coingeckoCache.set(cacheKey, { data, expires: Date.now() + ttlMs });
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function sendMethodNotAllowed(res) {
+  res.status(405).json({ error: "Método não permitido." });
+}
+
+exports.coingeckoPrice = onRequest(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 15,
+    cors: true,
+  },
+  async (req, res) => {
+    try {
+      applyCors(res);
+      if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+      }
+      if (req.method !== "GET") {
+        sendMethodNotAllowed(res);
+        return;
+      }
+
+      const ids = String(req.query.ids || "").trim().toLowerCase();
+      const vsCurrencies = String(req.query.vs_currencies || "usd").trim().toLowerCase();
+      if (!ids || ids.length > 500 || !/^[a-z0-9,-]+$/.test(ids)) {
+        res.status(400).json({ error: "ids inválido." });
+        return;
+      }
+      if (!vsCurrencies || vsCurrencies.length > 80 || !/^[a-z,]+$/.test(vsCurrencies)) {
+        res.status(400).json({ error: "vs_currencies inválido." });
+        return;
+      }
+
+      const query = new URLSearchParams({ ids, vs_currencies: vsCurrencies });
+      const data = await fetchJsonWithCache(
+        `price:${ids}:${vsCurrencies}`,
+        `${COINGECKO_BASE_URL}/simple/price?${query.toString()}`,
+        60 * 1000
+      );
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("coingeckoPrice error", error);
+      res.status(502).json({ error: String(error.message || error) });
+    }
+  }
+);
+
+exports.coingeckoSearch = onRequest(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 15,
+    cors: true,
+  },
+  async (req, res) => {
+    try {
+      applyCors(res);
+      if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+      }
+      if (req.method !== "GET") {
+        sendMethodNotAllowed(res);
+        return;
+      }
+
+      const queryText = String(req.query.query || "").trim();
+      if (!queryText || queryText.length > 80) {
+        res.status(400).json({ error: "query inválida." });
+        return;
+      }
+
+      const query = new URLSearchParams({ query: queryText });
+      const data = await fetchJsonWithCache(
+        `search:${queryText.toLowerCase()}`,
+        `${COINGECKO_BASE_URL}/search?${query.toString()}`,
+        6 * 60 * 60 * 1000
+      );
+      res.status(200).json(data);
+    } catch (error) {
+      console.error("coingeckoSearch error", error);
+      res.status(502).json({ error: String(error.message || error) });
+    }
+  }
+);
 
 // ---- Function
 exports.binancePortfolio = onRequest(
