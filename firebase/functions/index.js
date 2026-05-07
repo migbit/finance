@@ -12,8 +12,10 @@ const firestore = admin.firestore();
 const ACCESS_COLLECTION = "cleaning_hours_access";
 const ENTRIES_COLLECTION = "cleaning_hours_entries";
 const DEFAULT_ALLOWED_APARTMENTS = ["123", "1248", "Ambos", "Ferro 123", "Ferro 1248", "Ferro Ambos"];
-const COINGECKO_BASE_URL = "https://api.coingecko.com/api/v3";
-const coingeckoCache = new Map();
+const COINPAPRIKA_BASE_URL = "https://api.coinpaprika.com/v1";
+const binanceTickerCache = { data: null, expires: 0 };
+const coinpaprikaCoinsCache = { data: null, expires: 0 };
+const coinpaprikaPriceCache = new Map();
 
 // ---- Secrets (must be set via `firebase functions:secrets:set ...`)
 const BINANCE_KEY = defineSecret("BINANCE_KEY");
@@ -208,12 +210,38 @@ async function fetchAllSimpleEarn(path) {
   return rows;
 }
 
-async function fetchJsonWithCache(cacheKey, url, ttlMs) {
-  const cached = coingeckoCache.get(cacheKey);
-  if (cached && cached.expires > Date.now()) {
-    return cached.data;
-  }
+function sendMethodNotAllowed(res) {
+  res.status(405).json({ error: "Método não permitido." });
+}
 
+function parseSymbolsParam(value) {
+  return [...new Set(
+    String(value || "")
+      .split(",")
+      .map((symbol) => symbol.trim().toUpperCase())
+      .filter(Boolean)
+  )];
+}
+
+async function getCachedBinanceTickers() {
+  if (binanceTickerCache.data && binanceTickerCache.expires > Date.now()) {
+    return binanceTickerCache.data;
+  }
+  const tickers = await publicCall("/api/v3/ticker/price");
+  const prices = new Map([["USDT", 1]]);
+  for (const ticker of tickers) {
+    const pair = String(ticker.symbol || "");
+    if (!pair.endsWith("USDT")) continue;
+    const asset = pair.slice(0, -4);
+    const price = Number(ticker.price || 0);
+    if (asset && price > 0) prices.set(asset, price);
+  }
+  binanceTickerCache.data = prices;
+  binanceTickerCache.expires = Date.now() + 60 * 1000;
+  return prices;
+}
+
+async function fetchJson(url) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 10000);
   try {
@@ -232,63 +260,59 @@ async function fetchJsonWithCache(cacheKey, url, ttlMs) {
       data = { error: text };
     }
     if (!response.ok) {
-      throw new Error(`CoinGecko ${response.status}: ${text.slice(0, 200)}`);
+      throw new Error(`HTTP ${response.status}: ${text.slice(0, 200)}`);
     }
-    coingeckoCache.set(cacheKey, { data, expires: Date.now() + ttlMs });
     return data;
   } finally {
     clearTimeout(timer);
   }
 }
 
-function sendMethodNotAllowed(res) {
-  res.status(405).json({ error: "Método não permitido." });
-}
-
-exports.coingeckoPrice = onRequest(
-  {
-    region: "europe-west1",
-    timeoutSeconds: 15,
-    cors: true,
-  },
-  async (req, res) => {
-    try {
-      applyCors(res);
-      if (req.method === "OPTIONS") {
-        res.status(204).send("");
-        return;
-      }
-      if (req.method !== "GET") {
-        sendMethodNotAllowed(res);
-        return;
-      }
-
-      const ids = String(req.query.ids || "").trim().toLowerCase();
-      const vsCurrencies = String(req.query.vs_currencies || "usd").trim().toLowerCase();
-      if (!ids || ids.length > 500 || !/^[a-z0-9,-]+$/.test(ids)) {
-        res.status(400).json({ error: "ids inválido." });
-        return;
-      }
-      if (!vsCurrencies || vsCurrencies.length > 80 || !/^[a-z,]+$/.test(vsCurrencies)) {
-        res.status(400).json({ error: "vs_currencies inválido." });
-        return;
-      }
-
-      const query = new URLSearchParams({ ids, vs_currencies: vsCurrencies });
-      const data = await fetchJsonWithCache(
-        `price:${ids}:${vsCurrencies}`,
-        `${COINGECKO_BASE_URL}/simple/price?${query.toString()}`,
-        60 * 1000
-      );
-      res.status(200).json(data);
-    } catch (error) {
-      console.error("coingeckoPrice error", error);
-      res.status(502).json({ error: String(error.message || error) });
+async function getCachedCoinpaprikaCoins() {
+  if (coinpaprikaCoinsCache.data && coinpaprikaCoinsCache.expires > Date.now()) {
+    return coinpaprikaCoinsCache.data;
+  }
+  const coins = await fetchJson(`${COINPAPRIKA_BASE_URL}/coins`);
+  const bySymbol = new Map();
+  for (const coin of Array.isArray(coins) ? coins : []) {
+    if (!coin?.is_active) continue;
+    const symbol = String(coin.symbol || "").toUpperCase();
+    const id = String(coin.id || "");
+    if (!symbol || !id) continue;
+    const existing = bySymbol.get(symbol);
+    if (!existing || Number(coin.rank || Infinity) < Number(existing.rank || Infinity)) {
+      bySymbol.set(symbol, {
+        id,
+        symbol,
+        rank: Number(coin.rank || Infinity),
+      });
     }
   }
-);
+  coinpaprikaCoinsCache.data = bySymbol;
+  coinpaprikaCoinsCache.expires = Date.now() + 24 * 60 * 60 * 1000;
+  return bySymbol;
+}
 
-exports.coingeckoSearch = onRequest(
+async function fetchCoinpaprikaPrice(symbol) {
+  const up = String(symbol || "").toUpperCase();
+  const cached = coinpaprikaPriceCache.get(up);
+  if (cached && cached.expires > Date.now()) {
+    return cached.price;
+  }
+
+  const coins = await getCachedCoinpaprikaCoins();
+  const coin = coins.get(up);
+  if (!coin?.id) return 0;
+
+  const ticker = await fetchJson(`${COINPAPRIKA_BASE_URL}/tickers/${encodeURIComponent(coin.id)}?quotes=USD`);
+  const price = Number(ticker?.quotes?.USD?.price || 0);
+  if (price > 0) {
+    coinpaprikaPriceCache.set(up, { price, expires: Date.now() + 5 * 60 * 1000 });
+  }
+  return price;
+}
+
+exports.cryptoPrices = onRequest(
   {
     region: "europe-west1",
     timeoutSeconds: 15,
@@ -306,21 +330,45 @@ exports.coingeckoSearch = onRequest(
         return;
       }
 
-      const queryText = String(req.query.query || "").trim();
-      if (!queryText || queryText.length > 80) {
-        res.status(400).json({ error: "query inválida." });
+      const symbols = parseSymbolsParam(req.query.symbols);
+      if (!symbols.length || symbols.length > 100 || symbols.some((symbol) => !/^[A-Z0-9]{1,20}$/.test(symbol))) {
+        res.status(400).json({ error: "symbols inválido." });
         return;
       }
 
-      const query = new URLSearchParams({ query: queryText });
-      const data = await fetchJsonWithCache(
-        `search:${queryText.toLowerCase()}`,
-        `${COINGECKO_BASE_URL}/search?${query.toString()}`,
-        6 * 60 * 60 * 1000
-      );
-      res.status(200).json(data);
+      const tickerPrices = await getCachedBinanceTickers();
+      const prices = {};
+      const sources = {};
+      const missing = [];
+      for (const symbol of symbols) {
+        const price = tickerPrices.get(symbol) || 0;
+        if (price > 0) {
+          prices[symbol] = price;
+          sources[symbol] = "binance";
+        } else {
+          missing.push(symbol);
+        }
+      }
+
+      const unresolved = [];
+      await Promise.all(missing.map(async (symbol) => {
+        try {
+          const price = await fetchCoinpaprikaPrice(symbol);
+          if (price > 0) {
+            prices[symbol] = price;
+            sources[symbol] = "coinpaprika";
+          } else {
+            unresolved.push(symbol);
+          }
+        } catch (error) {
+          console.warn("CoinPaprika price fallback failed", symbol, error);
+          unresolved.push(symbol);
+        }
+      }));
+
+      res.status(200).json({ quote: "USD", prices, sources, missing: unresolved });
     } catch (error) {
-      console.error("coingeckoSearch error", error);
+      console.error("cryptoPrices error", error);
       res.status(502).json({ error: String(error.message || error) });
     }
   }

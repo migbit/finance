@@ -1,6 +1,6 @@
 ﻿import { CONFIG } from './config.js';
 import { FORMATTERS, PerformanceUtils, ValidationUtils } from './formatters.js';
-import { Storage, ApiService, Coingecko, PriceResolver, FirebaseService, EnhancedStorage } from './api.js';
+import { Storage, ApiService, CryptoPrices, PriceResolver, FirebaseService, EnhancedStorage } from './api.js';
 import { AppState } from './state.js';
 
 /* ================== DOM UTILS ================== */
@@ -425,7 +425,7 @@ class CryptoPortfolioApp {
         .filter(r => (r.quantity || 0) > 0 && !(r.priceUSDT > 0))
         .map(r => r.asset);
       const toPrefetch = [...new Set([...manualMissing, ...binanceMissing])];
-      if (toPrefetch.length) await Coingecko.prefetch(toPrefetch);
+      if (toPrefetch.length) await CryptoPrices.prefetch(toPrefetch);
 
       await this.hydrateBinanceRows();
       const eurHydrated = this.state.binanceRows.reduce((s,r)=>s+(r.valueEUR||0),0);
@@ -962,7 +962,7 @@ class CryptoPortfolioApp {
       const vUSDT = price>0 ? price * m.quantity : 0;
       const vEUR = (this.state.usdtToEurRate||0) ? vUSDT * this.state.usdtToEurRate : 0;
       const apy = this.getApyValue(m.asset, m.location);
-      return { ...m, valueUSDT: vUSDT, valueEUR: vEUR, priceUSDT: price, priceSource: 'coingecko', apy };
+      return { ...m, valueUSDT: vUSDT, valueEUR: vEUR, priceUSDT: price, priceSource: 'crypto-prices', apy };
     }));
 
     this.state.currentRows = [

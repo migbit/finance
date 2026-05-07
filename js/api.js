@@ -20,7 +20,6 @@ function getLocalStorageSafe() {
 export class EnhancedStorage {
   static PREFIXES = {
     PRICE: 'price_usd_',
-    COINGECKO_ID: 'cg_id_',
     PORTFOLIO: 'portfolio_data_',
     CACHE_META: 'cache_meta_'
   };
@@ -136,7 +135,7 @@ export class EnhancedStorage {
 }
 
 export const Storage = {
-  PREFIXES: { PRICE: 'price_usd_', COINGECKO_ID: 'cg_id_' },
+  PREFIXES: { PRICE: 'price_usd_' },
   get: (k) => {
     const store = getLocalStorageSafe();
     if (!store) return null;
@@ -170,26 +169,34 @@ export class ApiService {
   }
 
   static async fetchWithRetry(url, opt = {}, max = 3) {
+    let lastStatus = 0;
+    let lastBody = '';
     for (let i = 0; i < max; i++) {
       try {
         if (i > 0) await new Promise(r => setTimeout(r, [0, 500, 1000][i] || 500));
         const res = await fetch(url, opt);
         if (res.status === 429) {
+          lastStatus = res.status;
+          lastBody = await res.text().catch(() => '');
           await new Promise(r => setTimeout(r, 900 + Math.random() * 600));
           continue;
         }
         if (res.ok) return res;
-      } catch {
+        lastStatus = res.status;
+        lastBody = await res.text().catch(() => '');
+      } catch (error) {
+        lastBody = error?.message || String(error);
         // try again
       }
     }
-    throw new Error(`Failed ${url}`);
+    const detail = lastStatus ? `HTTP ${lastStatus}${lastBody ? `: ${lastBody.slice(0, 200)}` : ''}` : lastBody;
+    throw new Error(`Failed ${url}${detail ? ` (${detail})` : ''}`);
   }
 }
 
-export class Coingecko {
+export class CryptoPrices {
   static isFresh(p) {
-    return p && p.usd > 0 && (Date.now() - p.ts) < CONFIG.COINGECKO.PRICE_TTL_MS;
+    return p && p.usd > 0 && (Date.now() - p.ts) < CONFIG.CRYPTO_PRICES.PRICE_TTL_MS;
   }
 
   static buildUrl(baseUrl, params) {
@@ -197,25 +204,14 @@ export class Coingecko {
     return `${baseUrl}?${query.toString()}`;
   }
 
-  static async resolveId(symbol) {
-    const key = Storage.PREFIXES.COINGECKO_ID + symbol.toUpperCase();
-    const cached = Storage.get(key);
-    if (cached) return cached;
-
-    const r = await ApiService.fetchWithRetry(this.buildUrl(CONFIG.COINGECKO.SEARCH_URL, { query: symbol }));
+  static async fetchUSD(symbol) {
+    const up = symbol.toUpperCase();
+    const r = await ApiService.fetchWithRetry(this.buildUrl(CONFIG.CRYPTO_PRICES.URL, { symbols: up }));
     const data = await r.json();
-    const coins = data?.coins || [];
-    const exact = coins.find(c => c.symbol?.toUpperCase() === symbol.toUpperCase());
-    const sw = coins.find(c => c.symbol?.toUpperCase().startsWith(symbol.toUpperCase()));
-    const id = exact?.id || sw?.id || coins[0]?.id || null;
-    if (id) Storage.set(key, id);
-    return id;
-  }
-
-  static async fetchUSD(id) {
-    const r = await ApiService.fetchWithRetry(this.buildUrl(CONFIG.COINGECKO.PRICE_URL, { ids: id, vs_currencies: 'usd' }));
-    const j = await r.json();
-    return Number(j?.[id]?.usd || 0);
+    return {
+      price: Number(data?.prices?.[up] || 0),
+      src: data?.sources?.[up] || 'unknown'
+    };
   }
 
   static async prefetch(symbols) {
@@ -227,51 +223,27 @@ export class Coingecko {
     }
     if (!toFetch.length) return;
 
-    const queue = [...new Set(toFetch)];
-    const pairs = [];
-    const concurrency = Math.min(4, queue.length);
-    const takeNext = () => queue.pop();
-    const workers = Array.from({ length: concurrency }, () => (async () => {
-      while (true) {
-        const symbol = takeNext();
-        if (!symbol) break;
-        try {
-          const id = await this.resolveId(symbol);
-          if (id) pairs.push([symbol, id]);
-        } catch (error) {
-          console.warn('Coingecko.resolveId failed', symbol, error);
-        } finally {
-          if (queue.length) {
-            const delay = Math.max(150, Math.floor(CONFIG.COINGECKO.RATE_LIMIT_DELAY / 6));
-            await new Promise(r => setTimeout(r, delay));
-          }
-        }
-      }
-    })());
-    await Promise.all(workers);
+    const uniqueSymbols = [...new Set(toFetch)];
 
-    if (!pairs.length) return;
-
-    for (let i = 0; i < pairs.length; i += CONFIG.COINGECKO.BATCH_SIZE) {
-      const batchPairs = pairs.slice(i, i + CONFIG.COINGECKO.BATCH_SIZE);
-      const ids = batchPairs.map(([, id]) => id).filter(Boolean);
-      if (!ids.length) continue;
+    for (let i = 0; i < uniqueSymbols.length; i += CONFIG.CRYPTO_PRICES.BATCH_SIZE) {
+      const batchSymbols = uniqueSymbols.slice(i, i + CONFIG.CRYPTO_PRICES.BATCH_SIZE);
       try {
-        const url = this.buildUrl(CONFIG.COINGECKO.PRICE_URL, { ids: ids.join(','), vs_currencies: 'usd' });
+        const url = this.buildUrl(CONFIG.CRYPTO_PRICES.URL, { symbols: batchSymbols.join(',') });
         const response = await ApiService.fetchWithRetry(url);
         const data = await response.json();
+        const prices = data?.prices || {};
         const ts = Date.now();
-        for (const [sym, id] of batchPairs) {
-          const price = Number(data?.[id]?.usd || 0);
+        for (const sym of batchSymbols) {
+          const price = Number(prices?.[sym] || 0);
           if (price > 0) {
             Storage.setJSON(Storage.PREFIXES.PRICE + sym, { usd: price, ts });
           }
         }
       } catch (error) {
-        console.warn('Coingecko.priceFetch failed', error);
+        console.warn('CryptoPrices.priceFetch failed', error);
       }
-      if (i + CONFIG.COINGECKO.BATCH_SIZE < pairs.length) {
-        await new Promise(r => setTimeout(r, CONFIG.COINGECKO.RATE_LIMIT_DELAY));
+      if (i + CONFIG.CRYPTO_PRICES.BATCH_SIZE < uniqueSymbols.length) {
+        await new Promise(r => setTimeout(r, CONFIG.CRYPTO_PRICES.RATE_LIMIT_DELAY));
       }
     }
   }
@@ -291,13 +263,11 @@ export class PriceResolver {
   async getUSD(symbol) {
     const up = symbol.toUpperCase();
     if (this.binancePriceMap.has(up)) return { price: this.binancePriceMap.get(up), src: 'binance' };
-    const cached = Coingecko.getCachedUSD(up);
-    if (cached > 0) return { price: cached, src: 'coingecko' };
-    const id = await Coingecko.resolveId(up);
-    if (!id) return { price: 0, src: 'unknown' };
-    const p = await Coingecko.fetchUSD(id);
-    if (p > 0) Storage.setJSON(Storage.PREFIXES.PRICE + up, { usd: p, ts: Date.now() });
-    return { price: p, src: 'coingecko' };
+    const cached = CryptoPrices.getCachedUSD(up);
+    if (cached > 0) return { price: cached, src: 'cached' };
+    const { price, src } = await CryptoPrices.fetchUSD(up);
+    if (price > 0) Storage.setJSON(Storage.PREFIXES.PRICE + up, { usd: price, ts: Date.now() });
+    return { price, src: price > 0 ? src : 'unknown' };
   }
 }
 

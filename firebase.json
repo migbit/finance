@@ -25,16 +25,9 @@
         }
       },
       {
-        "source": "/api/coingecko/price",
+        "source": "/api/crypto/prices",
         "function": {
-          "functionId": "coingeckoPrice",
-          "region": "europe-west1"
-        }
-      },
-      {
-        "source": "/api/coingecko/search",
-        "function": {
-          "functionId": "coingeckoSearch",
+          "functionId": "cryptoPrices",
           "region": "europe-west1"
         }
       },

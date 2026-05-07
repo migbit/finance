@@ -2,8 +2,7 @@ export const CONFIG = {
   HOST: location.hostname,
   ON_FIREBASE: /\.web\.app$/.test(location.hostname) || /firebaseapp\.com$/.test(location.hostname),
   CF_URL: 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio',
-  COINGECKO_PRICE_CF_URL: 'https://europe-west1-apartments-a4b17.cloudfunctions.net/coingeckoPrice',
-  COINGECKO_SEARCH_CF_URL: 'https://europe-west1-apartments-a4b17.cloudfunctions.net/coingeckoSearch',
+  CRYPTO_PRICES_CF_URL: 'https://europe-west1-apartments-a4b17.cloudfunctions.net/cryptoPrices',
   API_URL: null,
   SMALL_USD_THRESHOLD: 5,
   HIDE_SYMBOLS: new Set(['NEBL', 'ETHW']),
@@ -18,13 +17,12 @@ export const CONFIG = {
     'Ledger',
     'Ledger staking.chain.link'
   ],
-  COINGECKO: {
+  CRYPTO_PRICES: {
     PRICE_TTL_MS: 1000 * 60 * 60,
     BATCH_SIZE: 25,
     RETRY_DELAYS: [0, 500, 1000],
     RATE_LIMIT_DELAY: 1200,
-    PRICE_URL: null,
-    SEARCH_URL: null
+    URL: null
   },
   META_COLLECTION: 'cryptoportfolio_meta',
   META_DOC: 'invested',
@@ -35,5 +33,4 @@ export const CONFIG = {
 };
 
 CONFIG.API_URL = CONFIG.ON_FIREBASE ? '/api/portfolio' : CONFIG.CF_URL;
-CONFIG.COINGECKO.PRICE_URL = CONFIG.ON_FIREBASE ? '/api/coingecko/price' : CONFIG.COINGECKO_PRICE_CF_URL;
-CONFIG.COINGECKO.SEARCH_URL = CONFIG.ON_FIREBASE ? '/api/coingecko/search' : CONFIG.COINGECKO_SEARCH_CF_URL;
+CONFIG.CRYPTO_PRICES.URL = CONFIG.ON_FIREBASE ? '/api/crypto/prices' : CONFIG.CRYPTO_PRICES_CF_URL;
