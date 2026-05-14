@@ -208,6 +208,159 @@ const WORKOUT_TEMPLATES = {
         }
       },
       
+    ],
+    'Peito': [
+      {
+        id: 'chest-press-dragao',
+        name: 'Chest Press',
+        note: 'Banco n.º 5 / costas n.º 3. Sem dor no ombro.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 50, targetReps: 12, rir: '2' },
+          { baseWeight: 50, targetReps: 12, rir: '1-2' },
+          { baseWeight: 50, targetReps: 12, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '8–12', rir: '2', rest: '2–3 min' },
+            { reps: '8–12', rir: '1–2', rest: '2–3 min' },
+            { reps: '8–12', rir: '1–2', rest: 'fim' }
+          ],
+          progression: 'Subir carga quando fizeres 50 kg × 12 / 12 / 12, mantendo RIR 1–2 e sem dor no ombro.',
+          warmup: '32 kg × 12–15 | RIR 4+; 41 kg × 8–10 | RIR 3+',
+          restMinSec: 120,
+          progressCheck: [
+            { minReps: 12, rirMin: 1, rirMax: 2 },
+            { minReps: 12, rirMin: 1, rirMax: 2 },
+            { minReps: 12, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'pec-fly-dragao',
+        name: 'Pec Fly',
+        note: 'Banco n.º 6. 3.ª série opcional se o ombro estiver bem. Sem amplitude profunda.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 27, targetReps: 15, rir: '2' },
+          { baseWeight: 32, targetReps: 15, rir: '1-2' },
+          { baseWeight: 32, targetReps: 15, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '12–20', rir: '2', rest: '75–90 s' },
+            { reps: '12–20', rir: '1–2', rest: '75–90 s' },
+            { reps: '12–20 opcional', rir: '1–2', rest: 'fim' }
+          ],
+          progression: 'Subir carga quando fizeres 32 kg × 15–16 reps em 2 séries, com controlo, sem amplitude profunda e sem dor na AC/ombro.',
+          warmup: '18–23 kg × 12–15 | RIR 3–4',
+          restMinSec: 75,
+          progressCheck: [
+            { minReps: 15, rirMin: 1, rirMax: 2 },
+            { minReps: 15, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      }
+    ],
+    'Braços': [
+      {
+        id: 'triceps-press-dragao',
+        name: 'Triceps Press',
+        note: 'Banco 5.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 41, targetReps: 15, rir: '1-2' },
+          { baseWeight: 41, targetReps: 15, rir: '1-2' },
+          { baseWeight: 41, targetReps: 15, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '10–15', rir: '1–2', rest: '90 s' },
+            { reps: '10–15', rir: '1–2', rest: '90 s' },
+            { reps: '10–15', rir: '1–2', rest: 'fim' }
+          ],
+          progression: 'Subir carga quando fizeres 3 × 15 com RIR 1–2.',
+          warmup: '23 kg × 12–15',
+          restMinSec: 90,
+          progressCheck: [
+            { minReps: 15, rirMin: 1, rirMax: 2 },
+            { minReps: 15, rirMin: 1, rirMax: 2 },
+            { minReps: 15, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'dependent-curl-dragao',
+        name: 'Dependent Curl',
+        note: 'Banco 4.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 18, targetReps: 12, rir: '1-2' },
+          { baseWeight: 18, targetReps: 12, rir: '1-2' },
+          { baseWeight: 18, targetReps: 12, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '8–12', rir: '1–2', rest: '90 s' },
+            { reps: '8–12', rir: '1–2', rest: '90 s' },
+            { reps: '8–12', rir: '1–2', rest: 'fim' }
+          ],
+          progression: 'Subir carga quando fizeres 3 × 12 com RIR 1–2.',
+          warmup: '14 kg × 10–12',
+          restMinSec: 90,
+          progressCheck: [
+            { minReps: 12, rirMin: 1, rirMax: 2 },
+            { minReps: 12, rirMin: 1, rirMax: 2 },
+            { minReps: 12, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'triceps-extension-dragao',
+        name: 'Triceps Extension',
+        note: 'Banco 3.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 27, targetReps: 15, rir: '1-2' },
+          { baseWeight: 27, targetReps: 15, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '10–15', rir: '1–2', rest: '75–90 s' },
+            { reps: '10–15', rir: '1–2', rest: 'fim' }
+          ],
+          progression: 'Subir carga quando fizeres 2 × 15 com RIR 1–2.',
+          warmup: 'Nenhum aquecimento definido',
+          restMinSec: 75,
+          progressCheck: [
+            { minReps: 15, rirMin: 1, rirMax: 2 },
+            { minReps: 15, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'biceps-curl-dragao',
+        name: 'Biceps Curl',
+        note: 'Banco 5. Recomendado: 18 kg, 2 × 12–15. Alternativa: 23 kg, 2 × 8–12.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 18, targetReps: 15, rir: '1-2' },
+          { baseWeight: 18, targetReps: 15, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '12–15 leve ou 8–12 pesado', rir: '1–2', rest: '75–90 s' },
+            { reps: '12–15 leve ou 8–12 pesado', rir: '1–2', rest: 'fim' }
+          ],
+          progression: 'Subir carga quando fizeres 2 × 15 na opção leve ou 2 × 12 na opção pesada.',
+          warmup: 'Nenhum aquecimento definido',
+          restMinSec: 75,
+          progressCheck: [
+            { minReps: 15, rirMin: 1, rirMax: 2 },
+            { minReps: 15, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      }
     ]
   },
   'Arrábida': {
@@ -803,6 +956,28 @@ function getSavedMachine(machineId) {
   return state.session?.machines?.[machineId] || null;
 }
 
+function getSavedSeries(savedMachine, index) {
+  if (!Array.isArray(savedMachine?.series)) return {};
+  return savedMachine.series.find(item => Number(item?.seriesIndex) === index)
+    || savedMachine.series[index]
+    || {};
+}
+
+function getNextExerciseOrder() {
+  const orders = Array.from(workoutWrap.querySelectorAll('.gym-machine-card'))
+    .map(card => Number(card.dataset.exerciseOrder || 0))
+    .filter(order => order > 0);
+  return orders.length ? Math.max(...orders) + 1 : 1;
+}
+
+function markExerciseTouched(target) {
+  const card = target?.closest?.('.gym-machine-card');
+  if (!card || Number(card.dataset.exerciseOrder || 0) > 0) return;
+  card.dataset.exerciseOrder = String(getNextExerciseOrder());
+  const meta = card.querySelector('[data-order-label]');
+  if (meta) meta.textContent = `Feito em ${card.dataset.exerciseOrder}º`;
+}
+
 function updateTotalDisplay(row, initialResistance) {
   const baseInput = row.querySelector('[data-base-weight]');
   const totalEl = row.querySelector('[data-total-weight]');
@@ -820,13 +995,13 @@ function updateTotalDisplay(row, initialResistance) {
   totalEl.textContent = `Resistência inicial ${formatWeight(initialResistance)} kg + ${baseLabel} = ${formatWeight(total)} kg`;
 }
 
-function createRepsSelect(value) {
+function createRepsSelect(value = 0) {
   const select = document.createElement('select');
   select.setAttribute('data-reps', 'true');
   for (let i = 0; i <= 30; i += 1) {
     const option = document.createElement('option');
     option.value = String(i);
-    option.textContent = String(i);
+    option.textContent = i === 0 ? '-' : String(i);
     if (Number(value) === i) option.selected = true;
     select.appendChild(option);
   }
@@ -936,7 +1111,7 @@ function createSeriesTable(machine, variant, savedMachine) {
   const tbody = table.querySelector('tbody');
 
   variant.series.forEach((series, index) => {
-    const savedSeries = savedMachine?.series?.[index] || {};
+    const savedSeries = getSavedSeries(savedMachine, index);
     const seriesKey = getSeriesKey(machine.id, variant?.id, index);
     const row = document.createElement('tr');
     row.setAttribute('data-series-row', 'true');
@@ -951,10 +1126,7 @@ function createSeriesTable(machine, variant, savedMachine) {
       ?? savedSeries.baseWeight
       ?? series.baseWeight
       ?? 0;
-    const repsValue = savedSeries.reps
-      ?? state.lastReps[seriesKey]
-      ?? series.targetReps
-      ?? 0;
+    const repsValue = savedSeries.reps ?? 0;
     const rirValue = savedSeries.rir
       ?? state.lastRir[seriesKey]
       ?? series.rir
@@ -1090,6 +1262,12 @@ function renderRulesBlock(card, rules) {
     w.textContent = `Aquecimento: ${rules.warmup}`;
     block.appendChild(w);
   }
+  if (rules.progression) {
+    const p = document.createElement('div');
+    p.className = 'gym-rule-note';
+    p.textContent = `Subir carga: ${rules.progression}`;
+    block.appendChild(p);
+  }
 
   card.appendChild(block);
 }
@@ -1195,14 +1373,15 @@ function parseRestLabel(label) {
 
 function renderMachine(machine) {
   const savedMachine = getSavedMachine(machine.id);
-  const card = document.createElement('div');
+  const card = document.createElement('details');
   card.className = 'gym-machine-card';
   card.setAttribute('data-machine-id', machine.id);
   card.setAttribute('data-machine-name', machine.name);
   card.setAttribute('data-variant-id', machine.id);
   card.setAttribute('data-variant-label', '');
+  card.setAttribute('data-exercise-order', savedMachine?.order ? String(savedMachine.order) : '');
 
-  const header = document.createElement('div');
+  const header = document.createElement('summary');
   header.className = 'gym-machine-header';
 
   const title = document.createElement('div');
@@ -1215,6 +1394,7 @@ function renderMachine(machine) {
 
   const meta = document.createElement('div');
   meta.className = 'gym-machine-meta';
+  meta.setAttribute('data-order-label', 'true');
 
   const titleWrap = document.createElement('div');
   titleWrap.style.display = 'flex';
@@ -1229,9 +1409,11 @@ function renderMachine(machine) {
     const displayResistance = machine.variants
       ? (variant?.initialResistance ?? null)
       : machine.initialResistance;
-    meta.textContent = displayResistance === null || displayResistance === undefined
+    const resistanceLabel = displayResistance === null || displayResistance === undefined
       ? 'Sem resistência inicial'
       : `Resistência inicial: ${formatWeight(displayResistance)} kg`;
+    const order = Number(card.dataset.exerciseOrder || 0);
+    meta.textContent = order > 0 ? `Feito em ${order}º` : resistanceLabel;
   };
   if (machine.variants) {
     const variantSelect = document.createElement('select');
@@ -1614,7 +1796,7 @@ function buildSessionFromDom() {
   };
 
   const machineEls = Array.from(document.querySelectorAll('.gym-machine-card'));
-  machineEls.forEach(machineEl => {
+  machineEls.forEach((machineEl, machineIndex) => {
     const machineId = machineEl.dataset.machineId;
     const machineName = machineEl.dataset.machineName || '';
     const variantId = machineEl.dataset.variantId || '';
@@ -1623,16 +1805,7 @@ function buildSessionFromDom() {
     if (!seriesRows.length) {
       seriesRows = Array.from(machineEl.querySelectorAll('.gym-series-table tbody tr'));
     }
-    if (seriesRows.length === 0) {
-      session.machines[machineId] = {
-        name: machineName,
-        variantId,
-        variantLabel,
-        initialResistance: null,
-        series: []
-      };
-      return;
-    }
+    if (seriesRows.length === 0) return;
 
     const initialResistance = parseFloat(seriesRows[0].dataset.initialResistance);
     const series = seriesRows.map(row => {
@@ -1644,21 +1817,22 @@ function buildSessionFromDom() {
       const baseWeight = parseFloat(row.querySelector('[data-base-weight]')?.value || 0);
       const targetReps = parseInt(row.dataset.targetReps || 0, 10);
       const repsInput = parseInt(row.querySelector('[data-reps]')?.value || 0, 10);
-      const reps = repsInput > 0
-        ? repsInput
-        : (state.lastReps[seriesKey] ?? targetReps);
+      const reps = repsInput > 0 ? repsInput : 0;
       const rirInput = row.querySelector('[data-rir]')?.value || '?';
       const rir = rirInput === '?' && state.lastRir[seriesKey]
         ? state.lastRir[seriesKey]
         : rirInput;
-      return { baseWeight, reps, targetReps, rir };
-    });
+      return { seriesIndex: rowIndex, baseWeight, reps, targetReps, rir };
+    }).filter(item => item.reps > 0);
+
+    if (!series.length) return;
 
     session.machines[machineId] = {
       name: machineName,
       variantId,
       variantLabel,
       initialResistance: Number.isNaN(initialResistance) ? null : initialResistance,
+      order: Number(machineEl.dataset.exerciseOrder || 0) || machineIndex + 1,
       series
     };
   });
@@ -1673,23 +1847,34 @@ function buildSummaryText(session) {
   const machines = Array.isArray(session.machines)
     ? session.machines
     : Object.values(session.machines || {});
-  machines.forEach((machine, machineIndex) => {
-    const seriesList = Array.isArray(machine.series)
-      ? machine.series
-      : Object.values(machine.series || {});
-    if (!seriesList.length) return;
-    const label = machine.variantLabel
-      ? `${machine.name} (${machine.variantLabel})`
-      : machine.name;
-    seriesList.forEach((series, index) => {
-      const baseWeight = Number(series.baseWeight) || 0;
-      const initial = machine.initialResistance ? Number(machine.initialResistance) : 0;
-      const total = baseWeight + initial;
-      const repsLabel = series.reps ? series.reps : '-';
-      const rirLabel = series.rir ? series.rir : '-';
-      lines.push(`${label} ${index + 1}ª série ${formatWeight(total)}kg x${repsLabel} RIR ${rirLabel}`);
+  machines
+    .filter(machine => {
+      const seriesList = Array.isArray(machine.series)
+        ? machine.series
+        : Object.values(machine.series || {});
+      return seriesList.some(series => Number(series?.reps || 0) > 0);
+    })
+    .sort((a, b) => (Number(a.order || 0) || 9999) - (Number(b.order || 0) || 9999))
+    .forEach(machine => {
+      const seriesList = Array.isArray(machine.series)
+        ? machine.series
+        : Object.values(machine.series || {});
+      const label = machine.variantLabel
+        ? `${machine.name} (${machine.variantLabel})`
+        : machine.name;
+      seriesList
+        .filter(series => Number(series?.reps || 0) > 0)
+        .sort((a, b) => Number(a.seriesIndex ?? 0) - Number(b.seriesIndex ?? 0))
+        .forEach((series, index) => {
+          const baseWeight = Number(series.baseWeight) || 0;
+          const initial = machine.initialResistance ? Number(machine.initialResistance) : 0;
+          const total = baseWeight + initial;
+          const repsLabel = series.reps ? series.reps : '-';
+          const rirLabel = series.rir ? series.rir : '-';
+          const seriesNumber = Number(series.seriesIndex ?? index) + 1;
+          lines.push(`${label} ${seriesNumber}ª série ${formatWeight(total)}kg x${repsLabel} RIR ${rirLabel}`);
+        });
     });
-  });
   return lines.join('\n');
 }
 
@@ -1700,6 +1885,10 @@ async function saveSession() {
     return;
   }
   const session = buildSessionFromDom();
+  if (!Object.keys(session.machines || {}).length) {
+    showToast('Preenche pelo menos uma série antes de gravar.', 'warning');
+    return;
+  }
   window.lastGymSession = session;
   console.log('[ginasio] session payload', session);
   const docId = getSessionId(state.gym, state.treino, state.date);
@@ -1751,6 +1940,7 @@ async function deleteSessionById(docId) {
 
 function renderSummaries(summaries) {
   summariesWrap.innerHTML = '';
+  summariesWrap.dataset.expanded = 'false';
   if (!summaries.length) {
     const empty = document.createElement('div');
     empty.className = 'gym-empty';
@@ -1789,6 +1979,19 @@ function renderSummaries(summaries) {
     card.append(header, body);
     summariesWrap.appendChild(card);
   });
+
+  if (summaries.length > 1) {
+    const moreBtn = document.createElement('button');
+    moreBtn.type = 'button';
+    moreBtn.className = 'gym-summary-more';
+    moreBtn.textContent = 'Mostrar mais';
+    moreBtn.addEventListener('click', () => {
+      const expanded = summariesWrap.dataset.expanded === 'true';
+      summariesWrap.dataset.expanded = expanded ? 'false' : 'true';
+      moreBtn.textContent = expanded ? 'Mostrar mais' : 'Mostrar menos';
+    });
+    summariesWrap.appendChild(moreBtn);
+  }
 }
 
 async function loadSummaries() {
@@ -1846,6 +2049,11 @@ function init() {
   workoutWrap.addEventListener('input', scheduleLocalDraftSave);
   workoutWrap.addEventListener('change', () => {
     setTimeout(scheduleLocalDraftSave, 0);
+  });
+  workoutWrap.addEventListener('change', event => {
+    if (event.target?.matches?.('[data-reps]') && Number(event.target.value || 0) > 0) {
+      markExerciseTouched(event.target);
+    }
   });
   window.addEventListener('pagehide', () => {
     if (localDraftDirty) persistLocalDraft();

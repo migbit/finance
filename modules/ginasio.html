@@ -41,6 +41,16 @@
       flex-direction: column;
       gap: 0.85rem;
     }
+    .gym-machine-card > summary {
+      cursor: pointer;
+      list-style: none;
+    }
+    .gym-machine-card > summary::-webkit-details-marker {
+      display: none;
+    }
+    .gym-machine-card:not([open]) {
+      padding-bottom: 1rem;
+    }
     .gym-machine-header {
       display: flex;
       flex-wrap: wrap;
@@ -186,6 +196,12 @@
       gap: 0.6rem;
       align-items: center;
     }
+    .gym-summary-more {
+      margin-top: 0.8rem;
+    }
+    .gym-summary-list[data-expanded="false"] .gym-summary-card:nth-of-type(n + 2) {
+      display: none;
+    }
     .gym-summary-header strong {
       font-size: 1rem;
     }
@@ -254,6 +270,7 @@
               <option value="Pernas">Pernas</option>
               <option value="Costas">Costas</option>
               <option value="Peito">Peito</option>
+              <option value="Braços">Braços</option>
             </select>
           </label>
           <label>
