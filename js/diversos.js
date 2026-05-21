@@ -1202,6 +1202,7 @@ function initIvaEstrangeiro() {
     const IVA_COLLECTION = _collection(db, 'ivaEstrangeiro');
 
     ivaForm.addEventListener('submit', onAddIva);
+    triBody.addEventListener('click', onResumoTrimestreClick);
     loadIvaEstrangeiro();
 
     async function onAddIva(e) {
@@ -1397,46 +1398,239 @@ function initIvaEstrangeiro() {
         });
     }
 
+    function parseIvaDate(record) {
+        if (record.data) {
+            const parts = String(record.data).split('-').map(Number);
+            if (parts.length === 3 && parts.every(Number.isFinite)) {
+                return new Date(parts[0], parts[1] - 1, parts[2]);
+            }
+        }
+        return record.ts ? new Date(record.ts) : null;
+    }
+
+    function getQuarterKey(record) {
+        const d = parseIvaDate(record);
+        if (!d || isNaN(d)) return null;
+        const y = d.getFullYear();
+        const q = Math.floor(d.getMonth() / 3) + 1;
+        return { key: `${y}-Q${q}`, ano: y, tri: q };
+    }
+
     function renderResumoTrimestres(items) {
         triBody.innerHTML = '';
 
         const acc = {};
         items.forEach(r => {
-            const d = r.data ? new Date(r.data) : (r.ts ? new Date(r.ts) : null);
-            if (!d || isNaN(d)) return;
+            const quarter = getQuarterKey(r);
+            if (!quarter) return;
 
-            const y = d.getFullYear();
-            const q = Math.floor(d.getMonth() / 3) + 1;
-            const key = `${y}-Q${q}`;
-
-            if (!acc[key]) acc[key] = { ano: y, tri: q, valor: 0, iva: 0, total: 0 };
+            if (!acc[quarter.key]) acc[quarter.key] = { ano: quarter.ano, tri: quarter.tri, valor: 0, iva: 0, total: 0, count: 0 };
             const valor = safeRound2(r.valor ?? 0);
             const iva = safeRound2(r.iva ?? (valor * 0.23));
             const total = safeRound2(r.total ?? (valor * 1.23));
 
-            acc[key].valor += valor;
-            acc[key].iva += iva;
-            acc[key].total += total;
+            acc[quarter.key].valor += valor;
+            acc[quarter.key].iva += iva;
+            acc[quarter.key].total += total;
+            acc[quarter.key].count += 1;
         });
 
         const rows = Object.values(acc).sort((a, b) => b.ano - a.ano || a.tri - b.tri);
 
         if (rows.length === 0) {
-            triBody.innerHTML = '<tr><td colspan="5">Sem dados</td></tr>';
+            triBody.innerHTML = '<tr><td colspan="6">Sem dados</td></tr>';
             return;
         }
 
         rows.forEach(r => {
             const tr = document.createElement('tr');
+            const key = `${r.ano}-Q${r.tri}`;
             tr.innerHTML = `
                 <td>${r.ano}</td>
                 <td>Q${r.tri}</td>
                 <td>${euro2(r.valor)}</td>
                 <td>${euro2(r.iva)}</td>
                 <td>${euro2(r.total)}</td>
+                <td>
+                    <button type="button" class="btn iva-pdf-btn" data-quarter="${escapeAttr(key)}" title="Exportar trimestre para PDF" aria-label="Exportar Q${r.tri} ${r.ano} para PDF">PDF</button>
+                </td>
             `;
             triBody.appendChild(tr);
         });
+    }
+
+    async function onResumoTrimestreClick(event) {
+        const button = event.target.closest('.iva-pdf-btn');
+        if (!button) return;
+
+        const quarterKey = button.dataset.quarter;
+        const rows = _ivaRowsAll.filter(row => getQuarterKey(row)?.key === quarterKey);
+        if (rows.length === 0) {
+            showToast('Sem dados para exportar.', 'info');
+            return;
+        }
+
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'A gerar...';
+
+        try {
+            await ensureIvaPdfLibs();
+            exportIvaQuarterPdf(quarterKey, rows);
+            showToast('PDF exportado.', 'success');
+        } catch (err) {
+            console.error('Erro ao exportar PDF de IVA', err);
+            showToast('Erro ao gerar PDF.', 'error');
+        } finally {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+    }
+
+    async function ensureIvaPdfLibs() {
+        const loadScript = (src) => {
+            if (!ensureIvaPdfLibs.cache) {
+                ensureIvaPdfLibs.cache = new Map();
+            }
+            if (ensureIvaPdfLibs.cache.has(src)) {
+                return ensureIvaPdfLibs.cache.get(src);
+            }
+
+            const promise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.crossOrigin = 'anonymous';
+                script.onload = () => resolve();
+                script.onerror = () => {
+                    ensureIvaPdfLibs.cache.delete(src);
+                    reject(new Error(`Falha ao carregar ${src}`));
+                };
+                document.head.appendChild(script);
+            });
+            ensureIvaPdfLibs.cache.set(src, promise);
+            return promise;
+        };
+
+        if (!window.jspdf || !window.jspdf.jsPDF) {
+            await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+            if (window.jspdf?.jsPDF && typeof window.jspdf.jsPDF === 'function') {
+                window.jsPDF = window.jspdf.jsPDF;
+            }
+        }
+
+        if (!window.jspdf?.jsPDF?.prototype?.autoTable) {
+            await loadScript('https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf.plugin.autotable.min.js');
+        }
+
+        if (!window.jspdf?.jsPDF) {
+            throw new Error('Biblioteca PDF indisponivel');
+        }
+
+        const probeDoc = new window.jspdf.jsPDF();
+        if (typeof probeDoc.autoTable !== 'function') {
+            throw new Error('Biblioteca PDF indisponivel');
+        }
+    }
+
+    function exportIvaQuarterPdf(quarterKey, rows) {
+        const [, yearPart, quarterPart] = quarterKey.match(/^(\d{4})-Q([1-4])$/) || [];
+        const ano = Number(yearPart);
+        const tri = Number(quarterPart);
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const margin = 14;
+
+        const orderedRows = [...rows].sort((a, b) => {
+            const ad = (a.data || '').replaceAll('-', '');
+            const bd = (b.data || '').replaceAll('-', '');
+            return Number(ad || 0) - Number(bd || 0);
+        });
+
+        const totals = orderedRows.reduce((acc, r) => {
+            const valor = safeRound2(r.valor ?? 0);
+            const iva = safeRound2(r.iva ?? (valor * 0.23));
+            const total = safeRound2(r.total ?? (valor * 1.23));
+            acc.valor += valor;
+            acc.iva += iva;
+            acc.total += total;
+            return acc;
+        }, { valor: 0, iva: 0, total: 0 });
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text(`IVA Estrangeiro - Q${tri} ${ano}`, pageWidth / 2, margin, { align: 'center' });
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(90);
+        doc.text(`Gerado a ${new Date().toLocaleDateString('pt-PT')}`, margin, margin + 8);
+        doc.text(`${orderedRows.length} registo${orderedRows.length === 1 ? '' : 's'}`, pageWidth - margin, margin + 8, { align: 'right' });
+        doc.setTextColor(0);
+
+        doc.autoTable({
+            startY: margin + 15,
+            head: [['Data', 'Descricao', 'Valor', 'IVA 23%', 'Total']],
+            body: orderedRows.map(r => {
+                const valor = safeRound2(r.valor ?? 0);
+                const iva = safeRound2(r.iva ?? (valor * 0.23));
+                const total = safeRound2(r.total ?? (valor * 1.23));
+                return [
+                    formatIvaDate(r.data),
+                    r.descricao || '',
+                    euro2(valor),
+                    euro2(iva),
+                    euro2(total)
+                ];
+            }),
+            foot: [['Totais', '', euro2(totals.valor), euro2(totals.iva), euro2(totals.total)]],
+            margin: { top: margin, right: margin, bottom: margin, left: margin },
+            styles: {
+                font: 'helvetica',
+                fontSize: 8,
+                cellPadding: 2.5,
+                lineColor: [210, 214, 220],
+                lineWidth: 0.1,
+                valign: 'middle'
+            },
+            headStyles: {
+                fillColor: [241, 245, 249],
+                textColor: [15, 23, 42],
+                fontStyle: 'bold'
+            },
+            footStyles: {
+                fillColor: [226, 232, 240],
+                textColor: [15, 23, 42],
+                fontStyle: 'bold'
+            },
+            alternateRowStyles: {
+                fillColor: [249, 250, 251]
+            },
+            columnStyles: {
+                0: { cellWidth: 24 },
+                1: { cellWidth: 76 },
+                2: { halign: 'right' },
+                3: { halign: 'right' },
+                4: { halign: 'right' }
+            },
+            didDrawPage: (data) => {
+                const pageHeight = doc.internal.pageSize.getHeight();
+                doc.setFontSize(8);
+                doc.setTextColor(120);
+                doc.text(`Pagina ${data.pageNumber}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+                doc.setTextColor(0);
+            }
+        });
+
+        doc.save(`iva-estrangeiro-${ano}-Q${tri}.pdf`);
+    }
+
+    function formatIvaDate(value) {
+        if (!value) return '';
+        const parts = String(value).split('-');
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        return value;
     }
 }
 
@@ -1704,4 +1898,3 @@ function initPallco() {
   // primeira carga
   loadPallco();
 }
-

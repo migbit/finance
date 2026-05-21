@@ -49,6 +49,7 @@ const WORKOUT_TEMPLATES = {
           {
             id: 'leg-press-45',
             label: 'Leg press 45º',
+            note: 'RPM moderado e sem dor: normal. RPM duro ou joelho 3–4/10: reduzir quad. Dor ≥5/10: cortar exercício provocador.',
             initialResistance: 75.7,
             series: [
               { baseWeight: 40, targetReps: 10, rir: '3+' },
@@ -74,6 +75,7 @@ const WORKOUT_TEMPLATES = {
           {
             id: 'hack-squat',
             label: 'Hack Squat',
+            note: 'Usar só com joelho verde. Se o joelho estiver amarelo/vermelho, cortar hack pesado e evitar amplitude agressiva.',
             initialResistance: 47.6,
             series: [
               { baseWeight: 20, targetReps: 8, rir: '2' },
@@ -144,23 +146,23 @@ const WORKOUT_TEMPLATES = {
       {
         id: 'leg-extension',
         name: 'Leg extension',
+        note: 'Opcional e só com joelho verde. Joelho amarelo: trocar por isometria ou cortar. Joelho vermelho: cortar.',
         initialResistance: 9.5,
         series: [
-          { baseWeight: 50, targetReps: 10, rir: '?' },
-          { baseWeight: 50, targetReps: 10, rir: '?' },
-          { baseWeight: 50, targetReps: 10, rir: '?' }
+          { baseWeight: 50, targetReps: 15, rir: '3+' },
+          { baseWeight: 50, targetReps: 15, rir: '3+' }
         ],
         rules: {
           series: [
-            { reps: '10–12', rir: '2–3', rest: '75–120 s' },
-            { reps: '12–14', rir: '2', rest: '75–120 s' },
-            { reps: '12–15', rir: '1–2', rest: 'fim' }
+            { reps: '12–15 opcional', rir: '3–5', rest: '75–120 s' },
+            { reps: '12–15 opcional', rir: '3–5', rest: 'fim' }
           ],
-          progression: 'S3 ≥15 limpo com RIR 1–2 → +1 pino',
+          progression: 'Só progredir se houver vários treinos sem dor. Se houver dor no joelho, cortar.',
           warmup: '1 série a ~60% × 12 reps | RIR 4+ | descanso 60 s',
           restMinSec: 75,
           progressCheck: [
-            { minReps: 15, rirMin: 1, rirMax: 2, seriesIndex: 2 }
+            { minReps: 15, rirMin: 3, rirMax: 5 },
+            { minReps: 15, rirMin: 3, rirMax: 5 }
           ]
         }
       },
@@ -192,6 +194,7 @@ const WORKOUT_TEMPLATES = {
       {
         id: 'abdutora',
         name: 'Hip Abductor (encosto regulável)',
+        note: 'Se o glúteo médio estiver irritado, fazer só isométrica leve ou cortar.',
         initialResistance: null,
         series: [
           { baseWeight: 45, targetReps: 15, rir: '?' },
@@ -266,7 +269,7 @@ const WORKOUT_TEMPLATES = {
       {
         id: 'triceps-press-dragao',
         name: 'Triceps Press',
-        note: 'Banco 5.',
+        note: 'Banco 5. Usar o treino de braços isolado só se não fizeres braços no dia de peito.',
         initialResistance: null,
         series: [
           { baseWeight: 41, targetReps: 15, rir: '1-2' },
@@ -309,7 +312,6 @@ const WORKOUT_TEMPLATES = {
           warmup: '14 kg × 10–12',
           restMinSec: 90,
           progressCheck: [
-            { minReps: 12, rirMin: 1, rirMax: 2 },
             { minReps: 12, rirMin: 1, rirMax: 2 },
             { minReps: 12, rirMin: 1, rirMax: 2 }
           ]
@@ -359,6 +361,168 @@ const WORKOUT_TEMPLATES = {
             { minReps: 15, rirMin: 1, rirMax: 2 },
             { minReps: 15, rirMin: 1, rirMax: 2 }
           ]
+        }
+      }
+    ],
+    'Peito + Ombro + Braços': [
+      {
+        id: 'chest-press-dragao-pob',
+        name: 'Chest Press',
+        note: 'Exercício principal. Ombro verde: normal. Ombro amarelo: só press confortável + lateral raise + rotação externa. Ombro vermelho: cortar press pesado e fly.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 50, targetReps: 12, rir: '1-2' },
+          { baseWeight: 50, targetReps: 12, rir: '1-2' },
+          { baseWeight: 50, targetReps: 12, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '6–12', rir: '1–2', rest: '2 min' },
+            { reps: '6–12', rir: '1–2', rest: '2 min' },
+            { reps: '6–12', rir: '1–2', rest: 'fim' }
+          ],
+          progression: '3×12 com RIR 1–2.',
+          warmup: '32 kg × 12–15; 41 kg × 8–10',
+          restMinSec: 120,
+          progressCheck: [
+            { minReps: 12, rirMin: 1, rirMax: 2 },
+            { minReps: 12, rirMin: 1, rirMax: 2 },
+            { minReps: 12, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'pec-fly-dragao-pob',
+        name: 'Pec Fly ou Crossover curto',
+        note: 'Opcional se ombro sensível. Banco n.º 5 se for Pec Fly. Cortar ao primeiro sinal de picada.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 27, targetReps: 20, rir: '2-3' },
+          { baseWeight: 32, targetReps: 20, rir: '2-3' }
+        ],
+        rules: {
+          series: [
+            { reps: '12–20', rir: '2–3', rest: '90 s' },
+            { reps: '12–20', rir: '2–3', rest: 'fim' }
+          ],
+          progression: '32 kg × 15–16 em 2 séries.',
+          warmup: '18–23 kg × 12–15',
+          restMinSec: 90,
+          progressCheck: [
+            { minReps: 15, rirMin: 2, rirMax: 3 },
+            { minReps: 15, rirMin: 2, rirMax: 3 }
+          ]
+        }
+      },
+      {
+        id: 'lateral-raise-maquina-dragao-pob',
+        name: 'Lateral Raise máquina',
+        note: 'Só amplitude confortável.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 0, targetReps: 20, rir: '1-2' },
+          { baseWeight: 0, targetReps: 20, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '12–20', rir: '1–2', rest: '75–90 s' },
+            { reps: '12–20', rir: '1–2', rest: 'fim' }
+          ],
+          progression: '2×20 limpas.',
+          warmup: 'Leve × 12–15',
+          restMinSec: 75,
+          progressCheck: [
+            { minReps: 20, rirMin: 1, rirMax: 2 },
+            { minReps: 20, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'rotacao-externa-dragao-pob',
+        name: 'Rotação externa',
+        note: 'Nunca à falha.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 0, targetReps: 25, rir: '3-5' },
+          { baseWeight: 0, targetReps: 25, rir: '3-5' }
+        ],
+        rules: {
+          series: [
+            { reps: '15–25', rir: '3–5', rest: '45–60 s' },
+            { reps: '15–25', rir: '3–5', rest: 'fim' }
+          ],
+          progression: '2×25 muito limpas.',
+          warmup: 'Nenhum aquecimento definido',
+          restMinSec: 45,
+          progressCheck: [
+            { minReps: 25, rirMin: 3, rirMax: 5 },
+            { minReps: 25, rirMin: 3, rirMax: 5 }
+          ]
+        }
+      },
+      {
+        id: 'triceps-press-dragao-pob',
+        name: 'Triceps Press',
+        note: '2 séries são suficientes neste treino combinado.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 55, targetReps: 15, rir: '1-2' },
+          { baseWeight: 55, targetReps: 15, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '10–15', rir: '1–2', rest: '90 s' },
+            { reps: '10–15', rir: '1–2', rest: 'fim' }
+          ],
+          progression: '2×15 com RIR 1–2.',
+          warmup: '32 kg × 12–15; 45 kg × 8–10',
+          restMinSec: 90,
+          progressCheck: [
+            { minReps: 15, rirMin: 1, rirMax: 2 },
+            { minReps: 15, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'dependent-curl-dragao-pob',
+        name: 'Dependent Curl',
+        note: '2 séries são suficientes neste treino combinado.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 18, targetReps: 12, rir: '1-2' },
+          { baseWeight: 18, targetReps: 12, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '8–12', rir: '1–2', rest: '90 s' },
+            { reps: '8–12', rir: '1–2', rest: 'fim' }
+          ],
+          progression: '2×12 com RIR 1–2.',
+          warmup: '14 kg × 10–12',
+          restMinSec: 90,
+          progressCheck: [
+            { minReps: 12, rirMin: 1, rirMax: 2 },
+            { minReps: 12, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'extra-opcional-bracos-dragao-pob',
+        name: 'Extra opcional',
+        note: 'Alternar bíceps/tríceps. Usar só se estiveres recuperado; se já fizeste braços noutro dia, cortar.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 0, targetReps: 15, rir: '1-2' },
+          { baseWeight: 0, targetReps: 15, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '8–15 opcional', rir: '1–2', rest: '75–90 s' },
+            { reps: '8–15 opcional', rir: '1–2', rest: 'fim' }
+          ],
+          progression: 'Não perseguir progressão se houver fadiga acumulada.',
+          warmup: 'Nenhum aquecimento definido',
+          restMinSec: 75
         }
       }
     ]
@@ -433,26 +597,25 @@ const WORKOUT_TEMPLATES = {
       {
         id: 'leg-extension-arrabida',
         name: 'Leg Extension pinos',
+        note: 'Menos agressiva. Se houver dor no joelho, cortar ou reduzir para trabalho leve tolerado.',
         initialResistance: 9.5,
         series: [
-          { baseWeight: 50, targetReps: 12, rir: '1-2' },
-          { baseWeight: 50, targetReps: 12, rir: '1-2' },
-          { baseWeight: 50, targetReps: 12, rir: '1-2' }
+          { baseWeight: 50, targetReps: 15, rir: '2-3' },
+          { baseWeight: 50, targetReps: 15, rir: '2-3' }
         ],
         rules: {
           series: [
-            { reps: '10–15', rir: '1–2', rest: '75–120 s' },
-            { reps: '10–15', rir: '1–2', rest: '75–120 s' },
-            { reps: '10–15', rir: '1–2', rest: 'fim' }
+            { reps: '12–15', rir: '2–3', rest: '75–120 s' },
+            { reps: '12–15', rir: '2–3', rest: 'fim' }
           ],
-          progression: 'Topo do range limpo → +1 pino',
+          progression: 'Topo do range limpo e sem dor durante 2–3 treinos → +1 pino',
           warmup: '1 série a ~60% × 12 reps | RIR 4+ | descanso 60 s',
           restMinSec: 75,
           progressCheck: [
-            { minReps: 15, rirMin: 1, rirMax: 2, seriesIndex: 2 }
+            { minReps: 15, rirMin: 2, rirMax: 3 },
+            { minReps: 15, rirMin: 2, rirMax: 3 }
           ]
-        },
-        note: 'Progressão lenta: só subir pino quando fechares topo do range limpo.'
+        }
       },
       {
         id: 'calf-leg-press-arrabida',
@@ -477,6 +640,7 @@ const WORKOUT_TEMPLATES = {
       {
         id: 'hip-abductor-arrabida',
         name: 'Hip Abductor',
+        note: 'Longe da falha. Se houver qualquer sinal no glúteo médio, fazer só isométrica leve ou cortar.',
         initialResistance: null,
         series: [
           { baseWeight: 45, targetReps: 18, rir: '3-5' },
@@ -489,12 +653,142 @@ const WORKOUT_TEMPLATES = {
           ],
           warmup: 'Nenhum aquecimento',
           restMinSec: 45
-        },
-        note: 'Longe da falha. Se houver qualquer sinal no glúteo médio, cortar sem substituir.'
+        }
       }
     ]
   },
   'Constituição': {
+    'Pernas': [
+      {
+        id: 'technogym-glute-constituicao',
+        name: 'Technogym Glute',
+        initialResistance: null,
+        series: [
+          { baseWeight: 30, targetReps: 15, rir: '2-3' },
+          { baseWeight: 30, targetReps: 15, rir: '2-3' },
+          { baseWeight: 30, targetReps: 15, rir: '2-3' }
+        ],
+        rules: {
+          series: [
+            { reps: '12–15', rir: '2–3', rest: '90–120 s' },
+            { reps: '12–15', rir: '2–3', rest: '90–120 s' },
+            { reps: '12–15 opcional', rir: '2–3', rest: 'fim' }
+          ],
+          progression: 'Subir para 35 kg quando fizer 3×14–15 RIR 2 sem dor.',
+          warmup: '15 kg × 10',
+          restMinSec: 90,
+          progressCheck: [
+            { minReps: 14, rirMin: 2, rirMax: 2 },
+            { minReps: 14, rirMin: 2, rirMax: 2 },
+            { minReps: 14, rirMin: 2, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'leg-curl-sentado-constituicao',
+        name: 'Leg Curl sentado',
+        initialResistance: null,
+        series: [
+          { baseWeight: 37.5, targetReps: 15, rir: '2' },
+          { baseWeight: 37.5, targetReps: 15, rir: '2' },
+          { baseWeight: 37.5, targetReps: 15, rir: '2' }
+        ],
+        rules: {
+          series: [
+            { reps: '10–15', rir: '2', rest: '90 s' },
+            { reps: '10–15', rir: '2', rest: '90 s' },
+            { reps: '10–15 opcional', rir: '2', rest: 'fim' }
+          ],
+          progression: 'Subir para 40 kg quando fizer 3×13–15 RIR 2 sem falha.',
+          warmup: '25 kg × 10–12',
+          restMinSec: 90,
+          progressCheck: [
+            { minReps: 13, rirMin: 2, rirMax: 2 },
+            { minReps: 13, rirMin: 2, rirMax: 2 },
+            { minReps: 13, rirMin: 2, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'leg-press-horizontal-constituicao',
+        name: 'Leg Press horizontal',
+        initialResistance: null,
+        series: [
+          { baseWeight: 130, targetReps: 15, rir: '3' },
+          { baseWeight: 130, targetReps: 15, rir: '3' },
+          { baseWeight: 130, targetReps: 15, rir: '3' }
+        ],
+        rules: {
+          series: [
+            { reps: '12–15', rir: '3', rest: '120 s' },
+            { reps: '12–15', rir: '3', rest: '120 s' },
+            { reps: '12–15 opcional', rir: '3', rest: 'fim' }
+          ],
+          progression: 'Só subir após 2–3 treinos sem dor e sem agravamento na bike.',
+          warmup: '100 kg × 10; opcional 120 kg × 6–8',
+          restMinSec: 120
+        }
+      },
+      {
+        id: 'leg-extension-constituicao-cortada',
+        name: 'Leg Extension',
+        note: 'Cortada. Reintroduzir leve: 20–25 kg × 15–20, RIR 4–5.',
+        initialResistance: null,
+        series: [],
+        rules: {
+          progression: 'Reintroduzir leve: 20–25 kg × 15–20, RIR 4–5.',
+          warmup: 'Cortada'
+        }
+      },
+      {
+        id: 'gemeos-leg-press-constituicao',
+        name: 'Gémeos na Leg Press',
+        initialResistance: null,
+        series: [
+          { baseWeight: 120, targetReps: 15, rir: '1-2' },
+          { baseWeight: 120, targetReps: 15, rir: '1-2' },
+          { baseWeight: 120, targetReps: 15, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '10–15', rir: '1–2', rest: '75–90 s' },
+            { reps: '10–15', rir: '1–2', rest: '75–90 s' },
+            { reps: '10–15 opcional', rir: '1–2', rest: 'fim' }
+          ],
+          progression: 'Subir para 130 kg quando fizer 3×15 com boa amplitude.',
+          warmup: '70 kg × 12',
+          restMinSec: 75,
+          progressCheck: [
+            { minReps: 15, rirMin: 1, rirMax: 2 },
+            { minReps: 15, rirMin: 1, rirMax: 2 },
+            { minReps: 15, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'technogym-abductor-constituicao',
+        name: 'Technogym Abductor',
+        note: 'Se o glúteo médio estiver irritado, fazer só isométrica leve ou cortar.',
+        initialResistance: null,
+        series: [
+          { baseWeight: 25, targetReps: 25, rir: '3' },
+          { baseWeight: 25, targetReps: 25, rir: '3' }
+        ],
+        rules: {
+          series: [
+            { reps: '20–25', rir: '3', rest: '60–75 s' },
+            { reps: '20–25', rir: '3', rest: 'fim' }
+          ],
+          progression: 'Subir para 30 kg quando fizer 2×25 RIR 3+ sem dor.',
+          warmup: 'Não necessário',
+          restMinSec: 60,
+          progressCheck: [
+            { minReps: 25, rirMin: 3, rirMax: 99 },
+            { minReps: 25, rirMin: 3, rirMax: 99 }
+          ]
+        }
+      }
+    ],
     'Costas': [
       {
         id: 'lat-pulldown-neutro',
@@ -556,18 +850,17 @@ const WORKOUT_TEMPLATES = {
           { baseWeight: 40, targetReps: 12, rir: '1-2' },
           { baseWeight: 40, targetReps: 11, rir: '1' }
         ],
-        note: 'Aquecimento opcional: 1×12 reps a ~70% se o ombro estiver “frio”.',
+        note: 'Aquecimento opcional: 1×12 reps a ~70% se o ombro estiver “frio”. Fazer 2 séries; 3.ª só se estiveres fresco.',
         rules: {
           series: [
             { reps: '12–13', rir: '2', rest: '90 s' },
             { reps: '11–12', rir: '1–2', rest: '90 s' },
-            { reps: '10–11', rir: '1', rest: 'fim' }
+            { reps: '10–11 opcional', rir: '1', rest: 'fim' }
           ],
-          progression: 'Quando fizeres 3×12 limpo → +1 pino. Após subida, alvo volta a 10–11 reps.',
+          progression: 'Quando fizeres 2×12 limpo, considera subir. 3.ª série só opcional.',
           warmup: 'Opcional: 1×12 reps a ~70% se o ombro estiver “frio”',
           restMinSec: 90,
           progressCheck: [
-            { minReps: 12, rirMin: 1, rirMax: 2 },
             { minReps: 12, rirMin: 1, rirMax: 2 },
             { minReps: 12, rirMin: 1, rirMax: 2 }
           ]
@@ -601,20 +894,19 @@ const WORKOUT_TEMPLATES = {
           { baseWeight: 7.5, targetReps: 16, rir: '1-2' },
           { baseWeight: 7.5, targetReps: 15, rir: '2' }
         ],
-        note: 'A S1 já é aquecimento funcional. Cotovelos abertos, foco em escápula. Se a AC reclamar, regressa à carga anterior.',
+        note: 'A S1 já é aquecimento funcional. Fazer 2 séries; 3.ª só opcional. Se a AC reclamar, regressa à carga anterior.',
         rules: {
           series: [
             { reps: '15–18', rir: '2', rest: '60 s' },
             { reps: '14–16', rir: '1–2', rest: '60 s' },
-            { reps: '12–15', rir: '2', rest: 'fim' }
+            { reps: '12–15 opcional', rir: '2', rest: 'fim' }
           ],
-          progression: '18 / 16 / 15 com boa forma → +1 pino',
+          progression: '18 / 16 com boa forma → +1 pino. 3.ª série opcional.',
           warmup: 'A S1 já é aquecimento funcional',
           restMinSec: 60,
           progressCheck: [
             { minReps: 18, rirMin: 1, rirMax: 2 },
-            { minReps: 16, rirMin: 1, rirMax: 2 },
-            { minReps: 15, rirMin: 1, rirMax: 2 }
+            { minReps: 16, rirMin: 1, rirMax: 2 }
           ]
         }
       },
@@ -660,7 +952,7 @@ const WORKOUT_TEMPLATES = {
             { minReps: 12, rirMin: 1, rirMax: 99, seriesIndex: 2 }
           ]
         },
-        note: 'Nunca subir carga se houver perda de controlo ou stress anterior no ombro.'
+        note: 'Ombro verde: normal. Ombro amarelo: manter press confortável, lateral raise e rotação externa. Ombro vermelho: cortar press pesado e fly.'
       },
       {
         id: 'press-halteres-plano',
@@ -683,7 +975,7 @@ const WORKOUT_TEMPLATES = {
             { minReps: 10, rirMin: 2, rirMax: 2, seriesIndex: 2 }
           ]
         },
-        note: 'Só subir carga quando fizeres S3 = 10 reps com RIR 2 limpo e zero picada. Se houver qualquer picada → manter carga e consolidar reps.'
+        note: 'Só subir carga quando fizeres S3 = 10 reps com RIR 2 limpo e zero picada. Se houver picada, reduzir halteres ou cortar este segundo press.'
       },
       {
         id: 'fly-halteres-plano',
@@ -705,7 +997,7 @@ const WORKOUT_TEMPLATES = {
             { minReps: 20, rirMin: 2, rirMax: 3 }
           ]
         },
-        note: 'Opcional. Cortar ao primeiro sinal no AC. Amplitude curta sempre.'
+        note: 'Opcional. Se o ombro estiver sensível, reduzir ou cortar. Cortar ao primeiro sinal no AC. Amplitude curta sempre.'
       },
       {
         id: 'lateral-cabo',
@@ -761,7 +1053,11 @@ const state = {
   lastRir: {},
   lastWeights: {},
   recommendedReps: {},
-  customMachines: []
+  customMachines: [],
+  timing: {
+    startedAt: null,
+    lastSetAt: null
+  }
 };
 
 const baseWeightTimers = new Map();
@@ -776,6 +1072,20 @@ function formatWeight(value) {
   if (value === null || Number.isNaN(value)) return '';
   const fixed = Number(value).toFixed(1);
   return fixed.endsWith('.0') ? fixed.slice(0, -2) : fixed;
+}
+
+function formatDuration(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${String(secs).padStart(2, '0')}s`;
+  }
+  return `${secs}s`;
 }
 
 function normalizeKey(text) {
@@ -963,6 +1273,29 @@ function getSavedSeries(savedMachine, index) {
     || {};
 }
 
+function getTimedSeriesRows() {
+  return Array.from(workoutWrap.querySelectorAll('[data-series-row][data-registered-at]'))
+    .map(row => ({
+      row,
+      registeredAt: Number(row.dataset.registeredAt || 0)
+    }))
+    .filter(item => item.registeredAt > 0)
+    .sort((a, b) => a.registeredAt - b.registeredAt);
+}
+
+function syncTimingFromDom() {
+  const timedRows = getTimedSeriesRows();
+  state.timing.startedAt = timedRows[0]?.registeredAt || null;
+  state.timing.lastSetAt = timedRows[timedRows.length - 1]?.registeredAt || null;
+}
+
+function resetWorkoutTiming() {
+  state.timing = {
+    startedAt: null,
+    lastSetAt: null
+  };
+}
+
 function getNextExerciseOrder() {
   const orders = Array.from(workoutWrap.querySelectorAll('.gym-machine-card'))
     .map(card => Number(card.dataset.exerciseOrder || 0))
@@ -976,6 +1309,20 @@ function markExerciseTouched(target) {
   card.dataset.exerciseOrder = String(getNextExerciseOrder());
   const meta = card.querySelector('[data-order-label]');
   if (meta) meta.textContent = `Feito em ${card.dataset.exerciseOrder}º`;
+}
+
+function recordSeriesTiming(target) {
+  const row = target?.closest?.('[data-series-row]');
+  if (!row || Number(target.value || 0) <= 0 || Number(row.dataset.registeredAt || 0) > 0) return;
+  syncTimingFromDom();
+  const now = Date.now();
+  const restBeforeSec = state.timing.lastSetAt
+    ? Math.max(0, Math.round((now - state.timing.lastSetAt) / 1000))
+    : 0;
+  row.dataset.registeredAt = String(now);
+  row.dataset.restBeforeSec = String(restBeforeSec);
+  if (!state.timing.startedAt) state.timing.startedAt = now;
+  state.timing.lastSetAt = now;
 }
 
 function updateTotalDisplay(row, initialResistance) {
@@ -1120,6 +1467,12 @@ function createSeriesTable(machine, variant, savedMachine) {
     row.setAttribute('data-initial-resistance', initialResistance ?? '');
     row.setAttribute('data-series-machine-id', machine.id);
     row.setAttribute('data-series-variant-id', variant?.id || '');
+    if (savedSeries.registeredAt) {
+      row.setAttribute('data-registered-at', String(savedSeries.registeredAt));
+    }
+    if (typeof savedSeries.restBeforeSec === 'number') {
+      row.setAttribute('data-rest-before-sec', String(savedSeries.restBeforeSec));
+    }
 
     const baseWeight = state.baseWeights[seriesKey]
       ?? state.lastWeights?.[seriesKey]
@@ -1283,6 +1636,12 @@ function parseRirRange(value) {
   }
   if (raw.includes('-')) {
     const [minRaw, maxRaw] = raw.split('-').map(Number);
+    if (Number.isFinite(minRaw) && Number.isFinite(maxRaw)) {
+      return { min: minRaw, max: maxRaw };
+    }
+  }
+  if (raw.includes('–')) {
+    const [minRaw, maxRaw] = raw.split('–').map(Number);
     if (Number.isFinite(minRaw) && Number.isFinite(maxRaw)) {
       return { min: minRaw, max: maxRaw };
     }
@@ -1491,6 +1850,7 @@ function renderWorkout() {
     return;
   }
   template.forEach(machine => workoutWrap.appendChild(renderMachine(machine)));
+  syncTimingFromDom();
   updateBaseMachineOptions(template);
 
   Array.from(workoutWrap.querySelectorAll('.gym-rest-btn')).forEach(button => {
@@ -1642,6 +2002,7 @@ async function loadSession() {
     state.lastWeights = {};
     state.recommendedReps = {};
     state.customMachines = [];
+    resetWorkoutTiming();
     renderWorkout();
     return;
   }
@@ -1668,6 +2029,7 @@ async function loadSession() {
     state.lastReps = {};
     state.lastRir = {};
     state.lastWeights = {};
+    resetWorkoutTiming();
     renderWorkout();
     return;
   }
@@ -1679,6 +2041,7 @@ async function loadSession() {
   }
   if (!state.date) {
     state.session = null;
+    resetWorkoutTiming();
     renderWorkout();
     return;
   }
@@ -1699,6 +2062,7 @@ async function loadSession() {
   } else {
     localDraftDirty = false;
   }
+  if (!state.session) resetWorkoutTiming();
   renderWorkout();
   resetAddMachineForm();
 }
@@ -1788,11 +2152,17 @@ async function loadLastReps(gym, treino) {
 }
 
 function buildSessionFromDom() {
+  syncTimingFromDom();
   const session = {
     gym: state.gym,
     treino: state.treino,
     date: state.date,
-    machines: {}
+    machines: {},
+    timing: {
+      startedAt: state.timing.startedAt || null,
+      finishedAt: null,
+      durationSec: null
+    }
   };
 
   const machineEls = Array.from(document.querySelectorAll('.gym-machine-card'));
@@ -1822,7 +2192,9 @@ function buildSessionFromDom() {
       const rir = rirInput === '?' && state.lastRir[seriesKey]
         ? state.lastRir[seriesKey]
         : rirInput;
-      return { seriesIndex: rowIndex, baseWeight, reps, targetReps, rir };
+      const registeredAt = Number(row.dataset.registeredAt || 0) || null;
+      const restBeforeSec = Number(row.dataset.restBeforeSec || 0) || 0;
+      return { seriesIndex: rowIndex, baseWeight, reps, targetReps, rir, registeredAt, restBeforeSec };
     }).filter(item => item.reps > 0);
 
     if (!series.length) return;
@@ -1837,6 +2209,9 @@ function buildSessionFromDom() {
     };
   });
 
+  if (!session.timing.startedAt) {
+    delete session.timing;
+  }
   return session;
 }
 
@@ -1844,6 +2219,10 @@ function buildSummaryText(session) {
   if (!session) return '';
   const lines = [];
   lines.push(`${session.date} — ${session.gym} / ${session.treino}`);
+  const durationSec = Number(session.timing?.durationSec || 0);
+  if (durationSec > 0) {
+    lines.push(`Tempo total: ${formatDuration(durationSec)}`);
+  }
   const machines = Array.isArray(session.machines)
     ? session.machines
     : Object.values(session.machines || {});
@@ -1872,7 +2251,10 @@ function buildSummaryText(session) {
           const repsLabel = series.reps ? series.reps : '-';
           const rirLabel = series.rir ? series.rir : '-';
           const seriesNumber = Number(series.seriesIndex ?? index) + 1;
-          lines.push(`${label} ${seriesNumber}ª série ${formatWeight(total)}kg x${repsLabel} RIR ${rirLabel}`);
+          const restLabel = Number(series.restBeforeSec || 0) > 0
+            ? ` | descanso ${formatDuration(series.restBeforeSec)}`
+            : '';
+          lines.push(`${label} ${seriesNumber}ª série ${formatWeight(total)}kg x${repsLabel} RIR ${rirLabel}${restLabel}`);
         });
     });
   return lines.join('\n');
@@ -1888,6 +2270,15 @@ async function saveSession() {
   if (!Object.keys(session.machines || {}).length) {
     showToast('Preenche pelo menos uma série antes de gravar.', 'warning');
     return;
+  }
+  if (session.timing?.startedAt) {
+    const previousFinishedAt = Number(state.session?.timing?.finishedAt || 0) || 0;
+    const lastSetAt = Number(state.timing.lastSetAt || 0);
+    const finishedAt = previousFinishedAt && lastSetAt <= previousFinishedAt
+      ? previousFinishedAt
+      : Date.now();
+    session.timing.finishedAt = finishedAt;
+    session.timing.durationSec = Math.max(0, Math.round((finishedAt - session.timing.startedAt) / 1000));
   }
   window.lastGymSession = session;
   console.log('[ginasio] session payload', session);
@@ -2051,8 +2442,17 @@ function init() {
     setTimeout(scheduleLocalDraftSave, 0);
   });
   workoutWrap.addEventListener('change', event => {
-    if (event.target?.matches?.('[data-reps]') && Number(event.target.value || 0) > 0) {
+    if (!event.target?.matches?.('[data-reps]')) return;
+    if (Number(event.target.value || 0) > 0) {
+      recordSeriesTiming(event.target);
       markExerciseTouched(event.target);
+      return;
+    }
+    const row = event.target.closest('[data-series-row]');
+    if (row) {
+      delete row.dataset.registeredAt;
+      delete row.dataset.restBeforeSec;
+      syncTimingFromDom();
     }
   });
   window.addEventListener('pagehide', () => {
