@@ -1,5 +1,5 @@
 /* Migbit Finance – Service Worker (DEV safe) */
-const CACHE = 'finance-static-v27';
+const CACHE = 'finance-static-v28';
 
 const CORE = [
   './',
@@ -94,5 +94,21 @@ self.addEventListener('fetch', (event) => {
     const fresh = await fetch(req);
     if (fresh && fresh.ok) cache.put(req, fresh.clone());
     return fresh;
+  })());
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  if (event.action === 'dismiss') return;
+
+  const url = event.notification.data?.url || './modules/ginasio.html';
+  event.waitUntil((async () => {
+    const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const existing = allClients.find(client => client.url.includes('/modules/ginasio.html'));
+    if (existing) {
+      await existing.focus();
+      return;
+    }
+    await clients.openWindow(url);
   })());
 });

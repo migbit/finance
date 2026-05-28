@@ -438,29 +438,6 @@ const WORKOUT_TEMPLATES = {
         }
       },
       {
-        id: 'rotacao-externa-dragao-pob',
-        name: 'Rotação externa',
-        note: 'Nunca à falha.',
-        initialResistance: null,
-        series: [
-          { baseWeight: 0, targetReps: 25, rir: '3-5' },
-          { baseWeight: 0, targetReps: 25, rir: '3-5' }
-        ],
-        rules: {
-          series: [
-            { reps: '15–25', rir: '3–5', rest: '45–60 s' },
-            { reps: '15–25', rir: '3–5', rest: 'fim' }
-          ],
-          progression: '2×25 muito limpas.',
-          warmup: 'Nenhum aquecimento definido',
-          restMinSec: 45,
-          progressCheck: [
-            { minReps: 25, rirMin: 3, rirMax: 5 },
-            { minReps: 25, rirMin: 3, rirMax: 5 }
-          ]
-        }
-      },
-      {
         id: 'triceps-press-dragao-pob',
         name: 'Triceps Press',
         note: '2 séries são suficientes neste treino combinado.',
@@ -507,22 +484,47 @@ const WORKOUT_TEMPLATES = {
         }
       },
       {
-        id: 'extra-opcional-bracos-dragao-pob',
-        name: 'Extra opcional',
-        note: 'Alternar bíceps/tríceps. Usar só se estiveres recuperado; se já fizeste braços noutro dia, cortar.',
+        id: 'triceps-extension-dragao-pob',
+        name: 'Triceps Extension',
         initialResistance: null,
         series: [
-          { baseWeight: 0, targetReps: 15, rir: '1-2' },
-          { baseWeight: 0, targetReps: 15, rir: '1-2' }
+          { baseWeight: 32, targetReps: 12, rir: '1-2' },
+          { baseWeight: 32, targetReps: 12, rir: '1-2' }
         ],
         rules: {
           series: [
-            { reps: '8–15 opcional', rir: '1–2', rest: '75–90 s' },
-            { reps: '8–15 opcional', rir: '1–2', rest: 'fim' }
+            { reps: '8–12', rir: '1–2', rest: '75–90 s' },
+            { reps: '8–12', rir: '1–2', rest: 'fim' }
           ],
-          progression: 'Não perseguir progressão se houver fadiga acumulada.',
+          progression: '2×12 com RIR 1–2.',
           warmup: 'Nenhum aquecimento definido',
-          restMinSec: 75
+          restMinSec: 75,
+          progressCheck: [
+            { minReps: 12, rirMin: 1, rirMax: 2 },
+            { minReps: 12, rirMin: 1, rirMax: 2 }
+          ]
+        }
+      },
+      {
+        id: 'biceps-curl-dragao-pob',
+        name: 'Biceps Curl',
+        initialResistance: null,
+        series: [
+          { baseWeight: 23, targetReps: 12, rir: '1-2' },
+          { baseWeight: 23, targetReps: 12, rir: '1-2' }
+        ],
+        rules: {
+          series: [
+            { reps: '8–12', rir: '1–2', rest: '75–90 s' },
+            { reps: '8–12', rir: '1–2', rest: 'fim' }
+          ],
+          progression: '2×12 com RIR 1–2.',
+          warmup: 'Nenhum aquecimento definido',
+          restMinSec: 75,
+          progressCheck: [
+            { minReps: 12, rirMin: 1, rirMax: 2 },
+            { minReps: 12, rirMin: 1, rirMax: 2 }
+          ]
         }
       }
     ]
@@ -1033,6 +1035,8 @@ const trainingSelect = document.getElementById('training-select');
 const dateInput = document.getElementById('session-date');
 const workoutWrap = document.getElementById('gym-workout');
 const saveBtn = document.getElementById('gym-save');
+const totalTimerEl = document.getElementById('gym-total-timer');
+const clearDraftBtn = document.getElementById('gym-clear-draft');
 const summariesWrap = document.getElementById('gym-summaries');
 const summariesRefreshBtn = document.getElementById('summaries-refresh');
 const machineNameInput = document.getElementById('gym-machine-name');
@@ -1063,10 +1067,12 @@ const state = {
 const baseWeightTimers = new Map();
 const recommendedTimers = new Map();
 const restTimerIntervals = new Map();
+const warmupTimerIntervals = new Map();
 const LOCAL_DRAFT_CURRENT_KEY = 'ginasio-current-draft-v1';
 const LOCAL_DRAFT_PREFIX = 'ginasio-session-draft-v1';
 let localDraftTimer = null;
 let localDraftDirty = false;
+let totalTimerInterval = null;
 
 function formatWeight(value) {
   if (value === null || Number.isNaN(value)) return '';
@@ -1086,6 +1092,25 @@ function formatDuration(seconds) {
     return `${minutes}m ${String(secs).padStart(2, '0')}s`;
   }
   return `${secs}s`;
+}
+
+function formatClockDuration(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const secs = total % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+    : `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function formatTimeOfDay(timestamp) {
+  const value = Number(timestamp || 0);
+  if (!value) return '';
+  return new Date(value).toLocaleTimeString('pt-PT', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 function normalizeKey(text) {
@@ -1189,6 +1214,21 @@ function clearLocalDraft(gym, treino, date) {
   localDraftDirty = false;
 }
 
+function clearCurrentDraft() {
+  setStateFromInputs();
+  if (!state.gym || !state.treino || !state.date) {
+    showToast('Não há seleção de treino para apagar.', 'warning');
+    return;
+  }
+  clearLocalDraft(state.gym, state.treino, state.date);
+  warmupTimerIntervals.forEach(timer => clearInterval(timer));
+  warmupTimerIntervals.clear();
+  state.session = null;
+  resetWorkoutTiming();
+  renderWorkout();
+  showToast('Treino temporário apagado.', 'success');
+}
+
 function getBaseWeightId(machineId, variantId, seriesIndex) {
   const variantKey = variantId ? normalizeKey(variantId) : 'base';
   return `${normalizeKey(machineId)}-${variantKey}-s${seriesIndex}`;
@@ -1273,6 +1313,11 @@ function getSavedSeries(savedMachine, index) {
     || {};
 }
 
+function getSavedWarmup(savedMachine, index) {
+  if (!Array.isArray(savedMachine?.warmups)) return {};
+  return savedMachine.warmups[index] || {};
+}
+
 function getTimedSeriesRows() {
   return Array.from(workoutWrap.querySelectorAll('[data-series-row][data-registered-at]'))
     .map(row => ({
@@ -1283,9 +1328,37 @@ function getTimedSeriesRows() {
     .sort((a, b) => a.registeredAt - b.registeredAt);
 }
 
+function getWarmupRows() {
+  return Array.from(workoutWrap.querySelectorAll('[data-warmup-row]'));
+}
+
+function getWarmupIntervals() {
+  return getWarmupRows()
+    .map(row => {
+      const startedAt = Number(row.dataset.startedAt || 0);
+      const finishedAt = Number(row.dataset.finishedAt || 0);
+      if (!startedAt) return null;
+      return {
+        startedAt,
+        finishedAt: finishedAt || Date.now()
+      };
+    })
+    .filter(Boolean);
+}
+
+function getOverlapSec(start, end, intervals) {
+  return intervals.reduce((total, interval) => {
+    const overlapStart = Math.max(start, interval.startedAt);
+    const overlapEnd = Math.min(end, interval.finishedAt);
+    return total + Math.max(0, overlapEnd - overlapStart);
+  }, 0) / 1000;
+}
+
 function syncTimingFromDom() {
   const timedRows = getTimedSeriesRows();
-  state.timing.startedAt = timedRows[0]?.registeredAt || null;
+  const warmupStarts = getWarmupIntervals().map(interval => interval.startedAt).filter(Boolean);
+  const firstWorkAt = timedRows[0]?.registeredAt || null;
+  state.timing.startedAt = [firstWorkAt, ...warmupStarts].filter(Boolean).sort((a, b) => a - b)[0] || null;
   state.timing.lastSetAt = timedRows[timedRows.length - 1]?.registeredAt || null;
 }
 
@@ -1294,6 +1367,8 @@ function resetWorkoutTiming() {
     startedAt: null,
     lastSetAt: null
   };
+  stopTotalTimer();
+  updateTotalTimer();
 }
 
 function getNextExerciseOrder() {
@@ -1316,13 +1391,194 @@ function recordSeriesTiming(target) {
   if (!row || Number(target.value || 0) <= 0 || Number(row.dataset.registeredAt || 0) > 0) return;
   syncTimingFromDom();
   const now = Date.now();
+  const warmupOverlapSec = state.timing.lastSetAt
+    ? getOverlapSec(state.timing.lastSetAt, now, getWarmupIntervals())
+    : 0;
   const restBeforeSec = state.timing.lastSetAt
-    ? Math.max(0, Math.round((now - state.timing.lastSetAt) / 1000))
+    ? Math.max(0, Math.round((now - state.timing.lastSetAt) / 1000 - warmupOverlapSec))
     : 0;
   row.dataset.registeredAt = String(now);
   row.dataset.restBeforeSec = String(restBeforeSec);
   if (!state.timing.startedAt) state.timing.startedAt = now;
   state.timing.lastSetAt = now;
+  updateTotalTimer();
+  startTotalTimer();
+}
+
+function updateTotalTimer() {
+  if (!totalTimerEl) return;
+  const startedAt = Number(state.timing.startedAt || 0);
+  if (!startedAt) {
+    totalTimerEl.textContent = '00:00';
+    return;
+  }
+  totalTimerEl.textContent = formatClockDuration((Date.now() - startedAt) / 1000);
+}
+
+function startTotalTimer() {
+  if (totalTimerInterval || !state.timing.startedAt) return;
+  updateTotalTimer();
+  totalTimerInterval = setInterval(updateTotalTimer, 1000);
+}
+
+function stopTotalTimer() {
+  if (totalTimerInterval) {
+    clearInterval(totalTimerInterval);
+    totalTimerInterval = null;
+  }
+}
+
+function parseWarmupSets(text) {
+  const raw = String(text || '').trim();
+  if (!raw || /nenhum|não necessário|nao necessário|cortada/i.test(raw)) return [];
+  return raw.split(';').map(part => part.trim()).filter(Boolean).map(part => {
+    const weightMatch = part.match(/(\d+(?:[,.]\d+)?)\s*kg/i);
+    const repsMatch = part.match(/[x×]\s*(\d+(?:\s*[–-]\s*\d+)?)/i);
+    const rirMatch = part.match(/RIR\s*([0-9?]+(?:[–+\-][0-9]+|\+)?)/i);
+    return {
+      baseWeight: weightMatch ? Number(weightMatch[1].replace(',', '.')) : 0,
+      reps: repsMatch ? repsMatch[1].replace(/\s+/g, '') : '',
+      rir: rirMatch ? rirMatch[1].replace('–', '-') : '?'
+    };
+  });
+}
+
+function renderWarmupBlock(card, machine, variant, savedMachine) {
+  const rules = variant?.rules || machine.rules || null;
+  const templateWarmups = parseWarmupSets(rules?.warmup || '');
+  const savedWarmups = Array.isArray(savedMachine?.warmups) ? savedMachine.warmups : [];
+  const warmups = savedWarmups.length ? savedWarmups : templateWarmups;
+  if (!warmups.length) return;
+
+  const block = document.createElement('div');
+  block.className = 'gym-warmup';
+  block.setAttribute('data-warmup-block', 'true');
+
+  const header = document.createElement('div');
+  header.className = 'gym-warmup-header';
+  const title = document.createElement('strong');
+  title.textContent = 'Aquecimento';
+  const actions = document.createElement('div');
+  actions.className = 'gym-warmup-actions';
+  const status = document.createElement('span');
+  status.className = 'gym-warmup-status';
+  status.setAttribute('data-warmup-status', 'true');
+  status.textContent = '00:00';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = 'Iniciar aquecimento';
+  btn.setAttribute('data-warmup-toggle', 'true');
+  actions.append(status, btn);
+  header.append(title, actions);
+  block.appendChild(header);
+
+  const table = document.createElement('table');
+  table.className = 'gym-series-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Série</th>
+        <th>Peso (kg)</th>
+        <th>Reps</th>
+        <th>RIR</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector('tbody');
+  warmups.forEach((warmup, index) => {
+    const row = document.createElement('tr');
+    row.setAttribute('data-warmup-row', 'true');
+    row.setAttribute('data-warmup-index', String(index));
+    if (warmup.startedAt) row.dataset.startedAt = String(warmup.startedAt);
+    if (warmup.finishedAt) row.dataset.finishedAt = String(warmup.finishedAt);
+    row.innerHTML = `
+      <td>${index + 1}ª aquecimento</td>
+      <td><input type="number" min="0" step="0.1" value="${warmup.baseWeight ?? 0}" data-warmup-weight></td>
+      <td><input type="text" value="${warmup.reps ?? ''}" data-warmup-reps></td>
+      <td></td>
+    `;
+    row.querySelector('td:nth-child(4)').appendChild(createRirSelect(warmup.rir ?? '?'));
+    tbody.appendChild(row);
+  });
+  block.appendChild(table);
+
+  btn.addEventListener('click', () => toggleWarmup(card, btn, status));
+  const seriesWrap = card.querySelector('[data-series-wrap]');
+  if (seriesWrap) {
+    card.insertBefore(block, seriesWrap);
+  } else {
+    card.appendChild(block);
+  }
+  updateWarmupStatus(block);
+  const hasActiveWarmup = Array.from(block.querySelectorAll('[data-warmup-row]'))
+    .some(row => Number(row.dataset.startedAt || 0) && !Number(row.dataset.finishedAt || 0));
+  if (hasActiveWarmup) {
+    const key = `${card.dataset.machineId}-${card.dataset.variantId || 'base'}-warmup`;
+    card.dataset.warmupTimerKey = key;
+    if (warmupTimerIntervals.has(key)) clearInterval(warmupTimerIntervals.get(key));
+    warmupTimerIntervals.set(key, setInterval(() => updateWarmupStatus(block), 1000));
+  }
+}
+
+function updateWarmupStatus(block) {
+  const status = block.querySelector('[data-warmup-status]');
+  const btn = block.querySelector('[data-warmup-toggle]');
+  const rows = Array.from(block.querySelectorAll('[data-warmup-row]'));
+  const startedAt = rows.map(row => Number(row.dataset.startedAt || 0)).filter(Boolean).sort((a, b) => a - b)[0] || 0;
+  const activeRow = rows.find(row => Number(row.dataset.startedAt || 0) && !Number(row.dataset.finishedAt || 0));
+  const finishedAt = rows.map(row => Number(row.dataset.finishedAt || 0)).filter(Boolean).sort((a, b) => b - a)[0] || 0;
+  const end = activeRow ? Date.now() : finishedAt;
+  const durationSec = startedAt && end ? Math.max(0, Math.round((end - startedAt) / 1000)) : 0;
+  if (status) status.textContent = formatClockDuration(durationSec);
+  if (btn) btn.textContent = activeRow ? 'Terminar aquecimento' : (durationSec ? 'Reiniciar aquecimento' : 'Iniciar aquecimento');
+}
+
+function toggleWarmup(card, btn, status) {
+  const block = card.querySelector('[data-warmup-block]');
+  const rows = Array.from(block?.querySelectorAll('[data-warmup-row]') || []);
+  if (!rows.length) return;
+  const activeRows = rows.filter(row => Number(row.dataset.startedAt || 0) && !Number(row.dataset.finishedAt || 0));
+  const now = Date.now();
+  if (activeRows.length) {
+    activeRows.forEach(row => {
+      row.dataset.finishedAt = String(now);
+    });
+    const key = card.dataset.warmupTimerKey;
+    if (key && warmupTimerIntervals.has(key)) {
+      clearInterval(warmupTimerIntervals.get(key));
+      warmupTimerIntervals.delete(key);
+    }
+    updateWarmupStatus(block);
+    scheduleLocalDraftSave();
+    return;
+  }
+  rows.forEach(row => {
+    row.dataset.startedAt = String(now);
+    delete row.dataset.finishedAt;
+  });
+  if (!state.timing.startedAt) {
+    state.timing.startedAt = now;
+    startTotalTimer();
+  }
+  const key = `${card.dataset.machineId}-${card.dataset.variantId || 'base'}-warmup`;
+  card.dataset.warmupTimerKey = key;
+  if (warmupTimerIntervals.has(key)) clearInterval(warmupTimerIntervals.get(key));
+  warmupTimerIntervals.set(key, setInterval(() => updateWarmupStatus(block), 1000));
+  updateWarmupStatus(block);
+  scheduleLocalDraftSave();
+}
+
+function finishActiveWarmups() {
+  const now = Date.now();
+  getWarmupRows().forEach(row => {
+    if (Number(row.dataset.startedAt || 0) && !Number(row.dataset.finishedAt || 0)) {
+      row.dataset.finishedAt = String(now);
+    }
+  });
+  warmupTimerIntervals.forEach(timer => clearInterval(timer));
+  warmupTimerIntervals.clear();
+  Array.from(workoutWrap.querySelectorAll('[data-warmup-block]')).forEach(updateWarmupStatus);
 }
 
 function updateTotalDisplay(row, initialResistance) {
@@ -1358,7 +1614,7 @@ function createRepsSelect(value = 0) {
 function createRirSelect(value) {
   const select = document.createElement('select');
   select.setAttribute('data-rir', 'true');
-  const options = ['falha', '?', '1', '2', '3', '2+', '3+', '2-4', '1-2', '2-3', '3-5', '4+'];
+  const options = ['falha', '?', '1', '2', '3', '4', '5', '2+', '3+', '4+', '1-2', '2-3', '2-4', '3-5', '4-5'];
   options.forEach(optionValue => {
     const option = document.createElement('option');
     option.value = optionValue;
@@ -1682,6 +1938,34 @@ function startRestTimer(machine, variantId, seconds, label, button) {
   }
 }
 
+function showRestNotification(key, machine, remaining, done = false) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  const tag = `gym-rest-${key}`;
+  const title = done ? 'Descanso terminado' : `Descanso ${formatClockDuration(remaining)}`;
+  const body = done ? machine.name : `${machine.name} | restante ${formatClockDuration(remaining)}`;
+  const options = {
+    body,
+    tag,
+    renotify: done,
+    silent: !done,
+    requireInteraction: done,
+    timestamp: Date.now(),
+    data: { url: location.href, tag },
+    actions: [{ action: 'dismiss', title: 'Fechar' }]
+  };
+  if (navigator.serviceWorker?.ready) {
+    navigator.serviceWorker.ready
+      .then(reg => reg.showNotification(title, options))
+      .catch(() => {
+        const notification = new Notification(title, options);
+        notification.onclick = () => notification.close();
+      });
+    return;
+  }
+  const notification = new Notification(title, options);
+  notification.onclick = () => notification.close();
+}
+
 function runRestTimer(key, machine, variantId, label, button) {
   if (restTimerIntervals.has(key)) {
     clearInterval(restTimerIntervals.get(key));
@@ -1692,13 +1976,10 @@ function runRestTimer(key, machine, variantId, label, button) {
     const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
     if (!remaining) {
       localStorage.removeItem(key);
+      localStorage.removeItem(`${key}-last-notify`);
       if (button) button.textContent = `Descanso ${label}`;
       showToast(`Descanso terminado: ${machine.name}`, 'success');
-      if ('Notification' in window && Notification.permission === 'granted') {
-        navigator.serviceWorker?.ready
-          .then(reg => reg.showNotification('Descanso terminado', { body: machine.name }))
-          .catch(() => new Notification('Descanso terminado', { body: machine.name }));
-      }
+      showRestNotification(key, machine, 0, true);
       if (restTimerIntervals.has(key)) {
         clearInterval(restTimerIntervals.get(key));
         restTimerIntervals.delete(key);
@@ -1709,6 +1990,11 @@ function runRestTimer(key, machine, variantId, label, button) {
       const mm = Math.floor(remaining / 60);
       const ss = String(remaining % 60).padStart(2, '0');
       button.textContent = `Descanso ${mm}:${ss}`;
+    }
+    const lastNotify = Number(localStorage.getItem(`${key}-last-notify`) || 0);
+    if (!lastNotify || Date.now() - lastNotify >= 15000) {
+      localStorage.setItem(`${key}-last-notify`, String(Date.now()));
+      showRestNotification(key, machine, remaining, false);
     }
   };
   updateLabel();
@@ -1811,9 +2097,16 @@ function renderMachine(machine) {
       const seriesWrap = card.querySelector('[data-series-wrap]');
       if (seriesWrap) {
         seriesWrap.innerHTML = '';
+        const warmupKey = card.dataset.warmupTimerKey;
+        if (warmupKey && warmupTimerIntervals.has(warmupKey)) {
+          clearInterval(warmupTimerIntervals.get(warmupKey));
+          warmupTimerIntervals.delete(warmupKey);
+        }
+        card.querySelector('[data-warmup-block]')?.remove();
         await loadBaseWeights(state.gym);
         await loadRecommendedReps(state.gym);
         await loadLastReps(state.gym, state.treino);
+        renderWarmupBlock(card, machine, selected || machine, savedMachine);
         seriesWrap.appendChild(createSeriesTable(machine, selected || machine, savedMachine));
         renderRecommendations(card, machine);
         if (canProgress(machine, card.dataset.variantId || '')) {
@@ -1828,6 +2121,7 @@ function renderMachine(machine) {
 
   const seriesWrap = document.createElement('div');
   seriesWrap.setAttribute('data-series-wrap', 'true');
+  renderWarmupBlock(card, machine, variant, savedMachine);
   seriesWrap.appendChild(createSeriesTable(machine, variant, savedMachine));
   card.appendChild(seriesWrap);
   renderRecommendations(card, machine);
@@ -1851,6 +2145,16 @@ function renderWorkout() {
   }
   template.forEach(machine => workoutWrap.appendChild(renderMachine(machine)));
   syncTimingFromDom();
+  const savedDuration = Number(state.session?.timing?.durationSec || 0);
+  const savedFinishedAt = Number(state.session?.timing?.finishedAt || 0);
+  if (savedFinishedAt && savedDuration) {
+    stopTotalTimer();
+    if (totalTimerEl) totalTimerEl.textContent = formatClockDuration(savedDuration);
+  } else if (state.timing.startedAt) {
+    startTotalTimer();
+  } else {
+    stopTotalTimer();
+  }
   updateBaseMachineOptions(template);
 
   Array.from(workoutWrap.querySelectorAll('.gym-rest-btn')).forEach(button => {
@@ -2178,6 +2482,18 @@ function buildSessionFromDom() {
     if (seriesRows.length === 0) return;
 
     const initialResistance = parseFloat(seriesRows[0].dataset.initialResistance);
+    const warmups = Array.from(machineEl.querySelectorAll('[data-warmup-row]')).map(row => {
+      const startedAt = Number(row.dataset.startedAt || 0) || null;
+      const finishedAt = Number(row.dataset.finishedAt || 0) || null;
+      return {
+        baseWeight: parseFloat(row.querySelector('[data-warmup-weight]')?.value || 0) || 0,
+        reps: row.querySelector('[data-warmup-reps]')?.value.trim() || '',
+        rir: row.querySelector('[data-rir]')?.value || '?',
+        startedAt,
+        finishedAt,
+        durationSec: startedAt && finishedAt ? Math.max(0, Math.round((finishedAt - startedAt) / 1000)) : 0
+      };
+    }).filter(item => item.baseWeight || item.reps || item.startedAt);
     const series = seriesRows.map(row => {
       const rowMachineId = row.dataset.seriesMachineId || machineId;
       const rowVariantId = row.dataset.seriesVariantId || variantId;
@@ -2197,7 +2513,7 @@ function buildSessionFromDom() {
       return { seriesIndex: rowIndex, baseWeight, reps, targetReps, rir, registeredAt, restBeforeSec };
     }).filter(item => item.reps > 0);
 
-    if (!series.length) return;
+    if (!series.length && !warmups.length) return;
 
     session.machines[machineId] = {
       name: machineName,
@@ -2205,6 +2521,7 @@ function buildSessionFromDom() {
       variantLabel,
       initialResistance: Number.isNaN(initialResistance) ? null : initialResistance,
       order: Number(machineEl.dataset.exerciseOrder || 0) || machineIndex + 1,
+      warmups,
       series
     };
   });
@@ -2221,6 +2538,11 @@ function buildSummaryText(session) {
   lines.push(`${session.date} — ${session.gym} / ${session.treino}`);
   const durationSec = Number(session.timing?.durationSec || 0);
   if (durationSec > 0) {
+    const startLabel = formatTimeOfDay(session.timing?.startedAt);
+    const finishLabel = formatTimeOfDay(session.timing?.finishedAt);
+    if (startLabel || finishLabel) {
+      lines.push(`Hora: ${startLabel || '-'}–${finishLabel || '-'}`);
+    }
     lines.push(`Tempo total: ${formatDuration(durationSec)}`);
   }
   const machines = Array.isArray(session.machines)
@@ -2241,6 +2563,13 @@ function buildSummaryText(session) {
       const label = machine.variantLabel
         ? `${machine.name} (${machine.variantLabel})`
         : machine.name;
+      const warmups = Array.isArray(machine.warmups) ? machine.warmups : [];
+      warmups.filter(warmup => warmup.baseWeight || warmup.reps).forEach((warmup, index) => {
+        const durationLabel = Number(warmup.durationSec || 0) > 0
+          ? ` | tempo ${formatDuration(warmup.durationSec)}`
+          : '';
+        lines.push(`${label} aquecimento ${index + 1} ${formatWeight(Number(warmup.baseWeight) || 0)}kg x${warmup.reps || '-'} RIR ${warmup.rir || '-'}${durationLabel}`);
+      });
       seriesList
         .filter(series => Number(series?.reps || 0) > 0)
         .sort((a, b) => Number(a.seriesIndex ?? 0) - Number(b.seriesIndex ?? 0))
@@ -2266,8 +2595,13 @@ async function saveSession() {
     showToast('Seleciona o ginásio, o treino e a data antes de gravar.', 'warning');
     return;
   }
+  finishActiveWarmups();
   const session = buildSessionFromDom();
-  if (!Object.keys(session.machines || {}).length) {
+  const hasWorkSeries = Object.values(session.machines || {}).some(machine => {
+    const seriesList = Array.isArray(machine.series) ? machine.series : Object.values(machine.series || {});
+    return seriesList.some(series => Number(series?.reps || 0) > 0);
+  });
+  if (!hasWorkSeries) {
     showToast('Preenche pelo menos uma série antes de gravar.', 'warning');
     return;
   }
@@ -2305,6 +2639,8 @@ async function saveSession() {
 
     state.session = { ...session };
     clearLocalDraft(session.gym, session.treino, session.date);
+    stopTotalTimer();
+    if (totalTimerEl) totalTimerEl.textContent = formatClockDuration(session.timing?.durationSec || 0);
     saveCurrentSelection();
     showToast('Treino gravado com sucesso.', 'success');
     await loadSummaries();
@@ -2464,6 +2800,9 @@ function init() {
     }
   });
   saveBtn.addEventListener('click', saveSession);
+  if (clearDraftBtn) {
+    clearDraftBtn.addEventListener('click', clearCurrentDraft);
+  }
   summariesRefreshBtn.addEventListener('click', loadSummaries);
   if (machineAddSeriesBtn) {
     machineAddSeriesBtn.addEventListener('click', () => addSeriesRow());

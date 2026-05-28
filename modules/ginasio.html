@@ -120,6 +120,48 @@
       flex-direction: column;
       gap: 0.2rem;
     }
+    .gym-session-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.06);
+      margin-top: 1rem;
+    }
+    .gym-session-time {
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .gym-warmup {
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 12px;
+      padding: 0.75rem;
+      background: rgba(148, 163, 184, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .gym-warmup-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+    }
+    .gym-warmup-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .gym-warmup-status {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+    }
     .gym-rule-note {
       color: var(--text);
       font-size: 0.9rem;
@@ -278,6 +320,13 @@
             Data
             <input type="date" id="session-date">
           </label>
+        </div>
+        <div class="gym-session-bar">
+          <div>
+            <div class="gym-machine-meta">Tempo de treino</div>
+            <div id="gym-total-timer" class="gym-session-time">00:00</div>
+          </div>
+          <button type="button" id="gym-clear-draft">Apagar temporário</button>
         </div>
       </div>
     </section>
