@@ -1113,6 +1113,18 @@ function formatTimeOfDay(timestamp) {
   });
 }
 
+function getTodayLocalISO() {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+  return now.toISOString().slice(0, 10);
+}
+
+function roundToNearestHalf(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  return Math.round(num * 2) / 2;
+}
+
 function normalizeKey(text) {
   return text
     .normalize('NFD')
@@ -1176,7 +1188,6 @@ function restoreCurrentSelection() {
   if (!current) return;
   if (current.gym && gymSelect) gymSelect.value = current.gym;
   if (current.treino && trainingSelect) trainingSelect.value = current.treino;
-  if (current.date && dateInput) dateInput.value = current.date;
 }
 
 function readLocalDraft(gym, treino, date) {
@@ -1428,15 +1439,19 @@ function stopTotalTimer() {
   }
 }
 
-function parseWarmupSets(text) {
+function parseWarmupSets(text, workWeight = 0) {
   const raw = String(text || '').trim();
   if (!raw || /nenhum|não necessário|nao necessário|cortada/i.test(raw)) return [];
   return raw.split(';').map(part => part.trim()).filter(Boolean).map(part => {
     const weightMatch = part.match(/(\d+(?:[,.]\d+)?)\s*kg/i);
+    const percentMatch = part.match(/~?\s*(\d+(?:[,.]\d+)?)\s*%/i);
     const repsMatch = part.match(/[x×]\s*(\d+(?:\s*[–-]\s*\d+)?)/i);
     const rirMatch = part.match(/RIR\s*([0-9?]+(?:[–+\-][0-9]+|\+)?)/i);
+    const percentWeight = percentMatch
+      ? roundToNearestHalf(Number(workWeight || 0) * Number(percentMatch[1].replace(',', '.')) / 100)
+      : 0;
     return {
-      baseWeight: weightMatch ? Number(weightMatch[1].replace(',', '.')) : 0,
+      baseWeight: weightMatch ? Number(weightMatch[1].replace(',', '.')) : percentWeight,
       reps: repsMatch ? repsMatch[1].replace(/\s+/g, '') : '',
       rir: rirMatch ? rirMatch[1].replace('–', '-') : '?'
     };
@@ -1445,7 +1460,8 @@ function parseWarmupSets(text) {
 
 function renderWarmupBlock(card, machine, variant, savedMachine) {
   const rules = variant?.rules || machine.rules || null;
-  const templateWarmups = parseWarmupSets(rules?.warmup || '');
+  const firstWorkWeight = Number(variant?.series?.[0]?.baseWeight ?? machine.series?.[0]?.baseWeight ?? 0) || 0;
+  const templateWarmups = parseWarmupSets(rules?.warmup || '', firstWorkWeight);
   const savedWarmups = Array.isArray(savedMachine?.warmups) ? savedMachine.warmups : [];
   const warmups = savedWarmups.length ? savedWarmups : templateWarmups;
   if (!warmups.length) return;
@@ -2755,9 +2771,7 @@ async function loadSummaries() {
 
 function init() {
   restoreCurrentSelection();
-  if (dateInput && !dateInput.value) {
-    dateInput.value = new Date().toISOString().slice(0, 10);
-  }
+  if (dateInput) dateInput.value = getTodayLocalISO();
   trainingSelect.disabled = !gymSelect.value;
 
   gymSelect.addEventListener('change', () => {
