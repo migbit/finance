@@ -116,6 +116,7 @@ const COPY = {
     progressTitle: 'Estado do grupo',
     guestLabel: 'Hóspede',
     emptySlot: 'Por preencher',
+    language: 'Idioma',
     checkin: 'Check-in',
     checkout: 'Check-out'
   },
@@ -143,6 +144,7 @@ const COPY = {
     progressTitle: 'Group status',
     guestLabel: 'Guest',
     emptySlot: 'Not filled yet',
+    language: 'Language',
     checkin: 'Check-in',
     checkout: 'Check-out'
   },
@@ -170,6 +172,7 @@ const COPY = {
     progressTitle: 'Statut du groupe',
     guestLabel: 'Invité',
     emptySlot: 'À remplir',
+    language: 'Langue',
     checkin: 'Arrivée',
     checkout: 'Départ'
   },
@@ -197,6 +200,7 @@ const COPY = {
     progressTitle: 'Estado del grupo',
     guestLabel: 'Huésped',
     emptySlot: 'Por rellenar',
+    language: 'Idioma',
     checkin: 'Entrada',
     checkout: 'Salida'
   }
@@ -218,7 +222,9 @@ const els = {
   documentCountry: document.getElementById('document-country'),
   declaration: document.getElementById('declaration'),
   progress: document.getElementById('guest-progress'),
-  stayDates: document.getElementById('stay-dates')
+  stayDates: document.getElementById('stay-dates'),
+  languageSelect: document.getElementById('language-select'),
+  languageLabel: document.getElementById('language-label')
 };
 
 const state = {
@@ -271,10 +277,34 @@ async function init() {
 }
 
 function bindEvents() {
+  els.languageSelect?.addEventListener('change', handleLanguageChange);
   els.countryOrigin.addEventListener('change', handleOriginChange);
   els.countryResidence.addEventListener('change', () => els.countryResidence.dataset.touched = 'true');
   els.documentCountry.addEventListener('change', () => els.documentCountry.dataset.touched = 'true');
   els.form.addEventListener('submit', handleSubmit);
+}
+
+function handleLanguageChange() {
+  const nextLanguage = COPY[els.languageSelect.value] ? els.languageSelect.value : 'en';
+  changeLanguage(nextLanguage);
+}
+
+function changeLanguage(nextLanguage) {
+  const selectedCountries = {
+    origin: els.countryOrigin.value,
+    residence: els.countryResidence.value,
+    documentCountry: els.documentCountry.value
+  };
+  const selectedDocumentType = els.documentType.value;
+
+  state.language = nextLanguage;
+  applyLanguage(state.language);
+  els.documentType.value = selectedDocumentType;
+  populateCountries();
+  restoreCountrySelections(selectedCountries);
+  els.subtitle.textContent = formatStaySubtitle();
+  renderStayDates();
+  renderProgress();
 }
 
 async function handleSubmit(event) {
@@ -396,6 +426,8 @@ function handleOriginChange() {
 function applyLanguage(lang) {
   const t = COPY[lang] || COPY.en;
   document.documentElement.lang = lang;
+  if (els.languageSelect) els.languageSelect.value = COPY[lang] ? lang : 'en';
+  if (els.languageLabel) els.languageLabel.textContent = t.language;
   els.title.textContent = t.title;
   els.subtitle.textContent = t.loading;
   els.submit.textContent = t.submit;
@@ -422,6 +454,12 @@ function populateCountries() {
   [els.countryOrigin, els.countryResidence, els.documentCountry].forEach((select) => {
     select.innerHTML = placeholder + options;
   });
+}
+
+function restoreCountrySelections(selectedCountries) {
+  els.countryOrigin.value = selectedCountries.origin || '';
+  els.countryResidence.value = selectedCountries.residence || '';
+  els.documentCountry.value = selectedCountries.documentCountry || '';
 }
 
 function getCountries(lang) {

@@ -88,6 +88,7 @@ async function handleCreateBoletim(event) {
     els.generatedUrl.value = link;
     els.generatedBox.hidden = false;
     els.form.reset();
+    els.language.value = 'en';
     els.guestCount.value = '1';
     await copyText(link, false);
     showToast('Link criado e copiado.', 'success');

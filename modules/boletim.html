@@ -33,6 +33,25 @@
       margin-bottom: 20px;
     }
 
+    .language-field {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 14px;
+    }
+
+    .language-field label {
+      display: grid;
+      gap: 6px;
+      min-width: 180px;
+      color: var(--text-dim);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .language-field select {
+      width: 100%;
+    }
+
     .checkin-header h1 {
       font-size: 1.45rem;
       line-height: 1.25;
@@ -188,6 +207,18 @@
 <body class="public-checkin">
   <main>
     <section class="checkin-shell">
+      <div class="language-field">
+        <label for="language-select">
+          <span id="language-label">Language</span>
+          <select id="language-select" aria-label="Language">
+            <option value="en">🇬🇧 English</option>
+            <option value="pt">🇵🇹 Português</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="es">🇪🇸 Español</option>
+          </select>
+        </label>
+      </div>
+
       <div class="checkin-header">
         <h1 id="page-title">Check-in</h1>
         <p id="page-subtitle">Loading...</p>
