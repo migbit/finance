@@ -240,6 +240,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
+  bindLanguageEvents();
   setMessage(COPY.en.loading);
   if (!state.token) {
     applyLanguage('en');
@@ -277,11 +278,14 @@ async function init() {
 }
 
 function bindEvents() {
-  els.languageSelect?.addEventListener('change', handleLanguageChange);
   els.countryOrigin.addEventListener('change', handleOriginChange);
   els.countryResidence.addEventListener('change', () => els.countryResidence.dataset.touched = 'true');
   els.documentCountry.addEventListener('change', () => els.documentCountry.dataset.touched = 'true');
   els.form.addEventListener('submit', handleSubmit);
+}
+
+function bindLanguageEvents() {
+  els.languageSelect?.addEventListener('change', handleLanguageChange);
 }
 
 function handleLanguageChange() {
@@ -302,9 +306,13 @@ function changeLanguage(nextLanguage) {
   els.documentType.value = selectedDocumentType;
   populateCountries();
   restoreCountrySelections(selectedCountries);
+  renderTranslatedContent();
+}
+
+function renderTranslatedContent() {
   els.subtitle.textContent = formatStaySubtitle();
   renderStayDates();
-  renderProgress();
+  if (state.summaries.length || !els.progress.hidden) renderProgress();
 }
 
 async function handleSubmit(event) {
