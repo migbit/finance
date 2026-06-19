@@ -106,6 +106,7 @@ const COPY = {
     documentCountry: 'País emissor do documento de identificação',
     declaration: 'Declaro a veracidade dos dados fornecidos e tenho conhecimento da base legal que exige o fornecimento dos dados incluídos neste formulário.',
     submit: 'Submeter',
+    submitting: 'A submeter...',
     success: 'Dados submetidos com sucesso.',
     addAnother: 'Adicionar outro hóspede',
     invalidLink: 'Link inválido ou expirado.',
@@ -134,6 +135,7 @@ const COPY = {
     documentCountry: 'Country of origin of the identification document',
     declaration: 'I declare the veracity of the data provided and I am aware of the legal basis which requires me to provide the data included on this form.',
     submit: 'Submit',
+    submitting: 'Submitting...',
     success: 'Data submitted successfully.',
     addAnother: 'Add another guest',
     invalidLink: 'Invalid or expired link.',
@@ -162,6 +164,7 @@ const COPY = {
     documentCountry: "Pays d'origine du document d'identification",
     declaration: "Je déclare l'exactitude des données fournies et je suis informé de la base légale qui exige la fourniture des données incluses dans ce formulaire.",
     submit: 'Envoyer',
+    submitting: 'Envoi...',
     success: 'Données envoyées avec succès.',
     addAnother: 'Ajouter un autre invité',
     invalidLink: 'Lien invalide ou expiré.',
@@ -190,6 +193,7 @@ const COPY = {
     documentCountry: 'País de origen del documento de identificación',
     declaration: 'Declaro la veracidad de los datos proporcionados y soy consciente de la base legal que exige proporcionar los datos incluidos en este formulario.',
     submit: 'Enviar',
+    submitting: 'Enviando...',
     success: 'Datos enviados correctamente.',
     addAnother: 'Añadir otro huésped',
     invalidLink: 'Enlace inválido o caducado.',
@@ -321,6 +325,7 @@ async function handleSubmit(event) {
 
   if (!els.form.reportValidity()) return;
   els.submit.disabled = true;
+  els.submit.textContent = t.submitting;
 
   const payload = {
     firstName: els.firstName.value.trim(),
@@ -364,6 +369,7 @@ async function handleSubmit(event) {
     setMessage(t.invalidLink, 'error');
   } finally {
     els.submit.disabled = false;
+    els.submit.textContent = COPY[state.language]?.submit || COPY.en.submit;
   }
 }
 

@@ -18,7 +18,7 @@
       width: 100%;
       max-width: 720px;
       margin: 0 auto;
-      padding: 22px 16px 34px;
+      padding: 18px 16px 34px;
     }
 
     .checkin-shell {
@@ -30,7 +30,7 @@
     }
 
     .checkin-header {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .language-field {
@@ -84,6 +84,11 @@
     .checkin-grid {
       display: grid;
       gap: 14px;
+    }
+
+    #guest-form {
+      display: grid;
+      gap: 4px;
     }
 
     .guest-progress {
@@ -180,8 +185,41 @@
     }
 
     @media (max-width: 640px) {
+      .public-checkin main {
+        padding: 10px 10px calc(24px + env(safe-area-inset-bottom));
+      }
+
       .checkin-shell {
-        padding: 18px;
+        padding: 16px;
+      }
+
+      .language-field {
+        justify-content: stretch;
+        margin-bottom: 12px;
+      }
+
+      .language-field label {
+        min-width: 0;
+        width: 100%;
+      }
+
+      .checkin-header h1 {
+        font-size: 1.3rem;
+      }
+
+      .stay-dates {
+        gap: 8px;
+      }
+
+      .stay-date {
+        width: 100%;
+      }
+
+      .field input,
+      .field select,
+      .language-field select {
+        font-size: 16px;
+        min-height: 48px;
       }
 
       .checkin-grid.two {
@@ -231,18 +269,18 @@
         <div class="checkin-grid two">
           <div class="field">
             <label for="first-name" data-i18n="firstName">Name</label>
-            <input id="first-name" type="text" autocomplete="given-name" required>
+            <input id="first-name" type="text" autocomplete="given-name" enterkeyhint="next" required>
           </div>
           <div class="field">
             <label for="last-name" data-i18n="lastName">Last name</label>
-            <input id="last-name" type="text" autocomplete="family-name" required>
+            <input id="last-name" type="text" autocomplete="family-name" enterkeyhint="next" required>
           </div>
         </div>
 
         <div class="checkin-grid two">
           <div class="field">
             <label for="birth-date" data-i18n="birthDate">Date of birth</label>
-            <input id="birth-date" type="date" required>
+            <input id="birth-date" type="date" autocomplete="bday" required>
           </div>
           <div class="field">
             <label for="document-type" data-i18n="documentType">Identification type</label>
@@ -252,7 +290,7 @@
 
         <div class="field">
           <label for="document-number" data-i18n="documentNumber">Identification number</label>
-          <input id="document-number" type="text" autocomplete="off" required>
+          <input id="document-number" type="text" autocomplete="off" enterkeyhint="next" required>
         </div>
 
         <div class="checkin-grid two">
@@ -281,7 +319,7 @@
         </div>
       </form>
 
-      <div id="checkin-message" class="checkin-message"></div>
+      <div id="checkin-message" class="checkin-message" role="status" aria-live="polite"></div>
     </section>
   </main>
 
