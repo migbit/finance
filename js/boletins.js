@@ -45,6 +45,7 @@ function bindEvents() {
   els.copyGenerated?.addEventListener('click', () => copyText(els.generatedUrl.value));
   [els.body, els.sentBody].forEach((body) => {
     body?.addEventListener('click', handleTableClick);
+    body?.addEventListener('keydown', handleTableKeydown);
     body?.addEventListener('change', handleSentChange);
   });
 }
@@ -219,6 +220,16 @@ function renderSendDeadline(checkinDate, sentToAuthorities) {
 }
 
 function handleTableClick(event) {
+  const copyableCell = event.target.closest('[data-action="copy-value"]');
+  if (copyableCell) {
+    copyText(
+      copyableCell.dataset.copyValue || '',
+      true,
+      `${copyableCell.dataset.copyLabel || 'Conteúdo'} copiado.`
+    );
+    return;
+  }
+
   const copyBtn = event.target.closest('button[data-action="copy"]');
   if (copyBtn) {
     copyText(copyBtn.dataset.link || '');
@@ -238,6 +249,20 @@ function handleTableClick(event) {
   if (deleteBtn) {
     deleteBoletim(deleteBtn.dataset.id, deleteBtn.dataset.name || 'este boletim');
   }
+}
+
+function handleTableKeydown(event) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+
+  const copyableCell = event.target.closest('[data-action="copy-value"]');
+  if (!copyableCell) return;
+
+  event.preventDefault();
+  copyText(
+    copyableCell.dataset.copyValue || '',
+    true,
+    `${copyableCell.dataset.copyLabel || 'Conteúdo'} copiado.`
+  );
 }
 
 async function deleteBoletim(id, name) {
@@ -299,11 +324,11 @@ function createToken() {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function copyText(text, showSuccess = true) {
+async function copyText(text, showSuccess = true, successMessage = 'Link copiado.') {
   if (!text) return;
   try {
     await navigator.clipboard.writeText(text);
-    if (showSuccess) showToast('Link copiado.', 'success');
+    if (showSuccess) showToast(successMessage, 'success');
   } catch {
     if (els.generatedUrl) {
       els.generatedUrl.focus();
@@ -443,41 +468,61 @@ function renderGuestDetails(guests) {
     return '<div class="empty-state">Ainda não há dados submetidos.</div>';
   }
 
-  const rows = guests.map((guest) => `
-    <tr>
-      <td>${escapeHtml(formatDateTime(guest.submittedAt))}</td>
-      <td>${escapeHtml(`${guest.firstName || ''} ${guest.lastName || ''}`.trim())}</td>
-      <td>${escapeHtml(guest.birthDate || '-')}</td>
-      <td>${escapeHtml(formatDateOnly(guest.checkinDate))}</td>
-      <td>${escapeHtml(formatDateOnly(guest.checkoutDate))}</td>
-      <td>${escapeHtml(formatDocumentType(guest.documentType))}</td>
-      <td>${escapeHtml(guest.documentNumber || '-')}</td>
-      <td>${escapeHtml(formatCountry(guest.countryOrigin))}</td>
-      <td>${escapeHtml(formatCountry(guest.countryResidence))}</td>
-      <td>${escapeHtml(formatCountry(guest.documentCountry))}</td>
-    </tr>
-  `).join('');
+  const rows = guests.map((guest) => {
+    const name = `${guest.firstName || ''} ${guest.lastName || ''}`.trim() || '-';
+    const birthDate = guest.birthDate || '-';
+    const documentNumber = guest.documentNumber || '-';
+
+    return `
+      <tr>
+        ${renderCopyableCell(name, 'Nome')}
+        ${renderCopyableCell(birthDate, 'Nascimento')}
+        ${renderCopyableCell(documentNumber, 'Número do documento')}
+        <td>${escapeHtml(formatDocumentType(guest.documentType))}</td>
+        <td>${escapeHtml(formatCountry(guest.documentCountry))}</td>
+        <td>${escapeHtml(formatCountry(guest.countryResidence))}</td>
+        <td>${escapeHtml(formatCountry(guest.countryOrigin))}</td>
+        <td>${escapeHtml(formatDateOnly(guest.checkinDate))}</td>
+        <td>${escapeHtml(formatDateOnly(guest.checkoutDate))}</td>
+        <td>${escapeHtml(formatDateTime(guest.submittedAt))}</td>
+      </tr>
+    `;
+  }).join('');
 
   return `
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Submetido</th>
             <th>Nome</th>
             <th>Nascimento</th>
+            <th>Número passaporte ou ID</th>
+            <th>Documento</th>
+            <th>País doc.</th>
+            <th>Residência</th>
+            <th>Origem</th>
             <th>Check-in</th>
             <th>Check-out</th>
-            <th>Documento</th>
-            <th>Número</th>
-            <th>Origem</th>
-            <th>Residência</th>
-            <th>País doc.</th>
+            <th>Submetido</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
+  `;
+}
+
+function renderCopyableCell(value, label) {
+  return `
+    <td
+      class="copyable-cell"
+      role="button"
+      tabindex="0"
+      title="Clique para copiar"
+      data-action="copy-value"
+      data-copy-value="${escapeAttr(value)}"
+      data-copy-label="${escapeAttr(label)}"
+    >${escapeHtml(value)}</td>
   `;
 }
 

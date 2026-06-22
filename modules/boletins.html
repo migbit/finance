@@ -97,6 +97,19 @@
       vertical-align: middle;
     }
 
+    .copyable-cell {
+      cursor: copy;
+      text-decoration: underline dotted;
+      text-underline-offset: 3px;
+    }
+
+    .copyable-cell:hover,
+    .copyable-cell:focus {
+      color: var(--primary);
+      background: color-mix(in srgb, var(--primary) 8%, transparent);
+      outline: none;
+    }
+
     .mono-link {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       font-size: 0.82rem;
