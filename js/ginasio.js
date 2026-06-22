@@ -1036,7 +1036,16 @@ const dateInput = document.getElementById('session-date');
 const workoutWrap = document.getElementById('gym-workout');
 const saveBtn = document.getElementById('gym-save');
 const totalTimerEl = document.getElementById('gym-total-timer');
+const workoutProgressEl = document.getElementById('gym-workout-progress');
+const activeRestEl = document.getElementById('gym-active-rest');
+const activeRestMachineEl = document.getElementById('gym-active-rest-machine');
+const activeRestTimeEl = document.getElementById('gym-active-rest-time');
+const restAddBtn = document.getElementById('gym-rest-add');
+const restCancelBtn = document.getElementById('gym-rest-cancel');
 const clearDraftBtn = document.getElementById('gym-clear-draft');
+const enableNotificationsBtn = document.getElementById('gym-enable-notifications');
+const testNotificationBtn = document.getElementById('gym-test-notification');
+const notificationStatusEl = document.getElementById('gym-notification-status');
 const summariesWrap = document.getElementById('gym-summaries');
 const summariesRefreshBtn = document.getElementById('summaries-refresh');
 const machineNameInput = document.getElementById('gym-machine-name');
@@ -1057,6 +1066,7 @@ const state = {
   lastRir: {},
   lastWeights: {},
   recommendedReps: {},
+  warmupDefaults: {},
   customMachines: [],
   timing: {
     startedAt: null,
@@ -1066,13 +1076,16 @@ const state = {
 
 const baseWeightTimers = new Map();
 const recommendedTimers = new Map();
+const warmupDefaultTimers = new Map();
 const restTimerIntervals = new Map();
+const restTimerUpdates = new Map();
 const warmupTimerIntervals = new Map();
 const LOCAL_DRAFT_CURRENT_KEY = 'ginasio-current-draft-v1';
 const LOCAL_DRAFT_PREFIX = 'ginasio-session-draft-v1';
 let localDraftTimer = null;
 let localDraftDirty = false;
 let totalTimerInterval = null;
+let activeRest = null;
 
 function formatWeight(value) {
   if (value === null || Number.isNaN(value)) return '';
@@ -1111,6 +1124,85 @@ function formatTimeOfDay(timestamp) {
     hour: '2-digit',
     minute: '2-digit'
   });
+}
+
+function isStandaloneApp() {
+  return window.matchMedia?.('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+}
+
+function isIosDevice() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isSamsungDevice() {
+  return /samsung|sm-[a-z0-9]+/i.test(navigator.userAgent);
+}
+
+function updateNotificationStatus() {
+  if (!notificationStatusEl) return;
+  if (!('Notification' in window)) {
+    notificationStatusEl.textContent = 'Este browser não suporta notificações web.';
+    notificationStatusEl.dataset.state = 'warning';
+    if (enableNotificationsBtn) enableNotificationsBtn.disabled = true;
+    if (testNotificationBtn) testNotificationBtn.disabled = true;
+    return;
+  }
+
+  const permission = Notification.permission;
+  if (enableNotificationsBtn) {
+    enableNotificationsBtn.disabled = permission === 'granted';
+    enableNotificationsBtn.textContent = permission === 'granted'
+      ? 'Notificações ativas'
+      : 'Ativar notificações';
+  }
+  if (testNotificationBtn) testNotificationBtn.disabled = permission !== 'granted';
+
+  if (permission === 'granted') {
+    notificationStatusEl.textContent = isSamsungDevice()
+      ? 'Ativas. No Samsung, permite ecrã bloqueado e remove a aplicação da suspensão profunda.'
+      : (isStandaloneApp()
+          ? 'Ativas. Confirma também som e ecrã bloqueado nas definições do telemóvel.'
+          : 'Ativas. Para maior fiabilidade, instala a aplicação no ecrã principal.');
+    notificationStatusEl.dataset.state = 'ready';
+    return;
+  }
+  if (permission === 'denied') {
+    notificationStatusEl.textContent = 'Bloqueadas pelo sistema. Ativa-as nas definições do browser/aplicação.';
+    notificationStatusEl.dataset.state = 'warning';
+    return;
+  }
+  if (isIosDevice() && !isStandaloneApp()) {
+    notificationStatusEl.textContent = 'No iPhone, adiciona primeiro ao ecrã principal e abre como aplicação.';
+  } else {
+    notificationStatusEl.textContent = 'Ativa para receber o fim do descanso no ecrã bloqueado.';
+  }
+  notificationStatusEl.dataset.state = 'warning';
+}
+
+async function requestNotificationPermission() {
+  if (!('Notification' in window)) {
+    updateNotificationStatus();
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') {
+    updateNotificationStatus();
+    showToast('As notificações estão bloqueadas nas definições do sistema.', 'warning');
+    return false;
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    updateNotificationStatus();
+    if (permission === 'granted') {
+      showToast('Notificações ativadas.', 'success');
+      return true;
+    }
+  } catch (err) {
+    console.error('Erro ao pedir permissão de notificações:', err);
+  }
+  updateNotificationStatus();
+  return false;
 }
 
 function getTodayLocalISO() {
@@ -1254,6 +1346,11 @@ function getRecommendedId(gym, machineId, variantId, seriesIndex) {
   return `${normalizeKey(gym)}-${normalizeKey(machineId)}-${variantKey}-rec-s${seriesIndex}`;
 }
 
+function getWarmupDefaultId(gym, machineId, variantId, warmupIndex) {
+  const variantKey = variantId ? normalizeKey(variantId) : 'base';
+  return `${normalizeKey(gym)}-${normalizeKey(machineId)}-${variantKey}-warmup-${warmupIndex}`;
+}
+
 function setStateFromInputs() {
   state.gym = gymSelect.value;
   state.treino = trainingSelect.value;
@@ -1311,6 +1408,7 @@ function renderEmpty(message) {
   empty.className = 'gym-empty';
   empty.textContent = message;
   workoutWrap.appendChild(empty);
+  updateWorkoutProgress();
 }
 
 function getSavedMachine(machineId) {
@@ -1397,6 +1495,25 @@ function markExerciseTouched(target) {
   if (meta) meta.textContent = `Feito em ${card.dataset.exerciseOrder}º`;
 }
 
+function updateCardDataState(target) {
+  const card = target?.closest?.('.gym-machine-card');
+  if (!card) return;
+  const hasWork = Array.from(card.querySelectorAll('[data-reps]'))
+    .some(input => Number(input.value || 0) > 0);
+  const hasWarmup = Array.from(card.querySelectorAll('[data-warmup-row]'))
+    .some(row => row.dataset.recorded === 'true'
+      || row.dataset.touched === 'true'
+      || Number(row.dataset.startedAt || 0) > 0);
+  card.dataset.hasData = String(hasWork || hasWarmup);
+}
+
+function updateWorkoutProgress() {
+  if (!workoutProgressEl) return;
+  const rows = Array.from(workoutWrap.querySelectorAll('[data-series-row]'));
+  const completed = rows.filter(row => Number(row.querySelector('[data-reps]')?.value || 0) > 0).length;
+  workoutProgressEl.textContent = `${completed} / ${rows.length} séries`;
+}
+
 function recordSeriesTiming(target) {
   const row = target?.closest?.('[data-series-row]');
   if (!row || Number(target.value || 0) <= 0 || Number(row.dataset.registeredAt || 0) > 0) return;
@@ -1463,7 +1580,13 @@ function renderWarmupBlock(card, machine, variant, savedMachine) {
   const firstWorkWeight = Number(variant?.series?.[0]?.baseWeight ?? machine.series?.[0]?.baseWeight ?? 0) || 0;
   const templateWarmups = parseWarmupSets(rules?.warmup || '', firstWorkWeight);
   const savedWarmups = Array.isArray(savedMachine?.warmups) ? savedMachine.warmups : [];
-  const warmups = savedWarmups.length ? savedWarmups : templateWarmups;
+  const variantId = variant?.id || '';
+  const warmups = savedWarmups.length
+    ? savedWarmups
+    : templateWarmups.map((warmup, index) => ({
+        ...warmup,
+        ...(state.warmupDefaults[getSeriesKey(machine.id, variantId, index)] || {})
+      }));
   if (!warmups.length) return;
 
   const block = document.createElement('div');
@@ -1506,13 +1629,14 @@ function renderWarmupBlock(card, machine, variant, savedMachine) {
     const row = document.createElement('tr');
     row.setAttribute('data-warmup-row', 'true');
     row.setAttribute('data-warmup-index', String(index));
+    if (savedWarmups[index]) row.dataset.recorded = 'true';
     if (warmup.startedAt) row.dataset.startedAt = String(warmup.startedAt);
     if (warmup.finishedAt) row.dataset.finishedAt = String(warmup.finishedAt);
     row.innerHTML = `
-      <td>${index + 1}ª aquecimento</td>
-      <td><input type="number" min="0" step="0.1" value="${warmup.baseWeight ?? 0}" data-warmup-weight></td>
-      <td><input type="text" value="${warmup.reps ?? ''}" data-warmup-reps></td>
-      <td></td>
+      <td data-label="Série">${index + 1}ª aquecimento</td>
+      <td data-label="Peso"><input type="number" min="0" step="0.1" value="${warmup.baseWeight ?? 0}" data-warmup-weight></td>
+      <td data-label="Reps"><input type="text" value="${warmup.reps ?? ''}" data-warmup-reps></td>
+      <td data-label="RIR"></td>
     `;
     row.querySelector('td:nth-child(4)').appendChild(createRirSelect(warmup.rir ?? '?'));
     tbody.appendChild(row);
@@ -1559,6 +1683,7 @@ function toggleWarmup(card, btn, status) {
   if (activeRows.length) {
     activeRows.forEach(row => {
       row.dataset.finishedAt = String(now);
+      row.dataset.touched = 'true';
     });
     const key = card.dataset.warmupTimerKey;
     if (key && warmupTimerIntervals.has(key)) {
@@ -1566,11 +1691,13 @@ function toggleWarmup(card, btn, status) {
       warmupTimerIntervals.delete(key);
     }
     updateWarmupStatus(block);
+    updateCardDataState(card);
     scheduleLocalDraftSave();
     return;
   }
   rows.forEach(row => {
     row.dataset.startedAt = String(now);
+    row.dataset.touched = 'true';
     delete row.dataset.finishedAt;
   });
   if (!state.timing.startedAt) {
@@ -1582,6 +1709,7 @@ function toggleWarmup(card, btn, status) {
   if (warmupTimerIntervals.has(key)) clearInterval(warmupTimerIntervals.get(key));
   warmupTimerIntervals.set(key, setInterval(() => updateWarmupStatus(block), 1000));
   updateWarmupStatus(block);
+  updateCardDataState(card);
   scheduleLocalDraftSave();
 }
 
@@ -1667,6 +1795,22 @@ async function saveRecommendedRep(machineId, variantId, seriesIndex, reps) {
   }, { merge: true });
 }
 
+async function saveWarmupDefault(gym, machineId, variantId, warmupIndex, warmup) {
+  if (!gym) return;
+  const docId = getWarmupDefaultId(gym, machineId, variantId, warmupIndex);
+  const ref = doc(collection(db, 'ginasio_aquecimentos'), docId);
+  await setDoc(ref, {
+    gym,
+    machineId,
+    variantId: variantId || '',
+    warmupIndex,
+    baseWeight: warmup.baseWeight,
+    reps: warmup.reps,
+    rir: warmup.rir,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+}
+
 function scheduleBaseWeightSave(machineId, variantId, seriesIndex, baseWeight) {
   if (!state.gym) return;
   const key = getSeriesKey(machineId, variantId, seriesIndex);
@@ -1701,6 +1845,66 @@ function scheduleRecommendedSave(machineId, variantId, seriesIndex, reps) {
       showToast('Erro ao gravar reps recomendadas.', 'error');
     }
   }, 700));
+}
+
+function scheduleWarmupDefaultSave(target) {
+  const row = target?.closest?.('[data-warmup-row]');
+  const card = target?.closest?.('.gym-machine-card');
+  if (!row || !card || !state.gym) return;
+
+  const machineId = card.dataset.machineId || '';
+  const variantId = card.dataset.variantId || '';
+  const warmupIndex = Number(row.dataset.warmupIndex || 0);
+  const gym = state.gym;
+  const stateKey = getSeriesKey(machineId, variantId, warmupIndex);
+  const timerKey = `${gym}|${stateKey}`;
+  const warmup = {
+    baseWeight: parseFloat(row.querySelector('[data-warmup-weight]')?.value || 0) || 0,
+    reps: row.querySelector('[data-warmup-reps]')?.value.trim() || '',
+    rir: row.querySelector('[data-rir]')?.value || '?'
+  };
+
+  if (warmupDefaultTimers.has(timerKey)) {
+    clearTimeout(warmupDefaultTimers.get(timerKey));
+  }
+  warmupDefaultTimers.set(timerKey, setTimeout(async () => {
+    try {
+      await saveWarmupDefault(gym, machineId, variantId, warmupIndex, warmup);
+      state.warmupDefaults[stateKey] = warmup;
+    } catch (err) {
+      console.error('Erro ao gravar aquecimento:', err);
+      showToast('Erro ao gravar valor do aquecimento.', 'error');
+    } finally {
+      warmupDefaultTimers.delete(timerKey);
+    }
+  }, 700));
+}
+
+async function persistRecordedWarmupDefaults() {
+  const tasks = Array.from(workoutWrap.querySelectorAll('[data-warmup-row]'))
+    .filter(row => row.dataset.recorded === 'true'
+      || row.dataset.touched === 'true'
+      || Number(row.dataset.startedAt || 0) > 0)
+    .map(row => {
+      const card = row.closest('.gym-machine-card');
+      const machineId = card?.dataset.machineId || '';
+      const variantId = card?.dataset.variantId || '';
+      const warmupIndex = Number(row.dataset.warmupIndex || 0);
+      const stateKey = getSeriesKey(machineId, variantId, warmupIndex);
+      const timerKey = `${state.gym}|${stateKey}`;
+      const warmup = {
+        baseWeight: parseFloat(row.querySelector('[data-warmup-weight]')?.value || 0) || 0,
+        reps: row.querySelector('[data-warmup-reps]')?.value.trim() || '',
+        rir: row.querySelector('[data-rir]')?.value || '?'
+      };
+      if (warmupDefaultTimers.has(timerKey)) {
+        clearTimeout(warmupDefaultTimers.get(timerKey));
+        warmupDefaultTimers.delete(timerKey);
+      }
+      state.warmupDefaults[stateKey] = warmup;
+      return saveWarmupDefault(state.gym, machineId, variantId, warmupIndex, warmup);
+    });
+  await Promise.all(tasks);
 }
 
 function createSeriesTable(machine, variant, savedMachine) {
@@ -1761,16 +1965,16 @@ function createSeriesTable(machine, variant, savedMachine) {
       ? `${rules.series[index].reps} reps | RIR ${rules.series[index].rir}`
       : '';
     row.innerHTML = `
-      <td>
+      <td data-label="Série">
         ${index + 1}ª série
         ${ruleText ? `<span class="gym-series-rule">${ruleText}</span>` : ''}
       </td>
-      <td data-total-cell="true">
+      <td data-label="Peso" data-total-cell="true">
         <input type="number" min="0" step="0.1" value="${baseWeight}" data-base-weight>
         <span class="gym-total" data-total-weight></span>
       </td>
-      <td></td>
-      <td>
+      <td data-label="Reps"></td>
+      <td data-label="RIR">
         <select data-rir>
           <option value="falha" ${rirValue === 'falha' ? 'selected' : ''}>falha</option>
           <option value="?" ${rirValue === '?' ? 'selected' : ''}>?</option>
@@ -1943,43 +2147,128 @@ function canProgress(machine, variantId) {
   });
 }
 
-function startRestTimer(machine, variantId, seconds, label, button) {
+async function startRestTimer(machine, variantId, seconds, label, button) {
   if (!state.gym || !state.treino) return;
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    showToast('Não foi possível calcular o tempo de descanso.', 'error');
+    return;
+  }
+  const notificationsEnabled = await requestNotificationPermission();
+  if (activeRest?.key) {
+    await cancelRestTimer(activeRest.key, { silent: true });
+  }
   const key = `gym-rest-${normalizeKey(state.gym)}-${normalizeKey(state.treino)}-${machine.id}-${variantId || 'base'}`;
   const endAt = Date.now() + seconds * 1000;
   localStorage.setItem(key, String(endAt));
+  localStorage.removeItem(`${key}-completed`);
   runRestTimer(key, machine, variantId, label, button);
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission().catch(() => {});
+  if (notificationsEnabled) {
+    showRestNotification(key, machine, seconds, false, endAt);
+  } else if (!('Notification' in window) || Notification.permission !== 'denied') {
+    showToast('Descanso iniciado sem notificação do sistema.', 'warning');
   }
 }
 
-function showRestNotification(key, machine, remaining, done = false) {
+async function closeRestNotification(key) {
+  if (!navigator.serviceWorker?.ready) return;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const notifications = await registration.getNotifications({ tag: `gym-rest-${key}` });
+    notifications.forEach(notification => notification.close());
+  } catch (err) {
+    console.warn('Não foi possível fechar a notificação de descanso:', err);
+  }
+}
+
+function updateActiveRestPanel(key, machine, remaining) {
+  if (!activeRestEl || activeRest?.key !== key) return;
+  activeRestEl.dataset.active = 'true';
+  if (activeRestMachineEl) activeRestMachineEl.textContent = machine.name;
+  if (activeRestTimeEl) activeRestTimeEl.textContent = formatClockDuration(remaining);
+}
+
+function clearActiveRestPanel(key = '') {
+  if (key && activeRest?.key !== key) return;
+  activeRest = null;
+  if (activeRestEl) activeRestEl.dataset.active = 'false';
+  if (activeRestMachineEl) activeRestMachineEl.textContent = 'Descanso';
+  if (activeRestTimeEl) activeRestTimeEl.textContent = '00:00';
+}
+
+async function cancelRestTimer(key, { silent = false } = {}) {
+  const current = activeRest?.key === key ? activeRest : null;
+  if (restTimerIntervals.has(key)) {
+    clearInterval(restTimerIntervals.get(key));
+    restTimerIntervals.delete(key);
+  }
+  restTimerUpdates.delete(key);
+  localStorage.removeItem(key);
+  localStorage.removeItem(`${key}-completed`);
+  if (current?.button) current.button.textContent = `Descanso ${current.label}`;
+  clearActiveRestPanel(key);
+  await closeRestNotification(key);
+  if (!silent) showToast('Descanso cancelado.', 'success');
+}
+
+function addTimeToActiveRest(seconds) {
+  if (!activeRest?.key) return;
+  const endAt = Number(localStorage.getItem(activeRest.key) || 0);
+  if (!endAt) return;
+  const nextEndAt = Math.max(Date.now(), endAt) + seconds * 1000;
+  localStorage.setItem(activeRest.key, String(nextEndAt));
+  localStorage.removeItem(`${activeRest.key}-completed`);
+  activeRest.update?.();
+  const remaining = Math.max(0, Math.ceil((nextEndAt - Date.now()) / 1000));
+  showRestNotification(activeRest.key, activeRest.machine, remaining, false, nextEndAt);
+}
+
+function showFallbackNotification(title, options) {
+  try {
+    const notification = new Notification(title, options);
+    notification.onclick = () => notification.close();
+  } catch (err) {
+    console.warn('Notificação direta não suportada:', err);
+  }
+}
+
+function showRestNotification(key, machine, remaining, done = false, endAt = null) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const tag = `gym-rest-${key}`;
-  const title = done ? 'Descanso terminado' : `Descanso ${formatClockDuration(remaining)}`;
-  const body = done ? machine.name : `${machine.name} | restante ${formatClockDuration(remaining)}`;
+  const finishLabel = endAt ? formatTimeOfDay(endAt) : '';
+  const title = done
+    ? 'Descanso terminado'
+    : `Descanso até ${finishLabel || '--:--'} · ${formatClockDuration(remaining)}`;
+  const body = done
+    ? `${machine.name} · próxima série`
+    : `${machine.name} · termina às ${finishLabel || '--:--'}`;
+  const icon = new URL('../icons/icon-192-v2.png', location.href).href;
   const options = {
     body,
     tag,
-    renotify: done,
-    silent: !done,
-    requireInteraction: done,
-    timestamp: Date.now(),
-    data: { url: location.href, tag },
+    icon,
+    badge: icon,
+    renotify: true,
+    silent: false,
+    requireInteraction: true,
+    vibrate: done ? [300, 150, 300, 150, 500] : [120],
+    timestamp: done ? Date.now() : (endAt || Date.now()),
+    lang: 'pt-PT',
+    data: { url: location.href, tag, restKey: key },
     actions: [{ action: 'dismiss', title: 'Fechar' }]
   };
   if (navigator.serviceWorker?.ready) {
     navigator.serviceWorker.ready
-      .then(reg => reg.showNotification(title, options))
+      .then(reg => {
+        if (!done && endAt && Date.now() >= endAt) return undefined;
+        return reg.showNotification(title, options);
+      })
       .catch(() => {
-        const notification = new Notification(title, options);
-        notification.onclick = () => notification.close();
+        if (!done && endAt && Date.now() >= endAt) return;
+        showFallbackNotification(title, options);
       });
     return;
   }
-  const notification = new Notification(title, options);
-  notification.onclick = () => notification.close();
+  showFallbackNotification(title, options);
 }
 
 function runRestTimer(key, machine, variantId, label, button) {
@@ -1987,19 +2276,25 @@ function runRestTimer(key, machine, variantId, label, button) {
     clearInterval(restTimerIntervals.get(key));
     restTimerIntervals.delete(key);
   }
+  restTimerUpdates.delete(key);
   const updateLabel = () => {
     const endAt = Number(localStorage.getItem(key) || 0);
     const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
     if (!remaining) {
       localStorage.removeItem(key);
-      localStorage.removeItem(`${key}-last-notify`);
       if (button) button.textContent = `Descanso ${label}`;
-      showToast(`Descanso terminado: ${machine.name}`, 'success');
-      showRestNotification(key, machine, 0, true);
+      if (!localStorage.getItem(`${key}-completed`)) {
+        localStorage.setItem(`${key}-completed`, String(Date.now()));
+        showToast(`Descanso terminado: ${machine.name}`, 'success');
+        showRestNotification(key, machine, 0, true, endAt);
+        if ('vibrate' in navigator) navigator.vibrate([300, 150, 300, 150, 500]);
+      }
       if (restTimerIntervals.has(key)) {
         clearInterval(restTimerIntervals.get(key));
         restTimerIntervals.delete(key);
       }
+      restTimerUpdates.delete(key);
+      clearActiveRestPanel(key);
       return;
     }
     if (button) {
@@ -2007,15 +2302,18 @@ function runRestTimer(key, machine, variantId, label, button) {
       const ss = String(remaining % 60).padStart(2, '0');
       button.textContent = `Descanso ${mm}:${ss}`;
     }
-    const lastNotify = Number(localStorage.getItem(`${key}-last-notify`) || 0);
-    if (!lastNotify || Date.now() - lastNotify >= 15000) {
-      localStorage.setItem(`${key}-last-notify`, String(Date.now()));
-      showRestNotification(key, machine, remaining, false);
-    }
+    updateActiveRestPanel(key, machine, remaining);
   };
+  activeRest = { key, machine, variantId, label, button, update: updateLabel };
+  restTimerUpdates.set(key, updateLabel);
   updateLabel();
+  if (!localStorage.getItem(key)) return;
   const timer = setInterval(updateLabel, 1000);
   restTimerIntervals.set(key, timer);
+}
+
+function refreshRestTimers() {
+  restTimerUpdates.forEach(update => update());
 }
 
 function parseRestLabel(label) {
@@ -2145,6 +2443,7 @@ function renderMachine(machine) {
   if (canProgress(machine, card.dataset.variantId || '')) {
     progressBadge.style.display = 'inline-flex';
   }
+  updateCardDataState(card);
   return card;
 }
 
@@ -2160,6 +2459,7 @@ function renderWorkout() {
     return;
   }
   template.forEach(machine => workoutWrap.appendChild(renderMachine(machine)));
+  updateWorkoutProgress();
   syncTimingFromDom();
   const savedDuration = Number(state.session?.timing?.durationSec || 0);
   const savedFinishedAt = Number(state.session?.timing?.finishedAt || 0);
@@ -2226,11 +2526,11 @@ function addSeriesRow(data = {}) {
   const index = tbody.children.length + 1;
   const row = document.createElement('tr');
   row.innerHTML = `
-    <td>${index}ª</td>
-    <td><input type="number" step="0.1" min="0" value="${data.baseWeight ?? ''}" data-series-weight></td>
-    <td><input type="number" step="1" min="0" value="${data.targetReps ?? ''}" data-series-reps></td>
-    <td></td>
-    <td><button type="button" data-remove-series>Remover</button></td>
+    <td data-label="Série">${index}ª</td>
+    <td data-label="Peso"><input type="number" step="0.1" min="0" value="${data.baseWeight ?? ''}" data-series-weight></td>
+    <td data-label="Reps"><input type="number" step="1" min="0" value="${data.targetReps ?? ''}" data-series-reps></td>
+    <td data-label="RIR"></td>
+    <td data-label="Ações"><button type="button" data-remove-series>Remover</button></td>
   `;
   const rirCell = row.querySelector('td:nth-child(4)');
   rirCell.appendChild(createRirSelect(data.rir ?? '?'));
@@ -2321,6 +2621,7 @@ async function loadSession() {
     state.lastRir = {};
     state.lastWeights = {};
     state.recommendedReps = {};
+    state.warmupDefaults = {};
     state.customMachines = [];
     resetWorkoutTiming();
     renderWorkout();
@@ -2337,6 +2638,12 @@ async function loadSession() {
   } catch (err) {
     console.error('Erro ao carregar reps recomendadas:', err);
     showToast('Erro ao carregar reps recomendadas.', 'error');
+  }
+  try {
+    await loadWarmupDefaults(state.gym);
+  } catch (err) {
+    console.error('Erro ao carregar aquecimentos:', err);
+    showToast('Erro ao carregar valores dos aquecimentos.', 'error');
   }
   try {
     await loadCustomMachines(state.gym, state.treino);
@@ -2418,6 +2725,26 @@ async function loadRecommendedReps(gym) {
   state.recommendedReps = repsMap;
 }
 
+async function loadWarmupDefaults(gym) {
+  if (!gym) {
+    state.warmupDefaults = {};
+    return;
+  }
+  const q = query(collection(db, 'ginasio_aquecimentos'), where('gym', '==', gym));
+  const snap = await getDocs(q);
+  const warmups = {};
+  snap.forEach(docSnap => {
+    const data = docSnap.data();
+    const key = getSeriesKey(data.machineId, data.variantId, data.warmupIndex);
+    warmups[key] = {
+      baseWeight: Number(data.baseWeight) || 0,
+      reps: String(data.reps || ''),
+      rir: String(data.rir || '?')
+    };
+  });
+  state.warmupDefaults = warmups;
+}
+
 async function loadCustomMachines(gym, treino) {
   if (!gym || !treino) {
     state.customMachines = [];
@@ -2440,7 +2767,9 @@ async function loadLastReps(gym, treino) {
     where('treino', '==', treino)
   );
   const snap = await getDocs(q);
-  const docs = snap.docs.map(docSnap => docSnap.data());
+  const docs = snap.docs
+    .map(docSnap => docSnap.data())
+    .filter(data => data.gym === gym);
   docs.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   const latest = docs[0];
   const lastReps = {};
@@ -2502,6 +2831,9 @@ function buildSessionFromDom() {
       const startedAt = Number(row.dataset.startedAt || 0) || null;
       const finishedAt = Number(row.dataset.finishedAt || 0) || null;
       return {
+        recorded: row.dataset.recorded === 'true'
+          || row.dataset.touched === 'true'
+          || Boolean(startedAt),
         baseWeight: parseFloat(row.querySelector('[data-warmup-weight]')?.value || 0) || 0,
         reps: row.querySelector('[data-warmup-reps]')?.value.trim() || '',
         rir: row.querySelector('[data-rir]')?.value || '?',
@@ -2509,7 +2841,9 @@ function buildSessionFromDom() {
         finishedAt,
         durationSec: startedAt && finishedAt ? Math.max(0, Math.round((finishedAt - startedAt) / 1000)) : 0
       };
-    }).filter(item => item.baseWeight || item.reps || item.startedAt);
+    })
+      .filter(item => item.recorded)
+      .map(({ recorded, ...warmup }) => warmup);
     const series = seriesRows.map(row => {
       const rowMachineId = row.dataset.seriesMachineId || machineId;
       const rowVariantId = row.dataset.seriesVariantId || variantId;
@@ -2569,7 +2903,11 @@ function buildSummaryText(session) {
       const seriesList = Array.isArray(machine.series)
         ? machine.series
         : Object.values(machine.series || {});
-      return seriesList.some(series => Number(series?.reps || 0) > 0);
+      const warmupList = Array.isArray(machine.warmups)
+        ? machine.warmups
+        : Object.values(machine.warmups || {});
+      return seriesList.some(series => Number(series?.reps || 0) > 0)
+        || warmupList.some(warmup => warmup?.baseWeight || warmup?.reps);
     })
     .sort((a, b) => (Number(a.order || 0) || 9999) - (Number(b.order || 0) || 9999))
     .forEach(machine => {
@@ -2606,6 +2944,7 @@ function buildSummaryText(session) {
 }
 
 async function saveSession() {
+  if (saveBtn?.disabled) return;
   setStateFromInputs();
   if (!state.gym || !state.treino || !state.date) {
     showToast('Seleciona o ginásio, o treino e a data antes de gravar.', 'warning');
@@ -2634,6 +2973,18 @@ async function saveSession() {
   console.log('[ginasio] session payload', session);
   const docId = getSessionId(state.gym, state.treino, state.date);
   const ref = doc(collection(db, 'ginasio_treinos'), docId);
+  const originalSaveLabel = saveBtn?.textContent || 'Guardar treino';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'A guardar…';
+  }
+
+  try {
+    await persistRecordedWarmupDefaults();
+  } catch (err) {
+    console.error('Erro ao gravar valores reutilizáveis do aquecimento:', err);
+    showToast('O treino será guardado, mas não foi possível atualizar o próximo aquecimento.', 'warning');
+  }
 
   try {
     await setDoc(ref, {
@@ -2663,6 +3014,11 @@ async function saveSession() {
   } catch (err) {
     console.error('Erro ao gravar treino:', err);
     showToast('Erro ao gravar treino no Firebase.', 'error');
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalSaveLabel;
+    }
   }
 }
 
@@ -2773,6 +3129,7 @@ function init() {
   restoreCurrentSelection();
   if (dateInput) dateInput.value = getTodayLocalISO();
   trainingSelect.disabled = !gymSelect.value;
+  updateNotificationStatus();
 
   gymSelect.addEventListener('change', () => {
     trainingSelect.disabled = !gymSelect.value;
@@ -2788,8 +3145,25 @@ function init() {
     loadSession();
   });
   workoutWrap.addEventListener('input', scheduleLocalDraftSave);
+  workoutWrap.addEventListener('input', event => {
+    const warmupRow = event.target?.closest?.('[data-warmup-row]');
+    if (warmupRow) warmupRow.dataset.touched = 'true';
+    updateCardDataState(event.target);
+    if (event.target?.matches?.('[data-warmup-weight], [data-warmup-reps]')) {
+      scheduleWarmupDefaultSave(event.target);
+    }
+  });
   workoutWrap.addEventListener('change', () => {
     setTimeout(scheduleLocalDraftSave, 0);
+  });
+  workoutWrap.addEventListener('change', event => {
+    const warmupRow = event.target?.closest?.('[data-warmup-row]');
+    if (warmupRow) warmupRow.dataset.touched = 'true';
+    updateCardDataState(event.target);
+    updateWorkoutProgress();
+    if (event.target?.closest?.('[data-warmup-row]')) {
+      scheduleWarmupDefaultSave(event.target);
+    }
   });
   workoutWrap.addEventListener('change', event => {
     if (!event.target?.matches?.('[data-reps]')) return;
@@ -2812,11 +3186,36 @@ function init() {
     if (document.visibilityState === 'hidden' && localDraftDirty) {
       persistLocalDraft();
     }
+    if (document.visibilityState === 'visible') {
+      refreshRestTimers();
+      updateNotificationStatus();
+    }
   });
   saveBtn.addEventListener('click', saveSession);
   if (clearDraftBtn) {
     clearDraftBtn.addEventListener('click', clearCurrentDraft);
   }
+  enableNotificationsBtn?.addEventListener('click', requestNotificationPermission);
+  testNotificationBtn?.addEventListener('click', async () => {
+    if (!await requestNotificationPermission()) return;
+    showRestNotification(
+      'gym-rest-test',
+      { name: 'Teste de notificações' },
+      0,
+      true,
+      Date.now()
+    );
+  });
+  window.addEventListener('focus', () => {
+    refreshRestTimers();
+    updateNotificationStatus();
+  });
+  window.matchMedia?.('(display-mode: standalone)')
+    .addEventListener?.('change', updateNotificationStatus);
+  restAddBtn?.addEventListener('click', () => addTimeToActiveRest(30));
+  restCancelBtn?.addEventListener('click', () => {
+    if (activeRest?.key) cancelRestTimer(activeRest.key);
+  });
   summariesRefreshBtn.addEventListener('click', loadSummaries);
   if (machineAddSeriesBtn) {
     machineAddSeriesBtn.addEventListener('click', () => addSeriesRow());

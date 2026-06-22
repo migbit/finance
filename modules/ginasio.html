@@ -51,6 +51,9 @@
     .gym-machine-card:not([open]) {
       padding-bottom: 1rem;
     }
+    .gym-machine-card[data-has-data="true"] {
+      border-color: rgba(34, 197, 94, 0.55);
+    }
     .gym-machine-header {
       display: flex;
       flex-wrap: wrap;
@@ -135,6 +138,58 @@
       font-weight: 700;
       font-variant-numeric: tabular-nums;
     }
+    .gym-session-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.25rem;
+    }
+    .gym-active-rest {
+      width: 100%;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      padding: 0.7rem 0.8rem;
+      border-radius: 10px;
+      color: #fff;
+      background: #2563eb;
+    }
+    .gym-active-rest[data-active="true"] {
+      display: flex;
+    }
+    .gym-active-rest-time {
+      font-size: 1.25rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .gym-active-rest-actions {
+      display: flex;
+      gap: 0.4rem;
+    }
+    .gym-active-rest-actions button {
+      border-color: rgba(255, 255, 255, 0.55);
+      color: #fff;
+      background: rgba(255, 255, 255, 0.14);
+    }
+    .gym-notification-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+    .gym-notification-status {
+      width: 100%;
+      color: var(--text-dim);
+      font-size: 0.82rem;
+      text-align: right;
+    }
+    .gym-notification-status[data-state="ready"] {
+      color: #15803d;
+    }
+    .gym-notification-status[data-state="warning"] {
+      color: #b45309;
+    }
     .gym-warmup {
       border: 1px solid rgba(148, 163, 184, 0.25);
       border-radius: 12px;
@@ -214,6 +269,11 @@
       color: var(--text-dim);
       font-size: 0.95rem;
     }
+    .gym-save-wrap {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
     .gym-summary-list {
       display: flex;
       flex-direction: column;
@@ -276,9 +336,47 @@
       .gym-series-table td {
         border-bottom: none;
         padding: 0.35rem 0;
+        display: grid;
+        grid-template-columns: minmax(105px, 0.8fr) minmax(0, 1.2fr);
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .gym-series-table td::before {
+        content: attr(data-label);
+        color: var(--text-dim);
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
       }
       .gym-series-table td:last-child {
         text-align: left;
+      }
+      .gym-notification-controls {
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .gym-notification-status {
+        text-align: left;
+      }
+      .gym-active-rest {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .gym-active-rest-actions {
+        width: 100%;
+      }
+      .gym-active-rest-actions button {
+        flex: 1;
+      }
+      .gym-save-wrap {
+        position: sticky;
+        bottom: 0.5rem;
+        z-index: 8;
+      }
+      .gym-save-wrap #gym-save {
+        width: 100%;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
       }
     }
   </style>
@@ -322,11 +420,32 @@
           </label>
         </div>
         <div class="gym-session-bar">
-          <div>
-            <div class="gym-machine-meta">Tempo de treino</div>
-            <div id="gym-total-timer" class="gym-session-time">00:00</div>
+          <div class="gym-session-metrics">
+            <div>
+              <div class="gym-machine-meta">Tempo de treino</div>
+              <div id="gym-total-timer" class="gym-session-time">00:00</div>
+            </div>
+            <div>
+              <div class="gym-machine-meta">Progresso</div>
+              <div id="gym-workout-progress" class="gym-session-time">0 / 0 séries</div>
+            </div>
           </div>
-          <button type="button" id="gym-clear-draft">Apagar temporário</button>
+          <div class="gym-notification-controls">
+            <button type="button" id="gym-enable-notifications">Ativar notificações</button>
+            <button type="button" id="gym-test-notification">Testar</button>
+            <button type="button" id="gym-clear-draft">Apagar temporário</button>
+            <div id="gym-notification-status" class="gym-notification-status" aria-live="polite"></div>
+          </div>
+          <div id="gym-active-rest" class="gym-active-rest" data-active="false" aria-live="polite">
+            <div>
+              <div id="gym-active-rest-machine">Descanso</div>
+              <div id="gym-active-rest-time" class="gym-active-rest-time">00:00</div>
+            </div>
+            <div class="gym-active-rest-actions">
+              <button type="button" id="gym-rest-add">+30 s</button>
+              <button type="button" id="gym-rest-cancel">Cancelar</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -335,7 +454,7 @@
       <div class="viz-card">
         <h4>Máquinas e séries</h4>
         <div id="gym-workout" class="gym-workout"></div>
-        <div style="display:flex; justify-content:flex-end; margin-top:1rem;">
+        <div class="gym-save-wrap">
           <button type="button" class="primary" id="gym-save">Guardar treino</button>
         </div>
       </div>
