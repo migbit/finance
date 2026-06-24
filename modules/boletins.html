@@ -14,7 +14,7 @@
   <style>
     body[data-page="boletins"] main {
       width: 100%;
-      max-width: 1180px;
+      max-width: min(1560px, calc(100vw - 48px));
       margin: 0 auto;
       padding: var(--space-6);
     }
@@ -97,6 +97,94 @@
       vertical-align: middle;
     }
 
+    .boletins-table {
+      min-width: 1180px;
+      table-layout: auto;
+    }
+
+    .boletins-table th:nth-child(1),
+    .boletins-table td:nth-child(1) {
+      min-width: 120px;
+      text-align: left;
+    }
+
+    .boletins-table th:nth-child(2),
+    .boletins-table td:nth-child(2),
+    .boletins-table th:nth-child(3),
+    .boletins-table td:nth-child(3) {
+      min-width: 130px;
+    }
+
+    .boletins-table th:nth-child(4),
+    .boletins-table td:nth-child(4) {
+      min-width: 140px;
+    }
+
+    .boletins-table th:nth-child(6),
+    .boletins-table td:nth-child(6) {
+      min-width: 150px;
+    }
+
+    .boletins-table th:nth-child(8),
+    .boletins-table td:nth-child(8) {
+      min-width: 240px;
+    }
+
+    .boletins-table th:nth-child(9),
+    .boletins-table td:nth-child(9) {
+      min-width: 100px;
+    }
+
+    .guest-details-table {
+      min-width: 1120px;
+      table-layout: auto;
+    }
+
+    .guest-details-table th,
+    .guest-details-table td {
+      padding: 13px 10px;
+    }
+
+    .guest-details-table th:nth-child(1),
+    .guest-details-table td:nth-child(1) {
+      min-width: 135px;
+      text-align: left;
+    }
+
+    .guest-details-table th:nth-child(2),
+    .guest-details-table td:nth-child(2),
+    .guest-details-table th:nth-child(8),
+    .guest-details-table td:nth-child(8),
+    .guest-details-table th:nth-child(9),
+    .guest-details-table td:nth-child(9) {
+      min-width: 110px;
+      white-space: nowrap;
+    }
+
+    .guest-details-table th:nth-child(3),
+    .guest-details-table td:nth-child(3) {
+      min-width: 145px;
+    }
+
+    .guest-details-table th:nth-child(4),
+    .guest-details-table td:nth-child(4) {
+      min-width: 115px;
+    }
+
+    .guest-details-table th:nth-child(5),
+    .guest-details-table td:nth-child(5),
+    .guest-details-table th:nth-child(6),
+    .guest-details-table td:nth-child(6),
+    .guest-details-table th:nth-child(7),
+    .guest-details-table td:nth-child(7) {
+      min-width: 120px;
+    }
+
+    .guest-details-table th:nth-child(10),
+    .guest-details-table td:nth-child(10) {
+      min-width: 140px;
+    }
+
     .copyable-cell {
       cursor: copy;
       text-decoration: underline dotted;
@@ -116,7 +204,7 @@
       color: var(--text-dim);
       word-break: break-all;
       text-align: left;
-      max-width: 280px;
+      max-width: 360px;
     }
 
     .empty-state {
@@ -127,6 +215,7 @@
 
     @media (max-width: 720px) {
       body[data-page="boletins"] main {
+        max-width: 100%;
         padding: var(--space-4);
       }
 

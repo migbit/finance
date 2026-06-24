@@ -491,7 +491,7 @@ function renderGuestDetails(guests) {
 
   return `
     <div class="table-wrap">
-      <table>
+      <table class="guest-details-table">
         <thead>
           <tr>
             <th>Nome</th>
