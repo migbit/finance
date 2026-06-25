@@ -1044,7 +1044,6 @@ const restAddBtn = document.getElementById('gym-rest-add');
 const restCancelBtn = document.getElementById('gym-rest-cancel');
 const clearDraftBtn = document.getElementById('gym-clear-draft');
 const enableNotificationsBtn = document.getElementById('gym-enable-notifications');
-const testNotificationBtn = document.getElementById('gym-test-notification');
 const notificationStatusEl = document.getElementById('gym-notification-status');
 const summariesWrap = document.getElementById('gym-summaries');
 const summariesRefreshBtn = document.getElementById('summaries-refresh');
@@ -1086,6 +1085,7 @@ let localDraftTimer = null;
 let localDraftDirty = false;
 let totalTimerInterval = null;
 let activeRest = null;
+let restAudioContext = null;
 
 function formatWeight(value) {
   if (value === null || Number.isNaN(value)) return '';
@@ -1139,13 +1139,51 @@ function isSamsungDevice() {
   return /samsung|sm-[a-z0-9]+/i.test(navigator.userAgent);
 }
 
+function getRestAudioContext() {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) return null;
+  if (!restAudioContext) restAudioContext = new AudioContextCtor();
+  return restAudioContext;
+}
+
+function unlockRestAudio() {
+  const audioContext = getRestAudioContext();
+  if (!audioContext) return;
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().catch(() => {});
+  }
+}
+
+function playRestFinishedBeep() {
+  const audioContext = getRestAudioContext();
+  if (!audioContext) return;
+  const play = () => {
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const now = audioContext.currentTime;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, now);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.24);
+  };
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().then(play).catch(() => {});
+    return;
+  }
+  play();
+}
+
 function updateNotificationStatus() {
   if (!notificationStatusEl) return;
   if (!('Notification' in window)) {
     notificationStatusEl.textContent = 'Este browser não suporta notificações web.';
     notificationStatusEl.dataset.state = 'warning';
     if (enableNotificationsBtn) enableNotificationsBtn.disabled = true;
-    if (testNotificationBtn) testNotificationBtn.disabled = true;
     return;
   }
 
@@ -1156,11 +1194,10 @@ function updateNotificationStatus() {
       ? 'Notificações ativas'
       : 'Ativar notificações';
   }
-  if (testNotificationBtn) testNotificationBtn.disabled = permission !== 'granted';
 
   if (permission === 'granted') {
     notificationStatusEl.textContent = isSamsungDevice()
-      ? 'Ativas. No Samsung, permite ecrã bloqueado e remove a aplicação da suspensão profunda.'
+      ? 'Ativas. No Samsung, permite ecrã bloqueado, som/vibração e espelhamento no Galaxy Wearable.'
       : (isStandaloneApp()
           ? 'Ativas. Confirma também som e ecrã bloqueado nas definições do telemóvel.'
           : 'Ativas. Para maior fiabilidade, instala a aplicação no ecrã principal.');
@@ -1181,6 +1218,7 @@ function updateNotificationStatus() {
 }
 
 async function requestNotificationPermission() {
+  unlockRestAudio();
   if (!('Notification' in window)) {
     updateNotificationStatus();
     return false;
@@ -2153,6 +2191,7 @@ async function startRestTimer(machine, variantId, seconds, label, button) {
     showToast('Não foi possível calcular o tempo de descanso.', 'error');
     return;
   }
+  unlockRestAudio();
   const notificationsEnabled = await requestNotificationPermission();
   if (activeRest?.key) {
     await cancelRestTimer(activeRest.key, { silent: true });
@@ -2286,6 +2325,7 @@ function runRestTimer(key, machine, variantId, label, button) {
       if (!localStorage.getItem(`${key}-completed`)) {
         localStorage.setItem(`${key}-completed`, String(Date.now()));
         showToast(`Descanso terminado: ${machine.name}`, 'success');
+        playRestFinishedBeep();
         showRestNotification(key, machine, 0, true, endAt);
         if ('vibrate' in navigator) navigator.vibrate([300, 150, 300, 150, 500]);
       }
@@ -3196,16 +3236,6 @@ function init() {
     clearDraftBtn.addEventListener('click', clearCurrentDraft);
   }
   enableNotificationsBtn?.addEventListener('click', requestNotificationPermission);
-  testNotificationBtn?.addEventListener('click', async () => {
-    if (!await requestNotificationPermission()) return;
-    showRestNotification(
-      'gym-rest-test',
-      { name: 'Teste de notificações' },
-      0,
-      true,
-      Date.now()
-    );
-  });
   window.addEventListener('focus', () => {
     refreshRestTimers();
     updateNotificationStatus();
