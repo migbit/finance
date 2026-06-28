@@ -32,7 +32,19 @@ const els = {
   generatedUrl: document.getElementById('generated-url'),
   copyGenerated: document.getElementById('copy-generated-link'),
   body: document.getElementById('boletins-body'),
-  sentBody: document.getElementById('boletins-sent-body')
+  sentBody: document.getElementById('boletins-sent-body'),
+  guestEditor: document.getElementById('guest-editor'),
+  guestEditorForm: document.getElementById('guest-editor-form'),
+  editBoletimId: document.getElementById('edit-boletim-id'),
+  editGuestId: document.getElementById('edit-guest-id'),
+  editFirstName: document.getElementById('edit-first-name'),
+  editLastName: document.getElementById('edit-last-name'),
+  editBirthDate: document.getElementById('edit-birth-date'),
+  editDocumentType: document.getElementById('edit-document-type'),
+  editDocumentNumber: document.getElementById('edit-document-number'),
+  editDocumentCountry: document.getElementById('edit-document-country'),
+  editCountryResidence: document.getElementById('edit-country-residence'),
+  editCountryOrigin: document.getElementById('edit-country-origin')
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -48,6 +60,8 @@ function bindEvents() {
     body?.addEventListener('keydown', handleTableKeydown);
     body?.addEventListener('change', handleSentChange);
   });
+  els.guestEditorForm?.addEventListener('submit', handleGuestEditSubmit);
+  els.guestEditor?.addEventListener('click', handleGuestEditorClick);
 }
 
 async function handleCreateBoletim(event) {
@@ -194,7 +208,7 @@ function renderBoletimRows(boletins) {
         </td>
       </tr>
       <tr id="${detailsId}" hidden>
-        <td colspan="${BOLETINS_COLSPAN}">${renderGuestDetails(item.guests || [])}</td>
+        <td colspan="${BOLETINS_COLSPAN}">${renderGuestDetails(item.id, item.guests || [])}</td>
       </tr>
     `;
   }).join('');
@@ -245,6 +259,12 @@ function handleTableClick(event) {
     return;
   }
 
+  const editGuestBtn = event.target.closest('button[data-action="edit-guest"]');
+  if (editGuestBtn) {
+    openGuestEditor(editGuestBtn.dataset.boletimId, editGuestBtn.dataset.guestId);
+    return;
+  }
+
   const deleteBtn = event.target.closest('button[data-action="delete"]');
   if (deleteBtn) {
     deleteBoletim(deleteBtn.dataset.id, deleteBtn.dataset.name || 'este boletim');
@@ -263,6 +283,99 @@ function handleTableKeydown(event) {
     true,
     `${copyableCell.dataset.copyLabel || 'Conteúdo'} copiado.`
   );
+}
+
+function openGuestEditor(boletimId, guestId) {
+  const boletim = state.boletins.find((item) => item.id === boletimId);
+  const guest = boletim?.guests?.find((item) => item.id === guestId);
+  if (!guest || !els.guestEditor) {
+    showToast('Não foi possível abrir os dados do hóspede.', 'error');
+    return;
+  }
+
+  els.editBoletimId.value = boletimId;
+  els.editGuestId.value = guestId;
+  els.editFirstName.value = guest.firstName || '';
+  els.editLastName.value = guest.lastName || '';
+  els.editBirthDate.value = guest.birthDate || '';
+  els.editDocumentType.value = guest.documentType || '';
+  els.editDocumentNumber.value = guest.documentNumber || '';
+  els.editDocumentCountry.value = guest.documentCountry || '';
+  els.editCountryResidence.value = guest.countryResidence || '';
+  els.editCountryOrigin.value = guest.countryOrigin || '';
+  els.guestEditor.showModal();
+  els.editFirstName.focus();
+}
+
+function handleGuestEditorClick(event) {
+  if (event.target.closest('[data-action="close-editor"]')) {
+    els.guestEditor.close();
+  }
+}
+
+async function handleGuestEditSubmit(event) {
+  event.preventDefault();
+  if (!els.guestEditorForm.reportValidity()) return;
+
+  const boletimId = els.editBoletimId.value;
+  const guestId = els.editGuestId.value;
+  const boletim = state.boletins.find((item) => item.id === boletimId);
+  const guest = boletim?.guests?.find((item) => item.id === guestId);
+  if (!guest) {
+    showToast('O registo do hóspede já não está disponível.', 'error');
+    return;
+  }
+
+  const changes = {
+    firstName: els.editFirstName.value.trim(),
+    lastName: els.editLastName.value.trim(),
+    birthDate: els.editBirthDate.value,
+    documentType: els.editDocumentType.value,
+    documentNumber: els.editDocumentNumber.value.trim(),
+    documentCountry: normalizeCountryCode(els.editDocumentCountry.value),
+    countryResidence: normalizeCountryCode(els.editCountryResidence.value),
+    countryOrigin: normalizeCountryCode(els.editCountryOrigin.value),
+    updatedAt: Timestamp.now()
+  };
+  if (!changes.firstName || !changes.lastName || !changes.documentNumber) {
+    showToast('Preenche o nome, apelido e número do documento.', 'warning');
+    return;
+  }
+
+  const submitButton = els.guestEditorForm.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+
+  try {
+    await updateDoc(doc(db, COLLECTION, boletimId, 'guests', guestId), changes);
+    Object.assign(guest, changes);
+
+    try {
+      await setDoc(doc(db, COLLECTION, boletimId, 'guest_summaries', guestId), {
+        firstName: changes.firstName,
+        lastName: changes.lastName,
+        submittedAt: guest.submittedAt
+      }, { merge: true });
+    } catch (summaryError) {
+      console.error('Erro ao atualizar resumo do hóspede', summaryError);
+      renderBoletins();
+      els.guestEditor.close();
+      showToast('Dados atualizados, mas o nome no estado do grupo não foi sincronizado.', 'warning');
+      return;
+    }
+
+    renderBoletins();
+    els.guestEditor.close();
+    showToast('Dados do hóspede atualizados.', 'success');
+  } catch (err) {
+    console.error('Erro ao atualizar hóspede', err);
+    showToast('Não foi possível atualizar os dados do hóspede.', 'error');
+  } finally {
+    submitButton.disabled = false;
+  }
+}
+
+function normalizeCountryCode(value) {
+  return value.trim().toUpperCase();
 }
 
 async function deleteBoletim(id, name) {
@@ -463,7 +576,7 @@ function toMillis(value) {
   return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
 }
 
-function renderGuestDetails(guests) {
+function renderGuestDetails(boletimId, guests) {
   if (!guests.length) {
     return '<div class="empty-state">Ainda não há dados submetidos.</div>';
   }
@@ -485,6 +598,14 @@ function renderGuestDetails(guests) {
         <td>${escapeHtml(formatDateOnly(guest.checkinDate))}</td>
         <td>${escapeHtml(formatDateOnly(guest.checkoutDate))}</td>
         <td>${escapeHtml(formatDateTime(guest.submittedAt))}</td>
+        <td>
+          <button
+            type="button"
+            data-action="edit-guest"
+            data-boletim-id="${escapeAttr(boletimId)}"
+            data-guest-id="${escapeAttr(guest.id)}"
+          >Editar</button>
+        </td>
       </tr>
     `;
   }).join('');
@@ -504,6 +625,7 @@ function renderGuestDetails(guests) {
             <th>Check-in</th>
             <th>Check-out</th>
             <th>Submetido</th>
+            <th>Ações</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>

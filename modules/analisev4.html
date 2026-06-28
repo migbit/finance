@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-pt">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Análise V4</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
+  <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#000000">
+</head>
+<body id="analisev4-page" data-page="analisev4">
+  <main>
+    <div class="page-intro analisev4-intro">
+      <h2>Análise V4</h2>
+    </div>
+
+    <section id="mod-progresso-v4" class="report-section" data-module="progresso-v4">
+      <div class="viz-card progresso-v4-card">
+        <div class="analisev4-dashboard-header">
+          <h4>Progresso vs <span id="progresso-v4-previous-year">—</span></h4>
+          <div class="segmented segmented--primary progresso-v4-switch" role="tablist" aria-label="Selecionar vista de progresso">
+            <button class="filter-btn active" data-progresso-v4-view="total" role="tab" aria-pressed="true">Total</button>
+            <button class="filter-btn" data-progresso-v4-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-progresso-v4-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+        </div>
+
+        <div class="progresso-v4-grid" aria-live="polite">
+          <article class="progresso-v4-tile" data-progress-kpi="month">
+            <span class="progresso-v4-label">Mês atual</span>
+            <strong id="progresso-v4-month-value">—</strong>
+            <small id="progresso-v4-month-meta">—</small>
+            <span class="progresso-v4-delta" id="progresso-v4-month-delta">—</span>
+          </article>
+          <article class="progresso-v4-tile progresso-v4-tile--primary" data-progress-kpi="ytd">
+            <span class="progresso-v4-label">Acumulado YTD</span>
+            <strong id="progresso-v4-ytd-value">—</strong>
+            <small id="progresso-v4-ytd-meta">—</small>
+            <span class="progresso-v4-delta" id="progresso-v4-ytd-delta">—</span>
+          </article>
+          <article class="progresso-v4-tile" data-progress-kpi="target">
+            <span class="progresso-v4-label">Para total anterior</span>
+            <strong id="progresso-v4-target-value">—</strong>
+            <small id="progresso-v4-target-meta">—</small>
+            <span class="progresso-v4-delta" id="progresso-v4-target-delta">—</span>
+          </article>
+          <article class="progresso-v4-tile" data-progress-kpi="avg">
+            <span class="progresso-v4-label">Média/noite YTD</span>
+            <strong id="progresso-v4-avg-value">—</strong>
+            <small id="progresso-v4-avg-meta">—</small>
+            <span class="progresso-v4-delta" id="progresso-v4-avg-delta">—</span>
+          </article>
+          <article class="progresso-v4-tile" data-progress-kpi="nights">
+            <span class="progresso-v4-label">Noites YTD</span>
+            <strong id="progresso-v4-nights-value">—</strong>
+            <small id="progresso-v4-nights-meta">—</small>
+            <span class="progresso-v4-delta" id="progresso-v4-nights-delta">—</span>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="mod-faturacao-v4" class="report-section" data-module="faturacao-v4">
+      <div class="viz-card chart-and-table faturacao-v4-card">
+        <div class="section-heading analisev4-card-heading faturacao-v4-heading">
+          <div class="segmented segmented--primary faturacao-v4-metric-switch" role="tablist" aria-label="Selecionar métrica do gráfico">
+            <button class="filter-btn active" data-faturacao-v4-metric="revenue" role="tab" aria-pressed="true">Faturação</button>
+            <button class="filter-btn" data-faturacao-v4-metric="occupancy" role="tab" aria-pressed="false">Ocupação</button>
+          </div>
+        </div>
+
+        <div class="chart-wrap faturacao-v4-chart-wrap">
+          <canvas id="chart-faturacao-v4" aria-label="Gráfico de faturação V4" role="img"></canvas>
+        </div>
+
+        <div class="chart-toolbar faturacao-v4-toolbar">
+          <div class="toolbar-left segmented segmented--compact" role="tablist" aria-label="Selecionar modo de faturação">
+            <button class="chip-btn active" data-faturacao-v4-mode="mes" role="tab" aria-pressed="true">Mês</button>
+            <button class="chip-btn" data-faturacao-v4-mode="cumulativo" role="tab" aria-pressed="false">Cumulativo</button>
+          </div>
+
+          <div class="toolbar-center segmented segmented--primary" role="tablist" aria-label="Selecionar vista de faturação">
+            <button class="filter-btn active" data-faturacao-v4-view="total" role="tab" aria-pressed="true">Total</button>
+            <button class="filter-btn" data-faturacao-v4-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-faturacao-v4-view="1248" role="tab" aria-pressed="false">1248</button>
+            <button class="filter-btn" data-faturacao-v4-view="compare" role="tab" aria-pressed="false">123 vs 1248</button>
+          </div>
+        </div>
+
+        <div class="faturacao-v4-table-actions">
+          <button type="button" class="chip-btn" id="faturacao-v4-toggle-table" aria-expanded="false">Mostrar tabela</button>
+          <button type="button" class="chip-btn faturacao-v4-history-btn" id="faturacao-v4-toggle-years" hidden>Mostrar anos desde 2024</button>
+        </div>
+
+        <div class="table-wrap faturacao-v4-table-wrap" id="faturacao-v4-table-wrap" hidden>
+          <div id="tabela-faturacao-v4"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+  <script type="module" src="../js/analisev2-error-handler.js"></script>
+  <script type="module" src="../js/analisev2-loading.js"></script>
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/analisev4-faturacao.js"></script>
+</body>
+</html>

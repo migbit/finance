@@ -1991,6 +1991,7 @@ body[data-page="faturas"] .detalhes-table tbody tr.fatura-row-apt-1248:hover {
 
 body[data-page="analisev2"] main,
 body[data-page="analisev3"] main,
+body[data-page="analisev4"] main,
 body[data-page="diversos-page"] main {
   padding-top: calc(var(--header-h) + 1rem);
 }
@@ -1999,6 +2000,8 @@ body[data-page="analisev2"] .tab-navigation,
 body[data-page="analisev2"] .tab-navigation--sticky,
 body[data-page="analisev3"] .tab-navigation,
 body[data-page="analisev3"] .tab-navigation--sticky,
+body[data-page="analisev4"] .tab-navigation,
+body[data-page="analisev4"] .tab-navigation--sticky,
 body[data-page="diversos-page"] .tab-navigation {
   border-radius: var(--radius-lg);
 }
@@ -2022,6 +2025,9 @@ body[data-page="analisev2"] section[id] {
   scroll-margin-top: calc(var(--header-h) + 40px);
 }
 body[data-page="analisev3"] section[id] {
+  scroll-margin-top: calc(var(--header-h) + 40px);
+}
+body[data-page="analisev4"] section[id] {
   scroll-margin-top: calc(var(--header-h) + 40px);
 }
 body[data-page="diversos-page"] .tab-navigation {
@@ -2392,7 +2398,8 @@ body[data-page="diversos-page"] .tab-navigation {
 
 @media (max-width: 1023px) {
   body[data-page="analisev2"] .chart-toolbar,
-  body[data-page="analisev3"] .chart-toolbar {
+  body[data-page="analisev3"] .chart-toolbar,
+  body[data-page="analisev4"] .chart-toolbar {
     padding: 0.85rem 1rem;
     column-gap: 0.65rem;
   }
@@ -2400,7 +2407,8 @@ body[data-page="diversos-page"] .tab-navigation {
 
 @media (max-width: 768px) {
   body[data-page="analisev2"] .chart-toolbar,
-  body[data-page="analisev3"] .chart-toolbar {
+  body[data-page="analisev3"] .chart-toolbar,
+  body[data-page="analisev4"] .chart-toolbar {
     grid-template-columns: 1fr;
     grid-template-areas: 'center' 'left' 'right';
     row-gap: 0.8rem;
@@ -2409,10 +2417,13 @@ body[data-page="diversos-page"] .tab-navigation {
 
   body[data-page="analisev2"] .chart-toolbar .toolbar-center,
   body[data-page="analisev3"] .chart-toolbar .toolbar-center,
+  body[data-page="analisev4"] .chart-toolbar .toolbar-center,
   body[data-page="analisev2"] .chart-toolbar .toolbar-left,
   body[data-page="analisev3"] .chart-toolbar .toolbar-left,
+  body[data-page="analisev4"] .chart-toolbar .toolbar-left,
   body[data-page="analisev2"] .chart-toolbar .toolbar-right,
-  body[data-page="analisev3"] .chart-toolbar .toolbar-right {
+  body[data-page="analisev3"] .chart-toolbar .toolbar-right,
+  body[data-page="analisev4"] .chart-toolbar .toolbar-right {
     width: 100%;
   }
 }
@@ -3481,7 +3492,8 @@ main,
   color: var(--text-dim);
 }
 body[data-page="analisev2"] .chart-toolbar,
-body[data-page="analisev3"] .chart-toolbar {
+body[data-page="analisev3"] .chart-toolbar,
+body[data-page="analisev4"] .chart-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-areas: 'left center right';
@@ -3497,39 +3509,45 @@ body[data-page="analisev3"] .chart-toolbar {
 }
 
 body[data-page="analisev2"] .progress-toolbar,
-body[data-page="analisev3"] .progress-toolbar {
+body[data-page="analisev3"] .progress-toolbar,
+body[data-page="analisev4"] .progress-toolbar {
   margin-top: 1rem;
 }
 
 body[data-page="analisev2"] .chart-toolbar .toolbar-left,
-body[data-page="analisev3"] .chart-toolbar .toolbar-left {
+body[data-page="analisev3"] .chart-toolbar .toolbar-left,
+body[data-page="analisev4"] .chart-toolbar .toolbar-left {
   grid-area: left;
   justify-content: flex-start;
   justify-self: flex-start;
 }
 
 body[data-page="analisev2"] .chart-toolbar .toolbar-center,
-body[data-page="analisev3"] .chart-toolbar .toolbar-center {
+body[data-page="analisev3"] .chart-toolbar .toolbar-center,
+body[data-page="analisev4"] .chart-toolbar .toolbar-center {
   grid-area: center;
   justify-content: center;
   justify-self: center;
 }
 
 body[data-page="analisev2"] .chart-toolbar .toolbar-right,
-body[data-page="analisev3"] .chart-toolbar .toolbar-right {
+body[data-page="analisev3"] .chart-toolbar .toolbar-right,
+body[data-page="analisev4"] .chart-toolbar .toolbar-right {
   grid-area: right;
   justify-content: flex-end;
   justify-self: flex-end;
 }
 
 body[data-page="analisev2"] .toolbar-placeholder,
-body[data-page="analisev3"] .toolbar-placeholder {
+body[data-page="analisev3"] .toolbar-placeholder,
+body[data-page="analisev4"] .toolbar-placeholder {
   min-height: 1px;
   min-width: 60px;
 }
 
 body[data-page="analisev2"] .chart-toolbar .segmented,
-body[data-page="analisev3"] .chart-toolbar .segmented {
+body[data-page="analisev3"] .chart-toolbar .segmented,
+body[data-page="analisev4"] .chart-toolbar .segmented {
   display: inline-flex;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
@@ -3539,7 +3557,8 @@ body[data-page="analisev3"] .chart-toolbar .segmented {
 }
 
 body[data-page="analisev2"] .chart-toolbar .segmented button,
-body[data-page="analisev3"] .chart-toolbar .segmented button {
+body[data-page="analisev3"] .chart-toolbar .segmented button,
+body[data-page="analisev4"] .chart-toolbar .segmented button {
   border: none;
   background: transparent;
   color: var(--text);
@@ -4364,5 +4383,309 @@ body[data-page="analisev3"] .chart-toolbar .segmented button {
   .confirm-dialog {
     width: 90%;
     min-width: 0;
+  }
+}
+
+/* --- Analise V4 ---------------------------------------------------------- */
+body[data-page="analisev4"] main {
+  max-width: 100%;
+}
+
+body[data-page="analisev4"] .analisev4-intro {
+  margin-bottom: 18px;
+}
+
+body[data-page="analisev4"] .analisev4-intro h2 {
+  margin-bottom: 0;
+  letter-spacing: 0;
+}
+
+body[data-page="analisev4"] .faturacao-v4-card {
+  gap: 1rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+body[data-page="analisev4"] .report-section {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+body[data-page="analisev4"] .progresso-v4-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  border-radius: var(--radius-lg);
+}
+
+body[data-page="analisev4"] .analisev4-dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+body[data-page="analisev4"] .analisev4-dashboard-header h4 {
+  margin: 0;
+  color: var(--text);
+  text-align: center;
+}
+
+body[data-page="analisev4"] .analisev4-dashboard-header .progresso-v4-switch {
+  position: absolute;
+  right: 0;
+}
+
+body[data-page="analisev4"] .progresso-v4-switch {
+  display: inline-flex;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: var(--shadow-1);
+}
+
+body[data-page="analisev4"] .progresso-v4-switch button {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 0.4rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+body[data-page="analisev4"] .progresso-v4-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+body[data-page="analisev4"] .progresso-v4-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+body[data-page="analisev4"] .progresso-v4-tile--primary {
+  background: #f1f5f9;
+  border-color: rgba(15, 23, 42, 0.12);
+}
+
+body[data-page="analisev4"] .progresso-v4-label {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+body[data-page="analisev4"] .progresso-v4-tile strong {
+  color: var(--text);
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
+body[data-page="analisev4"] .progresso-v4-tile small {
+  color: var(--text-dim);
+  min-height: 1.2rem;
+}
+
+body[data-page="analisev4"] .progresso-v4-delta {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  background: #eef2f7;
+  color: var(--text-dim);
+}
+
+body[data-page="analisev4"] .progresso-v4-delta.is-positive {
+  background: #ecfdf5;
+  color: #16a34a;
+}
+
+body[data-page="analisev4"] .progresso-v4-delta.is-negative {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+body[data-page="analisev4"] .analisev4-card-heading {
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+body[data-page="analisev4"] .analisev4-card-heading h4 {
+  margin: 0;
+  color: var(--text);
+}
+
+body[data-page="analisev4"] .faturacao-v4-heading {
+  justify-content: center;
+}
+
+body[data-page="analisev4"] .faturacao-v4-metric-switch {
+  display: inline-flex;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: var(--shadow-1);
+}
+
+body[data-page="analisev4"] .faturacao-v4-metric-switch button {
+  border: none;
+  background: transparent;
+  color: var(--text);
+  padding: 0.45rem 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+body[data-page="analisev4"] .faturacao-v4-chart-wrap {
+  height: 360px;
+  min-height: 320px;
+}
+
+body[data-page="analisev4"] .faturacao-v4-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: 'left center right';
+  background: #f1f5f9;
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+body[data-page="analisev4"] .faturacao-v4-toolbar::after {
+  content: '';
+  grid-area: right;
+  min-width: 1px;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table-wrap[hidden],
+body[data-page="analisev4"] .faturacao-v4-history-btn[hidden] {
+  display: none;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table-wrap {
+  margin-top: 0.25rem;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table th,
+body[data-page="analisev4"] .faturacao-v4-table td {
+  white-space: nowrap;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table thead th {
+  background: #f8fafc;
+}
+
+body[data-page="analisev4"] .faturacao-v4-total-row td {
+  background: #f8fafc !important;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table .faturacao-v4-diff-positive {
+  color: #16a34a !important;
+  font-weight: 700;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table .faturacao-v4-diff-negative {
+  color: #dc2626 !important;
+  font-weight: 700;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table .faturacao-v4-diff-empty {
+  color: var(--text-dim) !important;
+}
+
+body[data-page="analisev4"] .faturacao-v4-cell-123,
+body[data-page="analisev4"] .apt-123 {
+  color: rgba(37, 99, 235, 1);
+}
+
+body[data-page="analisev4"] .faturacao-v4-cell-1248,
+body[data-page="analisev4"] .apt-1248 {
+  color: rgba(217, 119, 6, 1);
+}
+
+body[data-page="analisev4"] .faturacao-v4-empty {
+  color: var(--text-dim);
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  body[data-page="analisev4"] .faturacao-v4-card,
+  body[data-page="analisev4"] .report-section {
+    border-radius: 8px;
+  }
+
+  body[data-page="analisev4"] .faturacao-v4-chart-wrap {
+    height: 300px;
+    min-height: 280px;
+  }
+
+  body[data-page="analisev4"] .analisev4-dashboard-header {
+    justify-content: center;
+    text-align: center;
+  }
+
+  body[data-page="analisev4"] .analisev4-dashboard-header .progresso-v4-switch {
+    position: static;
+  }
+
+  body[data-page="analisev4"] .progresso-v4-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body[data-page="analisev4"] .progresso-v4-switch {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  body[data-page="analisev4"] .progresso-v4-switch button {
+    flex: 1 0 auto;
+  }
+
+  body[data-page="analisev4"] .faturacao-v4-toolbar {
+    grid-template-columns: 1fr;
+    grid-template-areas: 'center' 'left';
+    justify-items: stretch;
+  }
+
+  body[data-page="analisev4"] .faturacao-v4-toolbar::after {
+    content: none;
+  }
+
+  body[data-page="analisev4"] .chart-toolbar .segmented {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  body[data-page="analisev4"] .chart-toolbar .segmented button {
+    flex: 0 0 auto;
+  }
+
+  body[data-page="analisev4"] .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }

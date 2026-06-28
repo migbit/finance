@@ -248,10 +248,11 @@ export class CryptoPrices {
     }
   }
 
-  static getCachedUSD(symbol) {
+  static getCachedUSD(symbol, { allowExpired = false } = {}) {
     const up = symbol.toUpperCase();
     const c = Storage.getJSON(Storage.PREFIXES.PRICE + up);
-    return this.isFresh(c) ? c.usd : 0;
+    if (!c || !(Number(c.usd) > 0)) return 0;
+    return allowExpired || this.isFresh(c) ? Number(c.usd) : 0;
   }
 }
 
@@ -265,9 +266,15 @@ export class PriceResolver {
     if (this.binancePriceMap.has(up)) return { price: this.binancePriceMap.get(up), src: 'binance' };
     const cached = CryptoPrices.getCachedUSD(up);
     if (cached > 0) return { price: cached, src: 'cached' };
-    const { price, src } = await CryptoPrices.fetchUSD(up);
-    if (price > 0) Storage.setJSON(Storage.PREFIXES.PRICE + up, { usd: price, ts: Date.now() });
-    return { price, src: price > 0 ? src : 'unknown' };
+    try {
+      const { price, src } = await CryptoPrices.fetchUSD(up);
+      if (price > 0) Storage.setJSON(Storage.PREFIXES.PRICE + up, { usd: price, ts: Date.now() });
+      return { price, src: price > 0 ? src : 'unknown' };
+    } catch (error) {
+      const stale = CryptoPrices.getCachedUSD(up, { allowExpired: true });
+      console.warn(`Price unavailable for ${up}; using ${stale > 0 ? 'stale cache' : 'zero value'}.`, error);
+      return { price: stale, src: stale > 0 ? 'stale-cache' : 'unavailable' };
+    }
   }
 }
 
