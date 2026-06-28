@@ -1,117 +1,101 @@
-[debug] [2026-06-28T10:57:27.348Z] ----------------------------------------------------------------------
-[debug] [2026-06-28T10:57:27.350Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\apart\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
-[debug] [2026-06-28T10:57:27.350Z] CLI Version:   15.22.0
-[debug] [2026-06-28T10:57:27.350Z] Platform:      win32
-[debug] [2026-06-28T10:57:27.350Z] Node Version:  v24.14.0
-[debug] [2026-06-28T10:57:27.351Z] Detected Agent: unknown
-[debug] [2026-06-28T10:57:27.351Z] Time:          Sun Jun 28 2026 11:57:27 GMT+0100 (Hora de verão da Europa Ocidental)
-[debug] [2026-06-28T10:57:27.351Z] ----------------------------------------------------------------------
+[debug] [2026-06-28T11:05:14.259Z] ----------------------------------------------------------------------
+[debug] [2026-06-28T11:05:14.262Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\apart\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting,firestore:rules --dry-run
+[debug] [2026-06-28T11:05:14.262Z] CLI Version:   15.22.0
+[debug] [2026-06-28T11:05:14.263Z] Platform:      win32
+[debug] [2026-06-28T11:05:14.263Z] Node Version:  v24.14.0
+[debug] [2026-06-28T11:05:14.263Z] Detected Agent: unknown
+[debug] [2026-06-28T11:05:14.263Z] Time:          Sun Jun 28 2026 12:05:14 GMT+0100 (Hora de verão da Europa Ocidental)
+[debug] [2026-06-28T11:05:14.263Z] ----------------------------------------------------------------------
 [debug] 
-[debug] [2026-06-28T10:57:29.218Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
-[debug] [2026-06-28T10:57:29.218Z] > authorizing via signed-in user (migbit84@gmail.com)
-[debug] [2026-06-28T10:57:29.218Z] [iam] checking project apartments-a4b17 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
-[debug] [2026-06-28T10:57:29.219Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:29.219Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:29.220Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions [none]
-[debug] [2026-06-28T10:57:29.220Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions  x-goog-user-project=apartments-a4b17
-[debug] [2026-06-28T10:57:29.220Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
-[debug] [2026-06-28T10:57:29.527Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions 200
-[debug] [2026-06-28T10:57:29.527Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
-[debug] [2026-06-28T10:57:29.528Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:29.528Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:29.528Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/apartments-a4b17 [none]
-[debug] [2026-06-28T10:57:29.927Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/apartments-a4b17 200
-[debug] [2026-06-28T10:57:29.927Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/apartments-a4b17 {"projectId":"apartments-a4b17","projectNumber":"465612199373","displayName":"apartments","name":"projects/apartments-a4b17","resources":{"hostingSite":"apartments-a4b17","realtimeDatabaseInstance":"apartments-a4b17-default-rtdb"},"state":"ACTIVE","etag":"1_d12322ec-83b7-4697-895e-9d1d7dfcd9c3"}
+[debug] [2026-06-28T11:05:16.254Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-28T11:05:16.254Z] > authorizing via signed-in user (migbit84@gmail.com)
+[debug] [2026-06-28T11:05:16.254Z] [iam] checking project apartments-a4b17 for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-06-28T11:05:16.256Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:16.256Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:16.257Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions [none]
+[debug] [2026-06-28T11:05:16.257Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions  x-goog-user-project=apartments-a4b17
+[debug] [2026-06-28T11:05:16.257Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-28T11:05:16.651Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions 200
+[debug] [2026-06-28T11:05:16.651Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-28T11:05:16.652Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:16.652Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:16.652Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/apartments-a4b17 [none]
+[debug] [2026-06-28T11:05:17.078Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/apartments-a4b17 200
+[debug] [2026-06-28T11:05:17.078Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/apartments-a4b17 {"projectId":"apartments-a4b17","projectNumber":"465612199373","displayName":"apartments","name":"projects/apartments-a4b17","resources":{"hostingSite":"apartments-a4b17","realtimeDatabaseInstance":"apartments-a4b17-default-rtdb"},"state":"ACTIVE","etag":"1_d12322ec-83b7-4697-895e-9d1d7dfcd9c3"}
+[info] 
+[info] === Deploying to 'apartments-a4b17'...
+[info] 
+[info] i  deploying firestore, hosting 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[info] i  firestore: ensuring required API firestore.googleapis.com is enabled... 
+[debug] [2026-06-28T11:05:17.083Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:17.084Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:17.084Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/apartments-a4b17/databases/(default) [none]
+[debug] [2026-06-28T11:05:17.441Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/apartments-a4b17/databases/(default) 200
+[debug] [2026-06-28T11:05:17.441Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/apartments-a4b17/databases/(default) {"name":"projects/apartments-a4b17/databases/(default)","uid":"42b460be-53db-4a09-b225-2f6cd3b4714f","createTime":"2024-10-04T00:38:22.701614Z","updateTime":"2024-10-04T00:38:22.701614Z","locationId":"eur3","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-06-28T10:05:17.768558Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"e","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IJqap4nlqZUDMJb2zPeM5JID"}
+[info] i  cloud.firestore: checking firebase/firestore.rules for compilation errors... 
+[debug] [2026-06-28T11:05:17.442Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:17.442Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:17.443Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/apartments-a4b17:test [none]
+[debug] [2026-06-28T11:05:17.443Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/apartments-a4b17:test [omitted]
+[debug] [2026-06-28T11:05:17.872Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/apartments-a4b17:test 200
+[debug] [2026-06-28T11:05:17.872Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/apartments-a4b17:test {}
+[info] +  cloud.firestore: rules file firebase/firestore.rules compiled successfully 
+[debug] [2026-06-28T11:05:17.874Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:17.874Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:17.874Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/apartments-a4b17/sites/apartments-a4b17 [none]
+[debug] [2026-06-28T11:05:19.043Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/apartments-a4b17/sites/apartments-a4b17 200
+[debug] [2026-06-28T11:05:19.044Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/apartments-a4b17/sites/apartments-a4b17 {"name":"projects/apartments-a4b17/sites/apartments-a4b17","defaultUrl":"https://apartments-a4b17.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-06-28T11:05:19.045Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:19.046Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:05:19.046Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions [none]
+[debug] [2026-06-28T11:05:19.046Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-06-28T11:05:20.875Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions 200
+[debug] [2026-06-28T11:07:53.356Z] ----------------------------------------------------------------------
+[debug] [2026-06-28T11:07:53.359Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\apart\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js deploy --only hosting
+[debug] [2026-06-28T11:07:53.359Z] CLI Version:   15.22.0
+[debug] [2026-06-28T11:07:53.359Z] Platform:      win32
+[debug] [2026-06-28T11:07:53.359Z] Node Version:  v24.14.0
+[debug] [2026-06-28T11:07:53.359Z] Detected Agent: unknown
+[debug] [2026-06-28T11:07:53.360Z] Time:          Sun Jun 28 2026 12:07:53 GMT+0100 (Hora de verão da Europa Ocidental)
+[debug] [2026-06-28T11:07:53.360Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-06-28T11:07:55.803Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-06-28T11:07:55.803Z] > authorizing via signed-in user (migbit84@gmail.com)
+[debug] [2026-06-28T11:07:55.803Z] [iam] checking project apartments-a4b17 for permissions ["firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2026-06-28T11:07:55.805Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:55.805Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:55.806Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions [none]
+[debug] [2026-06-28T11:07:55.806Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions  x-goog-user-project=apartments-a4b17
+[debug] [2026-06-28T11:07:55.806Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-28T11:07:56.163Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions 200
+[debug] [2026-06-28T11:07:56.163Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2026-06-28T11:07:56.163Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:56.163Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:56.164Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/apartments-a4b17 [none]
+[debug] [2026-06-28T11:07:56.617Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/apartments-a4b17 200
+[debug] [2026-06-28T11:07:56.618Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/apartments-a4b17 {"projectId":"apartments-a4b17","projectNumber":"465612199373","displayName":"apartments","name":"projects/apartments-a4b17","resources":{"hostingSite":"apartments-a4b17","realtimeDatabaseInstance":"apartments-a4b17-default-rtdb"},"state":"ACTIVE","etag":"1_d12322ec-83b7-4697-895e-9d1d7dfcd9c3"}
 [info] 
 [info] === Deploying to 'apartments-a4b17'...
 [info] 
 [info] i  deploying hosting 
-[debug] [2026-06-28T10:57:29.932Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:29.933Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:29.933Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/apartments-a4b17/sites/apartments-a4b17 [none]
-[debug] [2026-06-28T10:57:31.115Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/apartments-a4b17/sites/apartments-a4b17 200
-[debug] [2026-06-28T10:57:31.115Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/apartments-a4b17/sites/apartments-a4b17 {"name":"projects/apartments-a4b17/sites/apartments-a4b17","defaultUrl":"https://apartments-a4b17.web.app","type":"DEFAULT_SITE"}
-[debug] [2026-06-28T10:57:31.117Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:31.117Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:31.117Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions [none]
-[debug] [2026-06-28T10:57:31.117Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
-[debug] [2026-06-28T10:57:33.294Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions 200
-[debug] [2026-06-28T10:57:33.294Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions {"name":"projects/465612199373/sites/apartments-a4b17/versions/c73f528a92f9dc72","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-06-28T11:07:56.622Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:56.622Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:56.622Z] >>> [apiv2][query] GET https://firebasehosting.googleapis.com/v1beta1/projects/apartments-a4b17/sites/apartments-a4b17 [none]
+[debug] [2026-06-28T11:07:57.727Z] <<< [apiv2][status] GET https://firebasehosting.googleapis.com/v1beta1/projects/apartments-a4b17/sites/apartments-a4b17 200
+[debug] [2026-06-28T11:07:57.727Z] <<< [apiv2][body] GET https://firebasehosting.googleapis.com/v1beta1/projects/apartments-a4b17/sites/apartments-a4b17 {"name":"projects/apartments-a4b17/sites/apartments-a4b17","defaultUrl":"https://apartments-a4b17.web.app","type":"DEFAULT_SITE"}
+[debug] [2026-06-28T11:07:57.728Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:57.729Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:57.729Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions [none]
+[debug] [2026-06-28T11:07:57.729Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2026-06-28T11:07:59.342Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions 200
+[debug] [2026-06-28T11:07:59.342Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/apartments-a4b17/versions {"name":"projects/465612199373/sites/apartments-a4b17/versions/4bea1718f7993c89","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
 [info] i  hosting[apartments-a4b17]: beginning deploy... 
 [info] i  hosting[apartments-a4b17]: found 88 files in . 
-[debug] [2026-06-28T10:57:33.319Z] [hosting] uploading with 200 concurrency
-[debug] [2026-06-28T10:57:33.333Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:33.333Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:33.334Z] [hosting] hash cache [] stored for 88 files
-[debug] [2026-06-28T10:57:33.334Z] [hosting][hash queue][FINAL] {"max":9,"min":0,"avg":0.8289691499745063,"active":0,"complete":88,"success":88,"errored":0,"retried":0,"total":88,"elapsed":13}
-[debug] [2026-06-28T10:57:33.334Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/465612199373/sites/apartments-a4b17/versions/c73f528a92f9dc72:populateFiles [none]
-[debug] [2026-06-28T10:57:33.334Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/465612199373/sites/apartments-a4b17/versions/c73f528a92f9dc72:populateFiles {"files":{"/sw.js":"f9c42baa33816bd57dbdb5bee8cae8bf10cf8a9ab8dfc0d02f2b44014a64652a","/offline.html":"83ef81dcc9bbc45b84d1e268df2d63c9a59173265acd88211fafa59ef4c090a1","/manifest.json":"434f60d12596d1478fcab219b13cf93c82a61b022f6cb7bf7d328e7ad5a460c7","/index.html":"1f967f48228c16935a1fa261e020cce83f3f139b5978777f95748dc5dd5c50c9","/horas-limpeza.html":"11bcd9ff770d4f1995e9209991c6f52a71a302013a883bbb2dc556429791e048","/favicon.ico":"669a36fb39b3a71565a859726ea3a4657fe8da70299f248a27cc2db83bbb49be","/modules/tmt.html":"a6d31ca4f4dd6a0e6380b9b6616c99856462d4115d7f6eeb0f534e53cf24bca9","/modules/settings.html":"84de6a04e180f9b7c2897dcc190a2a2225e089924588dff84e632ea45a75cfbf","/modules/questionario.html":"1691e376ae1658273f82a31b27b50db8fe6d4ddab878f702c19b74376283b67a","/modules/pallco.html":"840ec5e772ae9a0691fd8656adc8c53120910e77709ac3996401ecfeb62563f4","/modules/mensagensData.json":"d165bfe0c1c115312475be51e1d0aa0be269f901086efc02f788732024e96615","/modules/iva.html":"83f04f157c29ae0f64fa89addff8cda4bb6601ce46747145d8eed64531c5ece8","/modules/ginasio.html":"0e5778c6b12dee006bdc643f451b0fb3d925db0a1106c3b5d015a15b63d82aa0","/modules/favicon.ico":"669a36fb39b3a71565a859726ea3a4657fe8da70299f248a27cc2db83bbb49be","/modules/faturas.html":"d2383077a6d1be204a9d17642d7eeb8ec5a0e2a0401bb2d84d2a6cb13374feb9","/modules/faturas-em-falta.html":"88a16feca76d060f6dd4c182b33b220d8efb9eafe5fec3da0ec96eca8fd08f72","/modules/diversos.html":"026c53692643482555d9d9c036a873757d7c8c3f7547da810d44759859aafbd3","/modules/dca.html":"4e2517514999429adf59bc38183d8c3c1c9c1c7a6978d88cbfa5faa14a4f3175","/modules/dca-revolut.html":"791869898844de73f298c33b5537edbe1572355a75a80e979ba4c108ecdebdc6","/modules/datas.html":"8a222b94f6d58f258e9deff149279ee7a34037db64e5e0a07d02b8c440b215ab","/modules/crypto.html":"7ffb061db5e7d987856411ff2b45ffa8dd7c4948f95f793f6491ccb6ad3cd237","/modules/cleaning-hours.html":"ca742b5379a0497972b8a3379a46f404248801125b1c18cd724536d872f3c2dd","/modules/carlos.html":"08200bdc156593ed68cebca08dfcbe9e1fa02d2dbcb265b8a09855be5e16b3e3","/modules/caixa.html":"d74c7bb52a90d9e47b58993dffe46f66590b2a2c5b9df6dc03530b6624b64b7d","/modules/boletim.html":"e288e69574ef3edc04158c38f94c3ed34e0b5731f79dae445ab2f647d171036b","/modules/analisev4.html":"4938280a836a6bf3530ac6b08d150a1ef8125211ab4da5f8976bffad3f389582","/modules/analisev3.html":"b2055158535bcc6bb61c38204f2acd06442da131357c80aa7f6e9df9ca967f6c","/maps/Manual1248.pdf":"b307bb398405445b1e1880f4f4c160270bbf6ef08482ffef806c8d9db4c60da4","/maps/Manual123.pdf":"b88acc47b66c2bd81e97d31b4df7b6bd2e5d42543a43aa16f373a6a766a22620","/maps/1248.jpg":"68d912ec003d320286a137f9e41092e75b4944aea20a1f0436756fa96a011dc0","/maps/123.jpg":"77553ab2b351e5153fea757cef82fb9d4369b5283ca82f38aa9327850a59e2ae","/js/toast.js":"52949e21ccf0166a7b9f830f2d3abe1c13ee60bbdd0805bb43ed7976c4eb217e","/js/tmt.js":"eb31d8ccad340c2c34f082b81c7759ec20cced5ccc6aafbde1ec27830c89be2c","/js/state.js":"a290a185e1267acccb9e80b871cae2e14a121d19d3c1638ab0f3ed9630259fca","/js/settings.js":"cbd910a6e7f18b8c3cf2eb6793f4f87fe24946f155c692eebe81316e39446173","/js/script.js":"5f6b1a75dcfeb593682b181f88e704d901fa75a0e14b935eb799b975e2b19faa","/js/questionario.js":"3b7248a82a9eefb2f57e8d69e65769ef8874cefa4aa6bf5061783539519776c1","/js/ginasio.js":"8c98bdc6e2080b05a2b70b3bb39f1fd9e6c2132e06fba0f4ecd3b351bc322f94","/js/formatters.js":"2cb7c7a16f210405ef3b0e757937693f0872d9a4f4fa0b7c69858b77f1772df9","/js/faturas.js":"8ae178404ce0630d7c6a135249b6ae1a12522d2e08cc17f7b7b01152ae27438b","/js/faturas-em-falta.js":"3ff3e30d2604ab729c5c7666b541b81cba4174e2ef7409f3ef9ffbe5dbf96831","/js/diversos.js":"5f128b1592373176135050cee82818d1324aaeb42f17dbeb651cdb2286f0f6b5","/js/dca-ui.js":"9377965b039c00da5f26d27a9ba6c93587cb434b4599cebe59d402c4dc271fce","/js/dca-revolut.js":"cfd249cba8ed4f0f04a924dd129557eabe38ef6e955b4494bda9aecf4e2b691c","/js/dca-quotes.js":"e49d7fad9dadcd974228444b22f183226fb325c09940f7ec185bf54b90e5fe8b","/js/dca-main.js":"6778b894f16923b89c906749efda78dda0815139591ec57bbbaf2c1926d7cd3b","/js/dca-core.js":"d5338d544e2a09fe654ad46e6d55c82d6bd976b2c4ccfedb6ecbdca097aac09c","/js/dca-calculations.js":"8bbd66dde5171a02a04be651e5fb8a127212f13beecd66ced86d8f3f8966e51c","/js/datas.js":"52c7bdba61022f28aa6d920cfd13891d45f20b89e4af484a6ed53519673742dc","/js/crypto.js":"6949aba41164b93d1f3bb098ba21c87acd8bf53ef0f57cec7ed5d5c9f9a4df92","/js/crypto-ui.js":"c66f6853352aa3af612a20174d1a92cc0ad7a363a19beb325852ad9fb7095dfd","/js/config.js":"9e7d5d536e5536485f623f4588bbc3f2e09c093ac00a570f22ac0567328e3819","/js/cleaning-hours-public.js":"d64bb65237260070548bac3e8e20f6a70f4ae8d9688542d2400d481071d8b9c6","/js/cleaning-hours-admin.js":"f60f08df5f29286698ca02e3b347d6c6895b2119eee6f9bcafb318227abdbe3a","/js/caixa.js":"ffbf8bf5555511ede14f54440bd55d3e1b26a281a35e7d5c3355052704d6d6d2","/js/boletim-public.js":"0b02d1a311bed9c2c8ff9802000d908c54d2765ab6880224f15268d7f60ac12c","/js/api.js":"b0860a04a625f0262914784b8d5d077920abf791bddceab7edf7d328e865a64c","/js/analisev4-faturacao.js":"cfc5d319e76fbc23518e825d835f3c45b2487bfd7efaa6f224659ced3dde2828","/js/analisev3-weekpart.js":"0b1f4a22a5e9f82639236808ce32e9dfbf7b8538b9063fe4c9ecdd6f8349d503","/js/analisev3-seasonal.js":"becf4ceca066b63debf0b2c5d7903214604773eb72210de5eaa270271ebc03bb","/js/analisev3-revpan.js":"e1d22f7a3cd6f287b7ce1d3952089bf28283494b93c08ba55dcd93c51166fa25","/js/analisev3-pricing-lab.js":"38f1f62d9911d9d1227b1963fe7646c187b4af69b2823b2894a23ae9797787a2","/js/analisev3-metrics.js":"6ed7c858dd3280a3b75463455f38388b4d506da60c9460c2ac2a781a13c9c0d8","/js/analisev3-leadtime.js":"51fec253f305208f9b2159cc95a7e52d56ca90786ac3c5f58015b0ecbb4d729d","/js/analisev3-gap-analysis.js":"cf22bfbb8b86d1b25756878e01ff5904ff2ba3058dc665031c030f384e81a3f1","/js/analisev3-data.js":"ac415ae4be46a11e4575d98409eecd4ba41d021c4c82097a87c41bb624c26a5b","/js/analisev2-valor-medio.js":"a3e228993ed9a059065a1056d78a3dee549c19ab876f4f7addc5aa6f95dd6a57","/js/analisev2-ui.js":"76138187f28398dbb02bba74d9f64400310c17ec0f8145ae17631725d1ae8b78","/js/analisev2-taxalimpeza.js":"29fcfa5569d4d245cd78d00719c679d3834ba09d25c17c6374488b885f58bb4e","/js/analisev2-refresh.js":"01fde54c577bed394f4e42ab3ed589f174aafa8b02b6aeb6c17c15c249f1296d","/js/analisev2-progresso.js":"86c2774e74195b615caf6e87f0ce972fa6b058ca6c63d6412c135ac0546a2cd9","/js/analisev2-ocupacao.js":"6ec4a8fc525ceccd09a89aa9bc86dc81f8dced1be3c6b8e6c6f0ce5b7b5dad38","/js/analisev2-noites-hospedes.js":"bbeb78ee521a20c4622d29c5fda619e4d3bd0d96015aca14735d42c504516a04","/js/analisev2-loading.js":"931a39d3a267e0acfd188fa9b621cf4d6b103b6ff4c9c5d7da19b51dcd1830ab","/js/analisev2-heatmap.js":"cb4441914dd69fe86147bed1d289970bf3b878ab10d55fdc07354689e1b0e35d","/js/analisev2-faturacao.js":"167b54072a0e79cfa9479af07ed7aa44cc69caa44337fdfd51355a89f2acba21","/js/analisev2-error-handler.js":"c5c998d313e06ceb4db331bf2999642b996eb1784b7d063b6d5dbd4aa7d3cbfe","/js/analisev2-core.js":"c935beeb2794fa7475e8a5c56dbc5b59c4b3be231e09e539af5b49c4238e0982","/js/analisev2-checkins-semana.js":"9dfbbbb068ff6df2ec69dffc2a61a6b9f2d5a29c3e51e8a1c7a3e6c3f1217d5c","/js/analisev2-charts.js":"76edeb7c09703eb65369b0257f48264dfc310c5608397f39fbbecb8af0bbab19","/icons/icon-512-v2.png":"fd011cc78990836fe6022a0199e653710f7c7d698ba03e1fd3eac31ac363da5a","/icons/icon-192-v2.png":"2b22554efc0cddc8e98a6e74197fb1df5c705922ae11d4d9ade5ddbc93a5f437","/css/styles.pcolor.css":"02d5fe16290a16b6c784296d880ce5b386dc8b2251300bb5e7e50a6a7c418e07","/css/styles.css":"37a2ad99ad97f3cc8e0b86393497d80e51dcf4dd3d4ba1cb44259ba0fc9e0f5e","/css/mobile.css":"2307fe0b93d22924d6d10740c706e8735a3a6cdbfe69241c6ec44fa5b9f4211f","/.claude/settings.local.json":"005859909af47f53590365f70dfbc67001026f331215dc44586f8023c407ae0a","/modules/boletins.html":"c489b989bb8538b78e07a8e284d04356d5ab2e02f29704368758b44aa7ba2a88","/js/boletins.js":"750a443249fb52beeb3232de3905f8b1d493752ecfda5e5ad0758dd4244a7624"}}
-[debug] [2026-06-28T10:57:34.266Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/465612199373/sites/apartments-a4b17/versions/c73f528a92f9dc72:populateFiles 200
-[debug] [2026-06-28T10:57:34.266Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/465612199373/sites/apartments-a4b17/versions/c73f528a92f9dc72:populateFiles {"uploadRequiredHashes":["750a443249fb52beeb3232de3905f8b1d493752ecfda5e5ad0758dd4244a7624","c489b989bb8538b78e07a8e284d04356d5ab2e02f29704368758b44aa7ba2a88"],"uploadUrl":"https://upload-firebasehosting.googleapis.com/upload/sites/apartments-a4b17/versions/c73f528a92f9dc72/files"}
-[debug] [2026-06-28T10:57:34.267Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:34.267Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:34.267Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:34.267Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:34.267Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/apartments-a4b17/versions/c73f528a92f9dc72/files/750a443249fb52beeb3232de3905f8b1d493752ecfda5e5ad0758dd4244a7624 [none]
-[debug] [2026-06-28T10:57:34.267Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/apartments-a4b17/versions/c73f528a92f9dc72/files/750a443249fb52beeb3232de3905f8b1d493752ecfda5e5ad0758dd4244a7624 [stream]
-[debug] [2026-06-28T10:57:34.268Z] >>> [apiv2][query] POST https://upload-firebasehosting.googleapis.com/upload/sites/apartments-a4b17/versions/c73f528a92f9dc72/files/c489b989bb8538b78e07a8e284d04356d5ab2e02f29704368758b44aa7ba2a88 [none]
-[debug] [2026-06-28T10:57:34.269Z] >>> [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/apartments-a4b17/versions/c73f528a92f9dc72/files/c489b989bb8538b78e07a8e284d04356d5ab2e02f29704368758b44aa7ba2a88 [stream]
-[debug] [2026-06-28T10:57:34.270Z] [hosting][populate queue][FINAL] {"max":935,"min":935,"avg":935,"active":0,"complete":1,"success":1,"errored":0,"retried":0,"total":1,"elapsed":938}
-[debug] [2026-06-28T10:57:34.270Z] [hosting] uploads queued: 2
-[debug] [2026-06-28T10:57:35.143Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/apartments-a4b17/versions/c73f528a92f9dc72/files/750a443249fb52beeb3232de3905f8b1d493752ecfda5e5ad0758dd4244a7624 200
-[debug] [2026-06-28T10:57:35.143Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/apartments-a4b17/versions/c73f528a92f9dc72/files/750a443249fb52beeb3232de3905f8b1d493752ecfda5e5ad0758dd4244a7624 [stream]
-[debug] [2026-06-28T10:57:35.287Z] <<< [apiv2][status] POST https://upload-firebasehosting.googleapis.com/upload/sites/apartments-a4b17/versions/c73f528a92f9dc72/files/c489b989bb8538b78e07a8e284d04356d5ab2e02f29704368758b44aa7ba2a88 200
-[debug] [2026-06-28T10:57:35.287Z] <<< [apiv2][body] POST https://upload-firebasehosting.googleapis.com/upload/sites/apartments-a4b17/versions/c73f528a92f9dc72/files/c489b989bb8538b78e07a8e284d04356d5ab2e02f29704368758b44aa7ba2a88 [stream]
-[debug] [2026-06-28T10:57:35.287Z] [hosting][upload queue][FINAL] {"max":1020,"min":877,"avg":948.5,"active":0,"complete":2,"success":2,"errored":0,"retried":0,"total":2,"elapsed":1021}
-[info] +  hosting[apartments-a4b17]: file upload complete 
-[debug] [2026-06-28T10:57:35.288Z] [hosting] deploy completed after 1991ms
-[debug] [2026-06-28T10:57:35.288Z] [
-  {
-    "config": {
-      "public": ".",
-      "ignore": [
-        "firebase.json",
-        ".firebaserc",
-        "firebase/**",
-        ".git/**",
-        "node_modules/**",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "rewrites": [
-        {
-          "source": "/api/portfolio",
-          "function": {
-            "functionId": "binancePortfolio",
-            "region": "europe-west1"
-          }
-        },
-        {
-          "source": "/api/crypto/prices",
-          "function": {
-            "functionId": "cryptoPrices",
-            "region": "europe-west1"
-          }
-        },
-        {
-          "source": "/api/cleaning-hours",
-          "function": {
-            "functionId": "cleaningHours",
-            "region": "europe-west1"
-          }
-        }
-      ],
-      "site": "apartments-a4b17"
-    },
-    "version": "projects/465612199373/sites/apartments-a4b17/versions/c73f528a92f9dc72"
-  }
-]
-[info] i  hosting[apartments-a4b17]: finalizing version... 
-[debug] [2026-06-28T10:57:35.289Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:35.289Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:35.289Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/apartments-a4b17/locations/-/functions [none]
-[debug] [2026-06-28T10:57:36.209Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/apartments-a4b17/locations/-/functions 200
-[debug] [2026-06-28T10:57:36.209Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/apartments-a4b17/locations/-/functions {}
-[debug] [2026-06-28T10:57:36.210Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:36.210Z] Checked if tokens are valid: true, expires at: 1782647518824
-[debug] [2026-06-28T10:57:36.210Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/apartments-a4b17/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2026-06-28T11:07:59.370Z] [hosting] uploading with 200 concurrency
+[debug] [2026-06-28T11:07:59.386Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:59.386Z] Checked if tokens are valid: true, expires at: 1782647518824
+[debug] [2026-06-28T11:07:59.387Z] [hosting] hash cache [] stored for 88 files
+[debug] [2026-06-28T11:07:59.387Z] [hosting][hash queue][FINAL] {"max":10,"min":0,"avg":1.0873297213524138,"active":0,"complete":88,"success":88,"errored":0,"retried":0,"total":88,"elapsed":15}
+[debug] [2026-06-28T11:07:59.387Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/465612199373/sites/apartments-a4b17/versions/4bea1718f7993c89:populateFiles [none]
+[debug] [2026-06-28T11:07:59.388Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/465612199373/sites/apartments-a4b17/versions/4bea1718f7993c89:populateFiles {"files":{"/sw.js":"f9c42baa33816bd57dbdb5bee8cae8bf10cf8a9ab8dfc0d02f2b44014a64652a","/offline.html":"83ef81dcc9bbc45b84d1e268df2d63c9a59173265acd88211fafa59ef4c090a1","/manifest.json":"434f60d12596d1478fcab219b13cf93c82a61b022f6cb7bf7d328e7ad5a460c7","/index.html":"1f967f48228c16935a1fa261e020cce83f3f139b5978777f95748dc5dd5c50c9","/horas-limpeza.html":"11bcd9ff770d4f1995e9209991c6f52a71a302013a883bbb2dc556429791e048","/favicon.ico":"669a36fb39b3a71565a859726ea3a4657fe8da70299f248a27cc2db83bbb49be","/modules/tmt.html":"a6d31ca4f4dd6a0e6380b9b6616c99856462d4115d7f6eeb0f534e53cf24bca9","/modules/settings.html":"84de6a04e180f9b7c2897dcc190a2a2225e089924588dff84e632ea45a75cfbf","/modules/questionario.html":"1691e376ae1658273f82a31b27b50db8fe6d4ddab878f702c19b74376283b67a","/modules/pallco.html":"840ec5e772ae9a0691fd8656adc8c53120910e77709ac3996401ecfeb62563f4","/modules/mensagensData.json":"d165bfe0c1c115312475be51e1d0aa0be269f901086efc02f788732024e96615","/modules/iva.html":"83f04f157c29ae0f64fa89addff8cda4bb6601ce46747145d8eed64531c5ece8","/modules/ginasio.html":"0e5778c6b12dee006bdc643f451b0fb3d925db0a1106c3b5d015a15b63d82aa0","/modules/favicon.ico":"669a36fb39b3a71565a859726ea3a4657fe8da70299f248a27cc2db83bbb49be","/modules/faturas.html":"d2383077a6d1be204a9d17642d7eeb8ec5a0e2a0401bb2d84d2a6cb13374feb9","/modules/faturas-em-falta.html":"88a16feca76d060f6dd4c182b33b220d8efb9eafe5fec3da0ec96eca8fd08f72","/modules/diversos.html":"026c53692643482555d9d9c036a873757d7c8c3f7547da810d44759859aafbd3","/modules/dca.html":"4e2517514999429adf59bc38183d8c3c1c9c1c7a6978d88cbfa5faa14a4f3175","/modules/dca-revolut.html":"791869898844de73f298c33b5537edbe1572355a75a80e979ba4c108ecdebdc6","/modules/datas.html":"8a222b94f6d58f258e9deff149279ee7a34037db64e5e0a07d02b8c440b215ab","/modules/crypto.html":"7ffb061db5e7d987856411ff2b45ffa8dd7c4948f95f793f6491ccb6ad3cd237","/modules/cleaning-hours.html":"ca742b5379a0497972b8a3379a46f404248801125b1c18cd724536d872f3c2dd","/modules/carlos.html":"08200bdc156593ed68cebca08dfcbe9e1fa02d2dbcb265b8a09855be5e16b3e3","/modules/caixa.html":"d74c7bb52a90d9e47b58993dffe46f66590b2a2c5b9df6dc03530b6624b64b7d","/modules/analisev4.html":"4938280a836a6bf3530ac6b08d150a1ef8125211ab4da5f8976bffad3f389582","/modules/analisev3.html":"b2055158535bcc6bb61c38204f2acd06442da131357c80aa7f6e9df9ca967f6c","/maps/Manual1248.pdf":"b307bb398405445b1e1880f4f4c160270bbf6ef08482ffef806c8d9db4c60da4","/maps/Manual123.pdf":"b88acc47b66c2bd81e97d31b4df7b6bd2e5d42543a43aa16f373a6a766a22620","/maps/1248.jpg":"68d912ec003d320286a137f9e41092e75b4944aea20a1f0436756fa96a011dc0","/maps/123.jpg":"77553ab2b351e5153fea757cef82fb9d4369b5283ca82f38aa9327850a59e2ae","/js/toast.js":"52949e21ccf0166a7b9f830f2d3abe1c13ee60bbdd0805bb43ed7976c4eb217e","/js/tmt.js":"eb31d8ccad340c2c34f082b81c7759ec20cced5ccc6aafbde1ec27830c89be2c","/js/state.js":"a290a185e1267acccb9e80b871cae2e14a121d19d3c1638ab0f3ed9630259fca","/js/settings.js":"cbd910a6e7f18b8c3cf2eb6793f4f87fe24946f155c692eebe81316e39446173","/js/script.js":"5f6b1a75dcfeb593682b181f88e704d901fa75a0e14b935eb799b975e2b19faa","/js/questionario.js":"3b7248a82a9eefb2f57e8d69e65769ef8874cefa4aa6bf5061783539519776c1","/js/ginasio.js":"8c98bdc6e2080b05a2b70b3bb39f1fd9e6c2132e06fba0f4ecd3b351bc322f94","/js/formatters.js":"2cb7c7a16f210405ef3b0e757937693f0872d9a4f4fa0b7c69858b77f1772df9","/js/faturas.js":"8ae178404ce0630d7c6a135249b6ae1a12522d2e08cc17f7b7b01152ae27438b","/js/faturas-em-falta.js":"3ff3e30d2604ab729c5c7666b541b81cba4174e2ef7409f3ef9ffbe5dbf96831","/js/diversos.js":"5f128b1592373176135050cee82818d1324aaeb42f17dbeb651cdb2286f0f6b5","/js/dca-ui.js":"9377965b039c00da5f26d27a9ba6c93587cb434b4599cebe59d402c4dc271fce","/js/dca-revolut.js":"cfd249cba8ed4f0f04a924dd129557eabe38ef6e955b4494bda9aecf4e2b691c","/js/dca-quotes.js":"e49d7fad9dadcd974228444b22f183226fb325c09940f7ec185bf54b90e5fe8b","/js/dca-main.js":"6778b894f16923b89c906749efda78dda0815139591ec57bbbaf2c1926d7cd3b","/js/dca-core.js":"d5338d544e2a09fe654ad46e6d55c82d6bd976b2c4ccfedb6ecbdca097aac09c","/js/dca-calculations.js":"8bbd66dde5171a02a04be651e5fb8a127212f13beecd66ced86d8f3f8966e51c","/js/datas.js":"52c7bdba61022f28aa6d920cfd13891d45f20b89e4af484a6ed53519673742dc","/js/crypto.js":"6949aba41164b93d1f3bb098ba21c87acd8bf53ef0f57cec7ed5d5c9f9a4df92","/js/crypto-ui.js":"c66f6853352aa3af612a20174d1a92cc0ad7a363a19beb325852ad9fb7095dfd","/js/config.js":"9e7d5d536e5536485f623f4588bbc3f2e09c093ac00a570f22ac0567328e3819","/js/cleaning-hours-public.js":"d64bb65237260070548bac3e8e20f6a70f4ae8d9688542d2400d481071d8b9c6","/js/cleaning-hours-admin.js":"f60f08df5f29286698ca02e3b347d6c6895b2119eee6f9bcafb318227abdbe3a","/js/caixa.js":"ffbf8bf5555511ede14f54440bd55d3e1b26a281a35e7d5c3355052704d6d6d2","/js/api.js":"b0860a04a625f0262914784b8d5d077920abf791bddceab7edf7d328e865a64c","/js/analisev4-faturacao.js":"cfc5d319e76fbc23518e825d835f3c45b2487bfd7efaa6f224659ced3dde2828","/js/analisev3-weekpart.js":"0b1f4a22a5e9f82639236808ce32e9dfbf7b8538b9063fe4c9ecdd6f8349d503","/js/analisev3-seasonal.js":"becf4ceca066b63debf0b2c5d7903214604773eb72210de5eaa270271ebc03bb","/js/analisev3-revpan.js":"e1d22f7a3cd6f287b7ce1d3952089bf28283494b93c08ba55dcd93c51166fa25","/js/analisev3-pricing-lab.js":"38f1f62d9911d9d1227b1963fe7646c187b4af69b2823b2894a23ae9797787a2","/js/analisev3-metrics.js":"6ed7c858dd3280a3b75463455f38388b4d506da60c9460c2ac2a781a13c9c0d8","/js/analisev3-leadtime.js":"51fec253f305208f9b2159cc95a7e52d56ca90786ac3c5f58015b0ecbb4d729d","/js/analisev3-gap-analysis.js":"cf22bfbb8b86d1b25756878e01ff5904ff2ba3058dc665031c030f384e81a3f1","/js/analisev3-data.js":"ac415ae4be46a11e4575d98409eecd4ba41d021c4c82097a87c41bb624c26a5b","/js/analisev2-valor-medio.js":"a3e228993ed9a059065a1056d78a3dee549c19ab876f4f7addc5aa6f95dd6a57","/js/analisev2-ui.js":"76138187f28398dbb02bba74d9f64400310c17ec0f8145ae17631725d1ae8b78","/js/analisev2-taxalimpeza.js":"29fcfa5569d4d245cd78d00719c679d3834ba09d25c17c6374488b885f58bb4e","/js/analisev2-refresh.js":"01fde54c577bed394f4e42ab3ed589f174aafa8b02b6aeb6c17c15c249f1296d","/js/analisev2-progresso.js":"86c2774e74195b615caf6e87f0ce972fa6b058ca6c63d6412c135ac0546a2cd9","/js/analisev2-ocupacao.js":"6ec4a8fc525ceccd09a89aa9bc86dc81f8dced1be3c6b8e6c6f0ce5b7b5dad38","/js/analisev2-noites-hospedes.js":"bbeb78ee521a20c4622d29c5fda619e4d3bd0d96015aca14735d42c504516a04","/js/analisev2-loading.js":"931a39d3a267e0acfd188fa9b621cf4d6b103b6ff4c9c5d7da19b51dcd1830ab","/js/analisev2-heatmap.js":"cb4441914dd69fe86147bed1d289970bf3b878ab10d55fdc07354689e1b0e35d","/js/analisev2-faturacao.js":"167b54072a0e79cfa9479af07ed7aa44cc69caa44337fdfd51355a89f2acba21","/js/analisev2-error-handler.js":"c5c998d313e06ceb4db331bf2999642b996eb1784b7d063b6d5dbd4aa7d3cbfe","/js/analisev2-core.js":"c935beeb2794fa7475e8a5c56dbc5b59c4b3be231e09e539af5b49c4238e0982","/js/analisev2-checkins-semana.js":"9dfbbbb068ff6df2ec69dffc2a61a6b9f2d5a29c3e51e8a1c7a3e6c3f1217d5c","/js/analisev2-charts.js":"76edeb7c09703eb65369b0257f48264dfc310c5608397f39fbbecb8af0bbab19","/icons/icon-512-v2.png":"fd011cc78990836fe6022a0199e653710f7c7d698ba03e1fd3eac31ac363da5a","/icons/icon-192-v2.png":"2b22554efc0cddc8e98a6e74197fb1df5c705922ae11d4d9ade5ddbc93a5f437","/css/styles.pcolor.css":"02d5fe16290a16b6c784296d880ce5b386dc8b2251300bb5e7e50a6a7c418e07","/css/styles.css":"37a2ad99ad97f3cc8e0b86393497d80e51dcf4dd3d4ba1cb44259ba0fc9e0f5e","/css/mobile.css":"2307fe0b93d22924d6d10740c706e8735a3a6cdbfe69241c6ec44fa5b9f4211f","/.claude/settings.local.json":"005859909af47f53590365f70dfbc67001026f331215dc44586f8023c407ae0a","/modules/boletins.html":"54ace6ec159787da886dbfd242598b4d5c60b5ce72037c19ff82444216cefabd","/js/boletins.js":"9288899a432fdaa1ae3859300ec0b0fd7b3f63a1fbbcf69366e3ba313b12f71f","/modules/boletim.html":"205a0269fddc4d649af3ba6ef5705bd79b42efb6f61b1abe19b3439a4dc37ac3","/js/boletim-public.js":"96a5e8acccc5a5972e79540cdff11fad02c2e42d9a14b79faa0fb13e42b07515"}}

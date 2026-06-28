@@ -1,13 +1,12 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js';
 import {
-  addDoc,
   collection,
   doc,
   getDoc,
   getDocs,
   getFirestore,
-  setDoc,
-  Timestamp
+  Timestamp,
+  writeBatch
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -107,8 +106,14 @@ const COPY = {
     declaration: 'Declaro a veracidade dos dados fornecidos e tenho conhecimento da base legal que exige o fornecimento dos dados incluídos neste formulário.',
     submit: 'Submeter',
     submitting: 'A submeter...',
+    updating: 'A guardar...',
     success: 'Dados submetidos com sucesso.',
+    updateSuccess: 'Dados atualizados com sucesso.',
+    saveError: 'Não foi possível guardar os dados. Tente novamente.',
     addAnother: 'Adicionar outro hóspede',
+    edit: 'Editar',
+    saveChanges: 'Guardar alterações',
+    cancel: 'Cancelar',
     invalidLink: 'Link inválido ou expirado.',
     loading: 'A carregar...',
     passport: 'Passaporte',
@@ -136,8 +141,14 @@ const COPY = {
     declaration: 'I declare the veracity of the data provided and I am aware of the legal basis which requires me to provide the data included on this form.',
     submit: 'Submit',
     submitting: 'Submitting...',
+    updating: 'Saving...',
     success: 'Data submitted successfully.',
+    updateSuccess: 'Data updated successfully.',
+    saveError: 'The data could not be saved. Please try again.',
     addAnother: 'Add another guest',
+    edit: 'Edit',
+    saveChanges: 'Save changes',
+    cancel: 'Cancel',
     invalidLink: 'Invalid or expired link.',
     loading: 'Loading...',
     passport: 'Passport',
@@ -165,8 +176,14 @@ const COPY = {
     declaration: "Je déclare l'exactitude des données fournies et je suis informé de la base légale qui exige la fourniture des données incluses dans ce formulaire.",
     submit: 'Envoyer',
     submitting: 'Envoi...',
+    updating: 'Enregistrement...',
     success: 'Données envoyées avec succès.',
+    updateSuccess: 'Données mises à jour avec succès.',
+    saveError: "Impossible d'enregistrer les données. Veuillez réessayer.",
     addAnother: 'Ajouter un autre invité',
+    edit: 'Modifier',
+    saveChanges: 'Enregistrer les modifications',
+    cancel: 'Annuler',
     invalidLink: 'Lien invalide ou expiré.',
     loading: 'Chargement...',
     passport: 'Passeport',
@@ -194,8 +211,14 @@ const COPY = {
     declaration: 'Declaro la veracidad de los datos proporcionados y soy consciente de la base legal que exige proporcionar los datos incluidos en este formulario.',
     submit: 'Enviar',
     submitting: 'Enviando...',
+    updating: 'Guardando...',
     success: 'Datos enviados correctamente.',
+    updateSuccess: 'Datos actualizados correctamente.',
+    saveError: 'No se pudieron guardar los datos. Inténtelo de nuevo.',
     addAnother: 'Añadir otro huésped',
+    edit: 'Editar',
+    saveChanges: 'Guardar cambios',
+    cancel: 'Cancelar',
     invalidLink: 'Enlace inválido o caducado.',
     loading: 'Cargando...',
     passport: 'Pasaporte',
@@ -228,7 +251,8 @@ const els = {
   progress: document.getElementById('guest-progress'),
   stayDates: document.getElementById('stay-dates'),
   languageSelect: document.getElementById('language-select'),
-  languageLabel: document.getElementById('language-label')
+  languageLabel: document.getElementById('language-label'),
+  cancelEdit: document.getElementById('cancel-edit')
 };
 
 const state = {
@@ -238,7 +262,8 @@ const state = {
   expectedGuests: 1,
   checkinDate: '',
   checkoutDate: '',
-  summaries: []
+  guests: [],
+  editingGuestId: ''
 };
 
 document.addEventListener('DOMContentLoaded', init);
@@ -269,7 +294,7 @@ async function init() {
     populateCountries();
     els.subtitle.textContent = formatStaySubtitle();
     renderStayDates();
-    await loadGuestSummaries();
+    await loadGuests();
     renderProgress();
     els.form.hidden = false;
     setMessage('');
@@ -286,6 +311,8 @@ function bindEvents() {
   els.countryResidence.addEventListener('change', () => els.countryResidence.dataset.touched = 'true');
   els.documentCountry.addEventListener('change', () => els.documentCountry.dataset.touched = 'true');
   els.form.addEventListener('submit', handleSubmit);
+  els.progress.addEventListener('click', handleProgressClick);
+  els.cancelEdit.addEventListener('click', startAddingGuest);
 }
 
 function bindLanguageEvents() {
@@ -316,18 +343,21 @@ function changeLanguage(nextLanguage) {
 function renderTranslatedContent() {
   els.subtitle.textContent = formatStaySubtitle();
   renderStayDates();
-  if (state.summaries.length || !els.progress.hidden) renderProgress();
+  if (state.guests.length || !els.progress.hidden) renderProgress();
+  updateFormActions();
 }
 
 async function handleSubmit(event) {
   event.preventDefault();
   const t = COPY[state.language];
+  const editingGuest = state.guests.find((guest) => guest.id === state.editingGuestId);
 
   if (!els.form.reportValidity()) return;
   els.submit.disabled = true;
-  els.submit.textContent = t.submitting;
+  els.cancelEdit.disabled = true;
+  els.submit.textContent = editingGuest ? t.updating : t.submitting;
 
-  const payload = {
+  const formData = {
     firstName: els.firstName.value.trim(),
     lastName: els.lastName.value.trim(),
     birthDate: els.birthDate.value,
@@ -338,68 +368,173 @@ async function handleSubmit(event) {
     documentCountry: els.documentCountry.value,
     checkinDate: state.checkinDate,
     checkoutDate: state.checkoutDate,
-    declarationAccepted: els.declaration.checked,
-    submittedAt: Timestamp.now(),
-    userAgent: navigator.userAgent || ''
+    declarationAccepted: els.declaration.checked
   };
 
   try {
-    const guestRef = await addDoc(collection(db, COLLECTION, state.token, 'guests'), payload);
-    const summary = {
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      submittedAt: payload.submittedAt
-    };
-    await setDoc(doc(db, COLLECTION, state.token, 'guest_summaries', guestRef.id), summary);
-    state.summaries.push(summary);
+    if (editingGuest) {
+      await updateGuest(editingGuest, formData);
+    } else {
+      await createGuest(formData);
+    }
+
     renderProgress();
-    els.form.reset();
-    els.countryResidence.dataset.touched = '';
-    els.documentCountry.dataset.touched = '';
-    state.previousOrigin = '';
-    setMessage(`${t.success} <button id="add-another" type="button">${t.addAnother}</button>`, 'success');
+    const successMessage = editingGuest ? t.updateSuccess : t.success;
+    resetGuestForm();
+    setMessage(`${successMessage} <button id="add-another" type="button">${t.addAnother}</button>`, 'success');
     els.form.hidden = true;
-    document.getElementById('add-another')?.addEventListener('click', () => {
-      els.form.hidden = false;
-      setMessage('');
-      els.firstName.focus();
-    });
+    document.getElementById('add-another')?.addEventListener('click', startAddingGuest);
   } catch (err) {
-    console.error('Erro ao submeter hóspede', err);
-    setMessage(t.invalidLink, 'error');
+    console.error('Erro ao guardar hóspede', err);
+    setMessage(t.saveError, 'error');
   } finally {
     els.submit.disabled = false;
-    els.submit.textContent = COPY[state.language]?.submit || COPY.en.submit;
+    els.cancelEdit.disabled = false;
+    updateFormActions();
   }
 }
 
-async function loadGuestSummaries() {
-  const snap = await getDocs(collection(db, COLLECTION, state.token, 'guest_summaries'));
-  state.summaries = snap.docs
-    .map((docSnap) => docSnap.data())
-    .sort((a, b) => toMillis(a.submittedAt) - toMillis(b.submittedAt));
+async function createGuest(formData) {
+  const guestRef = doc(collection(db, COLLECTION, state.token, 'guests'));
+  const submittedAt = Timestamp.now();
+  const payload = {
+    ...formData,
+    submittedAt,
+    userAgent: navigator.userAgent || ''
+  };
+  const batch = writeBatch(db);
+  batch.set(guestRef, payload);
+  batch.set(doc(db, COLLECTION, state.token, 'guest_summaries', guestRef.id), {
+    firstName: payload.firstName,
+    lastName: payload.lastName,
+    submittedAt
+  });
+  await batch.commit();
+  state.guests.push({ id: guestRef.id, ...payload });
+  sortGuests();
+}
+
+async function updateGuest(guest, formData) {
+  const changes = {
+    ...formData,
+    updatedAt: Timestamp.now()
+  };
+  const batch = writeBatch(db);
+  batch.update(doc(db, COLLECTION, state.token, 'guests', guest.id), changes);
+  batch.set(doc(db, COLLECTION, state.token, 'guest_summaries', guest.id), {
+    firstName: changes.firstName,
+    lastName: changes.lastName,
+    submittedAt: guest.submittedAt
+  }, { merge: true });
+  await batch.commit();
+  Object.assign(guest, changes);
+  sortGuests();
+}
+
+async function loadGuests() {
+  const snap = await getDocs(collection(db, COLLECTION, state.token, 'guests'));
+  state.guests = snap.docs.map((docSnap) => ({
+    id: docSnap.id,
+    ...docSnap.data()
+  }));
+  sortGuests();
+}
+
+function sortGuests() {
+  state.guests.sort((a, b) => toMillis(a.submittedAt) - toMillis(b.submittedAt));
 }
 
 function renderProgress() {
   const t = COPY[state.language];
   const slots = [];
-  const total = Math.max(state.expectedGuests, state.summaries.length || 0);
+  const total = Math.max(state.expectedGuests, state.guests.length || 0);
 
   for (let index = 0; index < total; index += 1) {
-    const summary = state.summaries[index];
-    const name = summary
-      ? `${summary.firstName || ''} ${summary.lastName || ''}`.trim()
+    const guest = state.guests[index];
+    const name = guest
+      ? `${guest.firstName || ''} ${guest.lastName || ''}`.trim()
       : t.emptySlot;
     slots.push(`
       <div class="guest-slot">
-        <strong>${t.guestLabel} ${index + 1}</strong>
-        <span>${escapeHtml(name || t.emptySlot)}</span>
+        <div class="guest-slot-info">
+          <strong>${t.guestLabel} ${index + 1}</strong>
+          <span>${escapeHtml(name || t.emptySlot)}</span>
+        </div>
+        ${guest ? `
+          <div class="guest-slot-actions">
+            <button type="button" data-action="edit-guest" data-guest-id="${escapeHtml(guest.id)}">${t.edit}</button>
+          </div>
+        ` : ''}
       </div>
     `);
   }
 
-  els.progress.innerHTML = `<h2>${t.progressTitle}</h2>${slots.join('')}`;
+  els.progress.innerHTML = `
+    <h2>${t.progressTitle}</h2>
+    ${slots.join('')}
+    <button type="button" class="guest-progress-add" data-action="add-guest">${t.addAnother}</button>
+  `;
   els.progress.hidden = false;
+}
+
+function handleProgressClick(event) {
+  const editButton = event.target.closest('[data-action="edit-guest"]');
+  if (editButton) {
+    startEditingGuest(editButton.dataset.guestId);
+    return;
+  }
+
+  if (event.target.closest('[data-action="add-guest"]')) {
+    startAddingGuest();
+  }
+}
+
+function startEditingGuest(guestId) {
+  const guest = state.guests.find((item) => item.id === guestId);
+  if (!guest) return;
+
+  state.editingGuestId = guest.id;
+  els.firstName.value = guest.firstName || '';
+  els.lastName.value = guest.lastName || '';
+  els.birthDate.value = guest.birthDate || '';
+  els.documentType.value = guest.documentType || '';
+  els.documentNumber.value = guest.documentNumber || '';
+  els.countryOrigin.value = guest.countryOrigin || '';
+  els.countryResidence.value = guest.countryResidence || '';
+  els.documentCountry.value = guest.documentCountry || '';
+  els.declaration.checked = Boolean(guest.declarationAccepted);
+  els.countryResidence.dataset.touched = 'true';
+  els.documentCountry.dataset.touched = 'true';
+  state.previousOrigin = guest.countryOrigin || '';
+  els.form.hidden = false;
+  setMessage('');
+  updateFormActions();
+  els.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  els.firstName.focus({ preventScroll: true });
+}
+
+function startAddingGuest() {
+  resetGuestForm();
+  els.form.hidden = false;
+  setMessage('');
+  updateFormActions();
+  els.firstName.focus();
+}
+
+function resetGuestForm() {
+  state.editingGuestId = '';
+  els.form.reset();
+  els.countryResidence.dataset.touched = '';
+  els.documentCountry.dataset.touched = '';
+  state.previousOrigin = '';
+}
+
+function updateFormActions() {
+  const t = COPY[state.language] || COPY.en;
+  const isEditing = Boolean(state.editingGuestId);
+  els.submit.textContent = isEditing ? t.saveChanges : t.submit;
+  els.cancelEdit.textContent = t.cancel;
+  els.cancelEdit.hidden = !isEditing;
 }
 
 function renderStayDates() {
@@ -444,7 +579,7 @@ function applyLanguage(lang) {
   if (els.languageLabel) els.languageLabel.textContent = t.language;
   els.title.textContent = t.title;
   els.subtitle.textContent = t.loading;
-  els.submit.textContent = t.submit;
+  updateFormActions();
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     const key = el.dataset.i18n;
     if (t[key]) el.textContent = t[key];

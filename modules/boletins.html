@@ -147,91 +147,42 @@
 
     .guest-details-table th:nth-child(1),
     .guest-details-table td:nth-child(1) {
-      min-width: 100px;
-    }
-
-    .guest-details-table th:nth-child(2),
-    .guest-details-table td:nth-child(2) {
       min-width: 135px;
       text-align: left;
     }
 
-    .guest-details-table th:nth-child(3),
-    .guest-details-table td:nth-child(3),
+    .guest-details-table th:nth-child(2),
+    .guest-details-table td:nth-child(2),
+    .guest-details-table th:nth-child(8),
+    .guest-details-table td:nth-child(8),
     .guest-details-table th:nth-child(9),
-    .guest-details-table td:nth-child(9),
-    .guest-details-table th:nth-child(10),
-    .guest-details-table td:nth-child(10) {
+    .guest-details-table td:nth-child(9) {
       min-width: 110px;
       white-space: nowrap;
     }
 
-    .guest-details-table th:nth-child(4),
-    .guest-details-table td:nth-child(4) {
+    .guest-details-table th:nth-child(3),
+    .guest-details-table td:nth-child(3) {
       min-width: 145px;
     }
 
-    .guest-details-table th:nth-child(5),
-    .guest-details-table td:nth-child(5) {
+    .guest-details-table th:nth-child(4),
+    .guest-details-table td:nth-child(4) {
       min-width: 115px;
     }
 
+    .guest-details-table th:nth-child(5),
+    .guest-details-table td:nth-child(5),
     .guest-details-table th:nth-child(6),
     .guest-details-table td:nth-child(6),
     .guest-details-table th:nth-child(7),
-    .guest-details-table td:nth-child(7),
-    .guest-details-table th:nth-child(8),
-    .guest-details-table td:nth-child(8) {
+    .guest-details-table td:nth-child(7) {
       min-width: 120px;
     }
 
-    .guest-details-table th:nth-child(11),
-    .guest-details-table td:nth-child(11) {
+    .guest-details-table th:nth-child(10),
+    .guest-details-table td:nth-child(10) {
       min-width: 140px;
-    }
-
-    .guest-details-actions {
-      display: flex;
-      justify-content: flex-start;
-      margin-bottom: 10px;
-    }
-
-    .guest-editor {
-      width: min(680px, calc(100vw - 32px));
-      max-height: calc(100vh - 32px);
-      padding: 0;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: var(--surface);
-      color: var(--text);
-      box-shadow: var(--shadow-2);
-    }
-
-    .guest-editor::backdrop {
-      background: rgb(0 0 0 / 45%);
-    }
-
-    .guest-editor-form {
-      display: grid;
-      gap: 18px;
-      padding: 22px;
-    }
-
-    .guest-editor-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .guest-editor-header h3 {
-      margin: 0;
-    }
-
-    .guest-editor-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
     }
 
     .copyable-cell {
@@ -272,9 +223,6 @@
         grid-template-columns: 1fr;
       }
 
-      .guest-editor-grid {
-        grid-template-columns: 1fr;
-      }
     }
   </style>
 </head>
@@ -397,62 +345,6 @@
       </div>
     </section>
   </main>
-
-  <dialog id="guest-editor" class="guest-editor">
-    <form id="guest-editor-form" class="guest-editor-form">
-      <div class="guest-editor-header">
-        <h3 id="guest-editor-title">Editar dados do hóspede</h3>
-        <button type="button" data-action="close-editor" aria-label="Fechar">×</button>
-      </div>
-
-      <input id="edit-boletim-id" type="hidden">
-      <input id="edit-guest-id" type="hidden">
-
-      <div class="guest-editor-grid">
-        <div class="field">
-          <label for="edit-first-name">Nome</label>
-          <input id="edit-first-name" type="text" autocomplete="off" required>
-        </div>
-        <div class="field">
-          <label for="edit-last-name">Apelido</label>
-          <input id="edit-last-name" type="text" autocomplete="off" required>
-        </div>
-        <div class="field">
-          <label for="edit-birth-date">Data de nascimento</label>
-          <input id="edit-birth-date" type="date" required>
-        </div>
-        <div class="field">
-          <label for="edit-document-type">Tipo de documento</label>
-          <select id="edit-document-type" required>
-            <option value="passport">Passaporte</option>
-            <option value="id">Cartão de cidadão / identificação</option>
-            <option value="other">Outro</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="edit-document-number">Número do documento</label>
-          <input id="edit-document-number" type="text" autocomplete="off" required>
-        </div>
-        <div class="field">
-          <label for="edit-document-country">País emissor (código ISO)</label>
-          <input id="edit-document-country" type="text" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" placeholder="PT" required>
-        </div>
-        <div class="field">
-          <label for="edit-country-residence">País de residência (código ISO)</label>
-          <input id="edit-country-residence" type="text" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" placeholder="PT" required>
-        </div>
-        <div class="field">
-          <label for="edit-country-origin">País de origem (código ISO)</label>
-          <input id="edit-country-origin" type="text" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" placeholder="PT" required>
-        </div>
-      </div>
-
-      <div class="boletins-actions">
-        <button type="button" data-action="close-editor">Cancelar</button>
-        <button id="guest-editor-submit" class="primary" type="submit">Guardar alterações</button>
-      </div>
-    </form>
-  </dialog>
 
   <script type="module" src="../js/script.js"></script>
   <script type="module" src="../js/boletins.js"></script>

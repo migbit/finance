@@ -130,6 +130,22 @@
       overflow-wrap: anywhere;
     }
 
+    .guest-slot-info {
+      display: grid;
+      gap: 3px;
+    }
+
+    .guest-slot-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .guest-progress-add {
+      justify-self: start;
+      margin-top: 4px;
+    }
+
     .checkin-grid.two {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -239,6 +255,11 @@
       .guest-slot span {
         text-align: left;
       }
+
+      .guest-slot-actions,
+      .guest-progress-add {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -315,6 +336,7 @@
         </label>
 
         <div class="checkin-actions">
+          <button id="cancel-edit" type="button" hidden>Cancel</button>
           <button id="submit-guest" class="primary" type="submit">Submit</button>
         </div>
       </form>
