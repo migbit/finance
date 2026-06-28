@@ -42,7 +42,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function carregarFaturas() {
   const q = query(collection(db, "faturas"), orderBy("timestamp", "desc"));
   const snap = await getDocs(q);
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter((fatura) => {
+      const canal = String(fatura.canal || '').trim().toUpperCase();
+      if (canal) return canal === 'AIRBNB';
+
+      // Compatibilidade: todos os registos antigos são Airbnb.
+      return !/^[VD]\d+$/i.test(String(fatura.numeroFatura || '').trim());
+    });
 }
 
 /* ========== Single-apt renderer ========== */

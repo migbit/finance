@@ -65,14 +65,23 @@
   <div id="fatura-form-wrap" class="hidden">
     <form id="fatura-form">
 
-      <!-- 1ª linha: Apartamento, Ano, Mês, Nº Fatura -->
-      <div class="form-row row-4">
+      <!-- 1ª linha: Apartamento, Canal, Ano, Mês, Nº Fatura -->
+      <div class="form-row row-5">
         <div class="form-group">
           <label for="apartamento">Apartamento:</label>
           <select id="apartamento" required>
             <option value="">Selecionar Apartamento</option>
             <option value="123">Apartamento 123</option>
             <option value="1248">Apartamento 1248</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="canal">Canal:</label>
+          <select id="canal" required>
+            <option value="AIRBNB" selected>AIRBNB</option>
+            <option value="VRBO">VRBO</option>
+            <option value="DIRETO">Direto</option>
           </select>
         </div>
 

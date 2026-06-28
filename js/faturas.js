@@ -1,6 +1,6 @@
 // Importar as funções necessárias do Firebase
 import { db } from './script.js';
-import { collection, addDoc, getDocs, query, orderBy, limit, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
+import { collection, addDoc, getDocs, query, orderBy, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js";
 
 // ---------- MOBILE MENU TOGGLE ----------
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,6 +59,27 @@ const nextBtn = document.getElementById('fatura-next');
 let currentIndex = -1;
 let loadedFaturas = [];
 let toastStack;
+let channelNumberRequest = 0;
+
+const CHANNEL_CONFIG = Object.freeze({
+  AIRBNB: { prefix: 'M', firstNumber: 1, padding: 0 },
+  VRBO: { prefix: 'V', firstNumber: 1, padding: 3 },
+  DIRETO: { prefix: 'D', firstNumber: 1, padding: 3 }
+});
+
+const TMT_FIELD_IDS = [
+  'valor-operador',
+  'noites-extra',
+  'noites-criancas',
+  'valor-direto',
+  'valor-tmt'
+];
+
+const REQUIRED_AIRBNB_FIELD_IDS = new Set([
+  'taxa-airbnb',
+  'valor-operador',
+  'valor-tmt'
+]);
 
 const getToastStack = () => {
   if (toastStack && document.body.contains(toastStack)) return toastStack;
@@ -102,6 +123,81 @@ const parseInvoiceNumber = (numero) => {
     number: Number.isNaN(digits) ? Number.NEGATIVE_INFINITY : digits
   };
 };
+
+const normalizeChannel = (canal, numeroFatura = '') => {
+  const normalized = String(canal || '').trim().toUpperCase();
+  if (CHANNEL_CONFIG[normalized]) return normalized;
+
+  const prefix = parseInvoiceNumber(numeroFatura).prefix;
+  if (prefix === CHANNEL_CONFIG.VRBO.prefix) return 'VRBO';
+  if (prefix === CHANNEL_CONFIG.DIRETO.prefix) return 'DIRETO';
+  return 'AIRBNB';
+};
+
+const formatInvoiceNumber = (channel, number) => {
+  const config = CHANNEL_CONFIG[channel] || CHANNEL_CONFIG.AIRBNB;
+  const numericPart = config.padding
+    ? String(number).padStart(config.padding, '0')
+    : String(number);
+  return `${config.prefix}${numericPart}`;
+};
+
+async function getNextInvoiceNumber(channel) {
+  const normalizedChannel = normalizeChannel(channel);
+  const config = CHANNEL_CONFIG[normalizedChannel];
+  const q = query(collection(db, 'faturas'), orderBy('timestamp', 'desc'));
+  const snap = await getDocs(q);
+
+  for (const invoiceDoc of snap.docs) {
+    const parsed = parseInvoiceNumber(invoiceDoc.data()?.numeroFatura || '');
+    if (parsed.prefix === config.prefix && Number.isFinite(parsed.number)) {
+      return formatInvoiceNumber(normalizedChannel, parsed.number + 1);
+    }
+  }
+
+  return formatInvoiceNumber(normalizedChannel, config.firstNumber);
+}
+
+function setAirbnbOnlyFieldsEnabled(isAirbnb) {
+  ['taxa-airbnb', ...TMT_FIELD_IDS].forEach((id) => {
+    const field = document.getElementById(id);
+    if (!field) return;
+
+    if (!isAirbnb) {
+      if (!field.disabled) field.dataset.airbnbValue = field.value;
+      field.value = '0';
+      field.disabled = true;
+      field.required = false;
+      return;
+    }
+
+    field.disabled = false;
+    field.required = REQUIRED_AIRBNB_FIELD_IDS.has(id);
+    if (Object.prototype.hasOwnProperty.call(field.dataset, 'airbnbValue')) {
+      field.value = field.dataset.airbnbValue;
+      delete field.dataset.airbnbValue;
+    }
+    if (id === 'valor-tmt' && field.value === '') field.value = '3.00';
+  });
+}
+
+async function applyChannelSelection({ updateNumber = false } = {}) {
+  const channelSelect = document.getElementById('canal');
+  const channel = normalizeChannel(channelSelect?.value);
+  if (channelSelect) channelSelect.value = channel;
+
+  setAirbnbOnlyFieldsEnabled(channel === 'AIRBNB');
+  calcAndSetPrecoMedioNoite();
+
+  if (!updateNumber) return;
+  const requestId = ++channelNumberRequest;
+  const nextNumber = await getNextInvoiceNumber(channel);
+  if (requestId !== channelNumberRequest) return;
+  if (normalizeChannel(channelSelect?.value) !== channel) return;
+
+  const numberInput = document.getElementById('numero-fatura');
+  if (numberInput) numberInput.value = nextNumber;
+}
 
 const sortInvoicesForNav = (items) => {
   return items.slice().sort((a, b) => {
@@ -165,6 +261,7 @@ if (nextBtn) nextBtn.addEventListener('click', () => navigateInvoice(1));
 // Ativa modo edição e preenche todos os campos
 async function entrarEmModoEdicao(f, options = {}) {
   const { skipScroll = false } = options;
+  channelNumberRequest += 1;
   
   // Ensure loadedFaturas is populated for navigation
   if (loadedFaturas.length === 0 && f?.id) {
@@ -196,8 +293,16 @@ async function entrarEmModoEdicao(f, options = {}) {
   const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v ?? ''); };
   const setNum = (id, v) => { const el = document.getElementById(id); if (el) el.value = (typeof v === 'number' ? v : (v ?? '')); };
 
+  ['taxa-airbnb', ...TMT_FIELD_IDS].forEach((id) => {
+    const field = document.getElementById(id);
+    if (!field) return;
+    field.disabled = false;
+    delete field.dataset.airbnbValue;
+  });
+
   // 1ª linha
   setVal('apartamento', f.apartamento);
+  setVal('canal', normalizeChannel(f.canal, f.numeroFatura));
   setNum('ano', Number(f.ano));
   setVal('mes', String(f.mes));
   setVal('numero-fatura', f.numeroFatura);
@@ -227,6 +332,7 @@ async function entrarEmModoEdicao(f, options = {}) {
   setNum('criancas', (typeof f.hospedesCriancas === 'number' ? f.hospedesCriancas : ''));
   setNum('bebes', (typeof f.hospedesBebes === 'number' ? f.hospedesBebes : ''));
 
+  await applyChannelSelection();
   calcAndSetPrecoMedioNoite();
 
   // Foco inicial
@@ -271,6 +377,16 @@ function calcAndSetPrecoMedioNoite() {
 document.addEventListener('DOMContentLoaded', async () => {
   await definirValoresPadrao();
   carregarTodosRelatorios();
+
+  const channelSelect = document.getElementById('canal');
+  if (channelSelect) {
+    channelSelect.addEventListener('change', () => {
+      applyChannelSelection({ updateNumber: true }).catch((error) => {
+        console.error('Erro ao calcular o próximo número de fatura:', error);
+        showToast('Não foi possível calcular o próximo número de fatura.', 'error');
+      });
+    });
+  }
 
   // Auto-preencher Nº de Noites quando alteras check-in/out
   ['checkin','checkout'].forEach(id => {
@@ -343,20 +459,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('ano').value = hoje.getFullYear();
     document.getElementById('mes').value = hoje.getMonth() + 1;
 
-    // buscar a última fatura (por timestamp) e calcular próximo número
-    const q = query(collection(db, "faturas"), orderBy("timestamp", "desc"), limit(1));
-    const snap = await getDocs(q);
-    let proximo = "M1";
-
-    if (!snap.empty) {
-      const ultima = snap.docs[0].data()?.numeroFatura || "";
-      if (typeof ultima === "string" && ultima.trim() !== "") {
-        const num = parseInt(ultima.replace(/\D/g, ""), 10);
-        if (!isNaN(num)) proximo = `M${num + 1}`;
-      }
-    }
-
-    document.getElementById("numero-fatura").value = proximo;
+    const channelSelect = document.getElementById('canal');
+    if (channelSelect) channelSelect.value = 'AIRBNB';
+    ['taxa-airbnb', ...TMT_FIELD_IDS].forEach((id) => {
+      const field = document.getElementById(id);
+      if (!field) return;
+      field.disabled = false;
+      delete field.dataset.airbnbValue;
+    });
+    await applyChannelSelection({ updateNumber: true });
 
     // Taxa de limpeza por defeito (KISS)
     const aptSel = document.getElementById("apartamento")?.value || "";
@@ -398,19 +509,23 @@ const precoMedioNoite = parseFloatSafe('preco-medio-noite', null);
 const hospedesAdultos  = parseIntSafe('adultos',  0);
 const hospedesCriancas = parseIntSafe('criancas', 0);
 const hospedesBebes    = parseIntSafe('bebes',    0);
+const canal             = normalizeChannel(getVal('canal'), getVal('numero-fatura'));
+const contabilizaTmt    = canal === 'AIRBNB';
 
 const formData = {
   apartamento: document.getElementById('apartamento').value,
+  canal,
+  tipo: contabilizaTmt ? null : 'reserva',
   ano: parseInt(document.getElementById('ano').value),
   mes: parseInt(document.getElementById('mes').value),
   numeroFatura: document.getElementById('numero-fatura').value,
-  taxaAirbnb: parseFloat(document.getElementById('taxa-airbnb').value),
+  taxaAirbnb: contabilizaTmt ? parseFloat(document.getElementById('taxa-airbnb').value) : 0,
   valorTransferencia: parseFloat(document.getElementById('valor-transferencia').value),
-  valorOperador: parseFloat(document.getElementById('valor-operador').value),
-  noitesExtra: parseInt(document.getElementById('noites-extra').value) || 0,
-  noitesCriancas: parseInt(document.getElementById('noites-criancas').value) || 0,
-  valorDireto: parseFloat(document.getElementById('valor-direto').value) || 0,
-  valorTmt: parseFloat(document.getElementById('valor-tmt').value),
+  valorOperador: contabilizaTmt ? parseFloat(document.getElementById('valor-operador').value) : 0,
+  noitesExtra: contabilizaTmt ? (parseInt(document.getElementById('noites-extra').value) || 0) : 0,
+  noitesCriancas: contabilizaTmt ? (parseInt(document.getElementById('noites-criancas').value) || 0) : 0,
+  valorDireto: contabilizaTmt ? (parseFloat(document.getElementById('valor-direto').value) || 0) : 0,
+  valorTmt: contabilizaTmt ? parseFloat(document.getElementById('valor-tmt').value) : 0,
   timestamp: new Date(), // só usado na criação  ✅ vírgula aqui
   taxaLimpeza: parseFloat(document.getElementById('taxa-limpeza').value) || 0,
   // 🔽 NOVOS CAMPOS (seguros p/ docs antigos)
@@ -683,6 +798,7 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
     const payload = {
       id: d.id,
       apartamento: d.apartamento,
+      canal: normalizeChannel(d.canal, d.numeroFatura),
       ano: d.ano,
       mes: d.mes,
       numeroFatura: d.numeroFatura,
