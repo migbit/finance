@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   getFirestore,
+  setDoc,
   Timestamp,
   writeBatch
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
@@ -312,7 +313,7 @@ function bindEvents() {
   els.documentCountry.addEventListener('change', () => els.documentCountry.dataset.touched = 'true');
   els.form.addEventListener('submit', handleSubmit);
   els.progress.addEventListener('click', handleProgressClick);
-  els.cancelEdit.addEventListener('click', startAddingGuest);
+  els.cancelEdit?.addEventListener('click', startAddingGuest);
 }
 
 function bindLanguageEvents() {
@@ -354,7 +355,7 @@ async function handleSubmit(event) {
 
   if (!els.form.reportValidity()) return;
   els.submit.disabled = true;
-  els.cancelEdit.disabled = true;
+  if (els.cancelEdit) els.cancelEdit.disabled = true;
   els.submit.textContent = editingGuest ? t.updating : t.submitting;
 
   const formData = {
@@ -389,7 +390,7 @@ async function handleSubmit(event) {
     setMessage(t.saveError, 'error');
   } finally {
     els.submit.disabled = false;
-    els.cancelEdit.disabled = false;
+    if (els.cancelEdit) els.cancelEdit.disabled = false;
     updateFormActions();
   }
 }
@@ -402,14 +403,12 @@ async function createGuest(formData) {
     submittedAt,
     userAgent: navigator.userAgent || ''
   };
-  const batch = writeBatch(db);
-  batch.set(guestRef, payload);
-  batch.set(doc(db, COLLECTION, state.token, 'guest_summaries', guestRef.id), {
+  await setDoc(guestRef, payload);
+  await setDoc(doc(db, COLLECTION, state.token, 'guest_summaries', guestRef.id), {
     firstName: payload.firstName,
     lastName: payload.lastName,
     submittedAt
   });
-  await batch.commit();
   state.guests.push({ id: guestRef.id, ...payload });
   sortGuests();
 }
@@ -432,11 +431,22 @@ async function updateGuest(guest, formData) {
 }
 
 async function loadGuests() {
-  const snap = await getDocs(collection(db, COLLECTION, state.token, 'guests'));
-  state.guests = snap.docs.map((docSnap) => ({
-    id: docSnap.id,
-    ...docSnap.data()
-  }));
+  try {
+    const snap = await getDocs(collection(db, COLLECTION, state.token, 'guests'));
+    state.guests = snap.docs.map((docSnap) => ({
+      id: docSnap.id,
+      editable: true,
+      ...docSnap.data()
+    }));
+  } catch (err) {
+    console.warn('Leitura completa indisponível; a usar resumos dos hóspedes.', err);
+    const snap = await getDocs(collection(db, COLLECTION, state.token, 'guest_summaries'));
+    state.guests = snap.docs.map((docSnap) => ({
+      id: docSnap.id,
+      editable: false,
+      ...docSnap.data()
+    }));
+  }
   sortGuests();
 }
 
@@ -460,7 +470,7 @@ function renderProgress() {
           <strong>${t.guestLabel} ${index + 1}</strong>
           <span>${escapeHtml(name || t.emptySlot)}</span>
         </div>
-        ${guest ? `
+        ${guest && guest.editable !== false ? `
           <div class="guest-slot-actions">
             <button type="button" data-action="edit-guest" data-guest-id="${escapeHtml(guest.id)}">${t.edit}</button>
           </div>
@@ -533,8 +543,10 @@ function updateFormActions() {
   const t = COPY[state.language] || COPY.en;
   const isEditing = Boolean(state.editingGuestId);
   els.submit.textContent = isEditing ? t.saveChanges : t.submit;
-  els.cancelEdit.textContent = t.cancel;
-  els.cancelEdit.hidden = !isEditing;
+  if (els.cancelEdit) {
+    els.cancelEdit.textContent = t.cancel;
+    els.cancelEdit.hidden = !isEditing;
+  }
 }
 
 function renderStayDates() {
