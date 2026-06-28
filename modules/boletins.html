@@ -147,47 +147,53 @@
 
     .guest-details-table th:nth-child(1),
     .guest-details-table td:nth-child(1) {
+      min-width: 100px;
+    }
+
+    .guest-details-table th:nth-child(2),
+    .guest-details-table td:nth-child(2) {
       min-width: 135px;
       text-align: left;
     }
 
-    .guest-details-table th:nth-child(2),
-    .guest-details-table td:nth-child(2),
-    .guest-details-table th:nth-child(8),
-    .guest-details-table td:nth-child(8),
+    .guest-details-table th:nth-child(3),
+    .guest-details-table td:nth-child(3),
     .guest-details-table th:nth-child(9),
-    .guest-details-table td:nth-child(9) {
+    .guest-details-table td:nth-child(9),
+    .guest-details-table th:nth-child(10),
+    .guest-details-table td:nth-child(10) {
       min-width: 110px;
       white-space: nowrap;
     }
 
-    .guest-details-table th:nth-child(3),
-    .guest-details-table td:nth-child(3) {
+    .guest-details-table th:nth-child(4),
+    .guest-details-table td:nth-child(4) {
       min-width: 145px;
     }
 
-    .guest-details-table th:nth-child(4),
-    .guest-details-table td:nth-child(4) {
+    .guest-details-table th:nth-child(5),
+    .guest-details-table td:nth-child(5) {
       min-width: 115px;
     }
 
-    .guest-details-table th:nth-child(5),
-    .guest-details-table td:nth-child(5),
     .guest-details-table th:nth-child(6),
     .guest-details-table td:nth-child(6),
     .guest-details-table th:nth-child(7),
-    .guest-details-table td:nth-child(7) {
+    .guest-details-table td:nth-child(7),
+    .guest-details-table th:nth-child(8),
+    .guest-details-table td:nth-child(8) {
       min-width: 120px;
-    }
-
-    .guest-details-table th:nth-child(10),
-    .guest-details-table td:nth-child(10) {
-      min-width: 140px;
     }
 
     .guest-details-table th:nth-child(11),
     .guest-details-table td:nth-child(11) {
-      min-width: 100px;
+      min-width: 140px;
+    }
+
+    .guest-details-actions {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 10px;
     }
 
     .guest-editor {
@@ -395,7 +401,7 @@
   <dialog id="guest-editor" class="guest-editor">
     <form id="guest-editor-form" class="guest-editor-form">
       <div class="guest-editor-header">
-        <h3>Editar dados do hóspede</h3>
+        <h3 id="guest-editor-title">Editar dados do hóspede</h3>
         <button type="button" data-action="close-editor" aria-label="Fechar">×</button>
       </div>
 
@@ -443,7 +449,7 @@
 
       <div class="boletins-actions">
         <button type="button" data-action="close-editor">Cancelar</button>
-        <button class="primary" type="submit">Guardar alterações</button>
+        <button id="guest-editor-submit" class="primary" type="submit">Guardar alterações</button>
       </div>
     </form>
   </dialog>

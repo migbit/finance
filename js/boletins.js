@@ -8,7 +8,8 @@ import {
   query,
   setDoc,
   Timestamp,
-  updateDoc
+  updateDoc,
+  writeBatch
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 import { showToast } from './toast.js';
 
@@ -35,6 +36,8 @@ const els = {
   sentBody: document.getElementById('boletins-sent-body'),
   guestEditor: document.getElementById('guest-editor'),
   guestEditorForm: document.getElementById('guest-editor-form'),
+  guestEditorTitle: document.getElementById('guest-editor-title'),
+  guestEditorSubmit: document.getElementById('guest-editor-submit'),
   editBoletimId: document.getElementById('edit-boletim-id'),
   editGuestId: document.getElementById('edit-guest-id'),
   editFirstName: document.getElementById('edit-first-name'),
@@ -196,6 +199,9 @@ function renderBoletimRows(boletins) {
           <button type="button" data-action="details" data-target="${detailsId}" ${item.guestSubmissions ? '' : 'disabled'}>
             Ver dados
           </button>
+          <button type="button" data-action="add-guest" data-boletim-id="${escapeAttr(item.id)}">
+            Adicionar hóspede
+          </button>
         </td>
         <td>
           <button type="button" data-action="copy" data-link="${escapeAttr(link)}">Copiar</button>
@@ -265,6 +271,12 @@ function handleTableClick(event) {
     return;
   }
 
+  const addGuestBtn = event.target.closest('button[data-action="add-guest"]');
+  if (addGuestBtn) {
+    openNewGuestEditor(addGuestBtn.dataset.boletimId);
+    return;
+  }
+
   const deleteBtn = event.target.closest('button[data-action="delete"]');
   if (deleteBtn) {
     deleteBoletim(deleteBtn.dataset.id, deleteBtn.dataset.name || 'este boletim');
@@ -303,6 +315,24 @@ function openGuestEditor(boletimId, guestId) {
   els.editDocumentCountry.value = guest.documentCountry || '';
   els.editCountryResidence.value = guest.countryResidence || '';
   els.editCountryOrigin.value = guest.countryOrigin || '';
+  els.guestEditorTitle.textContent = 'Editar dados do hóspede';
+  els.guestEditorSubmit.textContent = 'Guardar alterações';
+  els.guestEditor.showModal();
+  els.editFirstName.focus();
+}
+
+function openNewGuestEditor(boletimId) {
+  const boletim = state.boletins.find((item) => item.id === boletimId);
+  if (!boletim || !els.guestEditor) {
+    showToast('Não foi possível abrir o formulário de hóspede.', 'error');
+    return;
+  }
+
+  els.guestEditorForm.reset();
+  els.editBoletimId.value = boletimId;
+  els.editGuestId.value = '';
+  els.guestEditorTitle.textContent = 'Adicionar hóspede';
+  els.guestEditorSubmit.textContent = 'Adicionar hóspede';
   els.guestEditor.showModal();
   els.editFirstName.focus();
 }
@@ -321,7 +351,7 @@ async function handleGuestEditSubmit(event) {
   const guestId = els.editGuestId.value;
   const boletim = state.boletins.find((item) => item.id === boletimId);
   const guest = boletim?.guests?.find((item) => item.id === guestId);
-  if (!guest) {
+  if (!boletim || (guestId && !guest)) {
     showToast('O registo do hóspede já não está disponível.', 'error');
     return;
   }
@@ -346,32 +376,67 @@ async function handleGuestEditSubmit(event) {
   submitButton.disabled = true;
 
   try {
-    await updateDoc(doc(db, COLLECTION, boletimId, 'guests', guestId), changes);
-    Object.assign(guest, changes);
-
-    try {
-      await setDoc(doc(db, COLLECTION, boletimId, 'guest_summaries', guestId), {
-        firstName: changes.firstName,
-        lastName: changes.lastName,
-        submittedAt: guest.submittedAt
-      }, { merge: true });
-    } catch (summaryError) {
-      console.error('Erro ao atualizar resumo do hóspede', summaryError);
-      renderBoletins();
-      els.guestEditor.close();
-      showToast('Dados atualizados, mas o nome no estado do grupo não foi sincronizado.', 'warning');
-      return;
+    if (guestId) {
+      await updateExistingGuest(boletim, guest, changes);
+      showToast('Dados do hóspede atualizados.', 'success');
+    } else {
+      await addGuestToBoletim(boletim, changes);
+      showToast('Hóspede adicionado.', 'success');
     }
 
     renderBoletins();
     els.guestEditor.close();
-    showToast('Dados do hóspede atualizados.', 'success');
   } catch (err) {
-    console.error('Erro ao atualizar hóspede', err);
-    showToast('Não foi possível atualizar os dados do hóspede.', 'error');
+    console.error('Erro ao guardar hóspede', err);
+    showToast('Não foi possível guardar os dados do hóspede.', 'error');
   } finally {
     submitButton.disabled = false;
   }
+}
+
+async function updateExistingGuest(boletim, guest, changes) {
+  const batch = writeBatch(db);
+  batch.update(doc(db, COLLECTION, boletim.id, 'guests', guest.id), changes);
+  batch.set(doc(db, COLLECTION, boletim.id, 'guest_summaries', guest.id), {
+    firstName: changes.firstName,
+    lastName: changes.lastName,
+    submittedAt: guest.submittedAt
+  }, { merge: true });
+  await batch.commit();
+  Object.assign(guest, changes);
+}
+
+async function addGuestToBoletim(boletim, changes) {
+  const submittedAt = Timestamp.now();
+  const payload = {
+    ...changes,
+    checkinDate: boletim.checkinDate || '',
+    checkoutDate: boletim.checkoutDate || '',
+    declarationAccepted: false,
+    createdByAdmin: true,
+    submittedAt,
+    userAgent: navigator.userAgent || ''
+  };
+  const guestRef = doc(collection(db, COLLECTION, boletim.id, 'guests'));
+  const expectedGuests = Math.max(Number(boletim.expectedGuests || 0), boletim.guests.length + 1);
+  const batch = writeBatch(db);
+  batch.set(guestRef, payload);
+  batch.set(doc(db, COLLECTION, boletim.id, 'guest_summaries', guestRef.id), {
+    firstName: changes.firstName,
+    lastName: changes.lastName,
+    submittedAt
+  });
+  if (expectedGuests !== Number(boletim.expectedGuests || 0)) {
+    batch.update(doc(db, COLLECTION, boletim.id), {
+      expectedGuests,
+      updatedAt: Timestamp.now()
+    });
+  }
+  await batch.commit();
+
+  boletim.guests.push({ id: guestRef.id, ...payload });
+  boletim.guestSubmissions = boletim.guests.length;
+  boletim.expectedGuests = expectedGuests;
 }
 
 function normalizeCountryCode(value) {
@@ -577,10 +642,6 @@ function toMillis(value) {
 }
 
 function renderGuestDetails(boletimId, guests) {
-  if (!guests.length) {
-    return '<div class="empty-state">Ainda não há dados submetidos.</div>';
-  }
-
   const rows = guests.map((guest) => {
     const name = `${guest.firstName || ''} ${guest.lastName || ''}`.trim() || '-';
     const birthDate = guest.birthDate || '-';
@@ -588,6 +649,14 @@ function renderGuestDetails(boletimId, guests) {
 
     return `
       <tr>
+        <td>
+          <button
+            type="button"
+            data-action="edit-guest"
+            data-boletim-id="${escapeAttr(boletimId)}"
+            data-guest-id="${escapeAttr(guest.id)}"
+          >Editar</button>
+        </td>
         ${renderCopyableCell(name, 'Nome')}
         ${renderCopyableCell(birthDate, 'Nascimento')}
         ${renderCopyableCell(documentNumber, 'Número do documento')}
@@ -598,23 +667,21 @@ function renderGuestDetails(boletimId, guests) {
         <td>${escapeHtml(formatDateOnly(guest.checkinDate))}</td>
         <td>${escapeHtml(formatDateOnly(guest.checkoutDate))}</td>
         <td>${escapeHtml(formatDateTime(guest.submittedAt))}</td>
-        <td>
-          <button
-            type="button"
-            data-action="edit-guest"
-            data-boletim-id="${escapeAttr(boletimId)}"
-            data-guest-id="${escapeAttr(guest.id)}"
-          >Editar</button>
-        </td>
       </tr>
     `;
   }).join('');
 
   return `
+    <div class="guest-details-actions">
+      <button type="button" data-action="add-guest" data-boletim-id="${escapeAttr(boletimId)}">
+        Adicionar hóspede
+      </button>
+    </div>
     <div class="table-wrap">
       <table class="guest-details-table">
         <thead>
           <tr>
+            <th>Ações</th>
             <th>Nome</th>
             <th>Nascimento</th>
             <th>Número passaporte ou ID</th>
@@ -625,10 +692,9 @@ function renderGuestDetails(boletimId, guests) {
             <th>Check-in</th>
             <th>Check-out</th>
             <th>Submetido</th>
-            <th>Ações</th>
           </tr>
         </thead>
-        <tbody>${rows}</tbody>
+        <tbody>${rows || '<tr><td colspan="11" class="empty-state">Ainda não há dados submetidos.</td></tr>'}</tbody>
       </table>
     </div>
   `;
