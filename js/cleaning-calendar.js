@@ -100,6 +100,10 @@ function drawCalendar(payload) {
   const ctx = canvas.getContext('2d');
   const dates = buildDateKeys(payload.start, Number(payload.days) || 14);
   const calendars = normalizeCalendars(payload.calendars);
+  const schedules = {
+    '123': buildCleaningSchedule(dates, calendars['123']),
+    '1248': buildCleaningSchedule(dates, calendars['1248'])
+  };
 
   ctx.fillStyle = '#f4f7fb';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -142,16 +146,16 @@ function drawCalendar(payload) {
         width: columnWidth,
         height: 141,
         dateKey,
-        calendars
+        schedules
       });
     });
   });
 
-  drawCleaningSummary(ctx, dates, calendars);
+  drawCleaningSummary(ctx, dates, schedules);
   return canvas;
 }
 
-function drawDayCard(ctx, { x, y, width, height, dateKey, calendars }) {
+function drawDayCard(ctx, { x, y, width, height, dateKey, schedules }) {
   roundedRect(ctx, x, y, width, height, 14);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
@@ -166,17 +170,24 @@ function drawDayCard(ctx, { x, y, width, height, dateKey, calendars }) {
 
   const gap = 12;
   const statusWidth = (width - 36 - gap) / 2;
-  drawApartmentStatus(ctx, x + 18, y + 53, statusWidth, 70, '123', getDayStatus(dateKey, calendars['123']));
-  drawApartmentStatus(ctx, x + 18 + statusWidth + gap, y + 53, statusWidth, 70, '1248', getDayStatus(dateKey, calendars['1248']));
+  drawApartmentStatus(ctx, x + 18, y + 53, statusWidth, 70, '123', schedules['123'][dateKey]);
+  drawApartmentStatus(ctx, x + 18 + statusWidth + gap, y + 53, statusWidth, 70, '1248', schedules['1248'][dateKey]);
 }
 
 function drawApartmentStatus(ctx, x, y, width, height, apartment, status) {
   const theme = APARTMENTS[apartment];
   roundedRect(ctx, x, y, width, height, 11);
 
-  if (status === 'cleaning') {
-    ctx.fillStyle = theme.color;
+  if (status === 'required') {
+    ctx.fillStyle = '#d62828';
     ctx.fill();
+    ctx.fillStyle = theme.color;
+    ctx.fillRect(x, y + 8, 7, height - 16);
+  } else if (status === 'optional') {
+    ctx.fillStyle = '#20242c';
+    ctx.fill();
+    ctx.fillStyle = theme.color;
+    ctx.fillRect(x, y + 8, 7, height - 16);
   } else if (status === 'free') {
     ctx.fillStyle = theme.light;
     ctx.fill();
@@ -190,16 +201,21 @@ function drawApartmentStatus(ctx, x, y, width, height, apartment, status) {
     ctx.fillRect(x, y + 8, 7, height - 16);
   }
 
-  const mainColor = status === 'cleaning' ? '#ffffff' : status === 'free' ? theme.dark : '#566477';
+  const isCleaning = status === 'required' || status === 'optional';
+  const mainColor = isCleaning ? '#ffffff' : status === 'free' ? theme.dark : '#566477';
   ctx.fillStyle = mainColor;
   ctx.textAlign = 'left';
   ctx.font = '800 20px Arial, sans-serif';
   ctx.fillText(`AP. ${apartment}`, x + 17, y + 27);
   ctx.font = '900 23px Arial, sans-serif';
-  ctx.fillText(status === 'cleaning' ? 'LIMPAR' : status === 'free' ? 'LIVRE' : 'OCUPADO', x + 17, y + 55);
+  ctx.fillText(
+    status === 'required' ? 'LIMPAR!' : status === 'optional' ? 'LIMPAR' : status === 'free' ? 'LIVRE' : 'OCUPADO',
+    x + 17,
+    y + 55
+  );
 }
 
-function drawCleaningSummary(ctx, dates, calendars) {
+function drawCleaningSummary(ctx, dates, schedules) {
   const y = 1355;
   ctx.fillStyle = '#172033';
   ctx.textAlign = 'left';
@@ -208,7 +224,9 @@ function drawCleaningSummary(ctx, dates, calendars) {
 
   ['123', '1248'].forEach((apartment, index) => {
     const lineY = y + 47 + index * 43;
-    const cleaningDates = dates.filter((dateKey) => getDayStatus(dateKey, calendars[apartment]) === 'cleaning');
+    const cleaningDates = dates.filter((dateKey) =>
+      ['required', 'optional'].includes(schedules[apartment][dateKey])
+    );
     ctx.fillStyle = APARTMENTS[apartment].color;
     roundedRect(ctx, 48, lineY - 20, 22, 22, 5);
     ctx.fill();
@@ -216,7 +234,9 @@ function drawCleaningSummary(ctx, dates, calendars) {
     ctx.fillStyle = '#263246';
     ctx.font = '700 22px Arial, sans-serif';
     ctx.fillText(
-      `Apartamento ${apartment}: ${cleaningDates.length ? cleaningDates.map(formatShortDate).join(' · ') : 'sem limpezas nestas duas semanas'}`,
+      `Apartamento ${apartment}: ${cleaningDates.length
+        ? formatCleaningDateList(cleaningDates, schedules[apartment])
+        : 'sem limpezas nestas duas semanas'}`,
       84,
       lineY
     );
@@ -224,27 +244,58 @@ function drawCleaningSummary(ctx, dates, calendars) {
 
   ctx.fillStyle = '#687588';
   ctx.font = '600 19px Arial, sans-serif';
-  ctx.fillText('LIVRE = disponível para limpeza  •  OCUPADO = hóspedes no apartamento', 48, 1510);
+  ctx.fillText('VERMELHO = limpar nesse dia  •  PRETO = pode limpar nesse dia', 48, 1510);
   ctx.fillText(`Atualizado em ${new Date().toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}`, 48, 1545);
 }
 
 function normalizeCalendars(calendars) {
-  const result = { '123': [], '1248': [] };
+  const result = {
+    '123': { bookings: [], assumeTurnoverToday: false },
+    '1248': { bookings: [], assumeTurnoverToday: false }
+  };
   if (!Array.isArray(calendars)) return result;
 
   calendars.forEach((calendar) => {
     if (!result[calendar.apartment] || !Array.isArray(calendar.bookings)) return;
-    result[calendar.apartment] = calendar.bookings.filter((booking) =>
-      isDateKey(booking.start) && isDateKey(booking.end)
-    );
+    result[calendar.apartment] = {
+      bookings: calendar.bookings.filter((booking) =>
+        isDateKey(booking.start) && isDateKey(booking.end)
+      ),
+      assumeTurnoverToday: calendar.assumeTurnoverToday === true
+    };
   });
   return result;
 }
 
-function getDayStatus(dateKey, bookings) {
-  if (bookings.some((booking) => booking.end === dateKey)) return 'cleaning';
-  if (bookings.some((booking) => booking.start <= dateKey && dateKey < booking.end)) return 'occupied';
-  return 'free';
+function buildCleaningSchedule(dates, calendar) {
+  const bookings = [...calendar.bookings].sort((a, b) => a.start.localeCompare(b.start));
+  const schedule = {};
+
+  dates.forEach((dateKey) => {
+    schedule[dateKey] = bookings.some((booking) =>
+      booking.start <= dateKey && dateKey < booking.end
+    ) ? 'occupied' : 'free';
+  });
+
+  bookings.forEach((booking, index) => {
+    const checkout = booking.end;
+    const nextBooking = bookings.slice(index + 1).find((candidate) => candidate.start >= checkout);
+    const nextCheckIn = nextBooking?.start || null;
+    const required = nextCheckIn !== null && nextCheckIn <= addDays(checkout, 1);
+
+    dates.forEach((dateKey) => {
+      const isCleaningDay = required
+        ? dateKey === checkout
+        : dateKey >= checkout && (!nextCheckIn || dateKey < nextCheckIn);
+      if (isCleaningDay) schedule[dateKey] = required ? 'required' : 'optional';
+    });
+  });
+
+  if (calendar.assumeTurnoverToday && dates[0]) {
+    schedule[dates[0]] = 'required';
+  }
+
+  return schedule;
 }
 
 function buildDateKeys(start, count) {
@@ -278,6 +329,26 @@ function formatDayHeading(dateKey) {
 
 function formatShortDate(dateKey) {
   return toLocalDate(dateKey).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
+}
+
+function formatCleaningDateList(dateKeys, schedule) {
+  const groups = [];
+
+  dateKeys.forEach((dateKey) => {
+    const status = schedule[dateKey];
+    const last = groups[groups.length - 1];
+    if (last && last.status === status && addDays(last.end, 1) === dateKey) {
+      last.end = dateKey;
+    } else {
+      groups.push({ start: dateKey, end: dateKey, status });
+    }
+  });
+
+  return groups.map((group) => {
+    const suffix = group.status === 'required' ? '!' : '';
+    if (group.start === group.end) return `${formatShortDate(group.start)}${suffix}`;
+    return `${formatShortDate(group.start)}–${formatShortDate(group.end)}${suffix}`;
+  }).join(' · ');
 }
 
 function formatDateRange(start, days) {

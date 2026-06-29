@@ -12,6 +12,7 @@ if (!admin.apps.length) {
 const firestore = admin.firestore();
 const ACCESS_COLLECTION = "cleaning_hours_access";
 const ENTRIES_COLLECTION = "cleaning_hours_entries";
+const CALENDAR_STATE_COLLECTION = "cleaning_calendar_state";
 const DEFAULT_ALLOWED_APARTMENTS = ["123", "1248", "Ambos", "Ferro 123", "Ferro 1248", "Ferro Ambos"];
 const COINPAPRIKA_BASE_URL = "https://api.coinpaprika.com/v1";
 const binanceTickerCache = { data: null, expires: 0 };
@@ -657,11 +658,65 @@ exports.cleaningCalendar = onRequest(
         return;
       }
 
+      const calendar = await loadCleaningCalendar(start, 14);
+      calendar.calendars = await Promise.all(calendar.calendars.map(async (item) => {
+        const stateRef = firestore.collection(CALENDAR_STATE_COLLECTION).doc(item.apartment);
+        const stateSnap = await stateRef.get();
+        const storedBookings = stateSnap.exists && Array.isArray(stateSnap.data()?.bookings)
+          ? stateSnap.data().bookings.filter((booking) =>
+              isValidDateString(booking?.start) && isValidDateString(booking?.end)
+            )
+          : [];
+        const storedTurnovers = stateSnap.exists && Array.isArray(stateSnap.data()?.inferredTurnovers)
+          ? stateSnap.data().inferredTurnovers.filter(isValidDateString)
+          : [];
+        const storedPrevious = [...storedBookings]
+          .filter((booking) => booking.start < start)
+          .sort((a, b) => b.end.localeCompare(a.end))[0];
+        const bookings = deduplicateBookings([
+          ...item.bookings,
+          ...(storedPrevious ? [storedPrevious] : []),
+        ]).sort((a, b) => a.start.localeCompare(b.start));
+        const shouldInferTurnover =
+          !stateSnap.exists &&
+          !bookings.some((booking) => booking.end === start) &&
+          bookings.some((booking) => booking.start === start);
+        const inferredTurnovers = Array.from(new Set([
+          ...storedTurnovers,
+          ...(shouldInferTurnover ? [start] : []),
+        ]));
+
+        await stateRef.set({
+          apartment: item.apartment,
+          bookings,
+          inferredTurnovers,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+
+        return {
+          apartment: item.apartment,
+          bookings,
+          assumeTurnoverToday: inferredTurnovers.includes(start),
+        };
+      }));
+
       res.set("Cache-Control", "private, no-store");
-      res.status(200).json(await loadCleaningCalendar(start, 14));
+      res.status(200).json(calendar);
     } catch (error) {
       console.error("cleaningCalendar error", error);
       res.status(502).json({ error: "Não foi possível carregar os calendários Airbnb." });
     }
   }
 );
+
+function deduplicateBookings(bookings) {
+  const unique = new Map();
+  bookings.forEach((booking) => {
+    if (!isValidDateString(booking?.start) || !isValidDateString(booking?.end)) return;
+    unique.set(`${booking.start}|${booking.end}`, {
+      start: booking.start,
+      end: booking.end,
+    });
+  });
+  return Array.from(unique.values());
+}

@@ -27,11 +27,20 @@ function parseAirbnbBookings(icalText) {
     }
 
     if (line === "END:VEVENT") {
+      const summary = event?.summary?.trim().toLowerCase();
+      const validDates =
+        isDateKey(event?.start) &&
+        isDateKey(event?.end) &&
+        event.start < event.end;
+      const isAirbnbReservation = summary === "reserved";
+      const isMultiNightExternalBlock =
+        summary === "airbnb (not available)" &&
+        validDates &&
+        differenceInDays(event.start, event.end) > 1;
+
       if (
-        event?.summary?.trim().toLowerCase() === "reserved" &&
-        isDateKey(event.start) &&
-        isDateKey(event.end) &&
-        event.start < event.end
+        validDates &&
+        (isAirbnbReservation || isMultiNightExternalBlock)
       ) {
         bookings.push({ start: event.start, end: event.end });
       }
@@ -65,11 +74,36 @@ async function loadCleaningCalendar(start, days = 14) {
   const rangeEnd = addDays(start, days);
   const calendars = await Promise.all(CALENDAR_SOURCES.map(async (source) => {
     const bookings = await loadSourceBookings(source);
+    const previousBooking = [...bookings]
+      .filter((booking) => booking.end < start)
+      .sort((a, b) => b.end.localeCompare(a.end))[0];
+    const relevantBookings = bookings.filter((booking) =>
+      booking.end >= start && booking.start < rangeEnd
+    );
+    const nextBooking = [...bookings]
+      .filter((booking) => booking.start >= rangeEnd)
+      .sort((a, b) => a.start.localeCompare(b.start))[0];
+
+    if (
+      previousBooking &&
+      !relevantBookings.some((booking) =>
+        booking.start === previousBooking.start && booking.end === previousBooking.end
+      )
+    ) {
+      relevantBookings.unshift(previousBooking);
+    }
+    if (
+      nextBooking &&
+      !relevantBookings.some((booking) =>
+        booking.start === nextBooking.start && booking.end === nextBooking.end
+      )
+    ) {
+      relevantBookings.push(nextBooking);
+    }
+
     return {
       apartment: source.apartment,
-      bookings: bookings.filter((booking) =>
-        booking.end >= start && booking.start < rangeEnd
-      ),
+      bookings: relevantBookings,
     };
   }));
 
@@ -124,6 +158,12 @@ function addDays(dateKey, days) {
   const date = new Date(Date.UTC(year, month - 1, day));
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+function differenceInDays(start, end) {
+  const startDate = new Date(`${start}T00:00:00Z`);
+  const endDate = new Date(`${end}T00:00:00Z`);
+  return Math.round((endDate.getTime() - startDate.getTime()) / 86400000);
 }
 
 function isDateKey(value) {
