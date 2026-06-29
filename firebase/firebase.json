@@ -26,6 +26,13 @@
           "functionId": "cleaningHours",
           "region": "europe-west1"
         }
+      },
+      {
+        "source": "/api/cleaning-calendar",
+        "function": {
+          "functionId": "cleaningCalendar",
+          "region": "europe-west1"
+        }
       }
     ]
   }

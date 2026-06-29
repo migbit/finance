@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const admin = require("firebase-admin");
 const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
+const { loadCleaningCalendar } = require("./cleaning-calendar");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -610,6 +611,57 @@ exports.cleaningHours = onRequest(
     } catch (error) {
       console.error("cleaningHours error", error);
       res.status(500).json({ error: String(error.message || error) });
+    }
+  }
+);
+
+exports.cleaningCalendar = onRequest(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 20,
+    cors: true,
+  },
+  async (req, res) => {
+    try {
+      applyCors(res);
+
+      if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+      }
+
+      if (req.method !== "GET") {
+        res.status(405).json({ error: "Método não permitido." });
+        return;
+      }
+
+      const authorization = String(req.get("Authorization") || "");
+      const idToken = authorization.startsWith("Bearer ")
+        ? authorization.slice("Bearer ".length).trim()
+        : "";
+      if (!idToken) {
+        res.status(401).json({ error: "Autenticação necessária." });
+        return;
+      }
+
+      try {
+        await admin.auth().verifyIdToken(idToken);
+      } catch (_) {
+        res.status(401).json({ error: "Sessão inválida ou expirada." });
+        return;
+      }
+
+      const start = String(req.query.start || "").trim();
+      if (!isValidDateString(start)) {
+        res.status(400).json({ error: "Data inicial inválida." });
+        return;
+      }
+
+      res.set("Cache-Control", "private, no-store");
+      res.status(200).json(await loadCleaningCalendar(start, 14));
+    } catch (error) {
+      console.error("cleaningCalendar error", error);
+      res.status(502).json({ error: "Não foi possível carregar os calendários Airbnb." });
     }
   }
 );

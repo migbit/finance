@@ -220,6 +220,65 @@
       color: #991b1b;
     }
 
+    .calendar-builder {
+      margin-bottom: 18px;
+    }
+
+    .calendar-builder-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .calendar-builder-head p {
+      margin: 6px 0 0;
+      color: var(--text-dim);
+    }
+
+    .calendar-builder-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .calendar-status {
+      min-height: 24px;
+      margin: 12px 0 0;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+    }
+
+    .calendar-status.is-error {
+      color: #991b1b;
+      font-weight: 700;
+    }
+
+    .calendar-preview {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: #eef2f7;
+      text-align: center;
+    }
+
+    .calendar-preview img {
+      display: block;
+      width: min(100%, 720px);
+      height: auto;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: var(--shadow-1);
+    }
+
+    .calendar-preview small {
+      display: block;
+      margin-top: 10px;
+      color: var(--text-dim);
+    }
+
     @media (max-width: 900px) {
       body[data-page="cleaning-hours"] main {
         padding: var(--space-4);
@@ -251,6 +310,24 @@
       <h2>Horas de Limpeza</h2>
       <p>Criar links simples para a funcionária e acompanhar os registos gravados no Firebase.</p>
     </div>
+
+    <section class="viz-card calendar-builder" aria-labelledby="cleaning-calendar-title">
+      <div class="calendar-builder-head">
+        <div>
+          <h4 id="cleaning-calendar-title">Criar calendário</h4>
+          <p>Gera uma imagem simples com as limpezas e disponibilidade dos apartamentos 123 e 1248 para os próximos 14 dias.</p>
+        </div>
+        <div class="calendar-builder-actions">
+          <button type="button" id="generate-cleaning-calendar" class="btn primary">Gerar calendário de limpezas</button>
+          <button type="button" id="copy-cleaning-calendar" class="btn" hidden>Copiar imagem</button>
+        </div>
+      </div>
+      <div id="cleaning-calendar-status" class="calendar-status" role="status" aria-live="polite"></div>
+      <div id="cleaning-calendar-preview" class="calendar-preview" hidden>
+        <img id="cleaning-calendar-image" alt="Calendário de limpezas dos próximos 14 dias">
+        <small>Azul: apartamento 123 · Laranja: apartamento 1248</small>
+      </div>
+    </section>
 
     <section class="hours-grid">
       <div class="viz-card">
@@ -390,5 +467,6 @@
 
   <script type="module" src="../js/script.js"></script>
   <script type="module" src="../js/cleaning-hours-admin.js"></script>
+  <script type="module" src="../js/cleaning-calendar.js"></script>
 </body>
 </html>
