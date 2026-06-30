@@ -296,6 +296,160 @@
       flex-wrap: wrap;
     }
 
+    .cleaning-calendar-card {
+      grid-column: 1 / -1;
+    }
+
+    .cleaning-calendar-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .cleaning-calendar-head button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 999px;
+      padding: 0 17px;
+      background: var(--accent-strong);
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 700;
+    }
+
+    .cleaning-calendar-head button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .cleaning-calendar-meta {
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .cleaning-calendar-meta.is-error {
+      color: #991b1b;
+    }
+
+    .cleaning-calendar-legend {
+      display: flex;
+      gap: 10px 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+    }
+
+    .legend-dot.is-required { background: #d62828; }
+    .legend-dot.is-optional { background: #20242c; }
+    .legend-dot.is-123 { background: #1677d2; }
+    .legend-dot.is-1248 { background: #ed7a16; }
+
+    .cleaning-weeks {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .cleaning-week {
+      display: grid;
+      gap: 9px;
+      align-content: start;
+    }
+
+    .cleaning-week h3 {
+      margin: 0 0 2px;
+      color: var(--accent-strong);
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .cleaning-day {
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: #fff;
+    }
+
+    .cleaning-day-date {
+      margin-bottom: 9px;
+      font-weight: 800;
+      text-transform: capitalize;
+    }
+
+    .cleaning-day-statuses {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .cleaning-apartment-status {
+      min-height: 58px;
+      padding: 8px 9px 8px 13px;
+      border-radius: 10px;
+      border-left: 6px solid var(--apartment-color);
+      display: grid;
+      align-content: center;
+      gap: 2px;
+    }
+
+    .cleaning-apartment-status span {
+      font-size: 0.72rem;
+      font-weight: 800;
+    }
+
+    .cleaning-apartment-status strong {
+      font-size: 0.92rem;
+    }
+
+    .cleaning-apartment-status.is-123 {
+      --apartment-color: #1677d2;
+    }
+
+    .cleaning-apartment-status.is-1248 {
+      --apartment-color: #ed7a16;
+    }
+
+    .cleaning-apartment-status.is-required {
+      background: #d62828;
+      color: #fff;
+    }
+
+    .cleaning-apartment-status.is-optional {
+      background: #20242c;
+      color: #fff;
+    }
+
+    .cleaning-apartment-status.is-occupied {
+      background: #edf1f5;
+      color: #566477;
+    }
+
+    .cleaning-apartment-status.is-free {
+      background: #f8fafc;
+      color: #566477;
+    }
+
     @media (max-width: 860px) {
       .shell {
         grid-template-columns: 1fr;
@@ -308,11 +462,37 @@
       .card {
         padding: 18px;
       }
+
+      .cleaning-weeks {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
   <main class="shell">
+    <section class="card cleaning-calendar-card">
+      <div class="cleaning-calendar-head">
+        <div>
+          <h1>Dias de Limpeza</h1>
+          <p>Calendário atualizado dos próximos 14 dias.</p>
+        </div>
+        <button type="button" id="reload-cleaning-calendar">Atualizar</button>
+      </div>
+
+      <div class="cleaning-calendar-legend" aria-label="Legenda">
+        <span class="legend-item"><span class="legend-dot is-required"></span>Vermelho: limpar nesse dia</span>
+        <span class="legend-item"><span class="legend-dot is-optional"></span>Preto: pode limpar nesse dia</span>
+        <span class="legend-item"><span class="legend-dot is-123"></span>Apartamento 123</span>
+        <span class="legend-item"><span class="legend-dot is-1248"></span>Apartamento 1248</span>
+      </div>
+
+      <div id="cleaning-calendar-meta" class="cleaning-calendar-meta" role="status" aria-live="polite">A carregar calendário...</div>
+      <div id="cleaning-calendar-weeks" class="cleaning-weeks">
+        <div class="empty-state">A carregar os dias de limpeza...</div>
+      </div>
+    </section>
+
     <section class="card">
       <div class="intro">
         <span id="employee-chip" class="employee-chip" hidden></span>

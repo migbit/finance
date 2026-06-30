@@ -640,15 +640,24 @@ exports.cleaningCalendar = onRequest(
       const idToken = authorization.startsWith("Bearer ")
         ? authorization.slice("Bearer ".length).trim()
         : "";
-      if (!idToken) {
-        res.status(401).json({ error: "Autenticação necessária." });
-        return;
+      let authorized = false;
+
+      if (idToken) {
+        try {
+          await admin.auth().verifyIdToken(idToken);
+          authorized = true;
+        } catch (_) {
+          authorized = false;
+        }
       }
 
-      try {
-        await admin.auth().verifyIdToken(idToken);
-      } catch (_) {
-        res.status(401).json({ error: "Sessão inválida ou expirada." });
+      if (!authorized) {
+        const access = await findAccessByToken(req.query.token);
+        authorized = Boolean(access && access.active !== false);
+      }
+
+      if (!authorized) {
+        res.status(401).json({ error: "Link inválido ou sessão expirada." });
         return;
       }
 

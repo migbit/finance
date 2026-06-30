@@ -10,6 +10,9 @@ const historyList = document.getElementById('history-list');
 const recentList = document.getElementById('recent-list');
 const employeeChip = document.getElementById('employee-chip');
 const summaryYearSelect = document.getElementById('summary-year-select');
+const cleaningCalendarWeeks = document.getElementById('cleaning-calendar-weeks');
+const cleaningCalendarMeta = document.getElementById('cleaning-calendar-meta');
+const reloadCleaningCalendarBtn = document.getElementById('reload-cleaning-calendar');
 
 const token = new URLSearchParams(window.location.search).get('token') || '';
 let currentMeta = null;
@@ -18,6 +21,7 @@ let expandedMonths = new Set();
 let selectedApartment = '';
 let allowedApartments = [];
 let currentEntry = null;
+let cleaningCalendarLoading = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   dateInput.value = todayLocal();
@@ -29,19 +33,210 @@ document.addEventListener('DOMContentLoaded', () => {
   dateInput?.addEventListener('change', () => loadData(dateInput.value));
   summaryYearSelect?.addEventListener('change', renderSummary);
   apartmentToggle?.addEventListener('click', handleApartmentToggle);
+  reloadCleaningCalendarBtn?.addEventListener('click', loadCleaningCalendar);
 
   if (!token) {
     showStatus('Link inválido. Falta o token de acesso.', 'warning');
     setHtml(historyList, '<div class="empty-state">Não foi possível abrir este formulário.</div>');
     setHtml(recentList, '<div class="empty-state">Não foi possível abrir este formulário.</div>');
+    setHtml(cleaningCalendarWeeks, '<div class="empty-state">Não foi possível abrir o calendário.</div>');
+    setCalendarMeta('Link inválido. Falta o token de acesso.', true);
     form?.querySelectorAll('input, select, button').forEach((field) => {
       field.disabled = true;
     });
+    if (reloadCleaningCalendarBtn) reloadCleaningCalendarBtn.disabled = true;
     return;
   }
 
   loadData(dateInput.value);
+  loadCleaningCalendar();
+
+  window.setInterval(() => {
+    if (document.visibilityState === 'visible') loadCleaningCalendar();
+  }, 15 * 60 * 1000);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') loadCleaningCalendar();
+  });
 });
+
+async function loadCleaningCalendar() {
+  if (!token || !cleaningCalendarWeeks || cleaningCalendarLoading) return;
+  cleaningCalendarLoading = true;
+
+  if (reloadCleaningCalendarBtn) {
+    reloadCleaningCalendarBtn.disabled = true;
+    reloadCleaningCalendarBtn.textContent = 'A atualizar...';
+  }
+  setCalendarMeta('A carregar calendário...');
+
+  try {
+    const url = new URL('/api/cleaning-calendar', getApiOrigin());
+    url.searchParams.set('token', token);
+    url.searchParams.set('start', todayLocal());
+
+    const response = await fetch(url.toString(), { cache: 'no-store' });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Falha ao carregar o calendário.');
+
+    renderCleaningCalendar(payload);
+    const updatedAt = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
+    setCalendarMeta(`Atualizado em ${updatedAt.toLocaleString('pt-PT', {
+      dateStyle: 'short',
+      timeStyle: 'short'
+    })}. Atualiza automaticamente a cada 15 minutos.`);
+  } catch (error) {
+    console.error(error);
+    setCalendarMeta(error.message || 'Não foi possível carregar o calendário.', true);
+    cleaningCalendarWeeks.innerHTML = '<div class="empty-state">Não foi possível carregar os dias de limpeza.</div>';
+  } finally {
+    cleaningCalendarLoading = false;
+    if (reloadCleaningCalendarBtn) {
+      reloadCleaningCalendarBtn.disabled = false;
+      reloadCleaningCalendarBtn.textContent = 'Atualizar';
+    }
+  }
+}
+
+function renderCleaningCalendar(payload) {
+  const dates = buildDateKeys(payload.start, Number(payload.days) || 14);
+  const calendars = normalizeCleaningCalendars(payload.calendars);
+  const schedules = {
+    '123': buildCleaningSchedule(dates, calendars['123']),
+    '1248': buildCleaningSchedule(dates, calendars['1248'])
+  };
+  const weeks = [dates.slice(0, 7), dates.slice(7, 14)];
+
+  cleaningCalendarWeeks.innerHTML = weeks.map((weekDates, index) => `
+    <section class="cleaning-week">
+      <h3>Semana ${index + 1} · ${escapeHtml(formatShortRange(weekDates))}</h3>
+      ${weekDates.map((dateKey) => `
+        <article class="cleaning-day">
+          <div class="cleaning-day-date">${escapeHtml(formatCalendarDay(dateKey))}</div>
+          <div class="cleaning-day-statuses">
+            ${renderApartmentCleaningStatus('123', schedules['123'][dateKey])}
+            ${renderApartmentCleaningStatus('1248', schedules['1248'][dateKey])}
+          </div>
+        </article>
+      `).join('')}
+    </section>
+  `).join('');
+}
+
+function renderApartmentCleaningStatus(apartment, status) {
+  const labels = {
+    required: 'LIMPAR!',
+    optional: 'LIMPAR',
+    occupied: 'OCUPADO',
+    free: 'LIVRE'
+  };
+
+  return `
+    <div class="cleaning-apartment-status is-${escapeHtml(apartment)} is-${escapeHtml(status)}">
+      <span>AP. ${escapeHtml(apartment)}</span>
+      <strong>${labels[status] || 'LIVRE'}</strong>
+    </div>
+  `;
+}
+
+function normalizeCleaningCalendars(calendars) {
+  const result = {
+    '123': { bookings: [], assumeTurnoverToday: false },
+    '1248': { bookings: [], assumeTurnoverToday: false }
+  };
+  if (!Array.isArray(calendars)) return result;
+
+  calendars.forEach((calendar) => {
+    if (!result[calendar.apartment] || !Array.isArray(calendar.bookings)) return;
+    result[calendar.apartment] = {
+      bookings: calendar.bookings.filter((booking) =>
+        isDateKey(booking.start) && isDateKey(booking.end)
+      ),
+      assumeTurnoverToday: calendar.assumeTurnoverToday === true
+    };
+  });
+  return result;
+}
+
+function buildCleaningSchedule(dates, calendar) {
+  const bookings = [...calendar.bookings].sort((a, b) => a.start.localeCompare(b.start));
+  const schedule = {};
+
+  dates.forEach((dateKey) => {
+    schedule[dateKey] = bookings.some((booking) =>
+      booking.start <= dateKey && dateKey < booking.end
+    ) ? 'occupied' : 'free';
+  });
+
+  bookings.forEach((booking, index) => {
+    const checkout = booking.end;
+    const nextBooking = bookings.slice(index + 1).find((candidate) => candidate.start >= checkout);
+    const nextCheckIn = nextBooking?.start || null;
+    const required = nextCheckIn !== null && nextCheckIn <= addCalendarDays(checkout, 1);
+
+    dates.forEach((dateKey) => {
+      const isCleaningDay = required
+        ? dateKey === checkout
+        : dateKey >= checkout && (!nextCheckIn || dateKey < nextCheckIn);
+      if (isCleaningDay) schedule[dateKey] = required ? 'required' : 'optional';
+    });
+  });
+
+  if (calendar.assumeTurnoverToday && dates[0]) {
+    schedule[dates[0]] = 'required';
+  }
+
+  return schedule;
+}
+
+function buildDateKeys(start, count) {
+  return Array.from({ length: count }, (_, index) => addCalendarDays(start, index));
+}
+
+function addCalendarDays(dateKey, days) {
+  const date = calendarDate(dateKey);
+  date.setDate(date.getDate() + days);
+  return localDateKey(date);
+}
+
+function calendarDate(dateKey) {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Date(year, month - 1, day, 12);
+}
+
+function localDateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatCalendarDay(dateKey) {
+  return calendarDate(dateKey).toLocaleDateString('pt-PT', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
+}
+
+function formatShortRange(dates) {
+  if (!dates.length) return '';
+  const format = (dateKey) => calendarDate(dateKey).toLocaleDateString('pt-PT', {
+    day: 'numeric',
+    month: 'short'
+  });
+  return `${format(dates[0])}–${format(dates[dates.length - 1])}`;
+}
+
+function setCalendarMeta(message, isError = false) {
+  if (!cleaningCalendarMeta) return;
+  cleaningCalendarMeta.textContent = message;
+  cleaningCalendarMeta.classList.toggle('is-error', isError);
+}
+
+function isDateKey(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+}
 
 async function loadData(date) {
   try {
