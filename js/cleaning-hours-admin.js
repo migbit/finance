@@ -28,6 +28,7 @@ const manualEntryEmployee = document.getElementById('manual-entry-employee');
 const manualEntryDate = document.getElementById('manual-entry-date');
 const manualEntryHours = document.getElementById('manual-entry-hours');
 const manualEntryApartment = document.getElementById('manual-entry-apartment');
+const calendarShareLinks = document.getElementById('calendar-share-links');
 
 const filterEmployee = document.getElementById('hours-filter-employee');
 const filterYear = document.getElementById('hours-filter-year');
@@ -72,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
       accessRows = [];
       entryRows = [];
       setSyncState('warning', 'Login necessário', 'Inicia sessão para carregar os dados do Firebase.');
+      renderCalendarShareLinks();
       if (accessList) accessList.innerHTML = '<div class="empty-state">Inicia sessão para ver os links.</div>';
       if (entriesBody) entriesBody.innerHTML = '<tr><td colspan="8" class="empty-state">Inicia sessão para ver os registos.</td></tr>';
       if (summaryWrap) summaryWrap.innerHTML = '';
@@ -143,6 +145,7 @@ function renderAccessList() {
   populateEmployeeFilter();
   populateManualEmployeeSelect();
   populateApartmentFilter();
+  renderCalendarShareLinks();
 
   if (!accessRows.length) {
     accessList.innerHTML = '<div class="empty-state">Ainda não existem funcionárias configuradas.</div>';
@@ -173,6 +176,43 @@ function renderAccessList() {
 
   accessList.querySelectorAll('[data-edit-access-id]').forEach((button) => {
     button.addEventListener('click', () => editAccess(button.getAttribute('data-edit-access-id')));
+  });
+}
+
+function renderCalendarShareLinks() {
+  if (!calendarShareLinks) return;
+
+  const activeRows = accessRows.filter((row) => row.active !== false && row.shareToken);
+  if (!activeRows.length) {
+    calendarShareLinks.innerHTML = '<span class="sync-meta">Ainda não existe um link ativo.</span>';
+    return;
+  }
+
+  calendarShareLinks.innerHTML = activeRows.map((row) => {
+    const shareUrl = buildShareUrl(row.shareToken);
+    return `
+      <div class="calendar-share-link">
+        <div class="calendar-share-link-info">
+          <strong>${escapeHtml(row.employeeName || row.employeeId || 'Funcionária')}</strong>
+          <a href="${escapeAttr(shareUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shareUrl)}</a>
+        </div>
+        <button type="button" class="btn" data-copy-calendar-link="${escapeAttr(shareUrl)}">Copiar link</button>
+      </div>
+    `;
+  }).join('');
+
+  calendarShareLinks.querySelectorAll('[data-copy-calendar-link]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const shareUrl = button.getAttribute('data-copy-calendar-link') || '';
+      if (!shareUrl) return;
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast('Link da funcionária copiado.', 'success');
+      } catch (error) {
+        console.error(error);
+        showToast('Não foi possível copiar o link.', 'error');
+      }
+    });
   });
 }
 
