@@ -13,6 +13,7 @@ const summaryYearSelect = document.getElementById('summary-year-select');
 const cleaningCalendarWeeks = document.getElementById('cleaning-calendar-weeks');
 const cleaningCalendarMeta = document.getElementById('cleaning-calendar-meta');
 const reloadCleaningCalendarBtn = document.getElementById('reload-cleaning-calendar');
+const API_ORIGIN = 'https://apartments-a4b17.web.app';
 
 const token = new URLSearchParams(window.location.search).get('token') || '';
 let currentMeta = null;
@@ -548,11 +549,7 @@ function setHtml(element, html) {
 }
 
 function getApiOrigin() {
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return 'https://apartments-a4b17.web.app';
-  }
-  return window.location.origin;
+  return API_ORIGIN;
 }
 
 function todayLocal() {

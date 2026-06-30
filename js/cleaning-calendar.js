@@ -13,6 +13,7 @@ const APARTMENTS = {
     light: '#fff0e2'
   }
 };
+const API_ORIGIN = 'https://apartments-a4b17.web.app';
 
 const generateButton = document.getElementById('generate-cleaning-calendar');
 const copyButton = document.getElementById('copy-cleaning-calendar');
@@ -388,11 +389,7 @@ function setStatus(message, isError = false) {
 }
 
 function getApiOrigin() {
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return 'https://apartments-a4b17.web.app';
-  }
-  return window.location.origin;
+  return API_ORIGIN;
 }
 
 function todayLocal() {

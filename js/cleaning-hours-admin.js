@@ -16,6 +16,7 @@ import {
 
 const ACCESS_COLLECTION = 'cleaning_hours_access';
 const ENTRIES_COLLECTION = 'cleaning_hours_entries';
+const PUBLIC_APP_ORIGIN = 'https://apartments-a4b17.web.app';
 
 const accessForm = document.getElementById('cleaning-access-form');
 const accessList = document.getElementById('access-list');
@@ -367,11 +368,7 @@ function buildShareUrl(shareToken) {
 }
 
 function getPublicAppOrigin() {
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return 'https://apartments-a4b17.web.app';
-  }
-  return window.location.origin;
+  return PUBLIC_APP_ORIGIN;
 }
 
 function parseApartments(value) {
