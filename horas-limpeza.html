@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registo de Horas</title>
+  <title>Calendário de Limpezas</title>
   <link rel="icon" href="./favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="./icons/icon-192-v2.png">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 
     :root {
       --bg: #f4f6fb;
@@ -16,49 +16,38 @@
       --text: #1f2933;
       --muted: #617184;
       --border: #d9e1ef;
-      --accent: #48637d;
-      --accent-strong: #30475f;
-      --ok-bg: #e9f7ef;
-      --ok-text: #166534;
-      --warn-bg: #fff7ed;
-      --warn-text: #9a3412;
+      --accent: #30475f;
       --shadow: 0 22px 50px rgba(31, 41, 51, 0.08);
-      --radius: 18px;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
       min-height: 100vh;
+      padding: 24px;
       font-family: 'Montserrat', system-ui, sans-serif;
       color: var(--text);
       background:
         radial-gradient(circle at top left, rgba(72, 99, 125, 0.14), transparent 32%),
         linear-gradient(180deg, #f8fafc 0%, #eef3f9 100%);
-      display: grid;
-      place-items: center;
-      padding: 24px;
     }
 
-    .shell {
+    main {
       width: min(100%, 980px);
-      display: grid;
-      gap: 18px;
-      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-    }
-
-    .card {
-      background: rgba(255, 255, 255, 0.94);
-      border: 1px solid rgba(217, 225, 239, 0.95);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
+      margin: 0 auto;
       padding: 24px;
-      backdrop-filter: blur(12px);
+      border: 1px solid rgba(217, 225, 239, 0.95);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: var(--shadow);
     }
 
-    h1, h2 {
+    h1 {
       margin: 0 0 8px;
+      font-size: clamp(1.55rem, 4vw, 2.1rem);
     }
 
     p {
@@ -66,278 +55,33 @@
       color: var(--muted);
     }
 
-    .intro {
-      display: grid;
-      gap: 10px;
-      margin-bottom: 18px;
-    }
-
-    .employee-chip {
-      display: inline-flex;
+    .calendar-head {
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      width: fit-content;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: #edf4fb;
-      color: var(--accent-strong);
-      font-size: 0.88rem;
-      font-weight: 700;
-    }
-
-    .field {
-      display: grid;
-      gap: 6px;
-      margin-bottom: 14px;
-    }
-
-    label {
-      font-size: 0.94rem;
-      font-weight: 600;
-    }
-
-    input,
-    select {
-      width: 100%;
-      min-height: 46px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 11px 13px;
-      font: inherit;
-      color: var(--text);
-      background: #fff;
-    }
-
-    .segmented {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
+      gap: 14px;
       margin-bottom: 16px;
+      flex-wrap: wrap;
     }
 
-    .segmented button {
-      min-height: 46px;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      background: #fff;
-      color: var(--text);
-      font: inherit;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .segmented button.is-active {
+    .calendar-head button {
+      min-height: 44px;
+      padding: 0 18px;
+      border: 0;
+      border-radius: 999px;
       background: var(--accent);
       color: #fff;
-      border-color: var(--accent);
-    }
-
-    .actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 18px;
-    }
-
-    .actions button {
-      min-height: 46px;
-      border: 0;
-      border-radius: 999px;
-      padding: 0 18px;
-      font: inherit;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .btn-primary {
-      background: var(--accent-strong);
-      color: #fff;
-    }
-
-    .btn-secondary {
-      background: #eef3f9;
-      color: var(--accent-strong);
-    }
-
-    .status-box {
-      margin-top: 14px;
-      padding: 12px 14px;
-      border-radius: 12px;
-      display: none;
-      font-weight: 600;
-    }
-
-    .status-box.is-visible {
-      display: block;
-    }
-
-    .status-box.is-success {
-      background: var(--ok-bg);
-      color: var(--ok-text);
-    }
-
-    .status-box.is-warning {
-      background: var(--warn-bg);
-      color: var(--warn-text);
-    }
-
-    .history-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-
-    .history-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .history-item {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
-      background: #fff;
-      display: grid;
-      gap: 6px;
-    }
-
-    .history-item strong {
-      font-size: 1rem;
-    }
-
-    .history-item button {
-      width: fit-content;
-      min-height: 38px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #fff;
-      padding: 0 14px;
-      cursor: pointer;
-      font: inherit;
-      font-weight: 700;
-      color: var(--accent-strong);
-    }
-
-    .empty-state {
-      color: var(--muted);
-      text-align: center;
-      padding: 24px 12px;
-      font-style: italic;
-    }
-
-    .summary-panel {
-      display: grid;
-      gap: 14px;
-    }
-
-    .summary-year {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .summary-grid {
-      display: grid;
-      gap: 10px;
-    }
-
-    .month-card {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      background: #fff;
-      padding: 14px;
-      display: grid;
-      gap: 10px;
-    }
-
-    .month-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .month-total {
-      font-weight: 700;
-      color: var(--accent-strong);
-    }
-
-    .month-card button {
-      width: fit-content;
-      min-height: 38px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      background: #fff;
-      padding: 0 14px;
-      cursor: pointer;
-      font: inherit;
-      font-weight: 700;
-      color: var(--accent-strong);
-    }
-
-    .month-days {
-      display: grid;
-      gap: 8px;
-    }
-
-    .day-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: #f8fafc;
-      border: 1px solid #edf2f7;
-      flex-wrap: wrap;
-    }
-
-    .cleaning-calendar-card {
-      grid-column: 1 / -1;
-    }
-
-    .cleaning-calendar-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-
-    .cleaning-calendar-head button {
-      min-height: 42px;
-      border: 0;
-      border-radius: 999px;
-      padding: 0 17px;
-      background: var(--accent-strong);
-      color: #fff;
       cursor: pointer;
       font: inherit;
       font-weight: 700;
     }
 
-    .cleaning-calendar-head button:disabled {
+    .calendar-head button:disabled {
       cursor: wait;
       opacity: 0.65;
     }
 
-    .cleaning-calendar-meta {
-      margin-bottom: 14px;
-      color: var(--muted);
-      font-size: 0.88rem;
-      font-weight: 600;
-    }
-
-    .cleaning-calendar-meta.is-error {
-      color: #991b1b;
-    }
-
-    .cleaning-calendar-legend {
+    .calendar-legend {
       display: flex;
       gap: 10px 16px;
       margin-bottom: 16px;
@@ -364,206 +108,147 @@
     .legend-dot.is-123 { background: #1677d2; }
     .legend-dot.is-1248 { background: #ed7a16; }
 
-    .cleaning-weeks {
+    .calendar-meta {
+      min-height: 20px;
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 600;
+    }
+
+    .calendar-meta.is-error {
+      color: #991b1b;
+    }
+
+    .calendar-weeks {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 16px;
     }
 
-    .cleaning-week {
+    .calendar-week {
       display: grid;
       gap: 9px;
       align-content: start;
     }
 
-    .cleaning-week h3 {
+    .calendar-week h2 {
       margin: 0 0 2px;
-      color: var(--accent-strong);
+      color: var(--accent);
       font-size: 0.95rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
 
-    .cleaning-day {
+    .calendar-day {
       padding: 12px;
       border: 1px solid var(--border);
       border-radius: 14px;
       background: #fff;
     }
 
-    .cleaning-day-date {
+    .calendar-day-date {
       margin-bottom: 9px;
       font-weight: 800;
       text-transform: capitalize;
     }
 
-    .cleaning-day-statuses {
+    .calendar-day-statuses {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
     }
 
-    .cleaning-apartment-status {
+    .apartment-status {
       min-height: 58px;
       padding: 8px 9px 8px 13px;
-      border-radius: 10px;
       border-left: 6px solid var(--apartment-color);
+      border-radius: 10px;
       display: grid;
       align-content: center;
       gap: 2px;
     }
 
-    .cleaning-apartment-status span {
+    .apartment-status span {
       font-size: 0.72rem;
       font-weight: 800;
     }
 
-    .cleaning-apartment-status strong {
+    .apartment-status strong {
       font-size: 0.92rem;
     }
 
-    .cleaning-apartment-status.is-123 {
-      --apartment-color: #1677d2;
-    }
+    .apartment-status.is-123 { --apartment-color: #1677d2; }
+    .apartment-status.is-1248 { --apartment-color: #ed7a16; }
 
-    .cleaning-apartment-status.is-1248 {
-      --apartment-color: #ed7a16;
-    }
-
-    .cleaning-apartment-status.is-required {
+    .apartment-status.is-required {
       background: #d62828;
       color: #fff;
     }
 
-    .cleaning-apartment-status.is-optional {
+    .apartment-status.is-optional {
       background: #20242c;
       color: #fff;
     }
 
-    .cleaning-apartment-status.is-occupied {
+    .apartment-status.is-occupied {
       background: #edf1f5;
       color: #566477;
     }
 
-    .cleaning-apartment-status.is-free {
+    .apartment-status.is-free {
       background: #f8fafc;
       color: #566477;
     }
 
-    @media (max-width: 860px) {
-      .shell {
-        grid-template-columns: 1fr;
-      }
+    .empty-state {
+      grid-column: 1 / -1;
+      padding: 28px 12px;
+      color: var(--muted);
+      text-align: center;
+      font-style: italic;
+    }
 
+    @media (max-width: 700px) {
       body {
-        padding: 14px;
+        padding: 12px;
       }
 
-      .card {
-        padding: 18px;
+      main {
+        padding: 17px;
       }
 
-      .cleaning-weeks {
+      .calendar-weeks {
         grid-template-columns: 1fr;
       }
     }
   </style>
 </head>
 <body>
-  <main class="shell">
-    <section class="card cleaning-calendar-card">
-      <div class="cleaning-calendar-head">
-        <div>
-          <h1>Dias de Limpeza</h1>
-          <p>Calendário atualizado dos próximos 14 dias.</p>
-        </div>
-        <button type="button" id="reload-cleaning-calendar">Atualizar</button>
+  <main>
+    <header class="calendar-head">
+      <div>
+        <h1>Dias de Limpeza</h1>
+        <p>Calendário atualizado dos próximos 14 dias.</p>
       </div>
+      <button type="button" id="reload-cleaning-calendar">Atualizar</button>
+    </header>
 
-      <div class="cleaning-calendar-legend" aria-label="Legenda">
-        <span class="legend-item"><span class="legend-dot is-required"></span>Vermelho: limpar nesse dia</span>
-        <span class="legend-item"><span class="legend-dot is-optional"></span>Preto: pode limpar nesse dia</span>
-        <span class="legend-item"><span class="legend-dot is-123"></span>Apartamento 123</span>
-        <span class="legend-item"><span class="legend-dot is-1248"></span>Apartamento 1248</span>
-      </div>
+    <div class="calendar-legend" aria-label="Legenda">
+      <span class="legend-item"><span class="legend-dot is-required"></span>Vermelho: limpar nesse dia</span>
+      <span class="legend-item"><span class="legend-dot is-optional"></span>Preto: pode limpar nesse dia</span>
+      <span class="legend-item"><span class="legend-dot is-123"></span>Apartamento 123</span>
+      <span class="legend-item"><span class="legend-dot is-1248"></span>Apartamento 1248</span>
+    </div>
 
-      <div id="cleaning-calendar-meta" class="cleaning-calendar-meta" role="status" aria-live="polite">A carregar calendário...</div>
-      <div id="cleaning-calendar-weeks" class="cleaning-weeks">
-        <div class="empty-state">A carregar os dias de limpeza...</div>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="intro">
-        <span id="employee-chip" class="employee-chip" hidden></span>
-        <div>
-          <h1>Registo de Horas</h1>
-          <p>No fim do dia, indica se trabalhaste, quantas horas fizeste e em que apartamento.</p>
-        </div>
-      </div>
-
-      <form id="public-hours-form">
-        <div class="field">
-          <label for="work-date">Data</label>
-          <input id="work-date" type="date" required>
-        </div>
-
-        <label>Apartamento</label>
-        <div class="segmented" id="apartment-toggle">
-          <button type="button" data-apartment="123">123</button>
-          <button type="button" data-apartment="1248">1248</button>
-          <button type="button" data-apartment="Ambos">Ambos</button>
-          <button type="button" data-apartment="Ferro 123">Ferro 123</button>
-          <button type="button" data-apartment="Ferro 1248">Ferro 1248</button>
-          <button type="button" data-apartment="Ferro Ambos">Ferro Ambos</button>
-        </div>
-
-        <div class="field">
-          <label for="hours">Número de horas</label>
-          <select id="hours" required></select>
-        </div>
-
-        <div class="actions">
-          <button type="submit" id="submit-entry" class="btn-primary">Gravar</button>
-          <button type="button" id="reload-entry" class="btn-secondary">Recarregar</button>
-          <button type="button" id="delete-entry" class="btn-secondary" hidden>Apagar</button>
-        </div>
-
-        <div id="public-status" class="status-box" aria-live="polite"></div>
-      </form>
-    </section>
-
-    <section class="card">
-      <div class="history-head">
-        <div>
-          <h2>Resumo anual</h2>
-          <p>Mês atual com detalhe diário. Meses anteriores apenas com total, salvo se abrires os detalhes.</p>
-        </div>
-      </div>
-
-      <div id="summary-panel" class="summary-panel">
-        <div class="summary-year">
-          <label for="summary-year-select">Ano</label>
-          <select id="summary-year-select"></select>
-        </div>
-        <div id="history-list" class="history-list">
-          <div class="empty-state">A carregar...</div>
-        </div>
-      </div>
-
-      <div class="history-head" style="margin-top: 18px;">
-        <div>
-          <h2>Últimos registos</h2>
-          <p>Podes carregar num registo para o editar.</p>
-        </div>
-      </div>
-
-      <div id="recent-list" class="history-list">
-        <div class="empty-state">A carregar...</div>
-      </div>
-    </section>
+    <div id="cleaning-calendar-meta" class="calendar-meta" role="status" aria-live="polite">
+      A carregar calendário...
+    </div>
+    <div id="cleaning-calendar-weeks" class="calendar-weeks">
+      <div class="empty-state">A carregar os dias de limpeza...</div>
+    </div>
   </main>
 
-  <script type="module" src="./js/cleaning-hours-public.js"></script>
+  <script type="module" src="./js/cleaning-hours-public.js?v=20260630-3"></script>
 </body>
 </html>

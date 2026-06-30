@@ -1,78 +1,44 @@
-const form = document.getElementById('public-hours-form');
-const dateInput = document.getElementById('work-date');
-const apartmentToggle = document.getElementById('apartment-toggle');
-const hoursSelect = document.getElementById('hours');
-const submitBtn = document.getElementById('submit-entry');
-const reloadBtn = document.getElementById('reload-entry');
-const deleteBtn = document.getElementById('delete-entry');
-const statusBox = document.getElementById('public-status');
-const historyList = document.getElementById('history-list');
-const recentList = document.getElementById('recent-list');
-const employeeChip = document.getElementById('employee-chip');
-const summaryYearSelect = document.getElementById('summary-year-select');
-const cleaningCalendarWeeks = document.getElementById('cleaning-calendar-weeks');
-const cleaningCalendarMeta = document.getElementById('cleaning-calendar-meta');
-const reloadCleaningCalendarBtn = document.getElementById('reload-cleaning-calendar');
+const calendarWeeks = document.getElementById('cleaning-calendar-weeks');
+const calendarMeta = document.getElementById('cleaning-calendar-meta');
+const reloadButton = document.getElementById('reload-cleaning-calendar');
 const API_ORIGIN = 'https://apartments-a4b17.web.app';
-
 const token = new URLSearchParams(window.location.search).get('token') || '';
-let currentMeta = null;
-let currentSummaryYears = [];
-let expandedMonths = new Set();
-let selectedApartment = '';
-let allowedApartments = [];
-let currentEntry = null;
-let cleaningCalendarLoading = false;
+
+let loading = false;
 
 document.addEventListener('DOMContentLoaded', () => {
-  dateInput.value = todayLocal();
-  fillHoursSelect();
-
-  form?.addEventListener('submit', handleSubmit);
-  reloadBtn?.addEventListener('click', () => loadData(dateInput.value));
-  deleteBtn?.addEventListener('click', handleDelete);
-  dateInput?.addEventListener('change', () => loadData(dateInput.value));
-  summaryYearSelect?.addEventListener('change', renderSummary);
-  apartmentToggle?.addEventListener('click', handleApartmentToggle);
-  reloadCleaningCalendarBtn?.addEventListener('click', loadCleaningCalendar);
+  reloadButton?.addEventListener('click', loadCalendar);
 
   if (!token) {
-    showStatus('Link inválido. Falta o token de acesso.', 'warning');
-    setHtml(historyList, '<div class="empty-state">Não foi possível abrir este formulário.</div>');
-    setHtml(recentList, '<div class="empty-state">Não foi possível abrir este formulário.</div>');
-    setHtml(cleaningCalendarWeeks, '<div class="empty-state">Não foi possível abrir o calendário.</div>');
-    setCalendarMeta('Link inválido. Falta o token de acesso.', true);
-    form?.querySelectorAll('input, select, button').forEach((field) => {
-      field.disabled = true;
-    });
-    if (reloadCleaningCalendarBtn) reloadCleaningCalendarBtn.disabled = true;
+    setMeta('Link inválido. Falta o token de acesso.', true);
+    setHtml(calendarWeeks, '<div class="empty-state">Não foi possível abrir o calendário.</div>');
+    if (reloadButton) reloadButton.disabled = true;
     return;
   }
 
-  loadData(dateInput.value);
-  loadCleaningCalendar();
+  loadCalendar();
 
   window.setInterval(() => {
-    if (document.visibilityState === 'visible') loadCleaningCalendar();
+    if (document.visibilityState === 'visible') loadCalendar();
   }, 15 * 60 * 1000);
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') loadCleaningCalendar();
+    if (document.visibilityState === 'visible') loadCalendar();
   });
 });
 
-async function loadCleaningCalendar() {
-  if (!token || !cleaningCalendarWeeks || cleaningCalendarLoading) return;
-  cleaningCalendarLoading = true;
+async function loadCalendar() {
+  if (!token || !calendarWeeks || loading) return;
+  loading = true;
 
-  if (reloadCleaningCalendarBtn) {
-    reloadCleaningCalendarBtn.disabled = true;
-    reloadCleaningCalendarBtn.textContent = 'A atualizar...';
+  if (reloadButton) {
+    reloadButton.disabled = true;
+    reloadButton.textContent = 'A atualizar...';
   }
-  setCalendarMeta('A carregar calendário...');
+  setMeta('A carregar calendário...');
 
   try {
-    const url = new URL('/api/cleaning-calendar', getApiOrigin());
+    const url = new URL('/api/cleaning-calendar', API_ORIGIN);
     url.searchParams.set('token', token);
     url.searchParams.set('start', todayLocal());
 
@@ -80,43 +46,43 @@ async function loadCleaningCalendar() {
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || 'Falha ao carregar o calendário.');
 
-    renderCleaningCalendar(payload);
+    renderCalendar(payload);
     const updatedAt = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
-    setCalendarMeta(`Atualizado em ${updatedAt.toLocaleString('pt-PT', {
+    setMeta(`Atualizado em ${updatedAt.toLocaleString('pt-PT', {
       dateStyle: 'short',
       timeStyle: 'short'
     })}. Atualiza automaticamente a cada 15 minutos.`);
   } catch (error) {
     console.error(error);
-    setCalendarMeta(error.message || 'Não foi possível carregar o calendário.', true);
-    cleaningCalendarWeeks.innerHTML = '<div class="empty-state">Não foi possível carregar os dias de limpeza.</div>';
+    setMeta(error.message || 'Não foi possível carregar o calendário.', true);
+    setHtml(calendarWeeks, '<div class="empty-state">Não foi possível carregar os dias de limpeza.</div>');
   } finally {
-    cleaningCalendarLoading = false;
-    if (reloadCleaningCalendarBtn) {
-      reloadCleaningCalendarBtn.disabled = false;
-      reloadCleaningCalendarBtn.textContent = 'Atualizar';
+    loading = false;
+    if (reloadButton) {
+      reloadButton.disabled = false;
+      reloadButton.textContent = 'Atualizar';
     }
   }
 }
 
-function renderCleaningCalendar(payload) {
+function renderCalendar(payload) {
   const dates = buildDateKeys(payload.start, Number(payload.days) || 14);
-  const calendars = normalizeCleaningCalendars(payload.calendars);
+  const calendars = normalizeCalendars(payload.calendars);
   const schedules = {
-    '123': buildCleaningSchedule(dates, calendars['123']),
-    '1248': buildCleaningSchedule(dates, calendars['1248'])
+    '123': buildSchedule(dates, calendars['123']),
+    '1248': buildSchedule(dates, calendars['1248'])
   };
   const weeks = [dates.slice(0, 7), dates.slice(7, 14)];
 
-  cleaningCalendarWeeks.innerHTML = weeks.map((weekDates, index) => `
-    <section class="cleaning-week">
-      <h3>Semana ${index + 1} · ${escapeHtml(formatShortRange(weekDates))}</h3>
+  calendarWeeks.innerHTML = weeks.map((weekDates, index) => `
+    <section class="calendar-week">
+      <h2>Semana ${index + 1} · ${escapeHtml(formatShortRange(weekDates))}</h2>
       ${weekDates.map((dateKey) => `
-        <article class="cleaning-day">
-          <div class="cleaning-day-date">${escapeHtml(formatCalendarDay(dateKey))}</div>
-          <div class="cleaning-day-statuses">
-            ${renderApartmentCleaningStatus('123', schedules['123'][dateKey])}
-            ${renderApartmentCleaningStatus('1248', schedules['1248'][dateKey])}
+        <article class="calendar-day">
+          <div class="calendar-day-date">${escapeHtml(formatDay(dateKey))}</div>
+          <div class="calendar-day-statuses">
+            ${renderStatus('123', schedules['123'][dateKey])}
+            ${renderStatus('1248', schedules['1248'][dateKey])}
           </div>
         </article>
       `).join('')}
@@ -124,7 +90,7 @@ function renderCleaningCalendar(payload) {
   `).join('');
 }
 
-function renderApartmentCleaningStatus(apartment, status) {
+function renderStatus(apartment, status) {
   const labels = {
     required: 'LIMPAR!',
     optional: 'LIMPAR',
@@ -133,14 +99,14 @@ function renderApartmentCleaningStatus(apartment, status) {
   };
 
   return `
-    <div class="cleaning-apartment-status is-${escapeHtml(apartment)} is-${escapeHtml(status)}">
+    <div class="apartment-status is-${escapeHtml(apartment)} is-${escapeHtml(status)}">
       <span>AP. ${escapeHtml(apartment)}</span>
       <strong>${labels[status] || 'LIVRE'}</strong>
     </div>
   `;
 }
 
-function normalizeCleaningCalendars(calendars) {
+function normalizeCalendars(calendars) {
   const result = {
     '123': { bookings: [], assumeTurnoverToday: false },
     '1248': { bookings: [], assumeTurnoverToday: false }
@@ -159,7 +125,7 @@ function normalizeCleaningCalendars(calendars) {
   return result;
 }
 
-function buildCleaningSchedule(dates, calendar) {
+function buildSchedule(dates, calendar) {
   const bookings = [...calendar.bookings].sort((a, b) => a.start.localeCompare(b.start));
   const schedule = {};
 
@@ -173,7 +139,7 @@ function buildCleaningSchedule(dates, calendar) {
     const checkout = booking.end;
     const nextBooking = bookings.slice(index + 1).find((candidate) => candidate.start >= checkout);
     const nextCheckIn = nextBooking?.start || null;
-    const required = nextCheckIn !== null && nextCheckIn <= addCalendarDays(checkout, 1);
+    const required = nextCheckIn !== null && nextCheckIn <= addDays(checkout, 1);
 
     dates.forEach((dateKey) => {
       const isCleaningDay = required
@@ -191,29 +157,33 @@ function buildCleaningSchedule(dates, calendar) {
 }
 
 function buildDateKeys(start, count) {
-  return Array.from({ length: count }, (_, index) => addCalendarDays(start, index));
+  return Array.from({ length: count }, (_, index) => addDays(start, index));
 }
 
-function addCalendarDays(dateKey, days) {
-  const date = calendarDate(dateKey);
+function addDays(dateKey, days) {
+  const date = toDate(dateKey);
   date.setDate(date.getDate() + days);
-  return localDateKey(date);
+  return dateKeyFromDate(date);
 }
 
-function calendarDate(dateKey) {
+function toDate(dateKey) {
   const [year, month, day] = dateKey.split('-').map(Number);
   return new Date(year, month - 1, day, 12);
 }
 
-function localDateKey(date) {
+function dateKeyFromDate(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
-function formatCalendarDay(dateKey) {
-  return calendarDate(dateKey).toLocaleDateString('pt-PT', {
+function todayLocal() {
+  return dateKeyFromDate(new Date());
+}
+
+function formatDay(dateKey) {
+  return toDate(dateKey).toLocaleDateString('pt-PT', {
     weekday: 'long',
     day: 'numeric',
     month: 'long'
@@ -222,348 +192,25 @@ function formatCalendarDay(dateKey) {
 
 function formatShortRange(dates) {
   if (!dates.length) return '';
-  const format = (dateKey) => calendarDate(dateKey).toLocaleDateString('pt-PT', {
+  const format = (dateKey) => toDate(dateKey).toLocaleDateString('pt-PT', {
     day: 'numeric',
     month: 'short'
   });
   return `${format(dates[0])}–${format(dates[dates.length - 1])}`;
 }
 
-function setCalendarMeta(message, isError = false) {
-  if (!cleaningCalendarMeta) return;
-  cleaningCalendarMeta.textContent = message;
-  cleaningCalendarMeta.classList.toggle('is-error', isError);
+function setMeta(message, isError = false) {
+  if (!calendarMeta) return;
+  calendarMeta.textContent = message;
+  calendarMeta.classList.toggle('is-error', isError);
+}
+
+function setHtml(element, html) {
+  if (element) element.innerHTML = html;
 }
 
 function isDateKey(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
-}
-
-async function loadData(date) {
-  try {
-    showStatus('A carregar dados...', 'warning');
-    const url = new URL('/api/cleaning-hours', getApiOrigin());
-    url.searchParams.set('token', token);
-    if (date) url.searchParams.set('date', date);
-
-    const response = await fetch(url.toString());
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || 'Falha ao carregar dados.');
-
-    currentMeta = payload;
-    syncMeta(payload);
-    hydrateForm(payload.entry || null, date || payload.today);
-    currentSummaryYears = payload.yearlySummary || [];
-    renderYearOptions(payload.availableYears || []);
-    renderSummary();
-    renderRecent(payload.recentEntries || []);
-    showStatus('Dados carregados.', 'success');
-  } catch (error) {
-    console.error(error);
-    showStatus(error.message || 'Erro ao carregar dados.', 'warning');
-    setHtml(historyList, '<div class="empty-state">Não foi possível carregar os registos.</div>');
-    setHtml(recentList, '<div class="empty-state">Não foi possível carregar os registos.</div>');
-  }
-}
-
-async function handleSubmit(event) {
-  event.preventDefault();
-
-  try {
-    const body = {
-      token,
-      date: dateInput.value,
-      worked: true,
-      apartment: selectedApartment,
-      hours: Number(hoursSelect.value)
-    };
-
-    if (!selectedApartment) {
-      showStatus('Seleciona um apartamento antes de gravar.', 'warning');
-      return;
-    }
-
-    const response = await fetch(new URL('/api/cleaning-hours', getApiOrigin()).toString(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || 'Falha ao gravar.');
-
-    showStatus('Registo gravado com sucesso.', 'success');
-    await loadData(body.date);
-  } catch (error) {
-    console.error(error);
-    showStatus(error.message || 'Erro ao gravar.', 'warning');
-  }
-}
-
-function syncMeta(payload) {
-  const employeeName = payload.employeeName || 'Funcionária';
-  employeeChip.hidden = false;
-  employeeChip.textContent = employeeName;
-
-  allowedApartments = Array.isArray(payload.allowedApartments) && payload.allowedApartments.length
-    ? payload.allowedApartments
-    : ['123', '1248', 'Ambos', 'Ferro 123', 'Ferro 1248', 'Ferro Ambos'];
-  syncApartmentButtons();
-}
-
-function hydrateForm(entry, fallbackDate) {
-  currentEntry = entry || null;
-  dateInput.value = entry?.date || fallbackDate || todayLocal();
-  selectedApartment = entry?.apartment || '';
-  syncApartmentButtons();
-  hoursSelect.value = String(entry?.hours ?? 1);
-  syncEditingState();
-}
-
-function handleApartmentToggle(event) {
-  const button = event.target.closest('[data-apartment]');
-  if (!button || button.disabled) return;
-  selectedApartment = button.getAttribute('data-apartment') || '';
-  syncApartmentButtons();
-}
-
-function syncApartmentButtons() {
-  apartmentToggle?.querySelectorAll('[data-apartment]').forEach((button) => {
-    const value = button.getAttribute('data-apartment') || '';
-    const isAllowed =
-      value === 'Ambos'
-        ? allowedApartments.includes('123') && allowedApartments.includes('1248')
-        : value === 'Ferro Ambos'
-          ? allowedApartments.includes('Ferro 123') && allowedApartments.includes('Ferro 1248')
-          : allowedApartments.includes(value);
-
-    button.disabled = !isAllowed;
-    button.classList.toggle('is-active', value === selectedApartment);
-  });
-
-  if (selectedApartment === 'Ambos' && !(allowedApartments.includes('123') && allowedApartments.includes('1248'))) {
-    selectedApartment = '';
-  }
-  if (selectedApartment === 'Ferro Ambos' && !(allowedApartments.includes('Ferro 123') && allowedApartments.includes('Ferro 1248'))) {
-    selectedApartment = '';
-  }
-  if (
-    ['123', '1248', 'Ferro 123', 'Ferro 1248'].includes(selectedApartment) &&
-    !allowedApartments.includes(selectedApartment)
-  ) {
-    selectedApartment = '';
-  }
-}
-
-function renderRecent(rows) {
-  if (!recentList) return;
-
-  if (!rows.length) {
-    recentList.innerHTML = '<div class="empty-state">Ainda não existem registos.</div>';
-    return;
-  }
-
-  recentList.innerHTML = rows.map((row) => `
-    <article class="history-item">
-      <strong>${escapeHtml(formatPtDate(row.date))}</strong>
-      <div>${escapeHtml(row.apartment || '-')}, ${Number(row.hours || 0).toLocaleString('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} horas</div>
-      <button type="button" data-edit-entry data-date="${escapeHtml(row.date)}" data-apartment="${escapeHtml(row.apartment || '')}" data-hours="${escapeHtml(String(Number(row.hours || 0)))}">Editar</button>
-    </article>
-  `).join('');
-
-  recentList.querySelectorAll('[data-edit-entry]').forEach((button) => {
-    button.addEventListener('click', () => {
-      startEditingEntry({
-        date: button.getAttribute('data-date') || '',
-        apartment: button.getAttribute('data-apartment') || '',
-        hours: Number(button.getAttribute('data-hours') || 1),
-      });
-    });
-  });
-}
-
-function renderYearOptions(availableYears) {
-  if (!summaryYearSelect) return;
-
-  const years = Array.isArray(availableYears) && availableYears.length
-    ? availableYears
-    : [new Date().getFullYear()];
-
-  const currentValue = summaryYearSelect.value || String(years[0]);
-  summaryYearSelect.innerHTML = years.map((year) =>
-    `<option value="${escapeHtml(String(year))}">${escapeHtml(String(year))}</option>`
-  ).join('');
-
-  if (years.includes(Number(currentValue)) || years.includes(currentValue)) {
-    summaryYearSelect.value = String(currentValue);
-  } else {
-    summaryYearSelect.value = String(years[0]);
-  }
-}
-
-function renderSummary() {
-  if (!historyList || !summaryYearSelect) return;
-
-  const selectedYear = Number(summaryYearSelect.value || new Date().getFullYear());
-  const yearData = currentSummaryYears.find((item) => Number(item.year) === selectedYear);
-
-  if (!yearData || !Array.isArray(yearData.months) || !yearData.months.length) {
-    historyList.innerHTML = '<div class="empty-state">Sem registos para o ano selecionado.</div>';
-    return;
-  }
-
-  const currentMonthKey = todayLocal().slice(0, 7);
-  historyList.innerHTML = `
-    <div class="summary-grid">
-      ${yearData.months.map((month) => renderMonthCard(month, month.monthKey === currentMonthKey)).join('')}
-    </div>
-  `;
-
-  historyList.querySelectorAll('[data-toggle-month]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const monthKey = button.getAttribute('data-toggle-month');
-      if (expandedMonths.has(monthKey)) expandedMonths.delete(monthKey);
-      else expandedMonths.add(monthKey);
-      renderSummary();
-    });
-  });
-
-  historyList.querySelectorAll('[data-edit-entry]').forEach((button) => {
-    button.addEventListener('click', () => {
-      startEditingEntry({
-        date: button.getAttribute('data-date') || '',
-        apartment: button.getAttribute('data-apartment') || '',
-        hours: Number(button.getAttribute('data-hours') || 1),
-      });
-    });
-  });
-}
-
-function renderMonthCard(month, isCurrentMonth) {
-  const isExpanded = isCurrentMonth || expandedMonths.has(month.monthKey);
-  const detailsLabel = isExpanded && !isCurrentMonth ? 'Esconder detalhes' : 'Detalhes';
-  const daysHtml = isExpanded
-    ? `
-      <div class="month-days">
-        ${month.days.map((day) => `
-          <div class="day-row">
-            <span>${escapeHtml(formatPtDate(day.date))}</span>
-            <span>${escapeHtml(day.apartment || '-')}, ${Number(day.hours || 0).toLocaleString('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} h</span>
-            <button type="button" data-edit-entry data-date="${escapeHtml(day.date)}" data-apartment="${escapeHtml(day.apartment || '')}" data-hours="${escapeHtml(String(Number(day.hours || 0)))}">Editar</button>
-          </div>
-        `).join('')}
-      </div>
-    `
-    : '';
-
-  return `
-    <article class="month-card">
-      <div class="month-card-header">
-        <div>
-          <strong>${escapeHtml(month.label)}</strong>
-          <div class="month-total">Total: ${Number(month.totalHours || 0).toLocaleString('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} horas</div>
-        </div>
-        ${isCurrentMonth ? '<span class="employee-chip">Mês atual</span>' : `<button type="button" data-toggle-month="${escapeHtml(month.monthKey)}">${detailsLabel}</button>`}
-      </div>
-      ${daysHtml}
-    </article>
-  `;
-}
-
-function fillHoursSelect() {
-  if (!hoursSelect) return;
-
-  const values = [];
-  for (let value = 1; value <= 8; value += 0.5) {
-    values.push(Number(value.toFixed(1)));
-  }
-
-  hoursSelect.innerHTML = values.map((value) =>
-    `<option value="${value}">${value.toLocaleString('pt-PT', { minimumFractionDigits: value % 1 === 0 ? 0 : 1, maximumFractionDigits: 1 })}</option>`
-  ).join('');
-
-  hoursSelect.value = '1';
-}
-
-async function handleDelete() {
-  if (!currentEntry?.date) {
-    showStatus('Não existe nenhum registo carregado para apagar.', 'warning');
-    return;
-  }
-
-  const confirmed = window.confirm(`Apagar o registo de ${formatPtDate(currentEntry.date)}?`);
-  if (!confirmed) return;
-
-  try {
-    const response = await fetch(new URL('/api/cleaning-hours', getApiOrigin()).toString(), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token,
-        action: 'delete',
-        date: currentEntry.date
-      })
-    });
-    const payload = await response.json();
-    if (!response.ok) throw new Error(payload.error || 'Falha ao apagar.');
-
-    currentEntry = null;
-    selectedApartment = '';
-    syncApartmentButtons();
-    hoursSelect.value = '1';
-    syncEditingState();
-    showStatus('Registo apagado com sucesso.', 'success');
-    await loadData(dateInput.value);
-  } catch (error) {
-    console.error(error);
-    showStatus(error.message || 'Erro ao apagar.', 'warning');
-  }
-}
-
-function startEditingEntry(entry) {
-  if (!entry?.date) return;
-  hydrateForm({
-    date: entry.date,
-    apartment: entry.apartment || '',
-    hours: Number(entry.hours || 1),
-  }, entry.date);
-  form?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function syncEditingState() {
-  if (deleteBtn) deleteBtn.hidden = !currentEntry?.date;
-  if (submitBtn) submitBtn.textContent = currentEntry?.date ? 'Guardar alterações' : 'Gravar';
-  if (currentEntry?.date) {
-    showStatus(`A editar o registo de ${formatPtDate(currentEntry.date)}.`, 'success');
-  }
-}
-
-function showStatus(message, type) {
-  if (!statusBox) return;
-  statusBox.textContent = message;
-  statusBox.className = `status-box is-visible ${type === 'success' ? 'is-success' : 'is-warning'}`;
-}
-
-function setHtml(element, html) {
-  if (!element) return;
-  element.innerHTML = html;
-}
-
-function getApiOrigin() {
-  return API_ORIGIN;
-}
-
-function todayLocal() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function formatPtDate(value) {
-  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return value || '-';
-  const [year, month, day] = value.split('-');
-  return `${day}/${month}/${year}`;
 }
 
 function escapeHtml(value) {
