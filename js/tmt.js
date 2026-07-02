@@ -122,6 +122,17 @@ function gerarRelatorioTMTDeApt(faturas, apt) {
 }
 
 /* ========== Shared bits ========== */
+function calcularNoitesBebes(fatura) {
+  const bebes = Number(fatura.hospedesBebes || 0);
+  const noites = Number(fatura.noites || 0);
+
+  if (!Number.isFinite(bebes) || !Number.isFinite(noites) || bebes <= 0 || noites <= 0) {
+    return 0;
+  }
+
+  return bebes * noites;
+}
+
 function agruparPorAnoTrimestreApartamento(faturas) {
   return faturas.reduce((acc, f) => {
     const tri = Math.ceil((Number(f.mes) || 0) / 3);
@@ -133,7 +144,7 @@ function agruparPorAnoTrimestreApartamento(faturas) {
     acc[apt][key].valorOperador  += Number(f.valorOperador || 0);
     acc[apt][key].valorDireto   += Number(f.valorDireto  || 0);
     acc[apt][key].noitesExtra   += Number(f.noitesExtra  || 0);
-    acc[apt][key].noitesCriancas+= Number(f.noitesCriancas || 0);
+    acc[apt][key].noitesCriancas+= Number(f.noitesCriancas || 0) + calcularNoitesBebes(f);
     acc[apt][key].detalhes.push(f);
     return acc;
   }, {});
@@ -181,13 +192,14 @@ function gerarHTMLDetalhesTMT(items) {
     const valTmt = Number(d.valorTmt || 0);
     const base = valOp + valDir;
     const est  = valTmt > 0 ? Math.round(base / valTmt) : 0;
+    const noitesCriancas = Number(d.noitesCriancas || 0) + calcularNoitesBebes(d);
     return `
       <tr>
         <td>${d.ano}</td>
         <td>${meses[(d.mes|0)-1] || ''}</td>
         <td>${est}</td>
         <td>${Number(d.noitesExtra||0)}</td>
-        <td>${Number(d.noitesCriancas||0)}</td>
+        <td>${noitesCriancas}</td>
         <td>€${base.toFixed(2)}</td>
         <td>€${valTmt.toFixed(2)}</td>
       </tr>`;
