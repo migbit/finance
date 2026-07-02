@@ -1,18 +1,36 @@
 const CALENDAR_SOURCES = [
   {
     apartment: "123",
-    url: "https://www.airbnb.com/calendar/ical/1192674.ics?s=713a99e9483f6ed204d12be2acc1f940",
+    calendars: [
+      {
+        provider: "airbnb",
+        url: "https://www.airbnb.com/calendar/ical/1192674.ics?s=713a99e9483f6ed204d12be2acc1f940",
+      },
+      {
+        provider: "vrbo",
+        url: "https://www.vrbo.com/icalendar/c0cd3694cf3840288be37d51c9a758d2.ics?nonTentative",
+      },
+    ],
   },
   {
     apartment: "1248",
-    url: "https://www.airbnb.com/calendar/ical/9776121.ics?s=20937949370c92092084c8f0e5a50bbb",
+    calendars: [
+      {
+        provider: "airbnb",
+        url: "https://www.airbnb.com/calendar/ical/9776121.ics?s=20937949370c92092084c8f0e5a50bbb",
+      },
+      {
+        provider: "vrbo",
+        url: "https://www.vrbo.com/icalendar/a4305ff49cb547d39bc1fe735fe67c85.ics?nonTentative",
+      },
+    ],
   },
 ];
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const calendarCache = new Map();
 
-function parseAirbnbBookings(icalText) {
+function parseCalendarBookings(icalText, provider) {
   const unfolded = String(icalText || "")
     .replace(/\r\n[ \t]/g, "")
     .replace(/\n[ \t]/g, "");
@@ -32,15 +50,13 @@ function parseAirbnbBookings(icalText) {
         isDateKey(event?.start) &&
         isDateKey(event?.end) &&
         event.start < event.end;
-      const isAirbnbReservation = summary === "reserved";
-      const isMultiNightExternalBlock =
-        summary === "airbnb (not available)" &&
-        validDates &&
-        differenceInDays(event.start, event.end) > 1;
+      const isReservation = provider === "vrbo"
+        ? /^reserved(?:\s*-|$)/.test(summary || "")
+        : summary === "reserved";
 
       if (
         validDates &&
-        (isAirbnbReservation || isMultiNightExternalBlock)
+        isReservation
       ) {
         bookings.push({ start: event.start, end: event.end });
       }
@@ -73,7 +89,10 @@ function parseAirbnbBookings(icalText) {
 async function loadCleaningCalendar(start, days = 14) {
   const rangeEnd = addDays(start, days);
   const calendars = await Promise.all(CALENDAR_SOURCES.map(async (source) => {
-    const bookings = await loadSourceBookings(source);
+    const sourceBookings = await Promise.all(source.calendars.map((calendar) =>
+      loadSourceBookings(source.apartment, calendar)
+    ));
+    const bookings = deduplicateBookings(sourceBookings.flat());
     const previousBooking = [...bookings]
       .filter((booking) => booking.end < start)
       .sort((a, b) => b.end.localeCompare(a.end))[0];
@@ -115,8 +134,9 @@ async function loadCleaningCalendar(start, days = 14) {
   };
 }
 
-async function loadSourceBookings(source) {
-  const cached = calendarCache.get(source.apartment);
+async function loadSourceBookings(apartment, source) {
+  const cacheKey = `${apartment}:${source.provider}`;
+  const cached = calendarCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.bookings;
   }
@@ -134,15 +154,15 @@ async function loadSourceBookings(source) {
       throw new Error(`Airbnb respondeu com HTTP ${response.status}`);
     }
 
-    const bookings = parseAirbnbBookings(await response.text());
-    calendarCache.set(source.apartment, {
+    const bookings = parseCalendarBookings(await response.text(), source.provider);
+    calendarCache.set(cacheKey, {
       bookings,
       expiresAt: Date.now() + CACHE_TTL_MS,
     });
     return bookings;
   } catch (error) {
     if (cached?.bookings) {
-      console.warn(`A usar cache iCal expirado do apartamento ${source.apartment}`, error);
+      console.warn(`A usar cache iCal expirado de ${source.provider} no apartamento ${apartment}`, error);
       return cached.bookings;
     }
     throw error;
@@ -160,10 +180,20 @@ function addDays(dateKey, days) {
   return date.toISOString().slice(0, 10);
 }
 
-function differenceInDays(start, end) {
-  const startDate = new Date(`${start}T00:00:00Z`);
-  const endDate = new Date(`${end}T00:00:00Z`);
-  return Math.round((endDate.getTime() - startDate.getTime()) / 86400000);
+function deduplicateBookings(bookings) {
+  const unique = new Map();
+  bookings.forEach((booking) => {
+    unique.set(`${booking.start}|${booking.end}`, booking);
+  });
+  return Array.from(unique.values()).sort((a, b) => a.start.localeCompare(b.start));
+}
+
+function parseAirbnbBookings(icalText) {
+  return parseCalendarBookings(icalText, "airbnb");
+}
+
+function parseVrboBookings(icalText) {
+  return parseCalendarBookings(icalText, "vrbo");
 }
 
 function isDateKey(value) {
@@ -174,4 +204,5 @@ module.exports = {
   addDays,
   loadCleaningCalendar,
   parseAirbnbBookings,
+  parseVrboBookings,
 };

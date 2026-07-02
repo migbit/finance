@@ -13,6 +13,7 @@ const firestore = admin.firestore();
 const ACCESS_COLLECTION = "cleaning_hours_access";
 const ENTRIES_COLLECTION = "cleaning_hours_entries";
 const CALENDAR_STATE_COLLECTION = "cleaning_calendar_state";
+const CALENDAR_STATE_VERSION = 2;
 const DEFAULT_ALLOWED_APARTMENTS = ["123", "1248", "Ambos", "Ferro 123", "Ferro 1248", "Ferro Ambos"];
 const COINPAPRIKA_BASE_URL = "https://api.coinpaprika.com/v1";
 const binanceTickerCache = { data: null, expires: 0 };
@@ -671,12 +672,15 @@ exports.cleaningCalendar = onRequest(
       calendar.calendars = await Promise.all(calendar.calendars.map(async (item) => {
         const stateRef = firestore.collection(CALENDAR_STATE_COLLECTION).doc(item.apartment);
         const stateSnap = await stateRef.get();
-        const storedBookings = stateSnap.exists && Array.isArray(stateSnap.data()?.bookings)
+        const hasCurrentState =
+          stateSnap.exists &&
+          stateSnap.data()?.sourceVersion === CALENDAR_STATE_VERSION;
+        const storedBookings = hasCurrentState && Array.isArray(stateSnap.data()?.bookings)
           ? stateSnap.data().bookings.filter((booking) =>
               isValidDateString(booking?.start) && isValidDateString(booking?.end)
             )
           : [];
-        const storedTurnovers = stateSnap.exists && Array.isArray(stateSnap.data()?.inferredTurnovers)
+        const storedTurnovers = hasCurrentState && Array.isArray(stateSnap.data()?.inferredTurnovers)
           ? stateSnap.data().inferredTurnovers.filter(isValidDateString)
           : [];
         const storedPrevious = [...storedBookings]
@@ -687,7 +691,7 @@ exports.cleaningCalendar = onRequest(
           ...(storedPrevious ? [storedPrevious] : []),
         ]).sort((a, b) => a.start.localeCompare(b.start));
         const shouldInferTurnover =
-          !stateSnap.exists &&
+          !hasCurrentState &&
           !bookings.some((booking) => booking.end === start) &&
           bookings.some((booking) => booking.start === start);
         const inferredTurnovers = Array.from(new Set([
@@ -699,6 +703,7 @@ exports.cleaningCalendar = onRequest(
           apartment: item.apartment,
           bookings,
           inferredTurnovers,
+          sourceVersion: CALENDAR_STATE_VERSION,
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
 
