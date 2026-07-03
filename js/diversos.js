@@ -9,6 +9,7 @@ else { window.__diversosInit = true; /* segue init */ }
 
 import { db, enviarEmailUrgencia } from './script.js';
 import { showToast } from './toast.js';
+import { getAuth } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
 import { 
     collection, 
     addDoc, 
@@ -75,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initIvaEstrangeiro();
     initPallco();
     initObras();
+    initCleaningAlerts();
 });
 
 // ========================================
@@ -109,6 +111,106 @@ function escapeHtml(s) {
 
 function escapeAttr(s) {
     return escapeHtml(s);
+}
+
+// ========================================
+// CLEANING CONFLICT ALERTS
+// ========================================
+function initCleaningAlerts() {
+    const tabButton = document.querySelector('.tab-btn[data-tab="alertas"]');
+    const checkButton = document.getElementById('check-cleaning-alerts');
+    const status = document.getElementById('cleaning-alert-status');
+    const results = document.getElementById('cleaning-alert-results');
+    if (!tabButton || !checkButton || !status || !results) return;
+
+    let loaded = false;
+    let loading = false;
+
+    tabButton.addEventListener('click', () => {
+        if (!loaded) loadAlerts(false);
+    });
+    checkButton.addEventListener('click', () => loadAlerts(true));
+
+    async function loadAlerts(runCheck) {
+        if (loading) return;
+        const user = getAuth().currentUser;
+        if (!user) {
+            status.textContent = 'Inicie sessão para consultar os alertas.';
+            status.className = 'cleaning-alert-error';
+            return;
+        }
+
+        loading = true;
+        checkButton.disabled = true;
+        checkButton.textContent = runCheck ? 'A verificar...' : 'A carregar...';
+        status.className = '';
+        status.textContent = 'A consultar os calendários Airbnb e VRBO...';
+
+        try {
+            const response = await fetch('https://apartments-a4b17.web.app/api/cleaning-alerts', {
+                method: runCheck ? 'POST' : 'GET',
+                cache: 'no-store',
+                headers: {
+                    Authorization: `Bearer ${await user.getIdToken()}`
+                }
+            });
+            const payload = await response.json();
+            if (!response.ok) {
+                throw new Error(payload.error || 'Não foi possível consultar os alertas.');
+            }
+
+            loaded = true;
+            renderCleaningAlerts(payload);
+            const checkedAt = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
+            status.textContent = `Calendários consultados em ${checkedAt.toLocaleString('pt-PT', {
+                dateStyle: 'short',
+                timeStyle: 'short'
+            })}.`;
+
+            if (payload.emailSent) {
+                showToast('Alerta enviado por e-mail.', 'success');
+            }
+        } catch (error) {
+            console.error(error);
+            status.textContent = error.message || 'Erro ao verificar os alertas.';
+            status.className = 'cleaning-alert-error';
+        } finally {
+            loading = false;
+            checkButton.disabled = false;
+            checkButton.textContent = 'Verificar agora';
+        }
+    }
+
+    function renderCleaningAlerts(payload) {
+        const conflicts = Array.isArray(payload.conflicts) ? payload.conflicts : [];
+        if (!conflicts.length) {
+            results.innerHTML = '<p><strong>Sem conflitos de limpeza nos próximos 90 dias.</strong></p>';
+            return;
+        }
+
+        results.innerHTML = `
+            <h4>Possíveis conflitos encontrados</h4>
+            <ul class="cleaning-alert-list">
+                ${conflicts.map((conflict) => `
+                    <li>
+                        <strong>${escapeHtml(formatCleaningAlertDate(conflict.date))}</strong>
+                        — o apartamento ${escapeHtml(conflict.turnoverApartment)}
+                        já tem entrada e saída; considerar bloquear o
+                        apartamento ${escapeHtml(conflict.atRiskApartment)}.
+                    </li>
+                `).join('')}
+            </ul>
+            <p>O e-mail é enviado apenas uma vez por cada possível conflito.</p>
+        `;
+    }
+}
+
+function formatCleaningAlertDate(dateKey) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ''))) return String(dateKey || '');
+    const [year, month, day] = dateKey.split('-').map(Number);
+    return new Intl.DateTimeFormat('pt-PT', {
+        dateStyle: 'full'
+    }).format(new Date(year, month - 1, day, 12));
 }
 
 // ========================================
@@ -999,13 +1101,8 @@ function initReparacoes() {
 
             if (urgencia === 'alta') {
                 console.log('Urgência alta detectada. Enviando e-mail...');
-                const templateParams = {
-                    to_name: "apartments.oporto@gmail.com",
-                    from_name: "Apartments Oporto",
-                    message: `Uma nova reparação urgente foi registrada no apartamento ${apartamento}: ${descricao}`
-                };
                 if (typeof enviarEmailUrgencia === 'function') {
-                    enviarEmailUrgencia(templateParams);
+                    enviarEmailUrgencia(apartamento, descricao);
                 }
             }
         } catch (error) {

@@ -72,6 +72,37 @@
         .tab-content.active {
             display: block;
         }
+        .cleaning-alert-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 12px;
+            margin: 18px 0;
+        }
+        .cleaning-alert-metric {
+            padding: 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--card);
+        }
+        .cleaning-alert-metric span {
+            display: block;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+        .cleaning-alert-metric strong {
+            font-size: 1.05rem;
+        }
+        .cleaning-alert-list {
+            margin: 14px 0 0;
+            padding-left: 22px;
+        }
+        .cleaning-alert-list li {
+            margin-bottom: 8px;
+        }
+        .cleaning-alert-error {
+            color: #b42318;
+        }
 
         /* Obras (sub-tabs) */
         .obras-tab-navigation {
@@ -210,6 +241,7 @@
             <option value="compras">🛒 Compras</option>
             <option value="hospedes">👥 Hóspedes</option>
             <option value="reparacoes">🔧 Reparações</option>
+            <option value="alertas">🚨 Alertas</option>
             <option value="obras">🧱 Obras</option>
         </select>
         </div>
@@ -221,6 +253,7 @@
             <button class="tab-btn" data-tab="compras">🛒 Compras</button>
             <button class="tab-btn" data-tab="hospedes">👥 Hóspedes</button>
             <button class="tab-btn" data-tab="reparacoes">🔧 Reparações</button>
+            <button class="tab-btn" data-tab="alertas">🚨 Alertas</button>
             <button class="tab-btn" data-tab="obras">🧱 Obras</button>
         </div>
 
@@ -471,6 +504,44 @@
                     <div id="lista-reparacoes">
                         <!-- Lista de reparações será exibida aqui -->
                     </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- === ALERTAS === -->
+        <div id="tab-alertas" class="tab-content">
+            <section class="report-section">
+                <div class="viz-card">
+                    <h3>Alertas de limpeza</h3>
+                    <p>
+                        É enviado um e-mail quando um apartamento já tem check-out e
+                        check-in no mesmo dia e o outro também tem check-out nesse dia,
+                        mas ainda pode ser bloqueado para evitar uma segunda limpeza.
+                        Não é enviado alerta quando as duas limpezas já estão confirmadas.
+                    </p>
+
+                    <div class="cleaning-alert-summary">
+                        <div class="cleaning-alert-metric">
+                            <span>Verificação automática</span>
+                            <strong>A cada 3 horas</strong>
+                        </div>
+                        <div class="cleaning-alert-metric">
+                            <span>Período analisado</span>
+                            <strong>Próximos 90 dias</strong>
+                        </div>
+                        <div class="cleaning-alert-metric">
+                            <span>Fontes</span>
+                            <strong>Airbnb + VRBO</strong>
+                        </div>
+                    </div>
+
+                    <button type="button" id="check-cleaning-alerts" class="btn">
+                        Verificar agora
+                    </button>
+                    <p id="cleaning-alert-status" role="status" aria-live="polite">
+                        Abra este separador para consultar os conflitos.
+                    </p>
+                    <div id="cleaning-alert-results"></div>
                 </div>
             </section>
         </div>

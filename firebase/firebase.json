@@ -33,6 +33,13 @@
           "functionId": "cleaningCalendar",
           "region": "europe-west1"
         }
+      },
+      {
+        "source": "/api/cleaning-alerts",
+        "function": {
+          "functionId": "cleaningAlerts",
+          "region": "europe-west1"
+        }
       }
     ]
   }

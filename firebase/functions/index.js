@@ -2,8 +2,10 @@
 const crypto = require("crypto");
 const admin = require("firebase-admin");
 const { onRequest } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const { loadCleaningCalendar } = require("./cleaning-calendar");
+const { findPotentialCleaningConflicts } = require("./cleaning-alerts");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -14,6 +16,12 @@ const ACCESS_COLLECTION = "cleaning_hours_access";
 const ENTRIES_COLLECTION = "cleaning_hours_entries";
 const CALENDAR_STATE_COLLECTION = "cleaning_calendar_state";
 const CALENDAR_STATE_VERSION = 2;
+const CLEANING_ALERT_STATE_COLLECTION = "cleaning_alert_state";
+const CLEANING_ALERT_STATE_DOCUMENT = "potential_conflicts";
+const CLEANING_ALERT_LOOKAHEAD_DAYS = 90;
+const EMAILJS_SERVICE_ID = "service_tuglp9h";
+const EMAILJS_TEMPLATE_ID = "template_l516egr";
+const EMAILJS_PUBLIC_KEY = "dRbsNarrwt7bsIiDK";
 const DEFAULT_ALLOWED_APARTMENTS = ["123", "1248", "Ambos", "Ferro 123", "Ferro 1248", "Ferro Ambos"];
 const COINPAPRIKA_BASE_URL = "https://api.coinpaprika.com/v1";
 const binanceTickerCache = { data: null, expires: 0 };
@@ -93,6 +101,25 @@ async function findAccessByToken(token) {
   if (hashedMatch.empty) return null;
   const docSnap = hashedMatch.docs[0];
   return { id: docSnap.id, ...docSnap.data() };
+}
+
+async function isAuthorizedRequest(req) {
+  const authorization = String(req.get("Authorization") || "");
+  const idToken = authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length).trim()
+    : "";
+
+  if (idToken) {
+    try {
+      await admin.auth().verifyIdToken(idToken);
+      return true;
+    } catch (_) {
+      // A public cleaning-hours token can still authorize the request.
+    }
+  }
+
+  const access = await findAccessByToken(req.query.token);
+  return Boolean(access && access.active !== false);
 }
 
 function sanitizeApartment(apartment, allowedApartments) {
@@ -613,6 +640,188 @@ exports.cleaningHours = onRequest(
     } catch (error) {
       console.error("cleaningHours error", error);
       res.status(500).json({ error: String(error.message || error) });
+    }
+  }
+);
+
+function todayInLisbon() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Lisbon",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function formatAlertDate(dateKey) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-PT", {
+    timeZone: "Europe/Lisbon",
+    dateStyle: "full",
+  }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+}
+
+async function loadCleaningConflicts() {
+  const start = todayInLisbon();
+  const calendar = await loadCleaningCalendar(start, CLEANING_ALERT_LOOKAHEAD_DAYS);
+  const conflicts = findPotentialCleaningConflicts(
+    calendar.calendars,
+    start,
+    CLEANING_ALERT_LOOKAHEAD_DAYS
+  );
+  return {
+    start,
+    days: CLEANING_ALERT_LOOKAHEAD_DAYS,
+    generatedAt: calendar.generatedAt,
+    conflicts,
+  };
+}
+
+async function sendCleaningAlertEmail(conflicts) {
+  const dateLines = conflicts.map((conflict) =>
+    `• ${formatAlertDate(conflict.date)} — o apartamento ${conflict.turnoverApartment} já tem entrada e saída; bloquear manualmente o apartamento ${conflict.atRiskApartment}`
+  );
+  const message = [
+    "Alerta de 2 limpezas em simultâneo",
+    "",
+    "Existe a possibilidade de duas limpezas em simultâneo:",
+    ...dateLines,
+  ].join("\n");
+
+  const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      service_id: EMAILJS_SERVICE_ID,
+      template_id: EMAILJS_TEMPLATE_ID,
+      user_id: EMAILJS_PUBLIC_KEY,
+      template_params: {
+        to_name: "apartments.oporto@gmail.com",
+        from_name: "Apartments Oporto",
+        subject: "Alerta de 2 limpezas em simultâneo",
+        message,
+      },
+    }),
+    signal: AbortSignal.timeout(10000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`EmailJS respondeu com HTTP ${response.status}: ${await response.text()}`);
+  }
+}
+
+async function checkCleaningAlerts({ sendEmail = true } = {}) {
+  const snapshot = await loadCleaningConflicts();
+  const stateRef = firestore
+    .collection(CLEANING_ALERT_STATE_COLLECTION)
+    .doc(CLEANING_ALERT_STATE_DOCUMENT);
+  const stateSnap = await stateRef.get();
+  const notifiedKeys = new Set(
+    Array.isArray(stateSnap.data()?.notifiedKeys) ? stateSnap.data().notifiedKeys : []
+  );
+  const newConflicts = snapshot.conflicts.filter(
+    (conflict) => !notifiedKeys.has(conflict.key)
+  );
+
+  try {
+    if (sendEmail && newConflicts.length) {
+      await sendCleaningAlertEmail(newConflicts);
+    }
+
+    const update = {
+      conflicts: snapshot.conflicts,
+      lookaheadDays: CLEANING_ALERT_LOOKAHEAD_DAYS,
+      lastCheckedAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastError: admin.firestore.FieldValue.delete(),
+    };
+    if (sendEmail && newConflicts.length) {
+      newConflicts.forEach((conflict) => notifiedKeys.add(conflict.key));
+      update.notifiedKeys = [...notifiedKeys]
+        .filter((key) => key >= snapshot.start)
+        .sort();
+      update.lastEmailAt = admin.firestore.FieldValue.serverTimestamp();
+      update.lastEmailedDates = newConflicts.map((conflict) => conflict.key);
+    }
+    await stateRef.set(update, { merge: true });
+
+    return {
+      ...snapshot,
+      emailSent: sendEmail && newConflicts.length > 0,
+      emailedDates: newConflicts.map((conflict) => conflict.date),
+    };
+  } catch (error) {
+    await stateRef.set({
+      lastCheckedAt: admin.firestore.FieldValue.serverTimestamp(),
+      lastError: String(error.message || error),
+    }, { merge: true });
+    throw error;
+  }
+}
+
+exports.cleaningAlertsSchedule = onSchedule(
+  {
+    schedule: "every 3 hours",
+    timeZone: "Europe/Lisbon",
+    region: "europe-west1",
+    timeoutSeconds: 30,
+    maxInstances: 1,
+  },
+  async () => {
+    const result = await checkCleaningAlerts({ sendEmail: true });
+    console.log("Cleaning alerts checked", {
+      conflicts: result.conflicts.length,
+      emailSent: result.emailSent,
+      emailedDates: result.emailedDates,
+    });
+  }
+);
+
+exports.cleaningAlerts = onRequest(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 30,
+    cors: true,
+  },
+  async (req, res) => {
+    try {
+      applyCors(res);
+
+      if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+      }
+      if (!["GET", "POST"].includes(req.method)) {
+        res.status(405).json({ error: "Método não permitido." });
+        return;
+      }
+      if (!(await isAuthorizedRequest(req))) {
+        res.status(401).json({ error: "Inicie sessão para consultar os alertas." });
+        return;
+      }
+
+      if (req.method === "POST") {
+        res.status(200).json(await checkCleaningAlerts({ sendEmail: true }));
+        return;
+      }
+
+      const snapshot = await loadCleaningConflicts();
+      const stateSnap = await firestore
+        .collection(CLEANING_ALERT_STATE_COLLECTION)
+        .doc(CLEANING_ALERT_STATE_DOCUMENT)
+        .get();
+      const state = stateSnap.data() || {};
+      res.status(200).json({
+        ...snapshot,
+        lastCheckedAt: state.lastCheckedAt?.toDate?.().toISOString() || null,
+        lastEmailAt: state.lastEmailAt?.toDate?.().toISOString() || null,
+        lastEmailedDates: state.lastEmailedDates || [],
+        lastError: state.lastError || null,
+      });
+    } catch (error) {
+      console.error("cleaningAlerts error", error);
+      res.status(502).json({ error: "Não foi possível verificar os alertas de limpeza." });
     }
   }
 );
