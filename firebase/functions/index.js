@@ -24,13 +24,19 @@ const EMAILJS_TEMPLATE_ID = "template_l516egr";
 const EMAILJS_PUBLIC_KEY = "dRbsNarrwt7bsIiDK";
 const DEFAULT_ALLOWED_APARTMENTS = ["123", "1248", "Ambos", "Ferro 123", "Ferro 1248", "Ferro Ambos"];
 const COINPAPRIKA_BASE_URL = "https://api.coinpaprika.com/v1";
+const KRAKEN_BASE_URL = "https://api.kraken.com";
 const binanceTickerCache = { data: null, expires: 0 };
+const krakenAssetPairsCache = { data: null, expires: 0 };
+const krakenTickerCache = { data: new Map(), expires: 0 };
 const coinpaprikaCoinsCache = { data: null, expires: 0 };
 const coinpaprikaPriceCache = new Map();
+let krakenLastNonce = 0;
 
 // ---- Secrets (must be set via `firebase functions:secrets:set ...`)
 const BINANCE_KEY = defineSecret("BINANCE_KEY");
 const BINANCE_SECRET = defineSecret("BINANCE_SECRET");
+const KRAKEN_KEY = defineSecret("KRAKEN_KEY");
+const KRAKEN_SECRET = defineSecret("KRAKEN_SECRET");
 
 // ---- Helpers
 function sign(queryString) {
@@ -206,6 +212,217 @@ function normalizeAsset(a) {
   return a;
 }
 
+function normalizeKrakenAssetCode(code) {
+  let asset = String(code || "").trim().toUpperCase();
+  if (!asset) return asset;
+
+  asset = asset.split(".")[0];
+  if (asset === "XXBT") asset = "XBT";
+  if (asset === "XXDG") asset = "XDG";
+  if (/^[XZ][A-Z0-9]{3,}$/.test(asset)) asset = asset.slice(1);
+
+  const aliases = {
+    XBT: "BTC",
+    XDG: "DOGE",
+    ETH2: "ETH",
+    ZUSD: "USD",
+    ZEUR: "EUR",
+  };
+  if (aliases[asset]) return aliases[asset];
+
+  // Kraken Earn may expose strategy-specific balance wrappers such as DOT28/SOL03.
+  // They represent the base asset and can duplicate Earn/Allocations rows.
+  if (/^[A-Z]{2,10}\d{2,4}$/.test(asset)) {
+    asset = asset.replace(/\d+$/, "");
+  }
+
+  return aliases[asset] || asset;
+}
+
+function krakenAssetExtension(code) {
+  const match = String(code || "").trim().toUpperCase().match(/\.([A-Z]+)$/);
+  return match ? match[1] : "";
+}
+
+function nextKrakenNonce() {
+  const now = Date.now() * 1000;
+  krakenLastNonce = Math.max(now, krakenLastNonce + 1);
+  return String(krakenLastNonce);
+}
+
+function krakenSign(path, nonce, body) {
+  const encoded = Buffer.from(`${nonce}${body}`);
+  const hash = crypto.createHash("sha256").update(encoded).digest();
+  const message = Buffer.concat([Buffer.from(path), hash]);
+  return crypto
+    .createHmac("sha512", Buffer.from(KRAKEN_SECRET.value(), "base64"))
+    .update(message)
+    .digest("base64");
+}
+
+async function krakenPrivate(path, payload = {}) {
+  const nonce = nextKrakenNonce();
+  const data = { nonce, ...payload };
+  const body = new URLSearchParams(data).toString();
+  const response = await fetch(`${KRAKEN_BASE_URL}${path}`, {
+    method: "POST",
+    headers: {
+      "API-Key": KRAKEN_KEY.value(),
+      "API-Sign": krakenSign(path, nonce, body),
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Accept": "application/json",
+    },
+    body,
+  });
+  const json = await response.json().catch(() => ({}));
+  const errors = Array.isArray(json?.error) ? json.error.filter(Boolean) : [];
+  if (!response.ok || errors.length) {
+    throw new Error(errors.length ? errors.join("; ") : `HTTP ${response.status}`);
+  }
+  return json.result;
+}
+
+function getEarnAllocationNativeAmount(item) {
+  const total = Number(item?.amount_allocated?.total?.native || 0);
+  if (total > 0) return total;
+
+  const states = ["bonding", "allocated", "exit_queue", "unbonding"];
+  return states.reduce((sum, state) => {
+    const amount = Number(item?.amount_allocated?.[state]?.native || 0);
+    return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+  }, 0);
+}
+
+function getEarnAllocationConvertedAmount(item) {
+  const total = Number(item?.amount_allocated?.total?.converted || 0);
+  if (total > 0) return total;
+
+  const states = ["bonding", "allocated", "exit_queue", "unbonding"];
+  return states.reduce((sum, state) => {
+    const amount = Number(item?.amount_allocated?.[state]?.converted || 0);
+    return Number.isFinite(amount) && amount > 0 ? sum + amount : sum;
+  }, 0);
+}
+
+async function krakenPublic(path, params) {
+  const qs = params ? `?${new URLSearchParams(params).toString()}` : "";
+  const data = await fetchJson(`${KRAKEN_BASE_URL}${path}${qs}`);
+  const errors = Array.isArray(data?.error) ? data.error.filter(Boolean) : [];
+  if (errors.length) throw new Error(errors.join("; "));
+  return data.result || {};
+}
+
+async function getCachedKrakenAssetPairs() {
+  if (krakenAssetPairsCache.data && krakenAssetPairsCache.expires > Date.now()) {
+    return krakenAssetPairsCache.data;
+  }
+
+  const result = await krakenPublic("/0/public/AssetPairs", { assetVersion: "1" });
+  const pairs = [];
+  for (const [key, info] of Object.entries(result || {})) {
+    const base = normalizeKrakenAssetCode(info?.base || "");
+    const quote = normalizeKrakenAssetCode(info?.quote || "");
+    if (!base || !quote) continue;
+    pairs.push({
+      key,
+      altname: String(info?.altname || ""),
+      wsname: String(info?.wsname || ""),
+      base,
+      quote,
+    });
+  }
+
+  krakenAssetPairsCache.data = pairs;
+  krakenAssetPairsCache.expires = Date.now() + 24 * 60 * 60 * 1000;
+  return pairs;
+}
+
+async function getKrakenTickerPrices(pairKeys) {
+  const keys = [...new Set(pairKeys.filter(Boolean))];
+  if (!keys.length) return new Map();
+
+  const cached = new Map();
+  const missing = [];
+  const cacheFresh = krakenTickerCache.expires > Date.now();
+  for (const key of keys) {
+    if (cacheFresh && krakenTickerCache.data.has(key)) {
+      cached.set(key, krakenTickerCache.data.get(key));
+    } else {
+      missing.push(key);
+    }
+  }
+
+  if (missing.length) {
+    const result = await krakenPublic("/0/public/Ticker", {
+      pair: missing.join(","),
+      assetVersion: "1",
+    });
+    for (const [resultKey, ticker] of Object.entries(result || {})) {
+      const price = Number(ticker?.c?.[0] || 0);
+      if (price > 0) {
+        krakenTickerCache.data.set(resultKey, price);
+        cached.set(resultKey, price);
+      }
+    }
+    krakenTickerCache.expires = Date.now() + 60 * 1000;
+  }
+
+  return cached;
+}
+
+async function getKrakenUsdPrices(symbols) {
+  const unique = [...new Set(symbols.map(normalizeKrakenAssetCode).filter(Boolean))];
+  const prices = new Map();
+  const sources = new Map();
+
+  for (const stable of ["USD", "USDT", "USDC", "DAI"]) {
+    if (unique.includes(stable)) {
+      prices.set(stable, 1);
+      sources.set(stable, "kraken");
+    }
+  }
+
+  const pairs = await getCachedKrakenAssetPairs();
+  const findPair = (base, quotes) => pairs.find((pair) => pair.base === base && quotes.includes(pair.quote));
+  const pairRequestKey = (pair) => pair?.wsname || pair?.altname || pair?.key || "";
+  const tickerPriceForPair = (tickerPrices, pair) => {
+    for (const key of [pairRequestKey(pair), pair?.key, pair?.wsname, pair?.altname]) {
+      const price = Number(tickerPrices.get(key) || 0);
+      if (price > 0) return price;
+    }
+    return 0;
+  };
+  const eurUsdPair = findPair("EUR", ["USD"]);
+  const selected = new Map();
+  const pairKeys = [];
+
+  if (eurUsdPair) pairKeys.push(pairRequestKey(eurUsdPair));
+  for (const symbol of unique) {
+    if (prices.has(symbol)) continue;
+    const pair = findPair(symbol, ["USD", "USDT", "USDC", "EUR"]);
+    if (!pair) continue;
+    selected.set(symbol, pair);
+    pairKeys.push(pairRequestKey(pair));
+  }
+
+  const tickerPrices = await getKrakenTickerPrices(pairKeys);
+  const eurUsd = eurUsdPair ? tickerPriceForPair(tickerPrices, eurUsdPair) : 0;
+
+  for (const [symbol, pair] of selected) {
+    const price = tickerPriceForPair(tickerPrices, pair);
+    if (!(price > 0)) continue;
+    let usdPrice = price;
+    if (pair.quote === "EUR") usdPrice = eurUsd > 0 ? price * eurUsd : 0;
+    if (["USDT", "USDC"].includes(pair.quote)) usdPrice = price;
+    if (usdPrice > 0) {
+      prices.set(symbol, usdPrice);
+      sources.set(symbol, "kraken");
+    }
+  }
+
+  return { prices, sources };
+}
+
 // Signed (private) Binance call
 async function signed(path, extra = "") {
   const qs = `timestamp=${Date.now()}&recvWindow=5000${extra ? "&" + extra : ""}`;
@@ -366,22 +583,29 @@ exports.cryptoPrices = onRequest(
         return;
       }
 
-      const tickerPrices = await getCachedBinanceTickers();
       const prices = {};
       const sources = {};
-      const missing = [];
+      const unresolvedFromKraken = [];
+
+      let kraken = { prices: new Map(), sources: new Map() };
+      try {
+        kraken = await getKrakenUsdPrices(symbols);
+      } catch (error) {
+        console.warn("Kraken price lookup failed; falling back to CoinPaprika", error);
+      }
       for (const symbol of symbols) {
-        const price = tickerPrices.get(symbol) || 0;
+        const normalized = normalizeKrakenAssetCode(symbol);
+        const price = kraken.prices.get(normalized) || 0;
         if (price > 0) {
           prices[symbol] = price;
-          sources[symbol] = "binance";
+          sources[symbol] = kraken.sources.get(normalized) || "kraken";
         } else {
-          missing.push(symbol);
+          unresolvedFromKraken.push(symbol);
         }
       }
 
       const unresolved = [];
-      await Promise.all(missing.map(async (symbol) => {
+      await Promise.all(unresolvedFromKraken.map(async (symbol) => {
         try {
           const price = await fetchCoinpaprikaPrice(symbol);
           if (price > 0) {
@@ -400,6 +624,153 @@ exports.cryptoPrices = onRequest(
     } catch (error) {
       console.error("cryptoPrices error", error);
       res.status(502).json({ error: String(error.message || error) });
+    }
+  }
+);
+
+exports.krakenPortfolio = onRequest(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 20,
+    cors: true,
+    secrets: [KRAKEN_KEY, KRAKEN_SECRET],
+  },
+  async (req, res) => {
+    try {
+      applyCors(res);
+      if (req.method === "OPTIONS") {
+        res.status(204).send("");
+        return;
+      }
+      if (req.method !== "GET") {
+        sendMethodNotAllowed(res);
+        return;
+      }
+
+      const balanceResult = await krakenPrivate("/0/private/Balance");
+      const earnResult = await krakenPrivate("/0/private/Earn/Allocations", {
+        converted_asset: "USD",
+        hide_zero_allocations: "true",
+      }).catch((error) => ({ __error: error }));
+
+      const spotByAsset = new Map();
+      const extensionByAsset = new Map();
+      const earnByAsset = new Map();
+      const earnConvertedByAsset = new Map();
+      const add = (map, asset, qty) => {
+        const normalized = normalizeKrakenAssetCode(asset);
+        const amount = Number(qty || 0);
+        if (!normalized || !(amount > 0)) return;
+        map.set(normalized, (map.get(normalized) || 0) + amount);
+      };
+
+      for (const [rawAsset, rawQty] of Object.entries(balanceResult || {})) {
+        const qty = Number(rawQty || 0);
+        if (!(qty > 0)) continue;
+        const asset = normalizeKrakenAssetCode(rawAsset);
+        const extension = krakenAssetExtension(rawAsset);
+        if (["B", "F", "S", "M"].includes(extension)) {
+          add(extensionByAsset, asset, qty);
+        } else {
+          add(spotByAsset, asset, qty);
+        }
+      }
+
+      let earnError = null;
+      const earnItems = Array.isArray(earnResult?.items) ? earnResult.items : [];
+      if (earnResult?.__error) {
+        earnError = String(earnResult.__error.message || earnResult.__error);
+      } else {
+        for (const item of earnItems) {
+          const asset = normalizeKrakenAssetCode(item?.native_asset || "");
+          const nativeAmount = getEarnAllocationNativeAmount(item);
+          const convertedAmount = getEarnAllocationConvertedAmount(item);
+          if (asset && nativeAmount > 0) add(earnByAsset, asset, nativeAmount);
+          if (asset && convertedAmount > 0) {
+            earnConvertedByAsset.set(asset, (earnConvertedByAsset.get(asset) || 0) + convertedAmount);
+          }
+        }
+      }
+
+      for (const [asset, extensionQty] of extensionByAsset) {
+        const allocatedQty = earnByAsset.get(asset) || 0;
+        const remainder = Math.max(0, extensionQty - allocatedQty);
+        if (remainder > 0) add(earnByAsset, asset, remainder);
+      }
+
+      const positionAssets = [
+        ...new Set([
+          ...Array.from(spotByAsset.keys()),
+          ...Array.from(earnByAsset.keys()),
+          "EUR",
+        ]),
+      ];
+      const krakenPrices = await getKrakenUsdPrices(positionAssets);
+      const usdPrices = krakenPrices.prices;
+      const priceSources = krakenPrices.sources;
+
+      await Promise.all(positionAssets.map(async (asset) => {
+        if (usdPrices.get(asset) > 0) return;
+        try {
+          const price = await fetchCoinpaprikaPrice(asset);
+          if (price > 0) {
+            usdPrices.set(asset, price);
+            priceSources.set(asset, "coinpaprika");
+          }
+        } catch (error) {
+          console.warn("Portfolio price fallback failed", asset, error);
+        }
+      }));
+
+      const eurUsd = usdPrices.get("EUR") || 0;
+      const eurPerUSD = eurUsd > 0 ? 1 / eurUsd : null;
+      const positions = [];
+      const pushPosition = (asset, quantity, location, convertedUSD = 0) => {
+        const qty = Number(quantity || 0);
+        if (!(qty > 0)) return;
+        let priceUSDT = Number(usdPrices.get(asset) || 0);
+        let valueUSDT = Number(convertedUSD || 0);
+        if (!(valueUSDT > 0) && priceUSDT > 0) valueUSDT = qty * priceUSDT;
+        if (!(priceUSDT > 0) && valueUSDT > 0) priceUSDT = valueUSDT / qty;
+        const valueEUR = asset === "EUR"
+          ? qty
+          : (eurPerUSD && valueUSDT > 0 ? valueUSDT * eurPerUSD : 0);
+        positions.push({
+          asset,
+          quantity: qty,
+          location,
+          priceUSDT: priceUSDT || null,
+          valueUSDT,
+          valueEUR,
+          source: "kraken",
+          priceSource: priceSources.get(asset) || "unknown",
+        });
+      };
+
+      for (const [asset, qty] of spotByAsset) {
+        pushPosition(asset, qty, "Kraken Spot");
+      }
+      for (const [asset, qty] of earnByAsset) {
+        pushPosition(asset, qty, "Kraken Earn", earnConvertedByAsset.get(asset) || 0);
+      }
+
+      positions.sort((a, b) => (b.valueEUR || 0) - (a.valueEUR || 0));
+      const totalEUR = positions.reduce((sum, row) => sum + (row.valueEUR || 0), 0);
+
+      res.status(200).json({
+        generatedAt: new Date().toISOString(),
+        provider: "kraken",
+        totals: { EUR: totalEUR },
+        positions,
+        breakdown: {
+          spotCount: spotByAsset.size,
+          earnCount: earnByAsset.size,
+          earnError,
+        },
+      });
+    } catch (e) {
+      console.error("krakenPortfolio error", e);
+      res.status(500).json({ error: String(e.message || e) });
     }
   }
 );

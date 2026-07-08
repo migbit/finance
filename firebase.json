@@ -20,7 +20,7 @@
       {
         "source": "/api/portfolio",
         "function": {
-          "functionId": "binancePortfolio",
+          "functionId": "krakenPortfolio",
           "region": "europe-west1"
         }
       },

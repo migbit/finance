@@ -1,7 +1,7 @@
 export const CONFIG = {
   HOST: location.hostname,
   ON_FIREBASE: /\.web\.app$/.test(location.hostname) || /firebaseapp\.com$/.test(location.hostname),
-  CF_URL: 'https://europe-west1-apartments-a4b17.cloudfunctions.net/binancePortfolio',
+  CF_URL: 'https://europe-west1-apartments-a4b17.cloudfunctions.net/krakenPortfolio',
   CRYPTO_PRICES_CF_URL: 'https://europe-west1-apartments-a4b17.cloudfunctions.net/cryptoPrices',
   API_URL: null,
   SMALL_USD_THRESHOLD: 5,
@@ -10,12 +10,14 @@ export const CONFIG = {
     O: 'LDO'
   },
   LOCATION_CHOICES: [
+    'Kraken Spot',
+    'Kraken Earn',
+    'Ledger',
+    'Ledger staking.chain.link',
     'Binance Spot',
     'Binance Earn Flexible',
     'Binance Staking',
-    'Binance Earn Locked',
-    'Ledger',
-    'Ledger staking.chain.link'
+    'Binance Earn Locked'
   ],
   CRYPTO_PRICES: {
     PRICE_TTL_MS: 1000 * 60 * 60,

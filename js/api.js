@@ -263,7 +263,7 @@ export class PriceResolver {
 
   async getUSD(symbol) {
     const up = symbol.toUpperCase();
-    if (this.binancePriceMap.has(up)) return { price: this.binancePriceMap.get(up), src: 'binance' };
+    if (this.binancePriceMap.has(up)) return { price: this.binancePriceMap.get(up), src: 'kraken' };
     const cached = CryptoPrices.getCachedUSD(up);
     if (cached > 0) return { price: cached, src: 'cached' };
     try {

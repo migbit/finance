@@ -821,13 +821,14 @@ class CryptoPortfolioApp {
     return pos
       .map(p=>{
         const asset = this.normalizeSymbol(p.asset || '');
+        const location = p.location ? this.canonicalizeLocation(p.location) : '';
         const qty = Number(p.quantity||0);
         let priceUSDT = Number(p.priceUSDT||0);
         const vUSDT = Number(p.valueUSDT||0);
         const vEUR  = Number(p.valueEUR||0);
         if ((!priceUSDT || priceUSDT<=0) && qty>0 && vUSDT>0) priceUSDT = vUSDT/qty;
         if (priceUSDT>0) this.state.binancePriceMap.set(asset, priceUSDT);
-        return { asset, quantity:qty, valueUSDT:vUSDT, valueEUR:vEUR, priceUSDT, source:'binance' };
+        return { asset, location, quantity:qty, valueUSDT:vUSDT, valueEUR:vEUR, priceUSDT, source:p.source || 'kraken' };
       })
       .filter(r=>!CONFIG.HIDE_SYMBOLS.has(r.asset))
       .filter(r=>(r.quantity||0)>0 || (r.valueEUR||r.valueUSDT||0)>0)
@@ -967,7 +968,7 @@ class CryptoPortfolioApp {
 
     this.state.currentRows = [
       ...this.state.binanceRows.map(r=>{
-        const location = this.state.savedLocations.get(r.asset) || '';
+        const location = r.location || this.state.savedLocations.get(r.asset) || 'Kraken Spot';
         const apy = this.getApyValue(r.asset, location);
         return { ...r, location, apy };
       }),
@@ -1551,7 +1552,7 @@ class CryptoPortfolioApp {
                   aria-label="${actionLabel}"
                   data-edit="${esc(r.asset)}"
                   data-location="${esc(r.location)}"
-                  data-source="${esc(r.source||'binance')}">
+                  data-source="${esc(r.source||'kraken')}">
             &#9998;
           </button>
         `;
@@ -1928,7 +1929,7 @@ class CryptoPortfolioApp {
   openEditWindow(asset, location, source){
     this.currentInvestmentAsset   = this.normalizeSymbol(asset || '');
     this.currentInvestmentLocation = this.canonicalizeLocation(location || 'Other');
-    this.currentInvestmentSource   = source || 'binance';
+    this.currentInvestmentSource   = source || 'kraken';
 
     const modal      = this.getCachedElement('investmentModal', '#investment-modal-backdrop');
     const titleSpan  = modal?.querySelector('#inv-asset-name');
@@ -2097,7 +2098,7 @@ class CryptoPortfolioApp {
 
       const asset = this.normalizeSymbol(this.currentInvestmentAsset || '');
       const location = this.canonicalizeLocation(this.currentInvestmentLocation || 'Other');
-      const source = this.currentInvestmentSource || 'binance';
+      const source = this.currentInvestmentSource || 'kraken';
 
       let qtyToAdd = 0;
       let manualRow = null;
@@ -2566,7 +2567,7 @@ class CryptoPortfolioApp {
         const row = e.target.closest('tr');
         const previousLoc = row?.getAttribute('data-location') || '';
         const prevCanonical = this.canonicalizeLocation(previousLoc || 'Other');
-        const source = row?.getAttribute('data-source') || 'binance';
+        const source = row?.getAttribute('data-source') || 'kraken';
         
         if (source === 'manual') {
           await this.updateManualAssetLocation(asset, prevCanonical, loc);
@@ -2598,7 +2599,7 @@ class CryptoPortfolioApp {
       b.addEventListener('click', () => {
         const asset = b.getAttribute('data-edit');
         const location = b.getAttribute('data-location') || 'Other';
-        const source = b.getAttribute('data-source') || 'binance';
+        const source = b.getAttribute('data-source') || 'kraken';
         this.openEditWindow(asset, location, source);
       })
     );
@@ -2711,7 +2712,7 @@ class CryptoPortfolioApp {
         await this.renderAll(this.state.generatedAt);
         ToastService.success('Venda registrada com sucesso');
       } else {
-        ToastService.error('Nao e possivel vender ativos do Binance diretamente');
+        ToastService.error('Nao e possivel vender ativos da Kraken diretamente');
         return;
       }
 
