@@ -196,7 +196,7 @@ class CryptoPortfolioApp {
     const rows = this.getCachedElement('rows', '#rows');
     if (rows) {
       const safeMessage = this.escape(message || 'Sessão terminada.');
-      rows.innerHTML = `<tr><td colspan="11" class="text-muted">${safeMessage}</td></tr>`;
+      rows.innerHTML = `<tr><td colspan="12" class="text-muted">${safeMessage}</td></tr>`;
     }
 
     const kpiDefaults = [
@@ -265,6 +265,14 @@ class CryptoPortfolioApp {
     return `${sanitize(asset)}__${sanitize(location, 'GLOBAL')}`;
   }
 
+  makeDeallocateKey(asset, location=''){
+    return this.makeApyKey(asset, location);
+  }
+
+  makeDeallocateDocId(asset, location=''){
+    return this.makeApyDocId(asset, location);
+  }
+
   normalizeLocation(value){
     return String(value || 'Other').trim().toUpperCase();
   }
@@ -329,6 +337,21 @@ class CryptoPortfolioApp {
   formatApy(value){
     if (value === null || value === undefined || !isFinite(value)) return '--';
     return `${FORMATTERS.percent.format(value)}%`;
+  }
+
+  getDeallocateValue(asset, location=''){
+    const canonicalLocation = this.canonicalizeLocation(location || '');
+    const key = this.makeDeallocateKey(asset, canonicalLocation);
+    if (this.state.deallocateValues.has(key)) return this.state.deallocateValues.get(key);
+    const fallbackKey = this.makeDeallocateKey(asset, '');
+    return this.state.deallocateValues.has(fallbackKey)
+      ? this.state.deallocateValues.get(fallbackKey)
+      : '';
+  }
+
+  formatDeallocate(value){
+    const text = String(value || '').trim();
+    return text ? this.escape(text) : '--';
   }
 
   restoreCachedPortfolio(cache){
@@ -407,6 +430,7 @@ class CryptoPortfolioApp {
         this.loadInvested().catch(err => ErrorHandler.handle(err, 'loadInvested')),
         this.loadInvestments().catch(err => ErrorHandler.handle(err, 'loadInvestments')),
         this.loadApyValues().catch(err => ErrorHandler.handle(err, 'loadApyValues')),
+        this.loadDeallocateValues().catch(err => ErrorHandler.handle(err, 'loadDeallocateValues')),
         this.loadMonthlyTotals().catch(err => ErrorHandler.handle(err, 'loadMonthlyTotals')),
         this.loadMonthlyAssetSnapshots().catch(err => ErrorHandler.handle(err, 'loadMonthlyAssetSnapshots'))
       ]);
@@ -531,6 +555,21 @@ class CryptoPortfolioApp {
       map.set(key, num);
     }
     this.state.apyValues = map;
+  }
+
+  async loadDeallocateValues(){
+    const docs = await FirebaseService.getCollection(CONFIG.DEALLOCATE_COLLECTION);
+    const map = new Map();
+    for (const entry of docs){
+      const asset = this.normalizeSymbol(entry.asset || entry.id || '');
+      const locationRaw = entry.hasOwnProperty('location') ? entry.location : '';
+      const canonicalLocation = this.canonicalizeLocation(locationRaw || '');
+      const value = String(entry.value || '').trim();
+      if (!asset || !value) continue;
+      const key = this.makeDeallocateKey(asset, canonicalLocation);
+      map.set(key, value);
+    }
+    this.state.deallocateValues = map;
   }
 
   async loadMonthlyTotals(){
@@ -963,14 +1002,16 @@ class CryptoPortfolioApp {
       const vUSDT = price>0 ? price * m.quantity : 0;
       const vEUR = (this.state.usdtToEurRate||0) ? vUSDT * this.state.usdtToEurRate : 0;
       const apy = this.getApyValue(m.asset, m.location);
-      return { ...m, valueUSDT: vUSDT, valueEUR: vEUR, priceUSDT: price, priceSource: 'crypto-prices', apy };
+      const deallocate = this.getDeallocateValue(m.asset, m.location);
+      return { ...m, valueUSDT: vUSDT, valueEUR: vEUR, priceUSDT: price, priceSource: 'crypto-prices', apy, deallocate };
     }));
 
     this.state.currentRows = [
       ...this.state.binanceRows.map(r=>{
         const location = r.location || this.state.savedLocations.get(r.asset) || 'Kraken Spot';
         const apy = this.getApyValue(r.asset, location);
-        return { ...r, location, apy };
+        const deallocate = this.getDeallocateValue(r.asset, location);
+        return { ...r, location, apy, deallocate };
       }),
       ...manualVal
     ];
@@ -1479,7 +1520,8 @@ class CryptoPortfolioApp {
           valueEUR: 0,
           location: locKey,
           source: 'investments',
-          apy: this.getApyValue(asset, locKey)
+          apy: this.getApyValue(asset, locKey),
+          deallocate: this.getDeallocateValue(asset, locKey)
         });
       }
     }
@@ -1489,7 +1531,7 @@ class CryptoPortfolioApp {
     if (!vis.length){
       tbody.innerHTML = `
         <tr role="row">
-          <td role="cell" colspan="11" style="text-align: center; padding: 48px 24px;">
+          <td role="cell" colspan="12" style="text-align: center; padding: 48px 24px;">
             <div style="color: #9ca3af; margin-bottom: 16px;">
               <svg style="width: 64px; height: 64px; margin: 0 auto 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
@@ -1536,6 +1578,7 @@ class CryptoPortfolioApp {
         const invested = this.getAssetInvestedAmounts(r.asset, r.location);
         const apyValue = this.getApyValue(r.asset, r.location);
         const apyDisplay = this.formatApy(apyValue);
+        const deallocateDisplay = this.formatDeallocate(this.getDeallocateValue(r.asset, r.location));
         const rowKey = this.makeRowKey(r);
 
         const roi = invested.eur > 0
@@ -1579,6 +1622,7 @@ class CryptoPortfolioApp {
             <td role="cell" class="col-realized" style="color: ${realizedColor}; font-weight: 600;">${realizedValue}</td>
             <td role="cell" class="col-roi ${roiClass}">${roiDisplay}</td>
             <td role="cell" class="col-apy">${apyDisplay}</td>
+            <td role="cell" class="col-deallocate">${deallocateDisplay}</td>
             <td role="cell" class="col-loc">${sel}</td>
             <td role="cell">${actions}</td>
           </tr>
@@ -1623,6 +1667,7 @@ class CryptoPortfolioApp {
             <td role="cell" class="col-realized" style="color: ${realizedColor}; font-weight: 600;">${realizedValue}</td>
             <td role="cell" class="col-roi ${roiClass}">${roiDisplay}</td>
             <td role="cell" class="col-apy">-</td>
+            <td role="cell" class="col-deallocate">-</td>
             <td role="cell" class="col-loc"></td>
             <td role="cell"></td>
           </tr>
@@ -1903,6 +1948,7 @@ class CryptoPortfolioApp {
     DOM.$('#inv-add-btn')?.addEventListener('click', ()=>this.addInvestment());
     DOM.$('#inv-save-qty')?.addEventListener('click', ()=>this.saveManualQuantity());
     DOM.$('#inv-save-apy')?.addEventListener('click', ()=>this.saveApy());
+    DOM.$('#inv-save-deallocate')?.addEventListener('click', ()=>this.saveDeallocate());
     modal?.addEventListener('click', (e)=>{ if (e.target===modal) this.closeInvestmentModal(); });
 
     const dateInput = DOM.$('#inv-date');
@@ -1936,6 +1982,7 @@ class CryptoPortfolioApp {
     const qtyWrap    = modal?.querySelector('#inv-qty2-wrap');
     const qtyInput   = modal?.querySelector('#inv-qty2');
     const apyInput   = modal?.querySelector('#inv-apy');
+    const deallocateInput = modal?.querySelector('#inv-deallocate');
     const btnRemove  = modal?.querySelector('#inv-remove-asset');
     const btnSaveQty = modal?.querySelector('#inv-save-qty');
 
@@ -1967,6 +2014,9 @@ class CryptoPortfolioApp {
       const apyVal = this.getApyValue(this.currentInvestmentAsset, this.currentInvestmentLocation);
       apyInput.value = (apyVal !== null && apyVal !== undefined) ? String(apyVal) : '';
     }
+    if (deallocateInput) {
+      deallocateInput.value = this.getDeallocateValue(this.currentInvestmentAsset, this.currentInvestmentLocation);
+    }
 
     this.renderInvestmentList();
     if (modal) modal.style.display = 'flex';
@@ -1997,7 +2047,13 @@ class CryptoPortfolioApp {
     } catch (err) {
       console.warn('Falha ao remover APY manual', err);
     }
+    try {
+      await FirebaseService.deleteDocument(CONFIG.DEALLOCATE_COLLECTION, this.makeDeallocateDocId(normalizedAsset, targetLocation));
+    } catch (err) {
+      console.warn('Falha ao remover valor de desalocacao manual', err);
+    }
     this.state.apyValues.delete(this.makeApyKey(normalizedAsset, targetLocation));
+    this.state.deallocateValues.delete(this.makeDeallocateKey(normalizedAsset, targetLocation));
     this.state.investments.delete(key);
     this.state.manualAssets = this.state.manualAssets.filter(r =>
       !(r.asset === normalizedAsset && this.normalizeLocation(r.location) === this.normalizeLocation(targetLocation))
@@ -2012,6 +2068,8 @@ class CryptoPortfolioApp {
     this.currentInvestmentSource = null;
     const apyInput = DOM.$('#inv-apy');
     if (apyInput) apyInput.value = '';
+    const deallocateInput = DOM.$('#inv-deallocate');
+    if (deallocateInput) deallocateInput.value = '';
     const qtyInput = DOM.$('#inv-qty2');
     if (qtyInput) {
       qtyInput.value = '';
@@ -2290,6 +2348,41 @@ class CryptoPortfolioApp {
     } catch (err) {
       console.error(err);
       ToastService.error('Erro ao guardar APY');
+    }
+  }
+
+  async saveDeallocate(){
+    const asset = this.normalizeSymbol(this.currentInvestmentAsset || '');
+    const location = this.canonicalizeLocation(this.currentInvestmentLocation || '');
+    const input = DOM.$('#inv-deallocate');
+    if (!asset || !input) {
+      ToastService.error('Selecione um ativo para definir a desalocação');
+      return;
+    }
+
+    const value = input.value.trim().slice(0, 40);
+    const key = this.makeDeallocateKey(asset, location);
+    const docId = this.makeDeallocateDocId(asset, location);
+    try {
+      if (!value) {
+        await FirebaseService.deleteDocument(CONFIG.DEALLOCATE_COLLECTION, docId);
+        this.state.deallocateValues.delete(key);
+        input.value = '';
+        ToastService.success('Desalocação removida');
+      } else {
+        await FirebaseService.setDocument(CONFIG.DEALLOCATE_COLLECTION, docId, {
+          asset,
+          location,
+          value
+        });
+        this.state.deallocateValues.set(key, value);
+        input.value = value;
+        ToastService.success('Desalocação guardada com sucesso');
+      }
+      await this.renderAll(this.state.generatedAt);
+    } catch (err) {
+      console.error(err);
+      ToastService.error('Erro ao guardar desalocação');
     }
   }
 
@@ -2857,17 +2950,8 @@ class CryptoPortfolioApp {
   showError(msg){
     console.error(msg);
     const tb = DOM.$('#rows');
-    if (tb) tb.innerHTML = `<tr><td colspan="11" class="text-muted">Error: ${msg}</td></tr>`;
+    if (tb) tb.innerHTML = `<tr><td colspan="12" class="text-muted">Error: ${msg}</td></tr>`;
   }
 }
 
 export { DOM, ToastService, CryptoPortfolioApp };
-
-
-
-
-
-
-
-
-

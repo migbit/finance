@@ -31,6 +31,7 @@ export const CONFIG = {
   INVESTMENTS_COLLECTION: 'cryptoportfolio_investments',
   MONTHLY_TOTALS_COLLECTION: 'cryptoportfolio_monthly_totals',
   APY_COLLECTION: 'cryptoportfolio_apy',
+  DEALLOCATE_COLLECTION: 'cryptoportfolio_deallocate',
   MONTHLY_ASSETS_COLLECTION: 'cryptoportfolio_monthly_assets'
 };
 

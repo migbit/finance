@@ -101,6 +101,14 @@
       font-weight: 700;
     }
 
+    #crypto-table th.col-deallocate,
+    #crypto-table td.col-deallocate {
+      width: 92px;
+      max-width: 110px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
     /* Allocation split layout */
     .allocation-split {
       display: grid;
@@ -432,12 +440,14 @@
                 <th role="columnheader" scope="col" class="sortable col-realized" data-sort="realized" aria-sort="none">Realizado</th>
                 <th role="columnheader" scope="col" class="sortable col-roi" data-sort="roi" aria-sort="none">ROI %</th>
                 <th role="columnheader" scope="col" class="sortable col-apy" data-sort="apy" aria-sort="none">APY</th>
+                <th role="columnheader" scope="col" class="col-deallocate">Desalocar</th>
                 <th role="columnheader" scope="col" class="col-loc">Localização</th>
                 <th role="columnheader" scope="col">Editar</th>
               </tr>
             </thead>
             <tbody role="rowgroup" id="rows">
               <tr class="skeleton-row" role="row">
+                <td><div class="skeleton skeleton-text"></div></td>
                 <td><div class="skeleton skeleton-text"></div></td>
                 <td><div class="skeleton skeleton-text"></div></td>
                 <td><div class="skeleton skeleton-text"></div></td>
@@ -564,6 +574,19 @@
           <button id="inv-save-apy" class="btn" style="width: 100%;">Gravar APY</button>
         </div>
         <small style="display:block; margin-top: 6px; color:#047857;">Deixe em branco para remover o APY.</small>
+      </div>
+
+      <!-- Deallocate editor -->
+      <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; margin-bottom: 16px; background: #f8fafc;">
+        <h4 style="margin: 0 0 8px; font-size: 0.95rem;">Desalocar</h4>
+        <div class="field">
+          <label for="inv-deallocate">Valor</label>
+          <input id="inv-deallocate" type="text" maxlength="40" placeholder="ex.: 28 dias" />
+        </div>
+        <div class="field" style="margin-top: 8px;">
+          <button id="inv-save-deallocate" class="btn" style="width: 100%;">Gravar desalocação</button>
+        </div>
+        <small style="display:block; margin-top: 6px; color:#475569;">Deixe em branco para remover.</small>
       </div>
 
       <!-- List of investments -->

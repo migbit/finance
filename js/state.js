@@ -8,6 +8,7 @@ export class AppState {
     this.binancePriceMap = new Map();
     this.usdtToEurRate = 0;
     this.apyValues = new Map();
+    this.deallocateValues = new Map();
     this.hideSmall = true;
     this.currentRows = [];
     this.currency = 'EUR';
