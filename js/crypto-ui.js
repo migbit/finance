@@ -995,7 +995,7 @@ class CryptoPortfolioApp {
     const exact = this.sumInvestments(investments);
     if (exact.usd > 0 || exact.eur > 0) return exact;
 
-    const legacyInvestments = this.getLegacyExchangeInvestments(canonicalAsset, canonicalLocation);
+    const legacyInvestments = this.getLegacyInvestmentsForSingleCurrentRow(canonicalAsset, canonicalLocation);
     if (legacyInvestments.length) return this.sumInvestments(legacyInvestments);
 
     return exact;
@@ -1015,19 +1015,11 @@ class CryptoPortfolioApp {
     return this.normalizeLocation(location).startsWith('LEDGER');
   }
 
-  isKrakenLocation(location) {
-    return this.normalizeLocation(location).startsWith('KRAKEN');
-  }
-
-  getLegacyExchangeInvestments(asset, currentLocation) {
-    if (!this.isKrakenLocation(currentLocation)) return [];
-
-    const currentExchangeRows = (this.state.currentRows || []).filter(row =>
-      this.normalizeSymbol(row.asset || '') === asset &&
-      row.source !== 'manual' &&
-      !this.isLedgerLocation(row.location || '')
+  getLegacyInvestmentsForSingleCurrentRow(asset, currentLocation) {
+    const currentRows = (this.state.currentRows || []).filter(row =>
+      this.normalizeSymbol(row.asset || '') === asset
     );
-    if (currentExchangeRows.length > 1) return [];
+    if (currentRows.length !== 1) return [];
 
     const currentLocKey = this.normalizeLocation(currentLocation);
     const legacy = [];
@@ -1036,7 +1028,6 @@ class CryptoPortfolioApp {
       if (keyAsset !== asset) continue;
       const locKey = locationParts.join('_');
       if (!locKey || locKey === currentLocKey) continue;
-      if (locKey.startsWith('LEDGER') || locKey.startsWith('KRAKEN')) continue;
       legacy.push(...investments);
     }
     return legacy;
@@ -2249,12 +2240,13 @@ class CryptoPortfolioApp {
     }
 
     const isManual = (this.currentInvestmentSource === 'manual');
-    if (qtyWrap)   qtyWrap.style.display = isManual ? 'block' : 'none';
-    if (btnSaveQty) btnSaveQty.style.display = isManual ? '' : 'none';
+    const canEditQuantity = isManual || this.currentInvestmentSource === 'investments';
+    if (qtyWrap)   qtyWrap.style.display = canEditQuantity ? 'block' : 'none';
+    if (btnSaveQty) btnSaveQty.style.display = canEditQuantity ? '' : 'none';
     if (btnRemove) btnRemove.style.display = isManual ? '' : 'none';
 
     if (qtyInput)  {
-      if (isManual) {
+      if (canEditQuantity) {
         const manualRow = this.findManualAsset(this.currentInvestmentAsset, this.currentInvestmentLocation);
         const currentQty = manualRow?.quantity ?? null;
         qtyInput.value = currentQty !== null ? String(currentQty) : '';
@@ -2515,7 +2507,7 @@ class CryptoPortfolioApp {
   }
 
   async saveManualQuantity(){
-    if (this.currentInvestmentSource !== 'manual') return;
+    if (this.currentInvestmentSource !== 'manual' && this.currentInvestmentSource !== 'investments') return;
 
     const qtyInput = DOM.$('#inv-qty2');
     if (!qtyInput) {
@@ -2552,7 +2544,7 @@ class CryptoPortfolioApp {
       });
 
       await this.loadManualAssets();
-        await this.loadInvestments();
+      await this.loadInvestments();
       await this.renderAll(this.state.generatedAt);
 
       const updatedRow = this.findManualAsset(asset, location);
@@ -2923,6 +2915,35 @@ class CryptoPortfolioApp {
     }
   }
 
+  async updateInvestmentLocation(asset, previousLocation, newLocation){
+    const normalizedAsset = this.normalizeSymbol(asset || '');
+    const fromLocation = this.canonicalizeLocation(previousLocation || 'Other');
+    const targetLocation = this.canonicalizeLocation(newLocation || 'Other');
+    const key = `${normalizedAsset}_${this.normalizeLocation(fromLocation)}`;
+    const investments = this.state.investments.get(key) || [];
+
+    if (!investments.length) {
+      console.warn('Investments not found for location update', normalizedAsset, previousLocation);
+      return;
+    }
+
+    await Promise.all(investments
+      .filter(inv => inv?.id)
+      .map(inv => FirebaseService.setDocument(CONFIG.INVESTMENTS_COLLECTION, inv.id, {
+        asset: normalizedAsset,
+        location: targetLocation
+      }))
+    );
+
+    if (this.isLedgerLocation(targetLocation) && !this.findManualAsset(normalizedAsset, targetLocation)) {
+      await FirebaseService.setDocument('cryptoportfolio_manual', this.makeManualDocId(normalizedAsset, targetLocation), {
+        asset: normalizedAsset,
+        quantity: 0,
+        location: targetLocation
+      });
+    }
+  }
+
   bindTableEvents(){
     DOM.$$('select[data-asset]').forEach(sel => {
       sel.addEventListener('change', async (e) => {
@@ -2935,6 +2956,10 @@ class CryptoPortfolioApp {
         
         if (source === 'manual') {
           await this.updateManualAssetLocation(asset, prevCanonical, loc);
+          await this.loadManualAssets();
+        } else if (source === 'investments') {
+          await this.updateInvestmentLocation(asset, prevCanonical, loc);
+          await this.loadInvestments();
           await this.loadManualAssets();
         } else {
           const canonicalAsset = this.normalizeSymbol(asset || '');
