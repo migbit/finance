@@ -198,6 +198,25 @@
       outline: none;
     }
 
+    .copyable-cell.is-copied {
+      color: #166534;
+      background: #dcfce7;
+      box-shadow: inset 3px 0 0 #22c55e;
+      text-decoration: none;
+    }
+
+    .copyable-cell.is-copied::after {
+      content: " ✓";
+      font-weight: 700;
+      color: #15803d;
+    }
+
+    .sent-more-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
     .mono-link {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
       font-size: 0.82rem;
@@ -343,6 +362,9 @@
             <tr><td colspan="9" class="empty-state">A carregar boletins...</td></tr>
           </tbody>
         </table>
+      </div>
+      <div class="sent-more-actions">
+        <button id="boletins-sent-toggle" type="button" hidden>Mostrar mais</button>
       </div>
     </section>
   </main>

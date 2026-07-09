@@ -16,9 +16,12 @@ const COLLECTION = 'alojamento_boletins';
 const PUBLIC_FORM_URL = 'https://apartments-a4b17.web.app/modules/boletim.html';
 const BOLETINS_COLSPAN = 9;
 const SEND_DEADLINE_BUSINESS_DAYS = 3;
+const COPIED_CELLS_STORAGE_KEY = 'boletinsCopiedCellsV1';
+const SENT_PREVIEW_LIMIT = 5;
 
 const state = {
-  boletins: []
+  boletins: [],
+  sentExpanded: false
 };
 
 const els = {
@@ -32,7 +35,8 @@ const els = {
   generatedUrl: document.getElementById('generated-url'),
   copyGenerated: document.getElementById('copy-generated-link'),
   body: document.getElementById('boletins-body'),
-  sentBody: document.getElementById('boletins-sent-body')
+  sentBody: document.getElementById('boletins-sent-body'),
+  sentToggle: document.getElementById('boletins-sent-toggle')
 };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -43,6 +47,10 @@ document.addEventListener('DOMContentLoaded', () => {
 function bindEvents() {
   els.form?.addEventListener('submit', handleCreateBoletim);
   els.copyGenerated?.addEventListener('click', () => copyText(els.generatedUrl.value));
+  els.sentToggle?.addEventListener('click', () => {
+    state.sentExpanded = !state.sentExpanded;
+    renderBoletins();
+  });
   [els.body, els.sentBody].forEach((body) => {
     body?.addEventListener('click', handleTableClick);
     body?.addEventListener('keydown', handleTableKeydown);
@@ -140,6 +148,7 @@ function renderBoletins() {
     if (els.sentBody) {
       els.sentBody.innerHTML = renderEmptyRow('Ainda não existem boletins enviados.');
     }
+    updateSentToggle(0);
     return;
   }
 
@@ -151,10 +160,21 @@ function renderBoletins() {
     : renderEmptyRow('Não existem boletins por enviar.');
 
   if (els.sentBody) {
-    els.sentBody.innerHTML = sent.length
-      ? renderBoletimRows(sent)
+    const visibleSent = state.sentExpanded ? sent : sent.slice(0, SENT_PREVIEW_LIMIT);
+    els.sentBody.innerHTML = visibleSent.length
+      ? renderBoletimRows(visibleSent)
       : renderEmptyRow('Ainda não existem boletins enviados.');
+    updateSentToggle(sent.length);
   }
+}
+
+function updateSentToggle(totalSent) {
+  if (!els.sentToggle) return;
+  const hasMore = totalSent > SENT_PREVIEW_LIMIT;
+  els.sentToggle.hidden = !hasMore;
+  els.sentToggle.textContent = state.sentExpanded
+    ? 'Mostrar menos'
+    : `Mostrar mais (${totalSent - SENT_PREVIEW_LIMIT})`;
 }
 
 function renderBoletimRows(boletins) {
@@ -194,7 +214,7 @@ function renderBoletimRows(boletins) {
         </td>
       </tr>
       <tr id="${detailsId}" hidden>
-        <td colspan="${BOLETINS_COLSPAN}">${renderGuestDetails(item.guests || [])}</td>
+        <td colspan="${BOLETINS_COLSPAN}">${renderGuestDetails(item.guests || [], item.id)}</td>
       </tr>
     `;
   }).join('');
@@ -219,14 +239,15 @@ function renderSendDeadline(checkinDate, sentToAuthorities) {
   return `<span class="deadline-date${overdueClass}">${escapeHtml(formatDateOnlyFromDate(deadline))}</span>`;
 }
 
-function handleTableClick(event) {
+async function handleTableClick(event) {
   const copyableCell = event.target.closest('[data-action="copy-value"]');
   if (copyableCell) {
-    copyText(
+    const copied = await copyText(
       copyableCell.dataset.copyValue || '',
       true,
       `${copyableCell.dataset.copyLabel || 'Conteúdo'} copiado.`
     );
+    if (copied) markCopyableCellCopied(copyableCell);
     return;
   }
 
@@ -251,18 +272,19 @@ function handleTableClick(event) {
   }
 }
 
-function handleTableKeydown(event) {
+async function handleTableKeydown(event) {
   if (event.key !== 'Enter' && event.key !== ' ') return;
 
   const copyableCell = event.target.closest('[data-action="copy-value"]');
   if (!copyableCell) return;
 
   event.preventDefault();
-  copyText(
+  const copied = await copyText(
     copyableCell.dataset.copyValue || '',
     true,
     `${copyableCell.dataset.copyLabel || 'Conteúdo'} copiado.`
   );
+  if (copied) markCopyableCellCopied(copyableCell);
 }
 
 async function deleteBoletim(id, name) {
@@ -329,13 +351,48 @@ async function copyText(text, showSuccess = true, successMessage = 'Link copiado
   try {
     await navigator.clipboard.writeText(text);
     if (showSuccess) showToast(successMessage, 'success');
+    return true;
   } catch {
-    if (els.generatedUrl) {
+    if (els.generatedUrl && els.generatedUrl.value === text) {
       els.generatedUrl.focus();
       els.generatedUrl.select();
     }
     if (showSuccess) showToast('Não consegui copiar automaticamente.', 'warning');
+    return false;
   }
+}
+
+function markCopyableCellCopied(cell) {
+  const copyKey = cell.dataset.copyKey;
+  if (copyKey) {
+    const copiedKeys = getCopiedCellKeys();
+    copiedKeys.add(copyKey);
+    saveCopiedCellKeys(copiedKeys);
+  }
+  cell.classList.add('is-copied');
+  cell.title = 'Já copiado';
+}
+
+function getCopiedCellKeys() {
+  try {
+    const raw = localStorage.getItem(COPIED_CELLS_STORAGE_KEY);
+    const keys = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(keys) ? keys : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveCopiedCellKeys(keys) {
+  try {
+    localStorage.setItem(COPIED_CELLS_STORAGE_KEY, JSON.stringify([...keys]));
+  } catch {
+    // A marca visual continua a funcionar na sessão mesmo que o browser bloqueie localStorage.
+  }
+}
+
+function hasCopiedCellKey(copyKey) {
+  return copyKey ? getCopiedCellKeys().has(copyKey) : false;
 }
 
 function formatDateTime(value) {
@@ -463,21 +520,22 @@ function toMillis(value) {
   return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
 }
 
-function renderGuestDetails(guests) {
+function renderGuestDetails(guests, boletimId) {
   if (!guests.length) {
     return '<div class="empty-state">Ainda não há dados submetidos.</div>';
   }
 
-  const rows = guests.map((guest) => {
+  const rows = guests.map((guest, index) => {
     const name = `${guest.firstName || ''} ${guest.lastName || ''}`.trim() || '-';
     const birthDate = guest.birthDate || '-';
     const documentNumber = guest.documentNumber || '-';
+    const guestKey = `${boletimId || 'boletim'}:${guest.id || index}`;
 
     return `
       <tr>
-        ${renderCopyableCell(name, 'Nome')}
-        ${renderCopyableCell(birthDate, 'Nascimento')}
-        ${renderCopyableCell(documentNumber, 'Número do documento')}
+        ${renderCopyableCell(name, 'Nome', `${guestKey}:name:${name}`)}
+        ${renderCopyableCell(birthDate, 'Nascimento', `${guestKey}:birthDate:${birthDate}`)}
+        ${renderCopyableCell(documentNumber, 'Número do documento', `${guestKey}:documentNumber:${documentNumber}`)}
         <td>${escapeHtml(formatDocumentType(guest.documentType))}</td>
         <td>${escapeHtml(formatCountry(guest.documentCountry))}</td>
         <td>${escapeHtml(formatCountry(guest.countryResidence))}</td>
@@ -512,16 +570,20 @@ function renderGuestDetails(guests) {
   `;
 }
 
-function renderCopyableCell(value, label) {
+function renderCopyableCell(value, label, copyKey) {
+  const copiedClass = hasCopiedCellKey(copyKey) ? ' is-copied' : '';
+  const title = copiedClass ? 'Já copiado' : 'Clique para copiar';
+
   return `
     <td
-      class="copyable-cell"
+      class="copyable-cell${copiedClass}"
       role="button"
       tabindex="0"
-      title="Clique para copiar"
+      title="${title}"
       data-action="copy-value"
       data-copy-value="${escapeAttr(value)}"
       data-copy-label="${escapeAttr(label)}"
+      data-copy-key="${escapeAttr(copyKey)}"
     >${escapeHtml(value)}</td>
   `;
 }
