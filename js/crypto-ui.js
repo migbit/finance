@@ -2534,31 +2534,40 @@ class CryptoPortfolioApp {
       return;
     }
 
+    const manualRow = this.findManualAsset(asset, location);
+    const docId = manualRow?.id || this.makeManualDocId(asset, location);
     try {
-      const manualRow = this.findManualAsset(asset, location);
-      const docId = manualRow?.id || this.makeManualDocId(asset, location);
       await FirebaseService.setDocument('cryptoportfolio_manual', docId, {
         asset,
         quantity,
         location
       });
+    } catch (err) {
+      console.error('Erro ao gravar quantidade manual', err);
+      ToastService.error('Erro ao atualizar quantidade');
+      return;
+    }
 
+    try {
       await this.loadManualAssets();
       await this.loadInvestments();
       await this.renderAll(this.state.generatedAt);
-
       const updatedRow = this.findManualAsset(asset, location);
       if (updatedRow) {
         const value = updatedRow.quantity ?? 0;
         qtyInput.value = String(value);
         qtyInput.setAttribute('placeholder', `Atual: ${FORMATTERS.quantity.format(value)}`);
+      } else {
+        qtyInput.value = String(quantity);
+        qtyInput.setAttribute('placeholder', `Atual: ${FORMATTERS.quantity.format(quantity)}`);
       }
-
-      ToastService.success('Quantidade atualizada com sucesso');
     } catch (err) {
-      console.error('Erro ao atualizar quantidade manual', err);
-      ToastService.error('Erro ao atualizar quantidade');
+      console.warn('Quantidade gravada, mas a tabela nao foi redesenhada imediatamente', err);
+      qtyInput.value = String(quantity);
+      qtyInput.setAttribute('placeholder', `Atual: ${FORMATTERS.quantity.format(quantity)}`);
     }
+
+    ToastService.success('Quantidade atualizada com sucesso');
   }
 
   async saveApy(){
