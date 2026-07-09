@@ -92,6 +92,8 @@ class CryptoPortfolioApp {
     this._renderedRowKeys = new Set();
     this._tableRenderTimeout = null;
     this._eventsAttached = false;
+    this._monthlyAssetsActiveView = 'summary';
+    this._monthlyAssetsSelectedAsset = '__TOP__';
   }
 
   initDOMCache(){
@@ -160,6 +162,10 @@ class CryptoPortfolioApp {
     const currentMonthlyChart = this.state?.monthlyChart;
     if (currentMonthlyChart?.destroy) {
       try { currentMonthlyChart.destroy(); } catch (err) { console.warn('Failed to destroy monthly chart', err); }
+    }
+    const currentMonthlyAssetsChart = this.state?.monthlyAssetsChart;
+    if (currentMonthlyAssetsChart?.destroy) {
+      try { currentMonthlyAssetsChart.destroy(); } catch (err) { console.warn('Failed to destroy monthly assets chart', err); }
     }
     this.state = new AppState();
     this.priceResolver = null;
@@ -695,109 +701,290 @@ class CryptoPortfolioApp {
     return `${sign}${formatted}`;
   }
 
+  formatSignedPercent(value){
+    if (value === null || value === undefined || !isFinite(value)) return '--';
+    if (value === 0) return '0%';
+    const sign = value > 0 ? '+' : '-';
+    return `${sign}${FORMATTERS.percent.format(Math.abs(value))}%`;
+  }
+
+  getMonthlyAssetViewData(){
+    const snapshots = [...(this.state.monthlyAssetSnapshots || [])].sort((a, b) => a.month.localeCompare(b.month));
+    const months = snapshots.map(snapshot => snapshot.month);
+    const snapshotMap = new Map(snapshots.map(snapshot => [snapshot.month, snapshot]));
+    const latestMonth = months[months.length - 1] || '';
+    const previousMonth = months.length > 1 ? months[months.length - 2] : '';
+    const latestSnapshot = snapshotMap.get(latestMonth);
+    const previousSnapshot = snapshotMap.get(previousMonth);
+    const assetsSet = new Set();
+    snapshots.forEach(snapshot => Object.keys(snapshot.assets || {}).forEach(asset => assetsSet.add(asset)));
+
+    const totalsByMonth = new Map(snapshots.map(snapshot => [
+      snapshot.month,
+      Object.values(snapshot.assets || {}).reduce((sum, asset) => sum + Number(asset.valueEUR || 0), 0)
+    ]));
+
+    const assets = Array.from(assetsSet).map(asset => {
+      const latest = latestSnapshot?.assets?.[asset] || null;
+      const previous = previousSnapshot?.assets?.[asset] || null;
+      const currentValue = Number(latest?.valueEUR || 0);
+      const previousValue = Number(previous?.valueEUR || 0);
+      const currentQty = Number(latest?.quantity || 0);
+      const previousQty = Number(previous?.quantity || 0);
+      const deltaValue = latest && previous ? currentValue - previousValue : latest ? currentValue : 0;
+      const deltaQty = latest && previous ? currentQty - previousQty : latest ? currentQty : 0;
+      const deltaPct = previousValue > 0 ? (deltaValue / previousValue) * 100 : null;
+      const history = snapshots.map((snapshot, index) => {
+        const data = snapshot.assets?.[asset] || null;
+        const prevData = index > 0 ? snapshots[index - 1].assets?.[asset] : null;
+        const valueEUR = Number(data?.valueEUR || 0);
+        const quantity = Number(data?.quantity || 0);
+        const prevValue = Number(prevData?.valueEUR || 0);
+        const prevQty = Number(prevData?.quantity || 0);
+        return {
+          month: snapshot.month,
+          label: this.formatMonthLabel(snapshot.month),
+          quantity,
+          valueEUR,
+          deltaValue: data && prevData ? valueEUR - prevValue : null,
+          deltaQty: data && prevData ? quantity - prevQty : null,
+          deltaPct: data && prevValue > 0 ? ((valueEUR - prevValue) / prevValue) * 100 : null,
+          hasData: Boolean(data)
+        };
+      });
+      const monthsWithValue = history.filter(item => item.hasData && item.valueEUR > 0);
+      const bestMonth = monthsWithValue.reduce((best, item) => !best || item.valueEUR > best.valueEUR ? item : best, null);
+      const worstMonth = monthsWithValue.reduce((worst, item) => !worst || item.valueEUR < worst.valueEUR ? item : worst, null);
+      return {
+        asset,
+        currentValue,
+        previousValue,
+        currentQty,
+        previousQty,
+        deltaValue,
+        deltaQty,
+        deltaPct,
+        bestMonth,
+        worstMonth,
+        history
+      };
+    }).sort((a, b) => (b.currentValue || 0) - (a.currentValue || 0));
+
+    return {
+      snapshots,
+      months,
+      latestMonth,
+      previousMonth,
+      latestTotal: totalsByMonth.get(latestMonth) || 0,
+      previousTotal: totalsByMonth.get(previousMonth) || 0,
+      assets
+    };
+  }
+
   renderAssetSnapshotsTable(){
-    const table = DOM.$('#monthly-assets-table');
+    const data = this.getMonthlyAssetViewData();
+    this.renderMonthlyAssetsSummary(data);
+    this.renderMonthlyAssetControls(data);
+    this.renderMonthlyAssetsDetail(data);
+    if (this._monthlyAssetsActiveView === 'trend') {
+      this.renderMonthlyAssetTrendChart(data);
+    }
+  }
+
+  renderMonthlyAssetsSummary(data){
+    const setText = (selector, value, className) => {
+      const el = DOM.$(selector);
+      if (!el) return;
+      el.textContent = value;
+      if (className !== undefined) el.className = className;
+    };
+
+    if (!data.assets.length){
+      setText('#monthly-assets-total-current', '--', 'value');
+      setText('#monthly-assets-total-month', 'Sem dados', 'sub');
+      setText('#monthly-assets-total-delta', '--', 'value');
+      setText('#monthly-assets-total-delta-sub', '--', 'sub');
+      setText('#monthly-assets-best', '--', 'value');
+      setText('#monthly-assets-best-sub', '--', 'sub');
+      setText('#monthly-assets-worst', '--', 'value');
+      setText('#monthly-assets-worst-sub', '--', 'sub');
+      return;
+    }
+
+    const totalDelta = data.previousMonth ? data.latestTotal - data.previousTotal : 0;
+    const totalDeltaPct = data.previousTotal > 0 ? (totalDelta / data.previousTotal) * 100 : null;
+    const best = data.assets.filter(asset => asset.deltaValue > 0).sort((a, b) => b.deltaValue - a.deltaValue)[0];
+    const worst = data.assets.filter(asset => asset.deltaValue < 0).sort((a, b) => a.deltaValue - b.deltaValue)[0];
+
+    setText('#monthly-assets-total-current', FORMATTERS.eur.format(data.latestTotal), 'value');
+    setText('#monthly-assets-total-month', data.latestMonth ? this.formatMonthLabel(data.latestMonth) : '--', 'sub');
+    setText('#monthly-assets-total-delta', this.formatSignedCurrency(totalDelta), `value ${totalDelta > 0 ? 'pos' : totalDelta < 0 ? 'neg' : ''}`);
+    setText('#monthly-assets-total-delta-sub', totalDeltaPct === null ? 'Sem mês anterior' : this.formatSignedPercent(totalDeltaPct), 'sub');
+    setText('#monthly-assets-best', best ? best.asset : '--', 'value');
+    setText('#monthly-assets-best-sub', best ? this.formatSignedCurrency(best.deltaValue) : '--', best ? 'sub pos' : 'sub');
+    setText('#monthly-assets-worst', worst ? worst.asset : '--', 'value');
+    setText('#monthly-assets-worst-sub', worst ? this.formatSignedCurrency(worst.deltaValue) : '--', worst ? 'sub neg' : 'sub');
+  }
+
+  renderMonthlyAssetControls(data){
+    const select = DOM.$('#monthly-asset-trend-select');
+    if (!select) return;
+    const selected = this._monthlyAssetsSelectedAsset || '__TOP__';
+    const options = [
+      '<option value="__TOP__">Top 5 ativos</option>',
+      ...data.assets.map(asset => `<option value="${this.escape(asset.asset)}">${this.escape(asset.asset)}</option>`)
+    ];
+    select.innerHTML = options.join('');
+    select.value = data.assets.some(asset => asset.asset === selected) ? selected : '__TOP__';
+    this._monthlyAssetsSelectedAsset = select.value;
+  }
+
+  renderMonthlyAssetsDetail(data){
     const head = DOM.$('#monthly-assets-head');
     const body = DOM.$('#monthly-assets-body');
-    if (!table || !head || !body) return;
+    if (!head || !body) return;
 
-    const snapshots = this.state.monthlyAssetSnapshots || [];
-    if (!snapshots.length){
-      head.innerHTML = '';
-      body.innerHTML = `<tr><td class="text-muted" style="text-align:center; padding:16px;">Sem dados</td></tr>`;
+    head.innerHTML = `
+      <tr>
+        <th>Ativo</th>
+        <th>Atual</th>
+        <th>Mês anterior</th>
+        <th>&Delta; EUR</th>
+        <th>&Delta; %</th>
+        <th>&Delta; Qtd</th>
+        <th>Melhor mês</th>
+        <th>Pior mês</th>
+      </tr>
+    `;
+
+    if (!data.assets.length){
+      body.innerHTML = `<tr><td colspan="8" class="text-muted" style="text-align:center; padding:16px;">Sem dados</td></tr>`;
+      this.renderMonthlyAssetDrilldown(null, data);
       return;
     }
 
-    const months = snapshots.map(s => s.month);
-    const assetsSet = new Set();
-    snapshots.forEach(s => {
-      Object.keys(s.assets || {}).forEach(asset => assetsSet.add(asset));
-    });
-
-    if (!assetsSet.size){
-      head.innerHTML = '';
-      body.innerHTML = `<tr><td class="text-muted" style="text-align:center; padding:16px;">Sem dados</td></tr>`;
-      return;
-    }
-
-    const headerRow1 = ['<tr><th rowspan="2">Ativo</th>'];
-    const headerRow2 = ['<tr>'];
-    months.forEach(month => {
-      headerRow1.push(`<th colspan="4" style="text-align:center;">${this.formatMonthLabel(month)}</th>`);
-      headerRow2.push('<th>Qtd</th><th>Valor</th><th>&Delta;Qtd</th><th>&Delta;Valor</th>');
-    });
-    headerRow1.push('</tr>');
-    headerRow2.push('</tr>');
-    head.innerHTML = headerRow1.join('') + headerRow2.join('');
-
-    const snapshotMap = new Map(snapshots.map(s => [s.month, s]));
-    const latestMonth = months[months.length - 1];
-    const totalsByMonth = new Map();
-    snapshots.forEach(s => {
-      const totalValue = Object.values(s.assets || {}).reduce((sum, asset) => {
-        return sum + Number(asset.valueEUR || 0);
-      }, 0);
-      totalsByMonth.set(s.month, totalValue);
-    });
-
-    const rowsHtml = Array.from(assetsSet)
-      .map(asset => ({
-        asset,
-        latestValue: snapshotMap.get(latestMonth)?.assets?.[asset]?.valueEUR || 0
-      }))
-      .sort((a, b) => (b.latestValue || 0) - (a.latestValue || 0))
-      .map(asset => {
-        const cells = months.map((month, idx) => {
-          const snapshot = snapshotMap.get(month);
-          const data = snapshot?.assets?.[asset.asset];
-          const previousMonth = idx > 0 ? months[idx - 1] : null;
-          const previousData = previousMonth ? snapshotMap.get(previousMonth)?.assets?.[asset.asset] : null;
-          if (!data){
-            return '<td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td>';
-          }
-          const qty = Number(data.quantity || 0);
-          const value = Number(data.valueEUR || 0);
-          if (idx === 0){
-            return `
-              <td>${FORMATTERS.quantity.format(qty)}</td>
-              <td>${FORMATTERS.eur.format(value)}</td>
-              <td>&mdash;</td>
-              <td>&mdash;</td>
-            `;
-          }
-          const prevQty = Number(previousData?.quantity || 0);
-          const prevValue = Number(previousData?.valueEUR || 0);
-          const deltaQty = qty - prevQty;
-          const deltaValue = value - prevValue;
-          const qtyClass = deltaQty > 0 ? 'pos' : deltaQty < 0 ? 'neg' : '';
-          const valueClass = deltaValue > 0 ? 'pos' : deltaValue < 0 ? 'neg' : '';
-          return `
-            <td>${FORMATTERS.quantity.format(qty)}</td>
-            <td>${FORMATTERS.eur.format(value)}</td>
-            <td class="${qtyClass}">${this.formatSignedQuantity(deltaQty)}</td>
-            <td class="${valueClass}">${this.formatSignedCurrency(deltaValue)}</td>
-          `;
-        }).join('');
-
-        return `<tr><td><b>${this.escape(asset.asset)}</b></td>${cells}</tr>`;
-      }).join('');
-
-    const totalRowCells = months.map((month, idx) => {
-      const totalValue = totalsByMonth.get(month) || 0;
-      const prevMonth = idx > 0 ? months[idx - 1] : null;
-      const prevTotal = prevMonth ? totalsByMonth.get(prevMonth) || 0 : null;
-      const deltaValue = prevTotal !== null ? totalValue - prevTotal : null;
-      const valueCell = `<td>${FORMATTERS.eur.format(totalValue)}</td>`;
-      const qtyCell = '<td>&mdash;</td>';
-      const deltaQtyCell = '<td>&mdash;</td>';
-      const deltaValueCell = deltaValue === null
-        ? '<td>&mdash;</td>'
-        : `<td class="${deltaValue > 0 ? 'pos' : deltaValue < 0 ? 'neg' : ''}">${this.formatSignedCurrency(deltaValue)}</td>`;
-      return `${qtyCell}${valueCell}${deltaQtyCell}${deltaValueCell}`;
+    body.innerHTML = data.assets.map(asset => {
+      const deltaClass = asset.deltaValue > 0 ? 'pos' : asset.deltaValue < 0 ? 'neg' : '';
+      const qtyClass = asset.deltaQty > 0 ? 'pos' : asset.deltaQty < 0 ? 'neg' : '';
+      return `
+        <tr data-monthly-asset="${this.escape(asset.asset)}" tabindex="0">
+          <td><b>${this.escape(asset.asset)}</b></td>
+          <td>${FORMATTERS.eur.format(asset.currentValue)}</td>
+          <td>${data.previousMonth ? FORMATTERS.eur.format(asset.previousValue) : '--'}</td>
+          <td class="${deltaClass}">${data.previousMonth ? this.formatSignedCurrency(asset.deltaValue) : '--'}</td>
+          <td class="${deltaClass}">${data.previousMonth ? this.formatSignedPercent(asset.deltaPct) : '--'}</td>
+          <td class="${qtyClass}">${data.previousMonth ? this.formatSignedQuantity(asset.deltaQty) : '--'}</td>
+          <td>${asset.bestMonth ? `${this.escape(asset.bestMonth.label)}<br><small>${FORMATTERS.eur.format(asset.bestMonth.valueEUR)}</small>` : '--'}</td>
+          <td>${asset.worstMonth ? `${this.escape(asset.worstMonth.label)}<br><small>${FORMATTERS.eur.format(asset.worstMonth.valueEUR)}</small>` : '--'}</td>
+        </tr>
+      `;
     }).join('');
-    const totalRowHtml = `<tr><td><b>Total</b></td>${totalRowCells}</tr>`;
 
-    body.innerHTML = rowsHtml + totalRowHtml;
+    body.querySelectorAll('[data-monthly-asset]').forEach(row => {
+      const open = () => this.renderMonthlyAssetDrilldown(row.getAttribute('data-monthly-asset'), data);
+      row.addEventListener('click', open);
+      row.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          open();
+        }
+      });
+    });
+
+    const firstAsset = data.assets[0]?.asset || null;
+    this.renderMonthlyAssetDrilldown(firstAsset, data);
+  }
+
+  renderMonthlyAssetDrilldown(assetName, data = this.getMonthlyAssetViewData()){
+    const wrap = DOM.$('#monthly-asset-drilldown');
+    const title = DOM.$('#monthly-asset-drilldown-title');
+    const table = DOM.$('#monthly-asset-drilldown-table');
+    if (!wrap || !title || !table) return;
+
+    const asset = data.assets.find(item => item.asset === assetName);
+    if (!asset){
+      wrap.hidden = true;
+      return;
+    }
+
+    wrap.hidden = false;
+    title.textContent = `Detalhe ${asset.asset}`;
+    table.querySelector('thead').innerHTML = `
+      <tr>
+        <th>Mês</th>
+        <th>Quantidade</th>
+        <th>Valor EUR</th>
+        <th>&Delta; EUR</th>
+        <th>&Delta; %</th>
+        <th>&Delta; Qtd</th>
+      </tr>
+    `;
+    table.querySelector('tbody').innerHTML = asset.history.map(item => {
+      const valueClass = item.deltaValue > 0 ? 'pos' : item.deltaValue < 0 ? 'neg' : '';
+      const qtyClass = item.deltaQty > 0 ? 'pos' : item.deltaQty < 0 ? 'neg' : '';
+      return `
+        <tr>
+          <td>${this.escape(item.label)}</td>
+          <td>${item.hasData ? FORMATTERS.quantity.format(item.quantity) : '--'}</td>
+          <td>${item.hasData ? FORMATTERS.eur.format(item.valueEUR) : '--'}</td>
+          <td class="${valueClass}">${item.deltaValue === null ? '--' : this.formatSignedCurrency(item.deltaValue)}</td>
+          <td class="${valueClass}">${item.deltaPct === null ? '--' : this.formatSignedPercent(item.deltaPct)}</td>
+          <td class="${qtyClass}">${item.deltaQty === null ? '--' : this.formatSignedQuantity(item.deltaQty)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  renderMonthlyAssetTrendChart(data = this.getMonthlyAssetViewData()){
+    const canvas = DOM.$('#monthly-assets-trend-chart');
+    if (!canvas || !window.Chart) return;
+    if (this.state.monthlyAssetsChart?.destroy) {
+      try { this.state.monthlyAssetsChart.destroy(); } catch (err) { console.warn('Failed to destroy monthly asset chart', err); }
+    }
+
+    const palette = ['#526D82', '#16a34a', '#dc2626', '#f59e0b', '#7c3aed', '#0891b2', '#db2777', '#475569'];
+    const selected = this._monthlyAssetsSelectedAsset || '__TOP__';
+    const selectedAssets = selected === '__TOP__'
+      ? data.assets.slice(0, 5)
+      : data.assets.filter(asset => asset.asset === selected);
+    const labels = data.months.map(month => this.formatMonthLabel(month));
+    const datasets = selectedAssets.map((asset, index) => ({
+      label: asset.asset,
+      data: asset.history.map(item => item.hasData ? item.valueEUR : null),
+      borderColor: palette[index % palette.length],
+      backgroundColor: `${palette[index % palette.length]}22`,
+      borderWidth: 2,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      tension: 0.25,
+      spanGaps: true
+    }));
+
+    this.state.monthlyAssetsChart = new Chart(canvas, {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: {
+          legend: { display: true, position: 'top' },
+          tooltip: {
+            callbacks: {
+              label: (context) => `${context.dataset.label}: ${FORMATTERS.eur.format(context.parsed.y || 0)}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            ticks: { callback: (value) => FORMATTERS.eur.format(value) }
+          },
+          x: {
+            ticks: { maxRotation: 35, minRotation: 0 }
+          }
+        }
+      }
+    });
   }
 
   getAssetInvestedAmounts(asset, location) {
@@ -805,6 +992,16 @@ class CryptoPortfolioApp {
     const canonicalLocation = this.canonicalizeLocation(location || 'Other');
     const key = `${canonicalAsset}_${this.normalizeLocation(canonicalLocation)}`;
     const investments = this.state.investments.get(key) || [];
+    const exact = this.sumInvestments(investments);
+    if (exact.usd > 0 || exact.eur > 0) return exact;
+
+    const legacyInvestments = this.getLegacyExchangeInvestments(canonicalAsset, canonicalLocation);
+    if (legacyInvestments.length) return this.sumInvestments(legacyInvestments);
+
+    return exact;
+  }
+
+  sumInvestments(investments = []) {
     return investments.reduce(
       (acc, inv) => ({
         usd: acc.usd + inv.amountUSD,
@@ -812,6 +1009,37 @@ class CryptoPortfolioApp {
       }),
       { usd: 0, eur: 0 }
     );
+  }
+
+  isLedgerLocation(location) {
+    return this.normalizeLocation(location).startsWith('LEDGER');
+  }
+
+  isKrakenLocation(location) {
+    return this.normalizeLocation(location).startsWith('KRAKEN');
+  }
+
+  getLegacyExchangeInvestments(asset, currentLocation) {
+    if (!this.isKrakenLocation(currentLocation)) return [];
+
+    const currentExchangeRows = (this.state.currentRows || []).filter(row =>
+      this.normalizeSymbol(row.asset || '') === asset &&
+      row.source !== 'manual' &&
+      !this.isLedgerLocation(row.location || '')
+    );
+    if (currentExchangeRows.length > 1) return [];
+
+    const currentLocKey = this.normalizeLocation(currentLocation);
+    const legacy = [];
+    for (const [key, investments] of this.state.investments) {
+      const [keyAsset, ...locationParts] = key.split('_');
+      if (keyAsset !== asset) continue;
+      const locKey = locationParts.join('_');
+      if (!locKey || locKey === currentLocKey) continue;
+      if (locKey.startsWith('LEDGER') || locKey.startsWith('KRAKEN')) continue;
+      legacy.push(...investments);
+    }
+    return legacy;
   }
 
   getTotalInvestedAmounts() {
@@ -1834,6 +2062,7 @@ class CryptoPortfolioApp {
     this.setupPdf();
     this.setupKeyboardShortcuts();
     this.setupBulkOperations();
+    this.setupMonthlyAssetsDashboard();
 
     const btnEUR = DOM.$('#btn-eur');
     const btnUSD = DOM.$('#btn-usd');
@@ -1856,6 +2085,35 @@ class CryptoPortfolioApp {
         this.applyCurrencyMode();
         this.announce('Mostrando valores em USD');
       });
+    }
+  }
+
+  setupMonthlyAssetsDashboard(){
+    DOM.$$('[data-monthly-assets-view]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const view = btn.getAttribute('data-monthly-assets-view') || 'summary';
+        this.showMonthlyAssetsView(view);
+      });
+    });
+
+    DOM.$('#monthly-asset-trend-select')?.addEventListener('change', (event) => {
+      this._monthlyAssetsSelectedAsset = event.target.value || '__TOP__';
+      this.renderMonthlyAssetTrendChart();
+    });
+  }
+
+  showMonthlyAssetsView(view){
+    this._monthlyAssetsActiveView = view;
+    DOM.$$('[data-monthly-assets-view]').forEach(btn => {
+      const active = btn.getAttribute('data-monthly-assets-view') === view;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    DOM.$$('[data-monthly-assets-panel]').forEach(panel => {
+      panel.hidden = panel.getAttribute('data-monthly-assets-panel') !== view;
+    });
+    if (view === 'trend') {
+      window.setTimeout(() => this.renderMonthlyAssetTrendChart(), 0);
     }
   }
 
@@ -2322,9 +2580,9 @@ class CryptoPortfolioApp {
 
     const raw = input.value.trim();
     const key = this.makeApyKey(asset, location);
+    const docId = this.makeApyDocId(asset, location);
     try {
       if (raw === '') {
-        const docId = this.makeApyDocId(asset, location);
         await FirebaseService.deleteDocument(CONFIG.APY_COLLECTION, docId);
         this.state.apyValues.delete(key);
         input.value = '';
@@ -2335,7 +2593,6 @@ class CryptoPortfolioApp {
           ToastService.error('Valor APY invalido');
           return;
         }
-        const docId = this.makeApyDocId(asset, location);
         await FirebaseService.setDocument(CONFIG.APY_COLLECTION, docId, {
           asset,
           location,
@@ -2344,10 +2601,18 @@ class CryptoPortfolioApp {
         this.state.apyValues.set(key, value);
         ToastService.success('APY guardado com sucesso');
       }
-      await this.renderAll();
     } catch (err) {
       console.error(err);
       ToastService.error('Erro ao guardar APY');
+      return;
+    }
+
+    try {
+      this.applyCurrentSort();
+      this.renderTable();
+      this.updateSortHeaders();
+    } catch (err) {
+      console.warn('APY guardado, mas a tabela nao foi redesenhada imediatamente', err);
     }
   }
 
@@ -2379,10 +2644,16 @@ class CryptoPortfolioApp {
         input.value = value;
         ToastService.success('Desalocação guardada com sucesso');
       }
-      await this.renderAll(this.state.generatedAt);
     } catch (err) {
       console.error(err);
       ToastService.error('Erro ao guardar desalocação');
+      return;
+    }
+
+    try {
+      this.renderTable();
+    } catch (err) {
+      console.warn('Desalocacao guardada, mas a tabela nao foi redesenhada imediatamente', err);
     }
   }
 

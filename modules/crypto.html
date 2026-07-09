@@ -146,27 +146,102 @@
       font-weight: 600;
     }
 
-    #monthly-assets-table {
-      min-width: max-content;
+    .monthly-assets-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+
+    .monthly-assets-tab {
+      border: 1px solid #d1d5db;
+      background: #fff;
+      color: #334155;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .monthly-assets-tab.active {
+      background: #526D82;
+      border-color: #526D82;
+      color: #fff;
+    }
+
+    .monthly-assets-panel[hidden] {
+      display: none;
+    }
+
+    .monthly-assets-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .monthly-assets-summary-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #f8fafc;
+      padding: 12px;
+    }
+
+    .monthly-assets-summary-card .label {
+      color: #64748b;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .monthly-assets-summary-card .value {
+      color: #111827;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .monthly-assets-summary-card .sub {
+      color: #64748b;
+      font-size: 0.82rem;
+      margin-top: 4px;
+    }
+
+    .monthly-asset-trend-wrap {
+      height: 360px;
+      min-height: 280px;
+    }
+
+    .monthly-assets-controls {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .monthly-assets-controls select {
+      min-width: 180px;
     }
 
     #monthly-assets-table th,
-    #monthly-assets-table td {
+    #monthly-assets-table td,
+    #monthly-asset-drilldown-table th,
+    #monthly-asset-drilldown-table td {
       white-space: nowrap;
     }
 
-    .table-monthly-assets td {
-      vertical-align: top;
+    #monthly-assets-table tbody tr {
+      cursor: pointer;
     }
 
-    .table-monthly-assets .metric-delta {
-      display: block;
-      font-size: 0.75rem;
-      margin-top: 2px;
+    #monthly-assets-table tbody tr:hover {
+      background: #f8fafc;
     }
 
-    .table-monthly-assets .metric-delta.neutral {
-      color: #6b7280;
+    .monthly-asset-drilldown {
+      margin-top: 16px;
+      border-top: 1px solid #e5e7eb;
+      padding-top: 14px;
     }
 
     .data-status-banner {
@@ -479,13 +554,67 @@
     <section class="report-section">
       <div class="viz-card">
         <h3 style="margin: 0 0 16px; font-size: 1.05rem; color: #526D82; text-align: center;">Histórico Mensal por Ativo</h3>
-        <div class="table-wrap">
-          <table id="monthly-assets-table" class="table-monthly-assets">
-            <thead id="monthly-assets-head"></thead>
-            <tbody id="monthly-assets-body">
-              <tr><td class="text-muted" style="text-align:center; padding:16px;">Sem dados</td></tr>
-            </tbody>
-          </table>
+        <div class="monthly-assets-tabs" role="tablist" aria-label="Histórico mensal por ativo">
+          <button class="monthly-assets-tab active" type="button" data-monthly-assets-view="summary" role="tab" aria-selected="true">Resumo</button>
+          <button class="monthly-assets-tab" type="button" data-monthly-assets-view="trend" role="tab" aria-selected="false">Tendência</button>
+          <button class="monthly-assets-tab" type="button" data-monthly-assets-view="detail" role="tab" aria-selected="false">Detalhe</button>
+        </div>
+
+        <div id="monthly-assets-summary-panel" class="monthly-assets-panel" data-monthly-assets-panel="summary" role="tabpanel">
+          <div class="monthly-assets-summary-grid">
+            <div class="monthly-assets-summary-card">
+              <div class="label">Total atual</div>
+              <div id="monthly-assets-total-current" class="value">--</div>
+              <div id="monthly-assets-total-month" class="sub">--</div>
+            </div>
+            <div class="monthly-assets-summary-card">
+              <div class="label">Variação mensal</div>
+              <div id="monthly-assets-total-delta" class="value">--</div>
+              <div id="monthly-assets-total-delta-sub" class="sub">--</div>
+            </div>
+            <div class="monthly-assets-summary-card">
+              <div class="label">Maior subida</div>
+              <div id="monthly-assets-best" class="value">--</div>
+              <div id="monthly-assets-best-sub" class="sub">--</div>
+            </div>
+            <div class="monthly-assets-summary-card">
+              <div class="label">Maior queda</div>
+              <div id="monthly-assets-worst" class="value">--</div>
+              <div id="monthly-assets-worst-sub" class="sub">--</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="monthly-assets-trend-panel" class="monthly-assets-panel" data-monthly-assets-panel="trend" role="tabpanel" hidden>
+          <div class="monthly-assets-controls">
+            <label for="monthly-asset-trend-select" class="sr-only">Ativo</label>
+            <select id="monthly-asset-trend-select">
+              <option value="__TOP__">Top 5 ativos</option>
+            </select>
+          </div>
+          <div class="monthly-asset-trend-wrap">
+            <canvas id="monthly-assets-trend-chart"></canvas>
+          </div>
+        </div>
+
+        <div id="monthly-assets-detail-panel" class="monthly-assets-panel" data-monthly-assets-panel="detail" role="tabpanel" hidden>
+          <div class="table-wrap">
+            <table id="monthly-assets-table" class="table-monthly-assets">
+              <thead id="monthly-assets-head"></thead>
+              <tbody id="monthly-assets-body">
+                <tr><td class="text-muted" style="text-align:center; padding:16px;">Sem dados</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="monthly-asset-drilldown" class="monthly-asset-drilldown" hidden>
+            <h4 id="monthly-asset-drilldown-title" style="margin: 0 0 10px; font-size: 0.95rem; color: #526D82;">Detalhe</h4>
+            <div class="table-wrap">
+              <table id="monthly-asset-drilldown-table" class="table-monthly-assets">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -18,6 +18,7 @@ export class AppState {
     this.monthlyTotals = [];
     this.monthlyChart = null;
     this.topAssetsChart = null;
+    this.monthlyAssetsChart = null;
     this.monthlyAssetSnapshots = [];
     this.baselineAssetMonth = null;
     this.dataSource = 'unknown';
