@@ -318,9 +318,7 @@ async function handleSentChange(event) {
 
   try {
     await updateDoc(doc(db, COLLECTION, id), {
-      sentToAuthorities,
-      sentAt: sentToAuthorities ? Timestamp.now() : null,
-      updatedAt: Timestamp.now()
+      sentToAuthorities
     });
     const item = state.boletins.find((row) => row.id === id);
     if (item) item.sentToAuthorities = sentToAuthorities;
