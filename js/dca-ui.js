@@ -329,10 +329,9 @@ export function updateScenarios(scenarios, params) {
     if (el) el.textContent = toEUR(data.value);
     if (diffEl) {
       const cls = data.diff >= 0 ? 'pos' : 'neg';
-      const sign = data.diff > 0 ? '+' : (data.diff < 0 ? '-' : '');
       const absValue = toEUR(Math.abs(data.diff));
-      const diffText = sign ? `${sign}${absValue}` : absValue;
-      diffEl.textContent = `(${diffText})`;
+      const relation = data.diff > 0 ? 'acima' : (data.diff < 0 ? 'abaixo' : 'em linha');
+      diffEl.textContent = data.diff === 0 ? '(em linha)' : `(${absValue} ${relation})`;
       diffEl.className = `scenario-diff ${cls}`;
     }
   }
@@ -691,15 +690,32 @@ export function exportChartAsImage() {
 // ---------- Advanced Metrics Display ----------
 export function updateAdvancedMetrics(metrics) {
   if (!metrics) {
+    document.getElementById('simple-return').textContent = '-';
     document.getElementById('twr-value').textContent = '-';
     document.getElementById('mwr-value').textContent = '-';
     document.getElementById('annualized-return').textContent = '-';
+    const note = document.getElementById('annualized-history-note');
+    if (note) note.hidden = true;
     return;
   }
-  
+
+  const simpleEl = document.getElementById('simple-return');
+  if (simpleEl) {
+    simpleEl.textContent = `${metrics.simpleReturn.toFixed(2)}%`;
+    simpleEl.classList.toggle('pos', metrics.simpleReturn >= 0);
+    simpleEl.classList.toggle('neg', metrics.simpleReturn < 0);
+  }
   document.getElementById('twr-value').textContent = `${metrics.timeWeightedReturn.toFixed(2)}%`;
   document.getElementById('mwr-value').textContent = `${metrics.moneyWeightedReturn.toFixed(2)}%`;
   document.getElementById('annualized-return').textContent = `${metrics.annualizedReturn.toFixed(2)}%`;
+  const note = document.getElementById('annualized-history-note');
+  if (note) {
+    const hasFullYear = metrics.historyDays >= 365;
+    note.hidden = hasFullYear;
+    note.textContent = hasFullYear
+      ? ''
+      : '* Histórico inferior a 12 meses: MWR anual e TWR anualizado são taxas equivalentes anuais e podem variar bastante.';
+  }
 }
 
 // ---------- Rebalancing Display ----------

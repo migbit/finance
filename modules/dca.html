@@ -318,18 +318,23 @@
         <!-- Advanced Performance Metrics -->
         <div class="metrics-grid" style="margin-top: 1.5rem;">
           <div class="metric-item">
-            <div class="metric-label">Rendimento Ponderado pelo Tempo</div>
+            <div class="metric-label" title="Resultado atual dividido pelo total investido">Rentabilidade simples</div>
+            <div class="metric-value" id="simple-return">-</div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label" title="Retorno acumulado, neutralizando as contribuições mensais">TWR acumulado</div>
             <div class="metric-value" id="twr-value">-</div>
           </div>
           <div class="metric-item">
-            <div class="metric-label">Rendimento Ponderado pelo Dinheiro</div>
+            <div class="metric-label" title="Retorno anual considerando o montante e a data de cada contribuição">MWR anual (XIRR)</div>
             <div class="metric-value" id="mwr-value">-</div>
           </div>
           <div class="metric-item">
-            <div class="metric-label">Rendimento Anualizado</div>
+            <div class="metric-label" title="TWR acumulado convertido numa taxa anual equivalente">TWR anualizado</div>
             <div class="metric-value" id="annualized-return">-</div>
           </div>
         </div>
+        <p id="annualized-history-note" class="annualized-history-note" hidden></p>
       </div>
     </section>
 

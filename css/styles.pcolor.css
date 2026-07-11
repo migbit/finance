@@ -1400,6 +1400,14 @@ body[data-page="dca"] .donut-card .donut-canvas canvas {
   line-height: 1.45;
 }
 
+.annualized-history-note {
+  margin: 0.75rem 0 0;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
 /* Live data indicator - green tint for current unclosed month */
 .table-dca tbody tr.live-data {
   background: rgba(16, 185, 129, 0.05) !important;

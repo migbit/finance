@@ -142,11 +142,12 @@ export function calculateKPIs(rows, liveData = null) {
   const currentRow = rows.find(row => row.isCurrent);
   const lastFilledRow = [...rows].reverse().find(row => row.hasCurrent);
   const investedAnchor = currentRow || lastFilledRow || lastRow;
-  const hasCurrentData = !!currentRow?.hasCurrent;
 
   // Prefer live snapshot (quotes × shares + juro) when available
-  let currentValue = hasCurrentData ? (currentRow.totalNow || 0) : null;
-  if (hasCurrentData && liveData?.quotes && liveData?.shares) {
+  let currentValue = currentRow?.hasCurrent
+    ? currentRow.totalNow
+    : (lastFilledRow?.totalNow ?? null);
+  if (liveData?.quotes && liveData?.shares) {
     const vwceShares = liveData.shares.vwce ?? 0;
     const agghShares = liveData.shares.aggh ?? 0;
     const vwcePrice = liveData.quotes.vwce?.price;
@@ -176,7 +177,9 @@ export function calculateKPIs(rows, liveData = null) {
     currentValue,
     result,
     resultPct,
-    lastFilledRow: lastFilledRow || currentRow || lastRow
+    // Os cenários devem usar o investimento acumulado do mês atual, mesmo
+    // quando o respetivo valor vem das cotações live e a linha ainda está vazia.
+    lastFilledRow: { ...investedAnchor, totalNow: currentValue }
   };
 }
 
@@ -459,22 +462,33 @@ export function calculateAdvancedMetrics(rows, params, liveData = null) {
   if (filledRows.length < 2) return null;
 
   // Time-Weighted Return (TWR)
-  const twr = calculateTimeWeightedReturn(filledRows, params);
+  const twr = calculateTimeWeightedReturn(filledRows);
   
   // Money-Weighted Return (MWR) - Internal Rate of Return
-  const mwr = calculateMoneyWeightedReturn(filledRows, params, liveData);
+  const mwr = calculateMoneyWeightedReturn(filledRows, liveData);
   
   // Annualized Return
-  const annualized = calculateAnnualizedReturn(filledRows, liveData);
+  const annualized = calculateAnnualizedTWR(filledRows, twr, liveData);
+  const valuationRow = filledRows[filledRows.length - 1];
+  const simpleReturn = valuationRow.investedCum > 0
+    ? ((valuationRow.totalNow - valuationRow.investedCum) / valuationRow.investedCum) * 100
+    : 0;
+  const firstValuationDate = new Date(filledRows[0].y, filledRows[0].m, 0, 23, 59, 59);
+  const lastValuationDate = valuationRow.isLiveValuation
+    ? new Date()
+    : new Date(valuationRow.y, valuationRow.m, 0, 23, 59, 59);
+  const historyDays = Math.max(0, (lastValuationDate - firstValuationDate) / (1000 * 60 * 60 * 24));
   
   return {
     timeWeightedReturn: twr,
     moneyWeightedReturn: mwr,
-    annualizedReturn: annualized
+    annualizedReturn: annualized,
+    simpleReturn,
+    historyDays
   };
 }
 
-function calculateTimeWeightedReturn(rows, params) {
+function calculateTimeWeightedReturn(rows) {
   if (rows.length < 2) return 0;
   
   let cumulativeReturn = 1;
@@ -485,12 +499,15 @@ function calculateTimeWeightedReturn(rows, params) {
     
     // Only calculate if we have valid data for both periods
     if (prevRow.totalNow > 0 && currentRow.totalNow > 0) {
-      // Market return excluding new contributions (assume contrib. no fim do período)
+      // As compras DCA ocorrem no início do mês. A contribuição aumenta o
+      // capital exposto, mas não é rendimento do mercado.
       const contribution = currentRow.investedCum - prevRow.investedCum;
-      const periodReturn = (currentRow.totalNow - contribution - prevRow.totalNow) / prevRow.totalNow;
+      const openingCapital = prevRow.totalNow + Math.max(0, contribution);
+      const periodReturn = openingCapital > 0
+        ? (currentRow.totalNow / openingCapital) - 1
+        : 0;
       
-      // Sanity check: reasonable returns between -50% and +100% per month
-      if (periodReturn >= -0.5 && periodReturn <= 1.0) {
+      if (Number.isFinite(periodReturn) && periodReturn > -1) {
         cumulativeReturn *= (1 + periodReturn);
       }
     }
@@ -519,13 +536,21 @@ const applyLiveTotal = (rows, liveData) => {
   const liveTotal = liveTotalValue(liveData);
   if (liveTotal == null || rows.length === 0) return rows;
   const copy = [...rows];
-  const lastIdx = copy.length - 1;
-  copy[lastIdx] = { ...copy[lastIdx], totalNow: liveTotal };
+  const currentIdx = copy.findIndex(row => row.isCurrent);
+  const valuationIdx = currentIdx >= 0
+    ? currentIdx
+    : copy.reduce((found, row, index) => row.hasCurrent ? index : found, -1);
+  if (valuationIdx < 0) return rows;
+  copy[valuationIdx] = {
+    ...copy[valuationIdx],
+    totalNow: liveTotal,
+    hasCurrent: true,
+    isLiveValuation: true
+  };
   return copy;
 };
 
-function calculateMoneyWeightedReturn(rows, params, liveData) {
-  // Simplified XIRR calculation
+function calculateMoneyWeightedReturn(rows, liveData) {
   if (rows.length < 2) return 0;
   
   const cashFlows = [];
@@ -535,7 +560,7 @@ function calculateMoneyWeightedReturn(rows, params, liveData) {
   const firstRow = rows[0];
   if (firstRow.investedCum > 0) {
     cashFlows.push(-firstRow.investedCum);
-    dates.push(new Date(firstRow.y, firstRow.m - 1, 1)); // First day of month
+    dates.push(new Date(firstRow.y, firstRow.m - 1, 2));
   }
   
   // Monthly contributions (negative cash flows)
@@ -545,7 +570,7 @@ function calculateMoneyWeightedReturn(rows, params, liveData) {
     if (row.investedCum > rows[i-1].investedCum) {
       const contribution = -(row.investedCum - rows[i-1].investedCum);
       cashFlows.push(contribution);
-      dates.push(new Date(row.y, row.m - 1, 15)); // Middle of month
+      dates.push(new Date(row.y, row.m - 1, 2));
     }
   }
   
@@ -555,7 +580,9 @@ function calculateMoneyWeightedReturn(rows, params, liveData) {
   const finalValue = liveTotal ?? lastRow.totalNow;
   if (finalValue > 0) {
     cashFlows.push(finalValue);
-    dates.push(new Date(lastRow.y, lastRow.m - 1, 28)); // End of month
+    dates.push(lastRow.isLiveValuation
+      ? new Date()
+      : new Date(lastRow.y, lastRow.m, 0, 23, 59, 59));
   }
   
   // Calculate IRR only if we have enough cash flows
@@ -567,83 +594,52 @@ function calculateMoneyWeightedReturn(rows, params, liveData) {
   return 0;
 }
 
-function calculateXIRR(cashFlows, dates, guess = 0.1) {
-  // Newton-Raphson method for XIRR calculation
-  const maxIter = 50;
-  const tolerance = 1e-6;
-  
-  // Safety check: if all cash flows are negative or positive, return 0
+function calculateXIRR(cashFlows, dates) {
   const allNegative = cashFlows.every(cf => cf <= 0);
   const allPositive = cashFlows.every(cf => cf >= 0);
   if (allNegative || allPositive) return 0;
-  
-  let x = guess;
-  
-  for (let iter = 0; iter < maxIter; iter++) {
-    let npv = 0;
-    let derivative = 0;
-    const startDate = dates[0];
-    
-    for (let i = 0; i < cashFlows.length; i++) {
-      const years = (dates[i] - startDate) / (1000 * 60 * 60 * 24 * 365.25);
-      const factor = Math.pow(1 + x, years);
-      
-      npv += cashFlows[i] / factor;
-      if (factor !== 0) {
-        derivative -= years * cashFlows[i] / (factor * (1 + x));
-      }
+
+  const startDate = dates[0];
+  const npv = (rate) => cashFlows.reduce((sum, cashFlow, index) => {
+    const years = Math.max(0, (dates[index] - startDate) / (1000 * 60 * 60 * 24 * 365.25));
+    return sum + cashFlow / Math.pow(1 + rate, years);
+  }, 0);
+
+  let low = -0.9999;
+  let high = 10;
+  let lowValue = npv(low);
+  let highValue = npv(high);
+  if (!Number.isFinite(lowValue) || !Number.isFinite(highValue) || lowValue * highValue > 0) return 0;
+
+  for (let iteration = 0; iteration < 200; iteration++) {
+    const middle = (low + high) / 2;
+    const middleValue = npv(middle);
+    if (Math.abs(middleValue) < 0.000001) return middle;
+    if (lowValue * middleValue <= 0) {
+      high = middle;
+      highValue = middleValue;
+    } else {
+      low = middle;
+      lowValue = middleValue;
     }
-    
-    if (Math.abs(npv) < tolerance) {
-      return Math.min(Math.max(x, -0.99), 10); // Bound between -99% and 1000%
-    }
-    
-    // Avoid division by zero
-    if (Math.abs(derivative) < 1e-10) break;
-    
-    const newX = x - npv / derivative;
-    
-    // Prevent unreasonable values
-    if (newX < -0.99 || newX > 10 || !isFinite(newX)) {
-      break;
-    }
-    
-    if (Math.abs(newX - x) < tolerance) {
-      return newX;
-    }
-    
-    x = newX;
   }
-  
-  return Math.min(Math.max(x, -0.99), 10); // Bound the result
+  return (low + high) / 2;
 }
 
-function calculateAnnualizedReturn(rows, liveData) {
+function calculateAnnualizedTWR(rows, twrPercent, liveData) {
   if (rows.length < 2) return 0;
-  
   const firstRow = rows[0];
   const lastRow = rows[rows.length - 1];
-
-  // Basic sanity checks
-  const liveTotal = liveTotalValue(liveData);
-  const finalTotal = liveTotal ?? lastRow.totalNow;
-  if (firstRow.totalNow <= 0 || finalTotal <= 0) {
-    return 0;
-  }
-  
-  const totalReturn = (finalTotal / firstRow.totalNow) - 1;
-  
-  // Calculate time in years (more accurate)
-  const firstDate = new Date(firstRow.y, firstRow.m - 1, 1);
-  const lastDate = new Date(lastRow.y, lastRow.m - 1, 1);
+  const firstDate = new Date(firstRow.y, firstRow.m, 0, 23, 59, 59);
+  const hasLiveValue = liveTotalValue(liveData) != null && lastRow.isLiveValuation;
+  const lastDate = hasLiveValue
+    ? new Date()
+    : new Date(lastRow.y, lastRow.m, 0, 23, 59, 59);
   const years = (lastDate - firstDate) / (1000 * 60 * 60 * 24 * 365.25);
-
-  // Avoid mathematical errors
+  const totalReturn = twrPercent / 100;
   if (years <= 0 || totalReturn <= -1) return 0;
-
-  const annualizedReturn = Math.pow(1 + totalReturn, 1 / years) - 1;
-
-  return isFinite(annualizedReturn) ? annualizedReturn * 100 : 0;
+  const annualized = Math.pow(1 + totalReturn, 1 / years) - 1;
+  return Number.isFinite(annualized) ? annualized * 100 : 0;
 }
 
 
