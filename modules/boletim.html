@@ -120,6 +120,26 @@
       font-size: 0.92rem;
     }
 
+    button.guest-slot-empty {
+      width: 100%;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    }
+
+    button.guest-slot-empty:hover,
+    button.guest-slot-empty:focus-visible {
+      background: color-mix(in srgb, var(--primary) 7%, var(--surface));
+      border-color: var(--primary);
+    }
+
+    .guest-slot-cta {
+      color: var(--primary);
+      font-weight: 700;
+      text-align: right;
+    }
+
     .guest-slot strong {
       white-space: nowrap;
     }
@@ -254,6 +274,11 @@
 
       .guest-slot span {
         text-align: left;
+      }
+
+      .guest-slot-cta {
+        width: 100%;
+        padding-top: 5px;
       }
 
       .guest-slot-actions,

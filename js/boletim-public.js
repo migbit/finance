@@ -120,9 +120,10 @@ const COPY = {
     passport: 'Passaporte',
     idCard: 'Cartão de cidadão / identificação',
     other: 'Outro',
-    progressTitle: 'Estado do grupo',
+    progressTitle: 'Hóspedes por preencher',
     guestLabel: 'Hóspede',
     emptySlot: 'Por preencher',
+    fillGuest: 'Preencher dados',
     language: 'Idioma',
     checkin: 'Check-in',
     checkout: 'Check-out'
@@ -155,9 +156,10 @@ const COPY = {
     passport: 'Passport',
     idCard: 'ID card',
     other: 'Other',
-    progressTitle: 'Group status',
+    progressTitle: 'Guests to complete',
     guestLabel: 'Guest',
     emptySlot: 'Not filled yet',
+    fillGuest: 'Fill in details',
     language: 'Language',
     checkin: 'Check-in',
     checkout: 'Check-out'
@@ -190,9 +192,10 @@ const COPY = {
     passport: 'Passeport',
     idCard: "Carte d'identité",
     other: 'Autre',
-    progressTitle: 'Statut du groupe',
+    progressTitle: 'Invités à compléter',
     guestLabel: 'Invité',
     emptySlot: 'À remplir',
+    fillGuest: 'Remplir les données',
     language: 'Langue',
     checkin: 'Arrivée',
     checkout: 'Départ'
@@ -225,9 +228,10 @@ const COPY = {
     passport: 'Pasaporte',
     idCard: 'Documento de identidad',
     other: 'Otro',
-    progressTitle: 'Estado del grupo',
+    progressTitle: 'Huéspedes por completar',
     guestLabel: 'Huésped',
     emptySlot: 'Por rellenar',
+    fillGuest: 'Rellenar datos',
     language: 'Idioma',
     checkin: 'Entrada',
     checkout: 'Salida'
@@ -260,9 +264,10 @@ const COPY = {
     passport: '여권',
     idCard: '신분증',
     other: '기타',
-    progressTitle: '그룹 입력 현황',
+    progressTitle: '입력할 게스트',
     guestLabel: '게스트',
     emptySlot: '미입력',
+    fillGuest: '정보 입력',
     language: '언어',
     checkin: '체크인',
     checkout: '체크아웃'
@@ -499,25 +504,37 @@ function renderProgress() {
     const name = guest
       ? `${guest.firstName || ''} ${guest.lastName || ''}`.trim()
       : t.emptySlot;
-    slots.push(`
-      <div class="guest-slot">
+    slots.push(guest ? `
+      <div class="guest-slot guest-slot-complete">
         <div class="guest-slot-info">
           <strong>${t.guestLabel} ${index + 1}</strong>
           <span>${escapeHtml(name || t.emptySlot)}</span>
         </div>
-        ${guest && guest.editable !== false ? `
+        ${guest.editable !== false ? `
           <div class="guest-slot-actions">
             <button type="button" data-action="edit-guest" data-guest-id="${escapeHtml(guest.id)}">${t.edit}</button>
           </div>
         ` : ''}
       </div>
+    ` : `
+      <button type="button" class="guest-slot guest-slot-empty" data-action="add-guest">
+        <span class="guest-slot-info">
+          <strong>${t.guestLabel} ${index + 1}</strong>
+          <span>${t.emptySlot}</span>
+        </span>
+        <span class="guest-slot-cta">${t.fillGuest} ↓</span>
+      </button>
     `);
   }
+
+  const hasEmptyExpectedSlots = state.guests.length < state.expectedGuests;
 
   els.progress.innerHTML = `
     <h2>${t.progressTitle}</h2>
     ${slots.join('')}
-    <button type="button" class="guest-progress-add" data-action="add-guest">${t.addAnother}</button>
+    ${hasEmptyExpectedSlots ? '' : `
+      <button type="button" class="guest-progress-add" data-action="add-guest">${t.addAnother}</button>
+    `}
   `;
   els.progress.hidden = false;
 }
@@ -563,7 +580,8 @@ function startAddingGuest() {
   els.form.hidden = false;
   setMessage('');
   updateFormActions();
-  els.firstName.focus();
+  els.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  els.firstName.focus({ preventScroll: true });
 }
 
 function resetGuestForm() {
