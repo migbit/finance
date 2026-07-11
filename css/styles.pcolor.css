@@ -1034,6 +1034,39 @@ body[data-page="dca"] .page-title {
   overflow: visible;
 }
 
+body[data-page="dca-revolut"] .revolut-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0 auto 1.25rem;
+  max-width: 1200px;
+}
+
+body[data-page="dca-revolut"] .revolut-kpi {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border, #dfe3e8);
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  display: grid;
+  gap: .3rem;
+}
+
+body[data-page="dca-revolut"] .revolut-kpi span,
+body[data-page="dca-revolut"] .revolut-kpi small,
+body[data-page="dca-revolut"] .revolut-help {
+  color: var(--text-dim);
+}
+
+body[data-page="dca-revolut"] .revolut-kpi strong { font-size: 1.45rem; }
+body[data-page="dca-revolut"] .revolut-kpi strong.pos { color: var(--ok); }
+body[data-page="dca-revolut"] .revolut-kpi strong.neg { color: var(--bad); }
+body[data-page="dca-revolut"] .revolut-help { margin: .9rem 0 0; font-size: .9rem; }
+body[data-page="dca-revolut"] .revolut-cumulative { font-weight: 600; }
+
+@media (max-width: 700px) {
+  body[data-page="dca-revolut"] .revolut-summary { grid-template-columns: 1fr; }
+}
+
 .dca-page .viz-card,
 .dca-page .params-card {
   border-radius: 12px;
@@ -1340,6 +1373,31 @@ body[data-page="dca"] .donut-card .donut-canvas canvas {
 .table-dca tbody tr.current-month {
   background: rgba(95, 107, 122, 0.08) !important;
   font-weight: 700;
+}
+
+.dca-auto-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  color: #047857;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.dca-automation-status {
+  margin-top: 0.9rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 0.65rem;
+  background: rgba(16, 185, 129, 0.07);
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  line-height: 1.45;
 }
 
 /* Live data indicator - green tint for current unclosed month */

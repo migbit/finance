@@ -56,6 +56,24 @@
   <main class="dca-page">
     <h2 class="page-title center">DCA Revolut</h2>
 
+    <section class="revolut-summary" aria-label="Resumo do investimento">
+      <article class="revolut-kpi">
+        <span>Investido até agora</span>
+        <strong id="revolut-kpi-invested">—</strong>
+        <small id="revolut-kpi-invested-note">Contribuições reais</small>
+      </article>
+      <article class="revolut-kpi">
+        <span>Último valor registado</span>
+        <strong id="revolut-kpi-value">—</strong>
+        <small id="revolut-kpi-value-note">—</small>
+      </article>
+      <article class="revolut-kpi">
+        <span>Resultado à data</span>
+        <strong id="revolut-kpi-result">—</strong>
+        <small id="revolut-kpi-result-note">Valor menos capital investido</small>
+      </article>
+    </section>
+
     <section class="report-section">
       <div class="viz-card params-card">
         <h4>Parâmetros</h4>
@@ -64,13 +82,13 @@
             <thead>
               <tr>
                 <th class="num">Data final</th>
-                <th class="num">Contribuição Mensal</th>
+                <th class="num">Investimento automático</th>
                 <th style="width:140px">Ações</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td class="num"><input id="revolut-end-date" type="date" /></td>
+                <td class="num"><input id="revolut-end-date" type="month" /></td>
                 <td class="num">
                   <span id="revolut-monthly" style="font-weight:600;">50 €</span>
                 </td>
@@ -81,6 +99,7 @@
             </tbody>
           </table>
         </div>
+        <p class="revolut-help">Os 50 € são o valor automático mensal. No registo pode indicar 0 €, fazer um reforço maior, ou manter os 50 € sugeridos.</p>
         <div class="progress-section" style="margin-top: 1.5rem;">
           <div class="progress-header" style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
             <span style="font-weight: 600; color: var(--text-dim);">Progresso até ao mês final</span>

@@ -90,14 +90,23 @@ async function loadLiveData() {
       `${prevYM.y}-${String(prevYM.m).padStart(2, '0')}`
     );
 
-    return { quotes, shares, saldo, juroLive };
+    return {
+      quotes,
+      shares,
+      saldo,
+      juroLive,
+      lastClosedMonth: juroData.lastClosedMonth || null,
+      lastMonthlyInterest: Number(juroData.lastMonthlyInterest) || null
+    };
   } catch (err) {
     console.error('Error loading live data:', err);
     return {
       quotes: null,
       shares: { vwce: 0, aggh: 0 },
       saldo: 0,
-      juroLive: 0
+      juroLive: 0,
+      lastClosedMonth: null,
+      lastMonthlyInterest: null
     };
   }
 }
@@ -122,6 +131,7 @@ function updateJuroDisplay() {
   const saldoDisplay = document.getElementById('juro-saldo-display');
   const mensalDisplay = document.getElementById('juro-mensal-display');
   const acumDisplay = document.getElementById('juro-acumulado-display');
+  const automationStatus = document.getElementById('dca-automation-status');
 
   if (saldoDisplay) {
     const saldoValue = Number(state.liveData.saldo || 0);
@@ -140,6 +150,14 @@ function updateJuroDisplay() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }) + ' €';
+  }
+
+  if (automationStatus) {
+    const lastClosed = state.liveData.lastClosedMonth;
+    const lastInterest = state.liveData.lastMonthlyInterest;
+    automationStatus.textContent = lastClosed
+      ? `Último fecho automático: ${lastClosed}${Number.isFinite(lastInterest) ? ` · juro capitalizado: ${lastInterest.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : ''}. Próximo fecho no dia 1 às 01:10, antes da compra mensal.`
+      : 'Fecho automático no dia 1 às 01:10: fecha o mês, capitaliza o juro e só depois aplica 120 € em VWCE e 30 € em AGGH.';
   }
 
   // Calculate total accumulated juro from table

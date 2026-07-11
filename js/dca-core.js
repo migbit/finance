@@ -3,7 +3,7 @@
 import { db } from '../js/script.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 import {
-  collection, doc, getDoc, getDocs, setDoc, updateDoc,
+  addDoc, collection, doc, getDoc, getDocs, setDoc, updateDoc,
   query, orderBy
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
@@ -165,10 +165,19 @@ export async function loadJuroSaldo() {
 
 export async function saveJuroSaldo(saldo) {
   try {
+    const nextBalance = parseFloat(saldo) || 0;
+    const effectiveAt = new Date();
     await setDoc(JURO_DOC, {
-      saldo: parseFloat(saldo) || 0,
+      saldo: nextBalance,
       taxa: TAXA_ANUAL_FIXA,
-      updatedAt: new Date()
+      updatedAt: effectiveAt
+    }, { merge: true });
+    await addDoc(collection(db, 'dca_juro_movements'), {
+      type: 'set_balance',
+      balance: nextBalance,
+      effectiveAt,
+      source: 'manual',
+      createdAt: effectiveAt
     });
   } catch (err) {
     console.error('Error saving juro saldo:', err);

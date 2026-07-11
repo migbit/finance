@@ -12,6 +12,16 @@ import {
 
 const START_YM = { y: 2026, m: 1 };
 const MONTHLY_INV = 50;
+const DATA_VERSION = 1;
+const INITIAL_HISTORY = {
+  '2026-01': { invested: 150, value: 149.67 },
+  '2026-02': { invested: 0, value: 150.22 },
+  '2026-03': { invested: 50, value: 191.15 },
+  '2026-04': { invested: 50, value: 313.80 },
+  '2026-05': { invested: 50, value: 359.76 },
+  '2026-06': { invested: 100, value: 485.75 },
+  '2026-07': { invested: 50, value: null }
+};
 const SETTINGS_DOC = doc(collection(db, 'dca_revolut_settings'), 'params');
 const VALUES_COL = collection(db, 'dca_revolut');
 
@@ -70,6 +80,26 @@ async function loadParams() {
 
 async function saveParams(params) {
   await setDoc(SETTINGS_DOC, params, { merge: true });
+}
+
+async function migrateInitialHistory(params) {
+  if ((params?.dataVersion ?? 0) >= DATA_VERSION) return;
+
+  const writes = Object.entries(INITIAL_HISTORY).map(([id, entry]) => {
+    const ym = parseYMString(id);
+    return setDoc(doc(VALUES_COL, id), {
+      id,
+      y: ym.y,
+      m: ym.m,
+      invested: null,
+      invested_monthly: entry.invested,
+      value: entry.value,
+      updated_at: Date.now()
+    }, { merge: true });
+  });
+
+  await Promise.all(writes);
+  await saveParams({ dataVersion: DATA_VERSION });
 }
 
 async function loadValues() {
@@ -193,9 +223,10 @@ function buildTable(months) {
   thead.innerHTML = `
     <tr>
       <th>Mês</th>
-      <th class="num">INV</th>
+      <th class="num">Investido no mês</th>
+      <th class="num">Investido acumulado</th>
       <th class="num">Valor Carteira</th>
-      <th class="num">Variação</th>
+      <th class="num">Resultado</th>
     </tr>
   `;
   table.appendChild(thead);
@@ -230,6 +261,7 @@ function buildTable(months) {
             placeholder="${MONTHLY_INV.toFixed(2)}"
           />
         </td>
+        <td class="num revolut-cumulative">${investedTotal.toFixed(2)} €</td>
         <td class="num">
           <input
             type="number"
@@ -256,6 +288,40 @@ function buildTable(months) {
   applyValuesToInputs();
   bindInputHandlers();
   applyYearVisibility();
+}
+
+function updateSummary(months) {
+  const investedEl = document.getElementById('revolut-kpi-invested');
+  const valueEl = document.getElementById('revolut-kpi-value');
+  const valueNoteEl = document.getElementById('revolut-kpi-value-note');
+  const resultEl = document.getElementById('revolut-kpi-result');
+  if (!investedEl || !valueEl || !valueNoteEl || !resultEl) return;
+
+  const now = new Date();
+  const currentId = ymToId({ y: now.getFullYear(), m: now.getMonth() + 1 });
+  const elapsed = months.filter((ym) => ymToId(ym) <= currentId);
+  const investedTotals = buildInvestedTotals(months);
+  const latest = [...elapsed].reverse().find((ym) => Number.isFinite(state.values[ymToId(ym)]));
+  const investedNow = elapsed.length ? investedTotals[ymToId(elapsed[elapsed.length - 1])] : 0;
+
+  investedEl.textContent = `${investedNow.toFixed(2)} €`;
+  if (!latest) {
+    valueEl.textContent = '—';
+    valueNoteEl.textContent = 'Ainda sem valores registados';
+    resultEl.textContent = '—';
+    resultEl.className = '';
+    return;
+  }
+
+  const latestId = ymToId(latest);
+  const value = state.values[latestId];
+  const investedAtLatest = investedTotals[latestId];
+  const result = value - investedAtLatest;
+  const pct = investedAtLatest > 0 ? result / investedAtLatest * 100 : 0;
+  valueEl.textContent = `${value.toFixed(2)} €`;
+  valueNoteEl.textContent = `Fecho de ${formatMonthLabel(latest)}`;
+  resultEl.textContent = `${result >= 0 ? '+' : ''}${result.toFixed(2)} € (${result >= 0 ? '+' : ''}${pct.toFixed(2)}%)`;
+  resultEl.className = result >= 0 ? 'pos' : 'neg';
 }
 
 function applyValuesToInputs() {
@@ -411,8 +477,7 @@ function updateProgress(months) {
 
   const investedTotals = buildInvestedTotals(months);
   const totalMonths = months.length;
-  const lastId = totalMonths > 0 ? ymToId(months[totalMonths - 1]) : null;
-  const totalTarget = lastId ? (investedTotals[lastId] ?? 0) : 0;
+  const totalTarget = totalMonths * MONTHLY_INV;
 
   const now = new Date();
   const currentYM = { y: now.getFullYear(), m: now.getMonth() + 1 };
@@ -502,8 +567,8 @@ function getDefaultEndYM() {
 function syncEndDateInput() {
   const input = document.getElementById('revolut-end-date');
   if (!input || !state.endYM) return;
-  input.min = `${ymToId(START_YM)}-01`;
-  input.value = `${ymToId(state.endYM)}-01`;
+  input.min = ymToId(START_YM);
+  input.value = ymToId(state.endYM);
 }
 
 function bindEndDateInput() {
@@ -553,16 +618,26 @@ function render() {
   syncEndDateInput();
   updateChart(months);
   updateProgress(months);
+  updateSummary(months);
 }
 
 async function init() {
   const params = await loadParams();
+  try {
+    await migrateInitialHistory(params);
+  } catch (err) {
+    console.error('Erro ao inicializar o histórico Revolut:', err);
+  }
   state.endYM = parseYMString(params?.endYM) || params?.endYM || getDefaultEndYM();
   if (!state.endYM?.y) state.endYM = getDefaultEndYM();
   const months = monthsBetween(START_YM, state.endYM);
   const loaded = await loadValues();
   state.values = loaded.values || {};
   state.invested = normalizeInvestedEntries(loaded.invested || {}, loaded.investedMode || {}, months);
+  Object.entries(INITIAL_HISTORY).forEach(([id, entry]) => {
+    if (!(id in state.values) && Number.isFinite(entry.value)) state.values[id] = entry.value;
+    if (!(id in state.invested)) state.invested[id] = entry.invested;
+  });
 
   bindEndDateInput();
   bindParamsButtons();

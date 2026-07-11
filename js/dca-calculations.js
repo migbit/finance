@@ -59,7 +59,7 @@ export function buildModel(docs, params, liveData = null) {
   for (const d of months) {
     const rowYM = { y: d.y, m: d.m };
     const isCurrent = (rowYM.y === currentYM.y && rowYM.m === currentYM.m);
-    const isClosed = false; // Nunca fechar automaticamente
+    const isClosed = d.snapshot_status === 'closed';
 
     const manualMonthly = asNum(d.manual_monthly_contribution);
     const baseMonthly = manualMonthly != null ? manualMonthly : monthlyContribution;
@@ -124,7 +124,10 @@ export function buildModel(docs, params, liveData = null) {
       vwce_shares: d.vwce_shares || liveData?.shares?.vwce,
       aggh_shares: d.aggh_shares || liveData?.shares?.aggh,
       shares_estimated: d.shares_estimated || false,
-      estimation_note: d.estimation_note || null
+      estimation_note: d.estimation_note || null,
+      snapshotSource: d.snapshot_source || null,
+      snapshotPriceDate: d.snapshot_price_date || null,
+      closedAt: d.closed_at || null
     });
   }
   return rows;

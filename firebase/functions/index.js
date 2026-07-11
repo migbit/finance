@@ -6,6 +6,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const { loadCleaningCalendar } = require("./cleaning-calendar");
 const { findPotentialCleaningConflicts } = require("./cleaning-alerts");
+const { closePreviousMonthAndOpenCurrent } = require("./dca-monthly");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -37,6 +38,7 @@ const BINANCE_KEY = defineSecret("BINANCE_KEY");
 const BINANCE_SECRET = defineSecret("BINANCE_SECRET");
 const KRAKEN_KEY = defineSecret("KRAKEN_KEY");
 const KRAKEN_SECRET = defineSecret("KRAKEN_SECRET");
+const ALPHA_VANTAGE_API_KEY = defineSecret("ALPHA_VANTAGE_API_KEY");
 
 // ---- Helpers
 function sign(queryString) {
@@ -1146,6 +1148,28 @@ exports.cleaningAlertsSchedule = onSchedule(
       emailSent: result.emailSent,
       emailedDates: result.emailedDates,
     });
+  }
+);
+
+// Fecha primeiro o mês anterior e só depois aplica a compra DCA do novo mês.
+// 01:10 em Lisboa corresponde sempre ao novo dia também em UTC, incluindo no horário de verão.
+exports.dcaMonthlyClose = onSchedule(
+  {
+    schedule: "10 1 1 * *",
+    timeZone: "Europe/Lisbon",
+    region: "europe-west1",
+    timeoutSeconds: 90,
+    maxInstances: 1,
+    retryCount: 2,
+    secrets: [ALPHA_VANTAGE_API_KEY],
+  },
+  async () => {
+    const result = await closePreviousMonthAndOpenCurrent({
+      firestore,
+      apiKey: ALPHA_VANTAGE_API_KEY.value(),
+      runDate: new Date(),
+    });
+    console.log("DCA monthly close", result);
   }
 );
 

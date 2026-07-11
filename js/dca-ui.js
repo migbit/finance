@@ -66,6 +66,7 @@ export function renderTable(rows, wrapElement) {
       // Add special classes for state
       if (r.isCurrent) tr.classList.add('current-month');
       if (r.isLive) tr.classList.add('live-data');
+      if (r.isClosed) tr.classList.add('closed-month');
       if (r.shares_estimated) {
         tr.classList.add('estimated-values');
         if (r.estimation_note) tr.title = r.estimation_note;
@@ -87,6 +88,9 @@ export function renderTable(rows, wrapElement) {
       }
       if (r.shares_estimated) {
         monthCell += ' <span style="color: #f59e0b;" title="Valores estimados">⚠️</span>';
+      }
+      if (r.snapshotSource === 'automatic') {
+        monthCell += ' <span class="dca-auto-badge" title="Mês fechado automaticamente pelo servidor">Auto</span>';
       }
 
       tr.innerHTML = `
