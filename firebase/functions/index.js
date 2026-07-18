@@ -246,6 +246,11 @@ function krakenAssetExtension(code) {
   return match ? match[1] : "";
 }
 
+function isKrakenEarnBalanceCode(code) {
+  const asset = String(code || "").trim().toUpperCase().split(".")[0];
+  return /^[A-Z]{2,10}\d{2,4}$/.test(asset);
+}
+
 function nextKrakenNonce() {
   const now = Date.now() * 1000;
   krakenLastNonce = Math.max(now, krakenLastNonce + 1);
@@ -671,7 +676,7 @@ exports.krakenPortfolio = onRequest(
         if (!(qty > 0)) continue;
         const asset = normalizeKrakenAssetCode(rawAsset);
         const extension = krakenAssetExtension(rawAsset);
-        if (["B", "F", "S", "M"].includes(extension)) {
+        if (isKrakenEarnBalanceCode(rawAsset) || ["B", "F", "S", "M"].includes(extension)) {
           add(extensionByAsset, asset, qty);
         } else {
           add(spotByAsset, asset, qty);

@@ -2209,7 +2209,7 @@ class CryptoPortfolioApp {
         const asset = this.normalizeSymbol(this.currentInvestmentAsset || '');
         const location = this.canonicalizeLocation(this.currentInvestmentLocation || 'Other');
         if (!asset) return;
-        if (!confirm(`Remover o ticker ${asset} (${location}) e respetivos investimentos desta localizaÃ§Ã£o?`)) return;
+        if (!confirm(`Remover o ticker ${asset} (${location}) e respetivos investimentos desta localização?`)) return;
         await this.deleteManualAssetAndInvestments(asset, location);
         this.closeInvestmentModal();
         await this.loadManualAssets();
@@ -2236,14 +2236,15 @@ class CryptoPortfolioApp {
     const btnSaveQty = modal?.querySelector('#inv-save-qty');
 
     if (titleSpan) {
-      titleSpan.textContent = `${this.currentInvestmentAsset} â€“ ${this.currentInvestmentLocation}`;
+      titleSpan.textContent = `${this.currentInvestmentAsset} - ${this.currentInvestmentLocation}`;
     }
 
     const isManual = (this.currentInvestmentSource === 'manual');
     const canEditQuantity = isManual || this.currentInvestmentSource === 'investments';
+    const canRemove = isManual || this.currentInvestmentSource === 'investments';
     if (qtyWrap)   qtyWrap.style.display = canEditQuantity ? 'block' : 'none';
     if (btnSaveQty) btnSaveQty.style.display = canEditQuantity ? '' : 'none';
-    if (btnRemove) btnRemove.style.display = isManual ? '' : 'none';
+    if (btnRemove) btnRemove.style.display = canRemove ? '' : 'none';
 
     if (qtyInput)  {
       if (canEditQuantity) {
@@ -2276,12 +2277,13 @@ class CryptoPortfolioApp {
     const normalizedAsset = this.normalizeSymbol(asset || '');
     const targetLocation = this.canonicalizeLocation(location || 'Other');
     const manualRow = this.findManualAsset(normalizedAsset, targetLocation);
-    const manualDocId = manualRow?.id || normalizedAsset;
 
-    try {
-      await FirebaseService.deleteDocument('cryptoportfolio_manual', manualDocId);
-    } catch (err) {
-      console.warn('Falha ao remover ativo manual', err);
+    if (manualRow?.id) {
+      try {
+        await FirebaseService.deleteDocument('cryptoportfolio_manual', manualRow.id);
+      } catch (err) {
+        console.warn('Falha ao remover ativo manual', err);
+      }
     }
 
     const key = `${normalizedAsset}_${this.normalizeLocation(targetLocation)}`;

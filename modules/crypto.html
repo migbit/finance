@@ -319,14 +319,14 @@
     /* Loading overlay */
     .loading-overlay {
       position: fixed;
-      inset: 0;
+      inset: var(--header-h) 0 0;
       background: rgba(249, 250, 251, 0.96);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 18px;
-      z-index: 2200;
+      z-index: 1100;
       text-align: center;
       color: #1f2937;
       transition: opacity 0.3s ease, visibility 0.3s ease;
@@ -434,35 +434,6 @@
             <div class="kpi-label">Alteração Mensal</div>
             <div id="kpiMonthlyTotal" class="kpi-value">—</div>
             <div id="kpiMonthlyTotalUSD" class="kpi-sub">—</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Portfolio Insights -->
-    <section class="report-section">
-      <div class="viz-card">
-        <h3>Insights do Portfólio</h3>
-        <div class="insights-grid">
-          <div class="insight-card">
-            <div class="insight-label">Melhor Performance</div>
-            <div id="best-performer" class="insight-value">--</div>
-            <div id="best-performer-roi" class="insight-sub">--</div>
-          </div>
-          <div class="insight-card">
-            <div class="insight-label">Pior Performance</div>
-            <div id="worst-performer" class="insight-value">--</div>
-            <div id="worst-performer-roi" class="insight-sub">--</div>
-          </div>
-          <div class="insight-card">
-            <div class="insight-label">Maior Posição</div>
-            <div id="largest-position" class="insight-value">--</div>
-            <div id="largest-position-value" class="insight-sub">--</div>
-          </div>
-          <div class="insight-card">
-            <div class="insight-label">Diversificação</div>
-            <div id="diversification-score" class="insight-value">--</div>
-            <div id="diversification-desc" class="insight-sub">--</div>
           </div>
         </div>
       </div>
@@ -656,7 +627,7 @@
 
   <!-- Investment Modal -->
   <div id="investment-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="investment-modal-title" aria-hidden="true">
-    <div class="modal" style="max-width: 600px;">
+    <div class="modal" style="max-width: 520px; max-height: 85vh; padding: 20px;">
       <h3 id="investment-modal-title">Investimentos - <span id="inv-asset-name"></span></h3>
 
       <!-- Add new investment form -->
