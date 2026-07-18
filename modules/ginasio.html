@@ -189,6 +189,21 @@
       justify-content: flex-end;
       gap: 0.5rem;
     }
+    .gym-music-mode {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      min-height: var(--ctrl-h);
+      padding: 0 0.7rem;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .gym-music-mode input {
+      margin: 0;
+    }
     .gym-notification-status {
       width: 100%;
       color: var(--text-dim);
@@ -443,6 +458,11 @@
           </div>
           <div class="gym-notification-controls">
             <button type="button" id="gym-enable-notifications">Ativar notificações</button>
+            <button type="button" id="gym-test-sound">Testar alerta</button>
+            <label class="gym-music-mode">
+              <input type="checkbox" id="gym-music-mode">
+              Estou a ouvir música
+            </label>
             <button type="button" id="gym-clear-draft">Apagar temporário</button>
             <div id="gym-notification-status" class="gym-notification-status" aria-live="polite"></div>
           </div>

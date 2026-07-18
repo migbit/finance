@@ -1044,6 +1044,8 @@ const restAddBtn = document.getElementById('gym-rest-add');
 const restCancelBtn = document.getElementById('gym-rest-cancel');
 const clearDraftBtn = document.getElementById('gym-clear-draft');
 const enableNotificationsBtn = document.getElementById('gym-enable-notifications');
+const testSoundBtn = document.getElementById('gym-test-sound');
+const musicModeInput = document.getElementById('gym-music-mode');
 const notificationStatusEl = document.getElementById('gym-notification-status');
 const summariesWrap = document.getElementById('gym-summaries');
 const summariesRefreshBtn = document.getElementById('summaries-refresh');
@@ -1081,11 +1083,14 @@ const restTimerUpdates = new Map();
 const warmupTimerIntervals = new Map();
 const LOCAL_DRAFT_CURRENT_KEY = 'ginasio-current-draft-v1';
 const LOCAL_DRAFT_PREFIX = 'ginasio-session-draft-v1';
+const MUSIC_MODE_KEY = 'ginasio-music-mode-v1';
 let localDraftTimer = null;
 let localDraftDirty = false;
 let totalTimerInterval = null;
 let activeRest = null;
 let restAudioContext = null;
+let restCountdownAudio = null;
+let restCountdownAudioUrl = '';
 
 function formatWeight(value) {
   if (value === null || Number.isNaN(value)) return '';
@@ -1178,6 +1183,170 @@ function playRestFinishedBeep() {
   play();
 }
 
+function createCountdownAudioUrl(durationSeconds) {
+  const duration = Math.max(1, Math.ceil(Number(durationSeconds) || 0));
+  const sampleRate = 8000;
+  const frameCount = duration * sampleRate;
+  const bytesPerSample = 2;
+  const buffer = new ArrayBuffer(44 + frameCount * bytesPerSample);
+  const view = new DataView(buffer);
+  const writeText = (offset, text) => {
+    for (let i = 0; i < text.length; i += 1) view.setUint8(offset + i, text.charCodeAt(i));
+  };
+
+  writeText(0, 'RIFF');
+  view.setUint32(4, 36 + frameCount * bytesPerSample, true);
+  writeText(8, 'WAVE');
+  writeText(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * bytesPerSample, true);
+  view.setUint16(32, bytesPerSample, true);
+  view.setUint16(34, 16, true);
+  writeText(36, 'data');
+  view.setUint32(40, frameCount * bytesPerSample, true);
+
+  const beepStarts = [duration - 0.9, duration - 0.55, duration - 0.2]
+    .map(value => Math.max(0, value));
+  const beepLength = 0.13;
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    const time = frame / sampleRate;
+    // Um sinal de 1 bit mantém a sessão multimédia ativa sem produzir som audível.
+    let sample = (frame % 2 ? 1 : -1) / 32767;
+    const beepStart = beepStarts.find(start => time >= start && time < start + beepLength);
+    if (beepStart !== undefined) {
+      const beepTime = time - beepStart;
+      const edge = Math.min(1, beepTime / 0.012, (beepLength - beepTime) / 0.012);
+      sample = Math.sin(2 * Math.PI * 880 * beepTime) * 0.55 * Math.max(0, edge);
+    }
+    view.setInt16(44 + frame * bytesPerSample, Math.round(sample * 32767), true);
+  }
+  return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
+}
+
+function resetRestMediaSession() {
+  if (!('mediaSession' in navigator)) return;
+  try {
+    navigator.mediaSession.playbackState = 'none';
+    navigator.mediaSession.setPositionState();
+  } catch (_) {
+    // Alguns browsers não implementam a limpeza do estado de posição.
+  }
+}
+
+function stopRestCountdownAudio() {
+  if (restCountdownAudio) {
+    restCountdownAudio.onended = null;
+    restCountdownAudio.pause();
+    restCountdownAudio.removeAttribute('src');
+    restCountdownAudio.load();
+    restCountdownAudio = null;
+  }
+  if (restCountdownAudioUrl) {
+    URL.revokeObjectURL(restCountdownAudioUrl);
+    restCountdownAudioUrl = '';
+  }
+  resetRestMediaSession();
+}
+
+function startRestCountdownAudio(machine, seconds, endAt) {
+  stopRestCountdownAudio();
+  const duration = Math.max(1, Math.ceil(Number(seconds) || 0));
+  restCountdownAudioUrl = createCountdownAudioUrl(duration);
+  const audio = new Audio(restCountdownAudioUrl);
+  audio.preload = 'auto';
+  audio.playsInline = true;
+  restCountdownAudio = audio;
+
+  if ('mediaSession' in navigator && 'MediaMetadata' in window) {
+    const icon192 = new URL('../icons/icon-192-v2.png', location.href).href;
+    const icon512 = new URL('../icons/icon-512-v2.png', location.href).href;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: `Descanso · ${machine.name}`,
+      artist: `Termina às ${formatTimeOfDay(endAt)}`,
+      album: 'Ginásio',
+      artwork: [
+        { src: icon192, sizes: '192x192', type: 'image/png' },
+        { src: icon512, sizes: '512x512', type: 'image/png' }
+      ]
+    });
+    try {
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: 1,
+        position: 0
+      });
+    } catch (err) {
+      console.warn('Contador multimédia não disponível:', err);
+    }
+    try {
+      navigator.mediaSession.setActionHandler('play', () => audio.play().catch(() => {}));
+      navigator.mediaSession.setActionHandler('pause', () => audio.play().catch(() => {}));
+    } catch (err) {
+      console.warn('Controlos multimédia não disponíveis:', err);
+    }
+  }
+
+  audio.addEventListener('playing', () => {
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'playing';
+  });
+  audio.addEventListener('ended', () => {
+    refreshRestTimers();
+    if (restCountdownAudio === audio) {
+      restCountdownAudio = null;
+      if (restCountdownAudioUrl) URL.revokeObjectURL(restCountdownAudioUrl);
+      restCountdownAudioUrl = '';
+      resetRestMediaSession();
+    }
+  });
+  audio.play().catch(err => {
+    console.warn('O Android bloqueou o áudio do descanso:', err);
+    showToast('Toca em “Testar alerta” e inicia novamente o descanso para ativar o áudio.', 'warning');
+  });
+}
+
+async function playRestAudioTest() {
+  const testMachine = { name: 'Teste de som' };
+  const endAt = Date.now() + 1000;
+  if (isMusicModeEnabled()) {
+    unlockRestAudio();
+    setTimeout(playRestFinishedBeep, 1000);
+  } else {
+    startRestCountdownAudio(testMachine, 1, endAt);
+  }
+  const notificationsEnabled = await requestNotificationPermission();
+  if (notificationsEnabled) {
+    showRestNotification('test', testMachine, 1, false, endAt);
+    setTimeout(() => showRestNotification('test', testMachine, 0, true, endAt), 1000);
+  }
+  showToast('O bip deve tocar dentro de 1 segundo. Confirma o volume multimédia.', 'success', 2200);
+}
+
+function isMusicModeEnabled() {
+  return Boolean(musicModeInput?.checked);
+}
+
+function updateMusicMode() {
+  const enabled = isMusicModeEnabled();
+  try {
+    localStorage.setItem(MUSIC_MODE_KEY, enabled ? 'true' : 'false');
+  } catch (err) {
+    console.warn('Não foi possível guardar o modo de música:', err);
+  }
+
+  if (enabled) {
+    stopRestCountdownAudio();
+    showToast('Modo música ativo: o descanso não irá interromper a reprodução.', 'success', 2200);
+  } else if (activeRest?.key) {
+    const endAt = Number(localStorage.getItem(activeRest.key) || 0);
+    const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+    if (remaining) startRestCountdownAudio(activeRest.machine, remaining, endAt);
+  }
+  updateNotificationStatus();
+}
+
 function updateNotificationStatus() {
   if (!notificationStatusEl) return;
   if (!('Notification' in window)) {
@@ -1196,11 +1365,13 @@ function updateNotificationStatus() {
   }
 
   if (permission === 'granted') {
-    notificationStatusEl.textContent = isSamsungDevice()
-      ? 'Ativas. No Samsung, permite ecrã bloqueado, som/vibração e espelhamento no Galaxy Wearable.'
-      : (isStandaloneApp()
-          ? 'Ativas. Confirma também som e ecrã bloqueado nas definições do telemóvel.'
-          : 'Ativas. Para maior fiabilidade, instala a aplicação no ecrã principal.');
+    if (isMusicModeEnabled()) {
+      notificationStatusEl.textContent = 'Modo música ativo: notificações e vibração mantêm-se, sem ocupar o áudio multimédia.';
+    } else {
+      notificationStatusEl.textContent = isSamsungDevice()
+        ? 'Ativas. O contador no ecrã bloqueado e o bip usam o áudio multimédia; confirma também o volume e o Galaxy Wearable.'
+        : 'Ativas. O contador no ecrã bloqueado e o bip usam o áudio multimédia do telemóvel.';
+    }
     notificationStatusEl.dataset.state = 'ready';
     return;
   }
@@ -1763,6 +1934,32 @@ function finishActiveWarmups() {
   Array.from(workoutWrap.querySelectorAll('[data-warmup-block]')).forEach(updateWarmupStatus);
 }
 
+function finishActiveWarmupForSeries(target) {
+  const row = target?.closest?.('[data-series-row]');
+  if (!row || Number(row.dataset.seriesIndex || -1) !== 0) return;
+  const card = row.closest('.gym-machine-card');
+  const block = card?.querySelector('[data-warmup-block]');
+  if (!card || !block) return;
+  const activeRows = Array.from(block.querySelectorAll('[data-warmup-row]'))
+    .filter(warmupRow => Number(warmupRow.dataset.startedAt || 0)
+      && !Number(warmupRow.dataset.finishedAt || 0));
+  if (!activeRows.length) return;
+
+  const now = Date.now();
+  activeRows.forEach(warmupRow => {
+    warmupRow.dataset.finishedAt = String(now);
+    warmupRow.dataset.touched = 'true';
+  });
+  const key = card.dataset.warmupTimerKey;
+  if (key && warmupTimerIntervals.has(key)) {
+    clearInterval(warmupTimerIntervals.get(key));
+    warmupTimerIntervals.delete(key);
+  }
+  updateWarmupStatus(block);
+  updateCardDataState(card);
+  scheduleLocalDraftSave();
+}
+
 function updateTotalDisplay(row, initialResistance) {
   const baseInput = row.querySelector('[data-base-weight]');
   const totalEl = row.querySelector('[data-total-weight]');
@@ -2192,12 +2389,15 @@ async function startRestTimer(machine, variantId, seconds, label, button) {
     return;
   }
   unlockRestAudio();
+  const endAt = Date.now() + seconds * 1000;
+  if (!isMusicModeEnabled()) startRestCountdownAudio(machine, seconds, endAt);
   const notificationsEnabled = await requestNotificationPermission();
   if (activeRest?.key) {
     await cancelRestTimer(activeRest.key, { silent: true });
+    const remaining = Math.max(1, Math.ceil((endAt - Date.now()) / 1000));
+    if (!isMusicModeEnabled()) startRestCountdownAudio(machine, remaining, endAt);
   }
   const key = `gym-rest-${normalizeKey(state.gym)}-${normalizeKey(state.treino)}-${machine.id}-${variantId || 'base'}`;
-  const endAt = Date.now() + seconds * 1000;
   localStorage.setItem(key, String(endAt));
   localStorage.removeItem(`${key}-completed`);
   runRestTimer(key, machine, variantId, label, button);
@@ -2208,10 +2408,27 @@ async function startRestTimer(machine, variantId, seconds, label, button) {
   }
 }
 
+async function getNotificationRegistration() {
+  if (!('serviceWorker' in navigator)) return null;
+  let registration = await navigator.serviceWorker.getRegistration();
+  if (!registration) {
+    const scopeUrl = new URL('../', location.href);
+    const workerUrl = new URL('../sw.js', location.href);
+    registration = await navigator.serviceWorker.register(workerUrl, { scope: scopeUrl.pathname });
+  }
+  if (registration.active) return registration;
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('O service worker não ficou ativo a tempo.')), 5000);
+    })
+  ]);
+}
+
 async function closeRestNotification(key) {
-  if (!navigator.serviceWorker?.ready) return;
   try {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await getNotificationRegistration();
+    if (!registration) return;
     const notifications = await registration.getNotifications({ tag: `gym-rest-${key}` });
     notifications.forEach(notification => notification.close());
   } catch (err) {
@@ -2243,6 +2460,7 @@ async function cancelRestTimer(key, { silent = false } = {}) {
   restTimerUpdates.delete(key);
   localStorage.removeItem(key);
   localStorage.removeItem(`${key}-completed`);
+  stopRestCountdownAudio();
   if (current?.button) current.button.textContent = `Descanso ${current.label}`;
   clearActiveRestPanel(key);
   await closeRestNotification(key);
@@ -2258,6 +2476,7 @@ function addTimeToActiveRest(seconds) {
   localStorage.removeItem(`${activeRest.key}-completed`);
   activeRest.update?.();
   const remaining = Math.max(0, Math.ceil((nextEndAt - Date.now()) / 1000));
+  if (!isMusicModeEnabled()) startRestCountdownAudio(activeRest.machine, remaining, nextEndAt);
   showRestNotification(activeRest.key, activeRest.machine, remaining, false, nextEndAt);
 }
 
@@ -2270,7 +2489,7 @@ function showFallbackNotification(title, options) {
   }
 }
 
-function showRestNotification(key, machine, remaining, done = false, endAt = null) {
+async function showRestNotification(key, machine, remaining, done = false, endAt = null) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const tag = `gym-rest-${key}`;
   const finishLabel = endAt ? formatTimeOfDay(endAt) : '';
@@ -2287,26 +2506,25 @@ function showRestNotification(key, machine, remaining, done = false, endAt = nul
     icon,
     badge: icon,
     renotify: true,
-    silent: false,
+    silent: !done,
     requireInteraction: true,
     vibrate: done ? [300, 150, 300, 150, 500] : [120],
-    timestamp: done ? Date.now() : (endAt || Date.now()),
+    timestamp: Date.now(),
     lang: 'pt-PT',
     data: { url: location.href, tag, restKey: key },
     actions: [{ action: 'dismiss', title: 'Fechar' }]
   };
-  if (navigator.serviceWorker?.ready) {
-    navigator.serviceWorker.ready
-      .then(reg => {
-        if (!done && endAt && Date.now() >= endAt) return undefined;
-        return reg.showNotification(title, options);
-      })
-      .catch(() => {
-        if (!done && endAt && Date.now() >= endAt) return;
-        showFallbackNotification(title, options);
-      });
-    return;
+  try {
+    const registration = await getNotificationRegistration();
+    if (!done && endAt && Date.now() >= endAt) return;
+    if (registration) {
+      await registration.showNotification(title, options);
+      return;
+    }
+  } catch (err) {
+    console.warn('Notificação pelo service worker indisponível:', err);
   }
+  if (!done && endAt && Date.now() >= endAt) return;
   showFallbackNotification(title, options);
 }
 
@@ -2325,7 +2543,7 @@ function runRestTimer(key, machine, variantId, label, button) {
       if (!localStorage.getItem(`${key}-completed`)) {
         localStorage.setItem(`${key}-completed`, String(Date.now()));
         showToast(`Descanso terminado: ${machine.name}`, 'success');
-        playRestFinishedBeep();
+        if (!restCountdownAudio) playRestFinishedBeep();
         showRestNotification(key, machine, 0, true, endAt);
         if ('vibrate' in navigator) navigator.vibrate([300, 150, 300, 150, 500]);
       }
@@ -3168,6 +3386,13 @@ async function loadSummaries() {
 function init() {
   restoreCurrentSelection();
   if (dateInput) dateInput.value = getTodayLocalISO();
+  if (musicModeInput) {
+    try {
+      musicModeInput.checked = localStorage.getItem(MUSIC_MODE_KEY) === 'true';
+    } catch (_) {
+      musicModeInput.checked = false;
+    }
+  }
   trainingSelect.disabled = !gymSelect.value;
   updateNotificationStatus();
 
@@ -3208,6 +3433,7 @@ function init() {
   workoutWrap.addEventListener('change', event => {
     if (!event.target?.matches?.('[data-reps]')) return;
     if (Number(event.target.value || 0) > 0) {
+      finishActiveWarmupForSeries(event.target);
       recordSeriesTiming(event.target);
       markExerciseTouched(event.target);
       return;
@@ -3236,6 +3462,8 @@ function init() {
     clearDraftBtn.addEventListener('click', clearCurrentDraft);
   }
   enableNotificationsBtn?.addEventListener('click', requestNotificationPermission);
+  testSoundBtn?.addEventListener('click', playRestAudioTest);
+  musicModeInput?.addEventListener('change', updateMusicMode);
   window.addEventListener('focus', () => {
     refreshRestTimers();
     updateNotificationStatus();
