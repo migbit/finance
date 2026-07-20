@@ -1,5 +1,5 @@
 import { db, copiarMensagem } from './script.js';
-import { showToast } from './toast.js';
+import { showConfirm, showToast } from './toast.js';
 import {
   collection,
   deleteDoc,
@@ -1532,13 +1532,16 @@ function clearCurrentDraft() {
     showToast('Não há seleção de treino para apagar.', 'warning');
     return;
   }
-  clearLocalDraft(state.gym, state.treino, state.date);
-  warmupTimerIntervals.forEach(timer => clearInterval(timer));
-  warmupTimerIntervals.clear();
-  state.session = null;
-  resetWorkoutTiming();
-  renderWorkout();
-  showToast('Treino temporário apagado.', 'success');
+  const workoutLabel = `${state.date} • ${state.gym} / ${state.treino}`;
+  showConfirm(`Apagar o treino temporário de ${workoutLabel}? Esta ação não pode ser anulada.`, () => {
+    clearLocalDraft(state.gym, state.treino, state.date);
+    warmupTimerIntervals.forEach(timer => clearInterval(timer));
+    warmupTimerIntervals.clear();
+    state.session = null;
+    resetWorkoutTiming();
+    renderWorkout();
+    showToast('Treino temporário apagado.', 'success');
+  });
 }
 
 function getBaseWeightId(machineId, variantId, seriesIndex) {
@@ -3280,18 +3283,23 @@ async function saveSession() {
   }
 }
 
-async function deleteSessionById(docId) {
+async function deleteSessionById(docId, workoutLabel = 'este treino') {
   try {
     await deleteDoc(doc(collection(db, 'ginasio_treinos'), docId));
     await deleteDoc(doc(collection(db, 'ginasio_resumos'), docId));
-    clearLocalDraft(state.gym, state.treino, state.date);
-    state.session = null;
+    removeLocalKey(`${LOCAL_DRAFT_PREFIX}-${docId}`);
+    const isCurrentSession = Boolean(state.gym && state.treino && state.date)
+      && getSessionId(state.gym, state.treino, state.date) === docId;
+    if (isCurrentSession) {
+      state.session = null;
+      localDraftDirty = false;
+      renderWorkout();
+    }
     showToast('Treino apagado.', 'success');
     await loadSummaries();
-    renderWorkout();
   } catch (err) {
     console.error('Erro ao apagar treino:', err);
-    showToast('Erro ao apagar treino.', 'error');
+    showToast(`Erro ao apagar ${workoutLabel}.`, 'error');
   }
 }
 
@@ -3325,7 +3333,10 @@ function renderSummaries(summaries) {
     deleteBtn.textContent = 'Apagar';
     deleteBtn.addEventListener('click', () => {
       const docId = summaryDoc.id || getSessionId(summaryDoc.gym, summaryDoc.treino, summaryDoc.date);
-      deleteSessionById(docId);
+      const workoutLabel = `${summaryDoc.date} • ${summaryDoc.gym} / ${summaryDoc.treino}`;
+      showConfirm(`Apagar definitivamente o treino de ${workoutLabel}? Esta ação não pode ser anulada.`, () => {
+        deleteSessionById(docId, workoutLabel);
+      });
     });
     actions.append(deleteBtn, copyBtn);
     header.append(title, actions);
