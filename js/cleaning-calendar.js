@@ -105,6 +105,7 @@ function drawCalendar(payload) {
     '123': buildCleaningSchedule(dates, calendars['123']),
     '1248': buildCleaningSchedule(dates, calendars['1248'])
   };
+  addDeferredCleaningAlternatives(dates, schedules);
 
   ctx.fillStyle = '#f4f7fb';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -210,7 +211,7 @@ function drawApartmentStatus(ctx, x, y, width, height, apartment, status) {
   ctx.fillText(`AP. ${apartment}`, x + 17, y + 27);
   ctx.font = '900 23px Arial, sans-serif';
   ctx.fillText(
-    status === 'required' ? 'LIMPAR!' : status === 'optional' ? 'LIMPAR' : status === 'free' ? 'LIVRE' : 'OCUPADO',
+    status === 'required' ? 'LIMPAR!' : status === 'optional' ? 'LIMPAR' : status === 'free' ? 'DISPONÍVEL' : 'OCUPADO',
     x + 17,
     y + 55
   );
@@ -245,7 +246,7 @@ function drawCleaningSummary(ctx, dates, schedules) {
 
   ctx.fillStyle = '#687588';
   ctx.font = '600 19px Arial, sans-serif';
-  ctx.fillText('VERMELHO = limpar nesse dia  •  PRETO = pode limpar nesse dia', 48, 1510);
+  ctx.fillText('VERMELHO = limpar nesse dia  •  PRETO = primeira data possível', 48, 1510);
   ctx.fillText(`Atualizado em ${new Date().toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}`, 48, 1545);
 }
 
@@ -284,12 +285,19 @@ function buildCleaningSchedule(dates, calendar) {
     const nextCheckIn = nextBooking?.start || null;
     const required = nextCheckIn !== null && nextCheckIn <= addDays(checkout, 1);
 
-    dates.forEach((dateKey) => {
-      const isCleaningDay = required
-        ? dateKey === checkout
-        : dateKey >= checkout && (!nextCheckIn || dateKey < nextCheckIn);
-      if (isCleaningDay) schedule[dateKey] = required ? 'required' : 'optional';
-    });
+    if (required) {
+      if (Object.hasOwn(schedule, checkout)) schedule[checkout] = 'required';
+      return;
+    }
+
+    const firstPossibleDate = checkout < dates[0] ? dates[0] : checkout;
+    if (
+      Object.hasOwn(schedule, firstPossibleDate) &&
+      (!nextCheckIn || firstPossibleDate < nextCheckIn) &&
+      schedule[firstPossibleDate] === 'free'
+    ) {
+      schedule[firstPossibleDate] = 'optional';
+    }
   });
 
   if (calendar.assumeTurnoverToday && dates[0]) {
@@ -297,6 +305,28 @@ function buildCleaningSchedule(dates, calendar) {
   }
 
   return schedule;
+}
+
+function addDeferredCleaningAlternatives(dates, schedules) {
+  const dateSet = new Set(dates);
+  const alternatives = [];
+
+  dates.forEach((dateKey) => {
+    [['123', '1248'], ['1248', '123']].forEach(([apartment, otherApartment]) => {
+      if (
+        schedules[apartment][dateKey] === 'optional' &&
+        schedules[otherApartment][dateKey] === 'required'
+      ) {
+        alternatives.push({ apartment, dateKey: addDays(dateKey, 1) });
+      }
+    });
+  });
+
+  alternatives.forEach(({ apartment, dateKey }) => {
+    if (dateSet.has(dateKey) && schedules[apartment][dateKey] === 'free') {
+      schedules[apartment][dateKey] = 'optional';
+    }
+  });
 }
 
 function buildDateKeys(start, count) {

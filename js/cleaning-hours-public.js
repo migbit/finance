@@ -72,6 +72,7 @@ function renderCalendar(payload) {
     '123': buildSchedule(dates, calendars['123']),
     '1248': buildSchedule(dates, calendars['1248'])
   };
+  addDeferredCleaningAlternatives(dates, schedules);
   const weeks = [dates.slice(0, 7), dates.slice(7, 14)];
 
   calendarWeeks.innerHTML = weeks.map((weekDates, index) => `
@@ -95,13 +96,13 @@ function renderStatus(apartment, status) {
     required: 'LIMPAR!',
     optional: 'LIMPAR',
     occupied: 'OCUPADO',
-    free: 'LIVRE'
+    free: 'DISPONÍVEL'
   };
 
   return `
     <div class="apartment-status is-${escapeHtml(apartment)} is-${escapeHtml(status)}">
       <span>AP. ${escapeHtml(apartment)}</span>
-      <strong>${labels[status] || 'LIVRE'}</strong>
+      <strong>${labels[status] || 'DISPONÍVEL'}</strong>
     </div>
   `;
 }
@@ -141,12 +142,19 @@ function buildSchedule(dates, calendar) {
     const nextCheckIn = nextBooking?.start || null;
     const required = nextCheckIn !== null && nextCheckIn <= addDays(checkout, 1);
 
-    dates.forEach((dateKey) => {
-      const isCleaningDay = required
-        ? dateKey === checkout
-        : dateKey >= checkout && (!nextCheckIn || dateKey < nextCheckIn);
-      if (isCleaningDay) schedule[dateKey] = required ? 'required' : 'optional';
-    });
+    if (required) {
+      if (Object.hasOwn(schedule, checkout)) schedule[checkout] = 'required';
+      return;
+    }
+
+    const firstPossibleDate = checkout < dates[0] ? dates[0] : checkout;
+    if (
+      Object.hasOwn(schedule, firstPossibleDate) &&
+      (!nextCheckIn || firstPossibleDate < nextCheckIn) &&
+      schedule[firstPossibleDate] === 'free'
+    ) {
+      schedule[firstPossibleDate] = 'optional';
+    }
   });
 
   if (calendar.assumeTurnoverToday && dates[0]) {
@@ -154,6 +162,28 @@ function buildSchedule(dates, calendar) {
   }
 
   return schedule;
+}
+
+function addDeferredCleaningAlternatives(dates, schedules) {
+  const dateSet = new Set(dates);
+  const alternatives = [];
+
+  dates.forEach((dateKey) => {
+    [['123', '1248'], ['1248', '123']].forEach(([apartment, otherApartment]) => {
+      if (
+        schedules[apartment][dateKey] === 'optional' &&
+        schedules[otherApartment][dateKey] === 'required'
+      ) {
+        alternatives.push({ apartment, dateKey: addDays(dateKey, 1) });
+      }
+    });
+  });
+
+  alternatives.forEach(({ apartment, dateKey }) => {
+    if (dateSet.has(dateKey) && schedules[apartment][dateKey] === 'free') {
+      schedules[apartment][dateKey] = 'optional';
+    }
+  });
 }
 
 function buildDateKeys(start, count) {
