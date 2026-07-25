@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Análise V4</title>
+  <title>Análise</title>
   <link rel="stylesheet" href="../css/styles.pcolor.css">
   <link rel="stylesheet" href="../css/mobile.css">
   <link rel="icon" href="../favicon.ico" sizes="any">
@@ -15,7 +15,7 @@
 <body id="analisev4-page" data-page="analisev4">
   <main>
     <div class="page-intro analisev4-intro">
-      <h2>Análise V4</h2>
+      <h2>Análise</h2>
     </div>
 
     <section id="mod-progresso-v4" class="report-section" data-module="progresso-v4">
@@ -42,14 +42,8 @@
             <small id="progresso-v4-ytd-meta">—</small>
             <span class="progresso-v4-delta" id="progresso-v4-ytd-delta">—</span>
           </article>
-          <article class="progresso-v4-tile" data-progress-kpi="target">
-            <span class="progresso-v4-label">Para total anterior</span>
-            <strong id="progresso-v4-target-value">—</strong>
-            <small id="progresso-v4-target-meta">—</small>
-            <span class="progresso-v4-delta" id="progresso-v4-target-delta">—</span>
-          </article>
           <article class="progresso-v4-tile" data-progress-kpi="avg">
-            <span class="progresso-v4-label">Média/noite YTD</span>
+            <span class="progresso-v4-label">Média / Noite YTD</span>
             <strong id="progresso-v4-avg-value">—</strong>
             <small id="progresso-v4-avg-meta">—</small>
             <span class="progresso-v4-delta" id="progresso-v4-avg-delta">—</span>
@@ -59,6 +53,12 @@
             <strong id="progresso-v4-nights-value">—</strong>
             <small id="progresso-v4-nights-meta">—</small>
             <span class="progresso-v4-delta" id="progresso-v4-nights-delta">—</span>
+          </article>
+          <article class="progresso-v4-tile" data-progress-kpi="target">
+            <span class="progresso-v4-label">Para total anterior</span>
+            <strong id="progresso-v4-target-value">—</strong>
+            <small id="progresso-v4-target-meta">—</small>
+            <span class="progresso-v4-delta" id="progresso-v4-target-delta">—</span>
           </article>
         </div>
       </div>
@@ -70,15 +70,18 @@
           <div class="segmented segmented--primary faturacao-v4-metric-switch" role="tablist" aria-label="Selecionar métrica do gráfico">
             <button class="filter-btn active" data-faturacao-v4-metric="revenue" role="tab" aria-pressed="true">Faturação</button>
             <button class="filter-btn" data-faturacao-v4-metric="occupancy" role="tab" aria-pressed="false">Ocupação</button>
+            <button class="filter-btn" data-faturacao-v4-metric="cleaning" role="tab" aria-pressed="false">Taxa de Limpeza</button>
+            <button class="filter-btn" data-faturacao-v4-metric="revpan" role="tab" aria-pressed="false">RevPAN</button>
+            <button class="filter-btn" data-faturacao-v4-metric="avg-night" role="tab" aria-pressed="false">Média/noite</button>
           </div>
         </div>
 
         <div class="chart-wrap faturacao-v4-chart-wrap">
-          <canvas id="chart-faturacao-v4" aria-label="Gráfico de faturação V4" role="img"></canvas>
+          <canvas id="chart-faturacao-v4" aria-label="Gráfico de faturação, ocupação, taxa de limpeza, RevPAN ou média por noite" role="img"></canvas>
         </div>
 
         <div class="chart-toolbar faturacao-v4-toolbar">
-          <div class="toolbar-left segmented segmented--compact" role="tablist" aria-label="Selecionar modo de faturação">
+          <div class="toolbar-left segmented segmented--compact" id="faturacao-v4-mode-switch" role="tablist" aria-label="Selecionar modo do gráfico">
             <button class="chip-btn active" data-faturacao-v4-mode="mes" role="tab" aria-pressed="true">Mês</button>
             <button class="chip-btn" data-faturacao-v4-mode="cumulativo" role="tab" aria-pressed="false">Cumulativo</button>
           </div>
@@ -101,6 +104,40 @@
         </div>
       </div>
     </section>
+
+    <section id="mod-reservas-v4" class="report-section" data-module="reservas-v4">
+      <div class="viz-card reservas-v4-card">
+        <div class="section-heading analisev4-card-heading">
+          <h4>Detalhe das reservas</h4>
+        </div>
+
+        <div class="reservas-v4-controls">
+          <div class="segmented segmented--primary reservas-v4-view-switch" role="tablist" aria-label="Selecionar apartamentos">
+            <button class="filter-btn active" data-reservas-v4-view="total" role="tab" aria-pressed="true">Total</button>
+            <button class="filter-btn" data-reservas-v4-view="123" role="tab" aria-pressed="false">123</button>
+            <button class="filter-btn" data-reservas-v4-view="1248" role="tab" aria-pressed="false">1248</button>
+          </div>
+
+          <label class="reservas-v4-year-control" for="reservas-v4-year">
+            <span>Período</span>
+            <select id="reservas-v4-year" aria-label="Selecionar ano"></select>
+          </label>
+
+          <div class="segmented segmented--compact reservas-v4-table-switch" role="tablist" aria-label="Selecionar detalhe das reservas">
+            <button class="chip-btn active" data-reservas-v4-table="nights" role="tab" aria-pressed="true">Noites por reserva</button>
+            <button class="chip-btn" data-reservas-v4-table="guests" role="tab" aria-pressed="false">Hóspedes por reserva</button>
+            <button class="chip-btn" data-reservas-v4-table="leadtime" role="tab" aria-pressed="false">Antecedência das reservas</button>
+            <button class="chip-btn" data-reservas-v4-table="weekpart" role="tab" aria-pressed="false">Semana vs fim de semana</button>
+            <button class="chip-btn" data-reservas-v4-table="weekdays" role="tab" aria-pressed="false">Dias da semana</button>
+            <button class="chip-btn" data-reservas-v4-table="booking-month" role="tab" aria-pressed="false">Mês em que reservaram</button>
+          </div>
+        </div>
+
+        <div class="table-wrap reservas-v4-table-wrap">
+          <div id="reservas-v4-table" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
@@ -108,5 +145,6 @@
   <script type="module" src="../js/analisev2-loading.js"></script>
   <script type="module" src="../js/script.js"></script>
   <script type="module" src="../js/analisev4-faturacao.js"></script>
+  <script type="module" src="../js/analisev4-reservas.js"></script>
 </body>
 </html>

@@ -2056,7 +2056,6 @@ body[data-page="faturas"] .detalhes-table tbody tr.fatura-row-apt-1248:hover {
 }
 
 body[data-page="analisev2"] main,
-body[data-page="analisev3"] main,
 body[data-page="analisev4"] main,
 body[data-page="diversos-page"] main {
   padding-top: calc(var(--header-h) + 1rem);
@@ -2064,8 +2063,6 @@ body[data-page="diversos-page"] main {
 
 body[data-page="analisev2"] .tab-navigation,
 body[data-page="analisev2"] .tab-navigation--sticky,
-body[data-page="analisev3"] .tab-navigation,
-body[data-page="analisev3"] .tab-navigation--sticky,
 body[data-page="analisev4"] .tab-navigation,
 body[data-page="analisev4"] .tab-navigation--sticky,
 body[data-page="diversos-page"] .tab-navigation {
@@ -2088,9 +2085,6 @@ body[data-page="diversos-page"] .tab-navigation {
   }
 }
 body[data-page="analisev2"] section[id] {
-  scroll-margin-top: calc(var(--header-h) + 40px);
-}
-body[data-page="analisev3"] section[id] {
   scroll-margin-top: calc(var(--header-h) + 40px);
 }
 body[data-page="analisev4"] section[id] {
@@ -2464,7 +2458,6 @@ body[data-page="diversos-page"] .tab-navigation {
 
 @media (max-width: 1023px) {
   body[data-page="analisev2"] .chart-toolbar,
-  body[data-page="analisev3"] .chart-toolbar,
   body[data-page="analisev4"] .chart-toolbar {
     padding: 0.85rem 1rem;
     column-gap: 0.65rem;
@@ -2473,7 +2466,6 @@ body[data-page="diversos-page"] .tab-navigation {
 
 @media (max-width: 768px) {
   body[data-page="analisev2"] .chart-toolbar,
-  body[data-page="analisev3"] .chart-toolbar,
   body[data-page="analisev4"] .chart-toolbar {
     grid-template-columns: 1fr;
     grid-template-areas: 'center' 'left' 'right';
@@ -2482,13 +2474,10 @@ body[data-page="diversos-page"] .tab-navigation {
   }
 
   body[data-page="analisev2"] .chart-toolbar .toolbar-center,
-  body[data-page="analisev3"] .chart-toolbar .toolbar-center,
   body[data-page="analisev4"] .chart-toolbar .toolbar-center,
   body[data-page="analisev2"] .chart-toolbar .toolbar-left,
-  body[data-page="analisev3"] .chart-toolbar .toolbar-left,
   body[data-page="analisev4"] .chart-toolbar .toolbar-left,
   body[data-page="analisev2"] .chart-toolbar .toolbar-right,
-  body[data-page="analisev3"] .chart-toolbar .toolbar-right,
   body[data-page="analisev4"] .chart-toolbar .toolbar-right {
     width: 100%;
   }
@@ -3408,8 +3397,7 @@ body[data-page="analisev2"] .tab-navigation--sticky .tab-btn:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
-body[data-page="analisev2"] .chart-toolbar .segmented button:not(.active),
-body[data-page="analisev3"] .chart-toolbar .segmented button:not(.active) {
+body[data-page="analisev2"] .chart-toolbar .segmented button:not(.active) {
   color: var(--text-dim);
 }
 
@@ -3558,7 +3546,6 @@ main,
   color: var(--text-dim);
 }
 body[data-page="analisev2"] .chart-toolbar,
-body[data-page="analisev3"] .chart-toolbar,
 body[data-page="analisev4"] .chart-toolbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -3575,13 +3562,11 @@ body[data-page="analisev4"] .chart-toolbar {
 }
 
 body[data-page="analisev2"] .progress-toolbar,
-body[data-page="analisev3"] .progress-toolbar,
 body[data-page="analisev4"] .progress-toolbar {
   margin-top: 1rem;
 }
 
 body[data-page="analisev2"] .chart-toolbar .toolbar-left,
-body[data-page="analisev3"] .chart-toolbar .toolbar-left,
 body[data-page="analisev4"] .chart-toolbar .toolbar-left {
   grid-area: left;
   justify-content: flex-start;
@@ -3589,7 +3574,6 @@ body[data-page="analisev4"] .chart-toolbar .toolbar-left {
 }
 
 body[data-page="analisev2"] .chart-toolbar .toolbar-center,
-body[data-page="analisev3"] .chart-toolbar .toolbar-center,
 body[data-page="analisev4"] .chart-toolbar .toolbar-center {
   grid-area: center;
   justify-content: center;
@@ -3597,7 +3581,6 @@ body[data-page="analisev4"] .chart-toolbar .toolbar-center {
 }
 
 body[data-page="analisev2"] .chart-toolbar .toolbar-right,
-body[data-page="analisev3"] .chart-toolbar .toolbar-right,
 body[data-page="analisev4"] .chart-toolbar .toolbar-right {
   grid-area: right;
   justify-content: flex-end;
@@ -3605,14 +3588,12 @@ body[data-page="analisev4"] .chart-toolbar .toolbar-right {
 }
 
 body[data-page="analisev2"] .toolbar-placeholder,
-body[data-page="analisev3"] .toolbar-placeholder,
 body[data-page="analisev4"] .toolbar-placeholder {
   min-height: 1px;
   min-width: 60px;
 }
 
 body[data-page="analisev2"] .chart-toolbar .segmented,
-body[data-page="analisev3"] .chart-toolbar .segmented,
 body[data-page="analisev4"] .chart-toolbar .segmented {
   display: inline-flex;
   border-radius: var(--radius-lg);
@@ -3623,7 +3604,6 @@ body[data-page="analisev4"] .chart-toolbar .segmented {
 }
 
 body[data-page="analisev2"] .chart-toolbar .segmented button,
-body[data-page="analisev3"] .chart-toolbar .segmented button,
 body[data-page="analisev4"] .chart-toolbar .segmented button {
   border: none;
   background: transparent;
@@ -4472,6 +4452,86 @@ body[data-page="analisev4"] .faturacao-v4-card {
   box-shadow: var(--shadow-1);
 }
 
+body[data-page="analisev4"] .reservas-v4-card {
+  gap: 1rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+body[data-page="analisev4"] .reservas-v4-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+body[data-page="analisev4"] .reservas-v4-view-switch,
+body[data-page="analisev4"] .reservas-v4-table-switch {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+body[data-page="analisev4"] .reservas-v4-view-switch button,
+body[data-page="analisev4"] .reservas-v4-table-switch button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+body[data-page="analisev4"] .reservas-v4-year-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+body[data-page="analisev4"] .reservas-v4-year-control select {
+  min-width: 9rem;
+  padding: 0.42rem 2rem 0.42rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font: inherit;
+}
+
+body[data-page="analisev4"] .reservas-v4-table-wrap {
+  margin-top: 0.25rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body[data-page="analisev4"] .reservas-v4-table th,
+body[data-page="analisev4"] .reservas-v4-table td {
+  text-align: center;
+  white-space: nowrap;
+}
+
+body[data-page="analisev4"] .reservas-v4-table th:first-child,
+body[data-page="analisev4"] .reservas-v4-table td:first-child {
+  text-align: left;
+}
+
+body[data-page="analisev4"] .reservas-v4-total-row td {
+  background: #f8fafc !important;
+}
+
+body[data-page="analisev4"] .reservas-v4-highlight,
+body[data-page="analisev4"] tr.reservas-v4-highlight td {
+  background: #dcfce7 !important;
+  color: #166534;
+  font-weight: 800;
+}
+
+body[data-page="analisev4"] .reservas-v4-note {
+  margin: 0 0 0.75rem;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 body[data-page="analisev4"] .report-section {
   background: transparent;
   border: none;
@@ -4601,9 +4661,10 @@ body[data-page="analisev4"] .faturacao-v4-heading {
 
 body[data-page="analisev4"] .faturacao-v4-metric-switch {
   display: inline-flex;
+  max-width: 100%;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border);
-  overflow: hidden;
+  overflow-x: auto;
   background: var(--card);
   box-shadow: var(--shadow-1);
 }
@@ -4615,6 +4676,8 @@ body[data-page="analisev4"] .faturacao-v4-metric-switch button {
   padding: 0.45rem 1.15rem;
   font-weight: 700;
   cursor: pointer;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 body[data-page="analisev4"] .faturacao-v4-chart-wrap {
@@ -4644,7 +4707,10 @@ body[data-page="analisev4"] .faturacao-v4-table-actions {
 }
 
 body[data-page="analisev4"] .faturacao-v4-table-wrap[hidden],
-body[data-page="analisev4"] .faturacao-v4-history-btn[hidden] {
+body[data-page="analisev4"] .faturacao-v4-history-btn[hidden],
+body[data-page="analisev4"] .faturacao-v4-table-actions[hidden],
+body[data-page="analisev4"] #faturacao-v4-mode-switch[hidden],
+body[data-page="analisev4"] [data-faturacao-v4-mode][hidden] {
   display: none;
 }
 

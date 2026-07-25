@@ -11,6 +11,7 @@ const COLORS = {
   '123': 'rgba(54,162,235,1)',
   '1248': 'rgba(245,133,20,1)'
 };
+const HISTORICAL_AVERAGE_COLOR = 'rgba(71, 85, 105, 0.72)';
 const TOTAL_YEAR_COLORS = [
   'rgb(20, 78, 3)',
   'rgba(99,102,241,1)',
@@ -50,6 +51,7 @@ const state = {
   mode: 'mes',
   view: 'total',
   progressView: 'total',
+  rawFaturas: [],
   faturas: [],
   dailyEntries: [],
   chart: null,
@@ -81,6 +83,7 @@ async function loadData() {
     const q = query(collection(db, 'faturas'), orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
     const rows = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    state.rawFaturas = rows;
     state.faturas = consolidarFaturas(rows).filter((row) => APARTMENTS.includes(String(row.apartamento)));
     state.dailyEntries = buildDailyEntries(state.faturas);
     if (!state.dailyEntries.length) {
@@ -90,6 +93,7 @@ async function loadData() {
     render();
   } catch (error) {
     window.errorHandler?.handleError('faturacao-v4', error, 'loadData', loadData);
+    state.rawFaturas = [];
     state.faturas = [];
     state.dailyEntries = [];
     showEmptyState('Sem dados disponíveis.');
@@ -116,7 +120,9 @@ function bindMetricButtons() {
       const metric = btn.dataset.faturacaoV4Metric;
       if (!metric || metric === state.metric) return;
       state.metric = metric;
+      if (metric === 'avg-night') state.mode = 'mes';
       updateMetricButtons();
+      updateModeButtons();
       render();
     }, { signal });
   });
@@ -231,7 +237,17 @@ function updateTableVisibility() {
   const wrap = document.getElementById('faturacao-v4-table-wrap');
   const tableBtn = document.getElementById('faturacao-v4-toggle-table');
   const yearsBtn = document.getElementById('faturacao-v4-toggle-years');
-  if (wrap) wrap.hidden = !state.tableVisible;
+  const tableActions = document.querySelector('.faturacao-v4-table-actions');
+  const modeSwitch = document.getElementById('faturacao-v4-mode-switch');
+  const cumulativeButton = document.querySelector('[data-faturacao-v4-mode="cumulativo"]');
+  const isTablelessMetric = state.metric === 'revpan' || state.metric === 'avg-night';
+  if (wrap) wrap.hidden = !state.tableVisible || isTablelessMetric;
+  if (tableActions) tableActions.hidden = isTablelessMetric;
+  if (modeSwitch) modeSwitch.hidden = false;
+  if (cumulativeButton) {
+    cumulativeButton.hidden = state.metric === 'avg-night';
+    cumulativeButton.textContent = state.metric === 'revpan' ? 'YTD' : 'Cumulativo';
+  }
   if (tableBtn) {
     tableBtn.textContent = state.tableVisible ? 'Ocultar tabela' : 'Mostrar tabela';
     tableBtn.setAttribute('aria-expanded', state.tableVisible ? 'true' : 'false');
@@ -250,7 +266,7 @@ function render() {
   }
   renderProgressDashboard();
   renderChart();
-  if (state.tableVisible) renderTable();
+  if (state.tableVisible && state.metric !== 'revpan' && state.metric !== 'avg-night') renderTable();
   updateTableVisibility();
 }
 
@@ -380,9 +396,18 @@ function renderChart() {
 function renderYearChart() {
   const cfg = VIEW_CONFIG[state.view] || VIEW_CONFIG.total;
   const labels = MONTH_LABELS;
-  const yearly = state.metric === 'occupancy'
-    ? aggregateOccupancyByYear(cfg.apartments)
-    : aggregateMonthlyForChart(cfg.apartments);
+  let yearly;
+  if (state.metric === 'occupancy') {
+    yearly = aggregateOccupancyByYear(cfg.apartments);
+  } else if (state.metric === 'revpan') {
+    yearly = aggregateRevpanByYear(cfg.apartments);
+  } else if (state.metric === 'avg-night') {
+    yearly = aggregateAverageNightByYear(cfg.apartments);
+  } else if (state.metric === 'cleaning') {
+    yearly = aggregateCleaningByYear(cfg.apartments);
+  } else {
+    yearly = aggregateMonthlyForChart(cfg.apartments);
+  }
   const years = getChartYears(yearly);
   const currentYear = new Date().getFullYear();
 
@@ -407,6 +432,7 @@ function renderYearChart() {
     };
   });
 
+  appendHistoricalAverage(datasets);
   createOrUpdateChart(labels, datasets);
 }
 
@@ -425,15 +451,31 @@ function renderCompareChart() {
     renderOccupancyDifferenceChart();
     return;
   }
+  if (state.metric === 'revpan') {
+    renderNightlyMetricComparisonChart(aggregateRevpanByYear);
+    return;
+  }
+  if (state.metric === 'avg-night') {
+    renderNightlyMetricComparisonChart(aggregateAverageNightByYear);
+    return;
+  }
 
-  const monthly123 = aggregateMonthlyForChart(['123']);
-  const monthly1248 = aggregateMonthlyForChart(['1248']);
+  const monthly123 = state.metric === 'cleaning'
+    ? aggregateCleaningByYear(['123'])
+    : aggregateMonthlyForChart(['123']);
+  const monthly1248 = state.metric === 'cleaning'
+    ? aggregateCleaningByYear(['1248'])
+    : aggregateMonthlyForChart(['1248']);
   const timeline = buildCompareTimeline([monthly123, monthly1248]);
   const labels = timeline.map(({ year, month }) => `${MONTH_LABELS[month - 1]} ${String(year).slice(-2)}`);
   const series123 = timeline.map(({ year, month }) => monthly123[year]?.[month - 1] || 0);
   const series1248 = timeline.map(({ year, month }) => monthly1248[year]?.[month - 1] || 0);
   const data123 = state.mode === 'cumulativo' ? cumulativeTimeline(series123) : series123;
   const data1248 = state.mode === 'cumulativo' ? cumulativeTimeline(series1248) : series1248;
+  const historicalMonthlyAverage = buildHistoricalMonthlyAverage([monthly123, monthly1248], timeline);
+  const historicalAverage = state.mode === 'cumulativo'
+    ? cumulativeTimeline(historicalMonthlyAverage)
+    : historicalMonthlyAverage;
 
   const datasets = [
     {
@@ -461,10 +503,58 @@ function renderCompareChart() {
       pointBorderColor: COLORS['1248'],
       pointBorderWidth: 2,
       tension: 0.18
-    }
+    },
+    historicalAverageDataset(historicalAverage, 'Média histórica / apt.')
   ];
 
   createOrUpdateChart(labels, datasets);
+}
+
+function renderNightlyMetricComparisonChart(aggregateMetric) {
+  const values123 = aggregateMetric(['123']);
+  const values1248 = aggregateMetric(['1248']);
+  const years = [...new Set([
+    ...getChartYears(values123),
+    ...getChartYears(values1248)
+  ])].sort((a, b) => a - b);
+  const latestYear = years[years.length - 1];
+  if (!latestYear) {
+    createOrUpdateChart(MONTH_LABELS, []);
+    return;
+  }
+
+  const datasets = [
+    {
+      label: `123 · ${latestYear}`,
+      data: monthlyToDate(values123[latestYear], latestYear),
+      borderColor: COLORS['123'],
+      backgroundColor: withAlpha(COLORS['123'], 0.1),
+      borderWidth: 2.4,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: '#fff',
+      pointBorderColor: COLORS['123'],
+      pointBorderWidth: 2,
+      tension: 0.18,
+      spanGaps: true
+    },
+    {
+      label: `1248 · ${latestYear}`,
+      data: monthlyToDate(values1248[latestYear], latestYear),
+      borderColor: COLORS['1248'],
+      backgroundColor: withAlpha(COLORS['1248'], 0.1),
+      borderWidth: 2.4,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      pointBackgroundColor: '#fff',
+      pointBorderColor: COLORS['1248'],
+      pointBorderWidth: 2,
+      tension: 0.18,
+      spanGaps: true
+    }
+  ];
+
+  createOrUpdateChart(MONTH_LABELS, datasets);
 }
 
 function renderOccupancyDifferenceChart() {
@@ -509,7 +599,64 @@ function renderOccupancyDifferenceChart() {
     };
   });
 
+  appendHistoricalAverage(datasets, 'Média histórica Δ');
   createOrUpdateChart(MONTH_LABELS, datasets);
+}
+
+function appendHistoricalAverage(datasets, label = 'Média histórica') {
+  const sourceDatasets = datasets.filter((dataset) => !dataset.isHistoricalAverage);
+  if (sourceDatasets.length < 2) return;
+  const data = averageSeries(sourceDatasets.map((dataset) => dataset.data));
+  if (!data.some((value) => value != null)) return;
+  datasets.push(historicalAverageDataset(data, label));
+}
+
+function averageSeries(seriesList) {
+  const length = Math.max(0, ...seriesList.map((series) => series?.length || 0));
+  return Array.from({ length }, (_, index) => {
+    const values = seriesList
+      .map((series) => series?.[index])
+      .filter((value) => value != null && Number.isFinite(Number(value)))
+      .map(Number);
+    if (!values.length) return null;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  });
+}
+
+function historicalAverageDataset(data, label) {
+  return {
+    label,
+    data,
+    isHistoricalAverage: true,
+    borderColor: HISTORICAL_AVERAGE_COLOR,
+    backgroundColor: 'transparent',
+    borderDash: [3, 5],
+    borderWidth: 1.5,
+    pointRadius: 0,
+    pointHoverRadius: 3,
+    pointHitRadius: 8,
+    pointStyle: 'line',
+    tension: 0.18,
+    spanGaps: true
+  };
+}
+
+function buildHistoricalMonthlyAverage(monthlyMaps, timeline) {
+  const years = getAvailableYears();
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const averagesByMonth = Array.from({ length: 12 }, (_, monthIdx) => {
+    const values = monthlyMaps.flatMap((monthly) => years
+      .filter((year) => year !== currentYear || monthIdx + 1 <= currentMonth)
+      .map((year) => monthly[year]?.[monthIdx])
+      .filter((value) => value != null && Number.isFinite(Number(value)))
+      .map(Number));
+    return values.length
+      ? values.reduce((sum, value) => sum + value, 0) / values.length
+      : 0;
+  });
+  return timeline.map(({ month }) => averagesByMonth[month - 1]);
 }
 
 function getOccupancyCompareYears(occ123, occ1248) {
@@ -601,7 +748,7 @@ function createOrUpdateChart(labels, datasets) {
                 const suffix = winner && winner !== 'igual' ? ` mais ${winner}` : '';
                 return `${context.dataset.label}: ${value.toFixed(1)}%${suffix}`;
               }
-              return `${context.dataset.label}: ${state.metric === 'occupancy' ? `${value.toFixed(1)}%` : formatEuro(value)}`;
+              return `${context.dataset.label}: ${formatChartValue(value)}`;
             }
           }
         }
@@ -614,7 +761,7 @@ function createOrUpdateChart(labels, datasets) {
           ticks: {
             precision: 0,
             callback(value) {
-              return state.metric === 'occupancy' ? `${Math.round(value)}%` : formatEuro(value);
+              return formatChartValue(value, true);
             }
           },
           grid: { color: 'rgba(15, 23, 42, 0.06)' },
@@ -633,12 +780,28 @@ function createOrUpdateChart(labels, datasets) {
   }, { previousChart: state.chart });
 }
 
+function formatChartValue(value, rounded = false) {
+  if (state.metric === 'occupancy') {
+    return `${rounded ? Math.round(value) : Number(value).toFixed(1)}%`;
+  }
+  const formatted = formatEuro(value);
+  const isNightlyMetric = state.metric === 'revpan' || state.metric === 'avg-night';
+  return isNightlyMetric && !rounded ? `${formatted} / noite` : formatted;
+}
+
 function renderTable() {
   const container = document.getElementById('tabela-faturacao-v4');
   if (!container) return;
   const years = getTableYears();
   if (!years.length) {
     container.innerHTML = '<p class="faturacao-v4-empty">Sem dados para apresentar.</p>';
+    return;
+  }
+
+  if (state.metric === 'cleaning') {
+    container.innerHTML = state.view === 'compare'
+      ? buildCleaningCompareTable(years)
+      : buildCleaningTable(years, VIEW_CONFIG[state.view]?.apartments || VIEW_CONFIG.total.apartments);
     return;
   }
 
@@ -739,6 +902,100 @@ function occupancyCompareCells(value123, value1248, strong = false, empty = fals
     <td class="faturacao-v4-cell-1248">${open}${formatPercent(value1248)}${close}</td>
     <td>${open}${formatSignedPercent(diff)}${close}</td>
   `;
+}
+
+function buildCleaningTable(years, apartments) {
+  const stats = aggregateCleaningStats(apartments);
+  const visibleYears = years.filter((year) =>
+    (stats[year] || []).some((month) => month.count > 0)
+  );
+  if (!visibleYears.length) {
+    return '<p class="faturacao-v4-empty">Sem taxas de limpeza para apresentar.</p>';
+  }
+
+  const heading = visibleYears.map((year) => `<th colspan="2">${year}</th>`).join('');
+  const subHeading = visibleYears.map(() => '<th>N.º</th><th>Total</th>').join('');
+  const rows = MONTH_LABELS.map((label, monthIdx) => {
+    const cells = visibleYears.map((year) => {
+      const month = stats[year][monthIdx];
+      return `<td>${formatNumber(month.count)}</td><td>${formatEuro(month.total)}</td>`;
+    }).join('');
+    return `<tr><td>${label}</td>${cells}</tr>`;
+  }).join('');
+  const totals = visibleYears.map((year) => {
+    const total = stats[year].reduce((summary, month) => ({
+      count: summary.count + month.count,
+      value: summary.value + month.total
+    }), { count: 0, value: 0 });
+    return `<td><strong>${formatNumber(total.count)}</strong></td><td><strong>${formatEuro(total.value)}</strong></td>`;
+  }).join('');
+
+  return `
+    <table class="media-faturacao faturacao-v4-table">
+      <thead>
+        <tr><th rowspan="2">Mês</th>${heading}</tr>
+        <tr>${subHeading}</tr>
+      </thead>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>Total</strong></td>${totals}</tr></tbody>
+    </table>
+  `;
+}
+
+function buildCleaningCompareTable(years) {
+  const stats123 = aggregateCleaningStats(['123']);
+  const stats1248 = aggregateCleaningStats(['1248']);
+  const visibleYears = years.filter((year) =>
+    (stats123[year] || []).some((month) => month.count > 0)
+    || (stats1248[year] || []).some((month) => month.count > 0)
+  );
+  if (!visibleYears.length) {
+    return '<p class="faturacao-v4-empty">Sem taxas de limpeza para apresentar.</p>';
+  }
+
+  const heading = visibleYears.map((year) => `<th colspan="4">${year}</th>`).join('');
+  const subHeading = visibleYears
+    .map(() => '<th>123 · N.º</th><th>123 · Total</th><th>1248 · N.º</th><th>1248 · Total</th>')
+    .join('');
+  const rows = MONTH_LABELS.map((label, monthIdx) => {
+    const cells = visibleYears.map((year) => {
+      const apt123 = stats123[year][monthIdx];
+      const apt1248 = stats1248[year][monthIdx];
+      return `
+        <td class="faturacao-v4-cell-123">${formatNumber(apt123.count)}</td>
+        <td class="faturacao-v4-cell-123">${formatEuro(apt123.total)}</td>
+        <td class="faturacao-v4-cell-1248">${formatNumber(apt1248.count)}</td>
+        <td class="faturacao-v4-cell-1248">${formatEuro(apt1248.total)}</td>
+      `;
+    }).join('');
+    return `<tr><td>${label}</td>${cells}</tr>`;
+  }).join('');
+  const totals = visibleYears.map((year) => {
+    const apt123 = cleaningYearTotal(stats123[year]);
+    const apt1248 = cleaningYearTotal(stats1248[year]);
+    return `
+      <td class="faturacao-v4-cell-123"><strong>${formatNumber(apt123.count)}</strong></td>
+      <td class="faturacao-v4-cell-123"><strong>${formatEuro(apt123.total)}</strong></td>
+      <td class="faturacao-v4-cell-1248"><strong>${formatNumber(apt1248.count)}</strong></td>
+      <td class="faturacao-v4-cell-1248"><strong>${formatEuro(apt1248.total)}</strong></td>
+    `;
+  }).join('');
+
+  return `
+    <table class="media-faturacao faturacao-v4-table faturacao-v4-compare-table">
+      <thead>
+        <tr><th rowspan="2">Mês</th>${heading}</tr>
+        <tr>${subHeading}</tr>
+      </thead>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>Total</strong></td>${totals}</tr></tbody>
+    </table>
+  `;
+}
+
+function cleaningYearTotal(months = []) {
+  return months.reduce((summary, month) => ({
+    count: summary.count + month.count,
+    total: summary.total + month.total
+  }), { count: 0, total: 0 });
 }
 
 function buildYearTable(years, apartments) {
@@ -924,6 +1181,80 @@ function aggregateMonthlyForChart(apartments) {
   return result;
 }
 
+function aggregateRevpanByYear(apartments, mode = state.mode) {
+  const revenue = aggregateMonthlyForChart(apartments);
+  const result = createYearSeries(12);
+  Object.keys(result).forEach((yearKey) => {
+    const year = Number(yearKey);
+    let runningRevenue = 0;
+    let runningAvailable = 0;
+    for (let monthIdx = 0; monthIdx < 12; monthIdx++) {
+      const available = availableNights(year, monthIdx + 1, apartments.length);
+      const monthlyRevenue = revenue[year]?.[monthIdx] || 0;
+      if (mode === 'cumulativo') {
+        runningRevenue += monthlyRevenue;
+        runningAvailable += available;
+        result[year][monthIdx] = runningAvailable ? runningRevenue / runningAvailable : 0;
+      } else {
+        result[year][monthIdx] = available ? monthlyRevenue / available : 0;
+      }
+    }
+  });
+  return result;
+}
+
+function aggregateCleaningByYear(apartments) {
+  const allow = new Set(apartments.map(String));
+  const result = createYearSeries(12);
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  state.rawFaturas.forEach((row) => {
+    if (!allow.has(String(row.apartamento))) return;
+    const year = Number(row.ano);
+    const month = Number(row.mes);
+    const value = Number(row.taxaLimpeza || 0);
+    if (!result[year] || !isValidMonth(month) || value <= 0) return;
+    if (year === currentYear && month > currentMonth) return;
+    result[year][month - 1] += value;
+  });
+  return result;
+}
+
+function aggregateCleaningStats(apartments) {
+  const allow = new Set(apartments.map(String));
+  const result = {};
+  getAvailableYears().forEach((year) => {
+    result[year] = Array.from({ length: 12 }, () => ({ count: 0, total: 0 }));
+  });
+  state.rawFaturas.forEach((row) => {
+    if (!allow.has(String(row.apartamento))) return;
+    const year = Number(row.ano);
+    const month = Number(row.mes);
+    const value = Number(row.taxaLimpeza || 0);
+    if (!result[year] || !isValidMonth(month) || value <= 0) return;
+    result[year][month - 1].count += 1;
+    result[year][month - 1].total += value;
+  });
+  return result;
+}
+
+function aggregateAverageNightByYear(apartments) {
+  const revenue = aggregateMonthlyForChart(apartments);
+  const occupied = aggregateOccupiedByYear(apartments);
+  const result = createYearSeries(12);
+  Object.keys(result).forEach((yearKey) => {
+    const year = Number(yearKey);
+    for (let monthIdx = 0; monthIdx < 12; monthIdx++) {
+      const nights = occupied[year]?.[monthIdx] || 0;
+      result[year][monthIdx] = nights
+        ? (revenue[year]?.[monthIdx] || 0) / nights
+        : null;
+    }
+  });
+  return result;
+}
+
 function aggregateOccupancyByYear(apartments, mode = state.mode) {
   const occupied = aggregateOccupiedByYear(apartments);
   const result = createYearSeries(12, OCCUPANCY_BASE_YEAR);
@@ -1006,7 +1337,13 @@ function formatSignedPercent(value) {
 }
 
 function prepareChartData(values, year) {
-  if (state.metric === 'occupancy') return monthlyToDate(values, year);
+  if (
+    state.metric === 'occupancy'
+    || state.metric === 'revpan'
+    || state.metric === 'avg-night'
+  ) {
+    return monthlyToDate(values, year);
+  }
   return state.mode === 'cumulativo' ? cumulativeMonthlyToDate(values, year) : monthlyToDate(values, year);
 }
 
