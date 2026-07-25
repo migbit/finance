@@ -22,28 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// Dados manuais de faturação (substitua X e Y pelos valores reais que me fornecer)
-const manualFaturasEstatica = [
-      { ano: 2024, mes: 1, apartamento: '123', valorTransferencia: 1915.11, taxaAirbnb: 0 },
-      { ano: 2024, mes: 1, apartamento: '1248', valorTransferencia: 3851, taxaAirbnb: 0 },
-      { ano: 2024, mes: 2, apartamento: '123', valorTransferencia: 426, taxaAirbnb: 0 },
-      { ano: 2024, mes: 2, apartamento: '1248', valorTransferencia: 1454, taxaAirbnb: 0 },
-      { ano: 2024, mes: 3, apartamento: '123', valorTransferencia: 1310, taxaAirbnb: 0 },
-      { ano: 2024, mes: 3, apartamento: '1248', valorTransferencia: 2678, taxaAirbnb: 0 },
-      { ano: 2024, mes: 4, apartamento: '123', valorTransferencia: 4858.11, taxaAirbnb: 0 },
-      { ano: 2024, mes: 4, apartamento: '1248', valorTransferencia: 6323, taxaAirbnb: 0 },
-      { ano: 2024, mes: 5, apartamento: '123', valorTransferencia: 5680, taxaAirbnb: 0 },
-      { ano: 2024, mes: 5, apartamento: '1248', valorTransferencia: 4806.61, taxaAirbnb: 0 },
-      { ano: 2024, mes: 6, apartamento: '123', valorTransferencia: 4708.73, taxaAirbnb: 0 },
-      { ano: 2024, mes: 6, apartamento: '1248', valorTransferencia: 6206, taxaAirbnb: 0 },
-      { ano: 2024, mes: 7, apartamento: '123', valorTransferencia: 3659.04, taxaAirbnb: 0 },
-      { ano: 2024, mes: 7, apartamento: '1248', valorTransferencia: 6015.30, taxaAirbnb: 0 },
-      { ano: 2024, mes: 8, apartamento: '123', valorTransferencia: 5174, taxaAirbnb: 0 },
-      { ano: 2024, mes: 8, apartamento: '1248', valorTransferencia: 7777, taxaAirbnb: 0 },
-      { ano: 2024, mes: 9, apartamento: '123', valorTransferencia: 4599.41, taxaAirbnb: 0 },
-      { ano: 2024, mes: 9, apartamento: '1248', valorTransferencia: 6780.52, taxaAirbnb: 0 },
-    ];
-
     let showPrevFaturaYears = false;
 
 // DOM Elements
@@ -376,7 +354,8 @@ function calcAndSetPrecoMedioNoite() {
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
   await definirValoresPadrao();
-  carregarTodosRelatorios();
+  await carregarTodosRelatorios();
+  await abrirFaturaPedida();
 
   const channelSelect = document.getElementById('canal');
   if (channelSelect) {
@@ -576,9 +555,18 @@ async function carregarTodosRelatorios() {
   const firebaseFaturas = await carregarFaturas();
   loadedFaturas = sortInvoicesForNav(firebaseFaturas);
   updateNavigator();
-  const faturas = firebaseFaturas.concat(manualFaturasEstatica);
+  gerarRelatorioFaturacao(firebaseFaturas);
+}
 
-  gerarRelatorioFaturacao(faturas);
+async function abrirFaturaPedida() {
+  const id = new URLSearchParams(window.location.search).get('editar');
+  if (!id) return;
+  const fatura = loadedFaturas.find((item) => item.id === id);
+  if (!fatura) {
+    showToast('Não foi possível encontrar a fatura indicada.', 'error');
+    return;
+  }
+  await entrarEmModoEdicao(fatura);
 }
 
 async function carregarFaturas() {
@@ -609,11 +597,17 @@ function gerarRelatorioFaturacao(faturas) {
     const faturasAgrupadas = agruparPorAnoMes(arr);
     let html = '<table><thead><tr><th>Ano</th><th>Mês</th><th>Fatura Nº</th><th>Valor Transferência</th><th>Taxa AirBnB</th><th>Total Fatura</th><th>Ações</th></tr></thead><tbody>';
 
-    Object.entries(faturasAgrupadas).forEach(([key, grupo]) => {
+    Object.entries(faturasAgrupadas)
+      .sort(([keyA], [keyB]) => compareYearMonthDescending(keyA, keyB))
+      .forEach(([key, grupo]) => {
         const [ano, mes] = key.split('-');
         const totalTransferencia = grupo.reduce((sum, f) => sum + f.valorTransferencia, 0);
         const totalTaxaAirbnb = grupo.reduce((sum, f) => sum + f.taxaAirbnb, 0);
         const totalFatura = totalTransferencia + totalTaxaAirbnb;
+        const invoiceNumbers = grupo
+          .map((f) => String(f.numeroFatura || '').trim())
+          .filter(Boolean)
+          .join(', ') || '—';
 
         const grupoJSON = JSON.stringify(grupo).replace(/"/g, '&quot;');
 
@@ -621,7 +615,7 @@ function gerarRelatorioFaturacao(faturas) {
         <tr>
          <td>${ano}</td>
           <td>${obterNomeMes(parseInt(mes))}</td>
-          <td>${grupo.map(f => f.numeroFatura).join(', ')}</td>
+          <td>${invoiceNumbers}</td>
           <td>${euroInt(totalTransferencia)}</td>
          <td>${euroInt(totalTaxaAirbnb)}</td>
          <td>${euroInt(totalFatura)}</td>
@@ -652,6 +646,12 @@ function agruparPorAnoMes(faturas) {
         grupos[key].push(fatura);
         return grupos;
     }, {});
+}
+
+function compareYearMonthDescending(keyA, keyB) {
+    const [yearA, monthA] = keyA.split('-').map(Number);
+    const [yearB, monthB] = keyB.split('-').map(Number);
+    return (yearB - yearA) || (monthB - monthA);
 }
 
 function agruparPorAnoTrimestreApartamento(faturas) {

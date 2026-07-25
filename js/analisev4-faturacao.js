@@ -1,10 +1,10 @@
-import { db } from './script.js';
 import { createChart, destroyChartSafe } from './analisev2-charts.js';
-import { collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-import { consolidarFaturas, formatEuro, splitFaturaPorDia, valorFatura, MONTH_LABELS } from './analisev2-core.js';
+import { getFaturas } from './analise-data.js';
+import { computeOccupancyPercent } from './analise-metrics.js';
+import { formatEuro, parseLocalDate, splitFaturaPorDia, valorFatura, MONTH_LABELS } from './analisev2-core.js';
 
 const BASE_YEAR = 2024;
-const OCCUPANCY_BASE_YEAR = 2025;
+const OCCUPANCY_BASE_YEAR = 2024;
 const APARTMENTS = ['123', '1248'];
 const COLORS = {
   total: 'rgb(20, 78, 3)',
@@ -51,12 +51,13 @@ const state = {
   mode: 'mes',
   view: 'total',
   progressView: 'total',
-  rawFaturas: [],
   faturas: [],
   dailyEntries: [],
   chart: null,
   tableVisible: false,
-  showAllYears: false
+  showAllYears: false,
+  showAllChartYears: false,
+  tableExpanded: false
 };
 
 let modeButtonsController = null;
@@ -80,11 +81,8 @@ window.addEventListener('beforeunload', cleanup);
 async function loadData() {
   window.loadingManager?.show('faturacao-v4', { type: 'skeleton' });
   try {
-    const q = query(collection(db, 'faturas'), orderBy('timestamp', 'desc'));
-    const snapshot = await getDocs(q);
-    const rows = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    state.rawFaturas = rows;
-    state.faturas = consolidarFaturas(rows).filter((row) => APARTMENTS.includes(String(row.apartamento)));
+    const rows = await getFaturas();
+    state.faturas = rows.filter((row) => APARTMENTS.includes(String(row.apartamento)));
     state.dailyEntries = buildDailyEntries(state.faturas);
     if (!state.dailyEntries.length) {
       showEmptyState('Sem dados disponíveis.');
@@ -93,7 +91,6 @@ async function loadData() {
     render();
   } catch (error) {
     window.errorHandler?.handleError('faturacao-v4', error, 'loadData', loadData);
-    state.rawFaturas = [];
     state.faturas = [];
     state.dailyEntries = [];
     showEmptyState('Sem dados disponíveis.');
@@ -170,6 +167,8 @@ function bindTableButtons() {
 
   const tableBtn = document.getElementById('faturacao-v4-toggle-table');
   const yearsBtn = document.getElementById('faturacao-v4-toggle-years');
+  const chartYearsBtn = document.getElementById('faturacao-v4-toggle-chart-years');
+  const expandBtn = document.getElementById('faturacao-v4-expand-table');
 
   tableBtn?.addEventListener('click', () => {
     state.tableVisible = !state.tableVisible;
@@ -181,6 +180,25 @@ function bindTableButtons() {
     state.showAllYears = !state.showAllYears;
     updateTableVisibility();
     renderTable();
+  }, { signal });
+
+  chartYearsBtn?.addEventListener('click', () => {
+    state.showAllChartYears = !state.showAllChartYears;
+    updateTableVisibility();
+    renderChart();
+  }, { signal });
+
+  expandBtn?.addEventListener('click', () => {
+    state.tableExpanded = !state.tableExpanded;
+    document.getElementById('faturacao-v4-table-wrap')?.classList.toggle('is-expanded', state.tableExpanded);
+    document.body.classList.toggle('analisev4-table-open', state.tableExpanded);
+    expandBtn.classList.toggle('table-expand-btn-active', state.tableExpanded);
+    expandBtn.textContent = state.tableExpanded ? 'Fechar largura total' : 'Ver em largura total';
+    expandBtn.setAttribute('aria-expanded', state.tableExpanded ? 'true' : 'false');
+  }, { signal });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.tableExpanded) expandBtn?.click();
   }, { signal });
 }
 
@@ -237,10 +255,22 @@ function updateTableVisibility() {
   const wrap = document.getElementById('faturacao-v4-table-wrap');
   const tableBtn = document.getElementById('faturacao-v4-toggle-table');
   const yearsBtn = document.getElementById('faturacao-v4-toggle-years');
+  const chartYearsBtn = document.getElementById('faturacao-v4-toggle-chart-years');
+  const expandBtn = document.getElementById('faturacao-v4-expand-table');
   const tableActions = document.querySelector('.faturacao-v4-table-actions');
   const modeSwitch = document.getElementById('faturacao-v4-mode-switch');
   const cumulativeButton = document.querySelector('[data-faturacao-v4-mode="cumulativo"]');
   const isTablelessMetric = state.metric === 'revpan' || state.metric === 'avg-night';
+  if ((!state.tableVisible || isTablelessMetric) && state.tableExpanded) {
+    state.tableExpanded = false;
+    wrap?.classList.remove('is-expanded');
+    expandBtn?.classList.remove('table-expand-btn-active');
+    if (expandBtn) {
+      expandBtn.textContent = 'Ver em largura total';
+      expandBtn.setAttribute('aria-expanded', 'false');
+    }
+    document.body.classList.remove('analisev4-table-open');
+  }
   if (wrap) wrap.hidden = !state.tableVisible || isTablelessMetric;
   if (tableActions) tableActions.hidden = isTablelessMetric;
   if (modeSwitch) modeSwitch.hidden = false;
@@ -255,6 +285,16 @@ function updateTableVisibility() {
   if (yearsBtn) {
     yearsBtn.hidden = !state.tableVisible || getAvailableYears().length <= getDefaultTableYears().length;
     yearsBtn.textContent = state.showAllYears ? 'Mostrar só atual e anterior' : 'Mostrar anos desde 2024';
+  }
+  if (chartYearsBtn) {
+    const metricYears = getDataYearsForMetric();
+    const canExpandYears = metricYears.length > getDefaultChartYears(metricYears).length && state.view !== 'compare';
+    chartYearsBtn.hidden = !canExpandYears;
+    chartYearsBtn.textContent = state.showAllChartYears ? 'Ver 2024, atual e anterior' : 'Ver todos os anos';
+    chartYearsBtn.setAttribute('aria-pressed', state.showAllChartYears ? 'true' : 'false');
+  }
+  if (expandBtn) {
+    expandBtn.hidden = !state.tableVisible || isTablelessMetric;
   }
 }
 
@@ -303,8 +343,10 @@ function renderProgressDashboard() {
     value: formatTargetGap(currentYtd.revenue, previousFullYear.revenue),
     meta: `Total ${previousYear}: ${formatEuro(previousFullYear.revenue)}`,
     diff: currentYtd.revenue - previousFullYear.revenue,
-    base: previousFullYear.revenue
+    base: previousFullYear.revenue,
+    neutral: true
   });
+  updateTargetProgress(currentYtd.revenue, previousFullYear.revenue);
   setProgressTile('avg', {
     value: formatEuro(avgNight(currentYtd)),
     meta: `${previousYear}: ${formatEuro(avgNight(previousYtd))}`,
@@ -326,6 +368,7 @@ function renderProgressEmpty() {
     setText(`progresso-v4-${key}-meta`, 'Sem dados');
     setText(`progresso-v4-${key}-delta`, '—');
   });
+  updateTargetProgress(0, 0);
 }
 
 function formatTargetGap(currentRevenue, previousFullYearRevenue) {
@@ -334,14 +377,37 @@ function formatTargetGap(currentRevenue, previousFullYearRevenue) {
   return `Faltam ${formatEuro(Math.abs(diff))}`;
 }
 
-function setProgressTile(key, { value, meta, diff, base, unit = '€' }) {
+function setProgressTile(key, { value, meta, diff, base, unit = '€', neutral = false }) {
   setText(`progresso-v4-${key}-value`, value);
   setText(`progresso-v4-${key}-meta`, meta);
   const delta = document.getElementById(`progresso-v4-${key}-delta`);
   if (!delta) return;
-  delta.classList.remove('is-positive', 'is-negative');
+  delta.classList.remove('is-positive', 'is-negative', 'is-neutral');
+  if (neutral) {
+    const progress = base > 0 ? Math.max(0, ((Number(diff) || 0) + base) / base) : 0;
+    delta.classList.add('is-neutral');
+    delta.textContent = progress ? `${Math.round(progress * 100)}% do total anterior` : formatProgressDelta(diff, base, unit);
+    return;
+  }
   delta.classList.add(diff >= 0 ? 'is-positive' : 'is-negative');
   delta.textContent = formatProgressDelta(diff, base, unit);
+}
+
+function updateTargetProgress(currentRevenue, previousRevenue) {
+  const progress = previousRevenue > 0 ? (currentRevenue / previousRevenue) * 100 : 0;
+  const bounded = Math.max(0, Math.min(100, progress));
+  const track = document.getElementById('progresso-v4-target-progress');
+  const bar = document.getElementById('progresso-v4-target-bar');
+  const delta = document.getElementById('progresso-v4-target-delta');
+  if (bar) bar.style.width = `${bounded}%`;
+  if (track) track.setAttribute('aria-valuenow', String(Math.round(bounded)));
+  if (delta) {
+    delta.classList.remove('is-positive', 'is-negative');
+    delta.classList.add('is-neutral');
+    delta.textContent = previousRevenue > 0
+      ? `${Math.round(progress)}% do total anterior`
+      : 'Sem base de comparação';
+  }
 }
 
 function summarizeEntries({ apartments, year, month = null, maxMonth = null, maxDay = null, currentMonthDay = null }) {
@@ -408,8 +474,9 @@ function renderYearChart() {
   } else {
     yearly = aggregateMonthlyForChart(cfg.apartments);
   }
-  const years = getChartYears(yearly);
-  const currentYear = new Date().getFullYear();
+  const allYears = getChartYears(yearly, { all: true });
+  const years = state.showAllChartYears ? allYears : getDefaultChartYears(allYears);
+  const currentYear = getCurrentDataYear();
 
   const datasets = years.map((year) => {
     const values = yearly[year] || emptySeriesForMode();
@@ -432,7 +499,11 @@ function renderYearChart() {
     };
   });
 
-  appendHistoricalAverage(datasets);
+  appendHistoricalAverage(
+    datasets,
+    'Média histórica',
+    allYears.map((year) => prepareChartData(yearly[year] || emptySeriesForMode(), year))
+  );
   createOrUpdateChart(labels, datasets);
 }
 
@@ -470,11 +541,11 @@ function renderCompareChart() {
   const labels = timeline.map(({ year, month }) => `${MONTH_LABELS[month - 1]} ${String(year).slice(-2)}`);
   const series123 = timeline.map(({ year, month }) => monthly123[year]?.[month - 1] || 0);
   const series1248 = timeline.map(({ year, month }) => monthly1248[year]?.[month - 1] || 0);
-  const data123 = state.mode === 'cumulativo' ? cumulativeTimeline(series123) : series123;
-  const data1248 = state.mode === 'cumulativo' ? cumulativeTimeline(series1248) : series1248;
+  const data123 = state.mode === 'cumulativo' ? cumulativeTimeline(series123, timeline) : series123;
+  const data1248 = state.mode === 'cumulativo' ? cumulativeTimeline(series1248, timeline) : series1248;
   const historicalMonthlyAverage = buildHistoricalMonthlyAverage([monthly123, monthly1248], timeline);
   const historicalAverage = state.mode === 'cumulativo'
-    ? cumulativeTimeline(historicalMonthlyAverage)
+    ? cumulativeTimeline(historicalMonthlyAverage, timeline)
     : historicalMonthlyAverage;
 
   const datasets = [
@@ -603,10 +674,12 @@ function renderOccupancyDifferenceChart() {
   createOrUpdateChart(MONTH_LABELS, datasets);
 }
 
-function appendHistoricalAverage(datasets, label = 'Média histórica') {
-  const sourceDatasets = datasets.filter((dataset) => !dataset.isHistoricalAverage);
-  if (sourceDatasets.length < 2) return;
-  const data = averageSeries(sourceDatasets.map((dataset) => dataset.data));
+function appendHistoricalAverage(datasets, label = 'Média histórica', sourceSeries = null) {
+  const series = sourceSeries || datasets
+    .filter((dataset) => !dataset.isHistoricalAverage)
+    .map((dataset) => dataset.data);
+  if (series.length < 2) return;
+  const data = averageSeries(series);
   if (!data.some((value) => value != null)) return;
   datasets.push(historicalAverageDataset(data, label));
 }
@@ -660,19 +733,12 @@ function buildHistoricalMonthlyAverage(monthlyMaps, timeline) {
 }
 
 function getOccupancyCompareYears(occ123, occ1248) {
-  const currentYear = new Date().getFullYear();
-  const years = [];
-  for (let year = OCCUPANCY_BASE_YEAR; year <= currentYear; year++) {
-    if (
-      year === OCCUPANCY_BASE_YEAR ||
-      year === currentYear ||
-      (occ123[year] || []).some((value) => value > 0) ||
-      (occ1248[year] || []).some((value) => value > 0)
-    ) {
-      years.push(year);
-    }
-  }
-  return years;
+  return getAvailableYears()
+    .filter((year) => year >= OCCUPANCY_BASE_YEAR)
+    .filter((year) =>
+      (occ123[year] || []).some((value) => value > 0)
+      || (occ1248[year] || []).some((value) => value > 0)
+    );
 }
 
 function buildCompareTimeline(monthlyMaps) {
@@ -711,9 +777,15 @@ function determineCompareTimelineEnd(monthlyMaps) {
   return dataEnd;
 }
 
-function cumulativeTimeline(values) {
+function cumulativeTimeline(values, timeline = []) {
   let running = 0;
-  return values.map((value) => {
+  let activeYear = null;
+  return values.map((value, index) => {
+    const year = timeline[index]?.year;
+    if (year != null && year !== activeYear) {
+      running = 0;
+      activeYear = year;
+    }
     running += Number(value) || 0;
     return running;
   });
@@ -726,7 +798,11 @@ function createOrUpdateChart(labels, datasets) {
 
   const maxValue = Math.max(0, ...datasets.flatMap((dataset) => dataset.data.map((value) => Number(value) || 0)));
   const isOccupancyDiff = state.metric === 'occupancy' && state.view === 'compare';
-  const yMax = state.metric === 'occupancy' ? 100 : (maxValue > 0 ? Math.ceil(maxValue * 1.1) : undefined);
+  const yMax = isOccupancyDiff
+    ? Math.max(5, Math.ceil((maxValue * 1.2) / 5) * 5)
+    : state.metric === 'occupancy'
+      ? Math.min(100, Math.max(10, Math.ceil(((maxValue * 1.12) || 10) / 10) * 10))
+      : (maxValue > 0 ? Math.ceil(maxValue * 1.1) : undefined);
   const yMin = 0;
 
   state.chart = createChart(canvas, {
@@ -819,7 +895,7 @@ function renderTable() {
 
 function buildOccupancyYearTable(years, apartments) {
   const occupancy = aggregateOccupancyByYear(apartments);
-  const currentYear = new Date().getFullYear();
+  const currentYear = getCurrentDataYear();
   const previousYear = currentYear - 1;
   const currentMonth = new Date().getMonth() + 1;
   const visibleYears = years.filter((year) => year >= OCCUPANCY_BASE_YEAR);
@@ -828,7 +904,7 @@ function buildOccupancyYearTable(years, apartments) {
   const heading = visibleYears.map((year) => `<th>${year}</th>`).join('') + diffHeading;
   const rows = MONTH_LABELS.map((label, monthIdx) => {
     const cells = visibleYears.map((year) => {
-      const empty = Number(year) === currentYear && monthIdx + 1 > currentMonth;
+      const empty = monthIdx + 1 > currentMonth;
       return `<td>${empty ? '—' : formatPercent(occupancy[year]?.[monthIdx] || 0)}</td>`;
     }).join('');
     const diff = showYearDiff
@@ -868,7 +944,7 @@ function buildOccupancyCompareTable(years) {
   const subHeading = visibleYears.map(() => '<th>123</th><th>1248</th><th>Δ</th>').join('');
   const rows = MONTH_LABELS.map((label, monthIdx) => {
     const cells = visibleYears.map((year) => {
-      const empty = Number(year) === currentYear && monthIdx + 1 > currentMonth;
+      const empty = monthIdx + 1 > currentMonth;
       return occupancyCompareCells(occ123[year]?.[monthIdx] || 0, occ1248[year]?.[monthIdx] || 0, false, empty);
     }).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
@@ -906,6 +982,7 @@ function occupancyCompareCells(value123, value1248, strong = false, empty = fals
 
 function buildCleaningTable(years, apartments) {
   const stats = aggregateCleaningStats(apartments);
+  const currentMonth = new Date().getMonth() + 1;
   const visibleYears = years.filter((year) =>
     (stats[year] || []).some((month) => month.count > 0)
   );
@@ -917,13 +994,14 @@ function buildCleaningTable(years, apartments) {
   const subHeading = visibleYears.map(() => '<th>N.º</th><th>Total</th>').join('');
   const rows = MONTH_LABELS.map((label, monthIdx) => {
     const cells = visibleYears.map((year) => {
+      if (monthIdx + 1 > currentMonth) return '<td>—</td><td>—</td>';
       const month = stats[year][monthIdx];
       return `<td>${formatNumber(month.count)}</td><td>${formatEuro(month.total)}</td>`;
     }).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
   }).join('');
   const totals = visibleYears.map((year) => {
-    const total = stats[year].reduce((summary, month) => ({
+    const total = stats[year].slice(0, currentMonth).reduce((summary, month) => ({
       count: summary.count + month.count,
       value: summary.value + month.total
     }), { count: 0, value: 0 });
@@ -936,7 +1014,7 @@ function buildCleaningTable(years, apartments) {
         <tr><th rowspan="2">Mês</th>${heading}</tr>
         <tr>${subHeading}</tr>
       </thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>Total</strong></td>${totals}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}</tr></tbody>
     </table>
   `;
 }
@@ -944,6 +1022,7 @@ function buildCleaningTable(years, apartments) {
 function buildCleaningCompareTable(years) {
   const stats123 = aggregateCleaningStats(['123']);
   const stats1248 = aggregateCleaningStats(['1248']);
+  const currentMonth = new Date().getMonth() + 1;
   const visibleYears = years.filter((year) =>
     (stats123[year] || []).some((month) => month.count > 0)
     || (stats1248[year] || []).some((month) => month.count > 0)
@@ -958,6 +1037,9 @@ function buildCleaningCompareTable(years) {
     .join('');
   const rows = MONTH_LABELS.map((label, monthIdx) => {
     const cells = visibleYears.map((year) => {
+      if (monthIdx + 1 > currentMonth) {
+        return '<td>—</td><td>—</td><td>—</td><td>—</td>';
+      }
       const apt123 = stats123[year][monthIdx];
       const apt1248 = stats1248[year][monthIdx];
       return `
@@ -970,8 +1052,8 @@ function buildCleaningCompareTable(years) {
     return `<tr><td>${label}</td>${cells}</tr>`;
   }).join('');
   const totals = visibleYears.map((year) => {
-    const apt123 = cleaningYearTotal(stats123[year]);
-    const apt1248 = cleaningYearTotal(stats1248[year]);
+    const apt123 = cleaningYearTotal(stats123[year].slice(0, currentMonth));
+    const apt1248 = cleaningYearTotal(stats1248[year].slice(0, currentMonth));
     return `
       <td class="faturacao-v4-cell-123"><strong>${formatNumber(apt123.count)}</strong></td>
       <td class="faturacao-v4-cell-123"><strong>${formatEuro(apt123.total)}</strong></td>
@@ -986,7 +1068,7 @@ function buildCleaningCompareTable(years) {
         <tr><th rowspan="2">Mês</th>${heading}</tr>
         <tr>${subHeading}</tr>
       </thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>Total</strong></td>${totals}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}</tr></tbody>
     </table>
   `;
 }
@@ -999,7 +1081,7 @@ function cleaningYearTotal(months = []) {
 }
 
 function buildYearTable(years, apartments) {
-  const monthly = aggregateMonthlyByYear(apartments);
+  const monthly = aggregateMonthlyForChart(apartments);
   const currentYear = getCurrentDataYear();
   const previousYear = currentYear - 1;
   const currentMonth = new Date().getMonth() + 1;
@@ -1007,14 +1089,15 @@ function buildYearTable(years, apartments) {
   const diffHeading = showYearDiff ? `<th>Δ ${currentYear} vs ${previousYear}</th>` : '';
   const heading = years.map((year) => `<th>${year}</th>`).join('') + diffHeading;
   const rows = MONTH_LABELS.map((label, monthIdx) => {
-    const cells = years.map((year) => `<td>${formatEuro(monthly[year]?.[monthIdx] || 0)}</td>`).join('');
+    const empty = monthIdx + 1 > currentMonth;
+    const cells = years.map((year) => `<td>${empty ? '—' : formatEuro(monthly[year]?.[monthIdx] || 0)}</td>`).join('');
     const diff = showYearDiff
       ? yearDiffCell((monthly[currentYear]?.[monthIdx] || 0) - (monthly[previousYear]?.[monthIdx] || 0), false, monthIdx + 1 > currentMonth)
       : '';
     return `<tr><td>${label}</td>${cells}${diff}</tr>`;
   }).join('');
   const totals = years.map((year) => {
-    const total = (monthly[year] || []).reduce((sum, value) => sum + value, 0);
+    const total = sumUntilMonth(monthly[year], currentMonth);
     return `<td><strong>${formatEuro(total)}</strong></td>`;
   }).join('');
   const currentYtd = sumUntilMonth(monthly[currentYear], currentMonth);
@@ -1024,7 +1107,7 @@ function buildYearTable(years, apartments) {
   return `
     <table class="media-faturacao faturacao-v4-table">
       <thead><tr><th>Mês</th>${heading}</tr></thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>Total</strong></td>${totals}${totalDiff}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}${totalDiff}</tr></tbody>
     </table>
   `;
 }
@@ -1045,8 +1128,8 @@ function yearDiffCell(diff, strong = false, empty = false) {
 }
 
 function buildCompareTable(years) {
-  const monthly123 = aggregateMonthlyByYear(['123']);
-  const monthly1248 = aggregateMonthlyByYear(['1248']);
+  const monthly123 = aggregateMonthlyForChart(['123']);
+  const monthly1248 = aggregateMonthlyForChart(['1248']);
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
   const heading = years.map((year) => `<th colspan="3">${year}</th>`).join('');
@@ -1055,14 +1138,14 @@ function buildCompareTable(years) {
     const cells = years.map((year) => {
       const value123 = monthly123[year]?.[monthIdx] || 0;
       const value1248 = monthly1248[year]?.[monthIdx] || 0;
-      const isFuture = Number(year) === currentYear && monthIdx + 1 > currentMonth;
+      const isFuture = monthIdx + 1 > currentMonth;
       return compareCells(value123, value1248, false, isFuture);
     }).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
   }).join('');
   const totals = years.map((year) => {
-    const total123 = (monthly123[year] || []).reduce((sum, value) => sum + value, 0);
-    const total1248 = (monthly1248[year] || []).reduce((sum, value) => sum + value, 0);
+    const total123 = sumUntilMonth(monthly123[year], currentMonth);
+    const total1248 = sumUntilMonth(monthly1248[year], currentMonth);
     return compareCells(total123, total1248, true);
   }).join('');
 
@@ -1072,7 +1155,7 @@ function buildCompareTable(years) {
         <tr><th rowspan="2">Mês</th>${heading}</tr>
         <tr>${subHeading}</tr>
       </thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>Total</strong></td>${totals}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}</tr></tbody>
     </table>
   `;
 }
@@ -1139,28 +1222,6 @@ function fallbackMonthlyEntries(fatura, apt) {
   }));
 }
 
-function aggregateDailyByYear(apartments) {
-  const allow = new Set(apartments.map(String));
-  const result = createYearSeries(366);
-  state.dailyEntries.forEach((entry) => {
-    if (!allow.has(entry.apartamento)) return;
-    if (!result[entry.year]) result[entry.year] = Array(366).fill(0);
-    result[entry.year][calendarDayIndex(entry.month, entry.day) - 1] += entry.amount;
-  });
-  return result;
-}
-
-function aggregateMonthlyByYear(apartments) {
-  const allow = new Set(apartments.map(String));
-  const result = createYearSeries(12);
-  state.dailyEntries.forEach((entry) => {
-    if (!allow.has(entry.apartamento)) return;
-    if (!result[entry.year]) result[entry.year] = Array(12).fill(0);
-    result[entry.year][entry.month - 1] += entry.amount;
-  });
-  return result;
-}
-
 function aggregateMonthlyForChart(apartments) {
   const allow = new Set(apartments.map(String));
   const result = createYearSeries(12);
@@ -1173,8 +1234,8 @@ function aggregateMonthlyForChart(apartments) {
     if (!allow.has(entry.apartamento)) return;
     if (entry.year === currentYear) {
       if (entry.month > currentMonth) return;
-      if (entry.month === currentMonth && entry.day > currentDay) return;
     }
+    if (entry.month === currentMonth && entry.day > currentDay) return;
     if (!result[entry.year]) result[entry.year] = Array(12).fill(0);
     result[entry.year][entry.month - 1] += entry.amount;
   });
@@ -1209,13 +1270,15 @@ function aggregateCleaningByYear(apartments) {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
-  state.rawFaturas.forEach((row) => {
+  const currentDay = now.getDate();
+  state.faturas.forEach((row) => {
     if (!allow.has(String(row.apartamento))) return;
-    const year = Number(row.ano);
-    const month = Number(row.mes);
+    if (!isDetailedReservation(row)) return;
+    const { year, month, day } = getStayPeriod(row);
     const value = Number(row.taxaLimpeza || 0);
     if (!result[year] || !isValidMonth(month) || value <= 0) return;
     if (year === currentYear && month > currentMonth) return;
+    if (month === currentMonth && day != null && day > currentDay) return;
     result[year][month - 1] += value;
   });
   return result;
@@ -1227,12 +1290,18 @@ function aggregateCleaningStats(apartments) {
   getAvailableYears().forEach((year) => {
     result[year] = Array.from({ length: 12 }, () => ({ count: 0, total: 0 }));
   });
-  state.rawFaturas.forEach((row) => {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  const currentDay = now.getDate();
+  state.faturas.forEach((row) => {
     if (!allow.has(String(row.apartamento))) return;
-    const year = Number(row.ano);
-    const month = Number(row.mes);
+    if (!isDetailedReservation(row)) return;
+    const { year, month, day } = getStayPeriod(row);
     const value = Number(row.taxaLimpeza || 0);
     if (!result[year] || !isValidMonth(month) || value <= 0) return;
+    if (year === currentYear && month > currentMonth) return;
+    if (month === currentMonth && day != null && day > currentDay) return;
     result[year][month - 1].count += 1;
     result[year][month - 1].total += value;
   });
@@ -1260,17 +1329,17 @@ function aggregateOccupancyByYear(apartments, mode = state.mode) {
   const result = createYearSeries(12, OCCUPANCY_BASE_YEAR);
   Object.keys(result).forEach((yearKey) => {
     const year = Number(yearKey);
-    let runningPct = 0;
-    let runningMonths = 0;
+    let runningOccupied = 0;
+    let runningAvailable = 0;
     for (let idx = 0; idx < 12; idx++) {
       const month = idx + 1;
       const available = availableNights(year, month, apartments.length);
       const nights = occupied[year]?.[idx] || 0;
-      const monthPct = available ? Math.min(100, (nights / available) * 100) : 0;
+      const monthPct = computeOccupancyPercent(nights, available);
       if (mode === 'cumulativo') {
-        runningPct += monthPct;
-        runningMonths += 1;
-        result[year][idx] = runningMonths ? runningPct / runningMonths : 0;
+        runningOccupied += nights;
+        runningAvailable += available;
+        result[year][idx] = computeOccupancyPercent(runningOccupied, runningAvailable);
       } else {
         result[year][idx] = monthPct;
       }
@@ -1292,8 +1361,8 @@ function aggregateOccupiedByYear(apartments) {
     if (!allow.has(entry.apartamento)) return;
     if (entry.year === currentYear) {
       if (entry.month > currentMonth) return;
-      if (entry.month === currentMonth && entry.day > currentDay) return;
     }
+    if (entry.month === currentMonth && entry.day > currentDay) return;
     if (entry.year < OCCUPANCY_BASE_YEAR) return;
     occupiedDays.add(`${entry.apartamento}-${entry.year}-${entry.month}-${entry.day}`);
   });
@@ -1310,7 +1379,7 @@ function aggregateOccupiedByYear(apartments) {
 function availableNights(year, month, apartmentCount) {
   const now = new Date();
   let days = daysInMonth(year, month);
-  if (year === now.getFullYear() && month === now.getMonth() + 1) {
+  if (month === now.getMonth() + 1) {
     days = Math.min(days, now.getDate());
   }
   return days * apartmentCount;
@@ -1318,11 +1387,15 @@ function availableNights(year, month, apartmentCount) {
 
 function occupancyYtdForYear(apartments, year) {
   const now = new Date();
-  const monthLimit = Number(year) === now.getFullYear() ? now.getMonth() + 1 : 12;
-  const monthly = aggregateOccupancyByYear(apartments, 'mes')[year] || [];
-  const values = monthly.slice(0, monthLimit);
-  if (!values.length) return 0;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+  const monthLimit = now.getMonth() + 1;
+  const occupied = aggregateOccupiedByYear(apartments)[year] || [];
+  let occupiedTotal = 0;
+  let availableTotal = 0;
+  for (let month = 1; month <= monthLimit; month++) {
+    occupiedTotal += Number(occupied[month - 1]) || 0;
+    availableTotal += availableNights(Number(year), month, apartments.length);
+  }
+  return computeOccupancyPercent(occupiedTotal, availableTotal);
 }
 
 function formatPercent(value) {
@@ -1351,8 +1424,12 @@ function monthlyToDate(values, year) {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
   const series = Array.isArray(values) ? [...values] : Array(12).fill(0);
-  if (Number(year) !== currentYear) return series;
-  return series.map((value, idx) => (idx + 1 > currentMonth ? null : value));
+  const limitAllYears = state.mode === 'cumulativo';
+  return series.map((value, idx) => (
+    idx + 1 > currentMonth && (Number(year) === currentYear || limitAllYears)
+      ? null
+      : value
+  ));
 }
 
 function createYearSeries(length, startYear = BASE_YEAR) {
@@ -1366,11 +1443,10 @@ function createYearSeries(length, startYear = BASE_YEAR) {
 }
 
 function getAvailableYears() {
-  const currentYear = new Date().getFullYear();
-  const maxYear = Math.max(currentYear, getMaxEntryYear());
-  const years = [];
-  for (let year = BASE_YEAR; year <= maxYear; year++) years.push(year);
-  return years;
+  return [...new Set(state.dailyEntries
+    .map((entry) => Number(entry.year))
+    .filter((year) => Number.isFinite(year) && year >= BASE_YEAR)
+  )].sort((a, b) => a - b);
 }
 
 function getDefaultTableYears() {
@@ -1384,18 +1460,42 @@ function getTableYears() {
   return state.showAllYears ? getAvailableYears() : getDefaultTableYears();
 }
 
-function getChartYears(yearly) {
+function getChartYears(yearly, options = {}) {
+  const { all = false } = options;
   const available = getAvailableYears();
   const minYear = state.metric === 'occupancy' ? OCCUPANCY_BASE_YEAR : BASE_YEAR;
-  return available
+  const years = available
     .filter((year) => year >= minYear)
-    .filter((year) => (yearly[year] || []).some((value) => Number(value) > 0) || year === new Date().getFullYear());
+    .filter((year) => (yearly[year] || []).some((value) => Number(value) > 0));
+  return all ? years : getDefaultChartYears(years);
+}
+
+function getDefaultChartYears(years) {
+  if (years.length <= 2) return years;
+  const currentDataYear = getCurrentDataYear();
+  const preferred = years.filter((year) => (
+    year === BASE_YEAR
+    || year === currentDataYear
+    || year === currentDataYear - 1
+  ));
+  return preferred.length ? preferred : years.slice(-2);
+}
+
+function getDataYearsForMetric() {
+  const apartments = VIEW_CONFIG[state.view]?.apartments || VIEW_CONFIG.total.apartments;
+  let yearly;
+  if (state.metric === 'occupancy') yearly = aggregateOccupancyByYear(apartments);
+  else if (state.metric === 'revpan') yearly = aggregateRevpanByYear(apartments);
+  else if (state.metric === 'avg-night') yearly = aggregateAverageNightByYear(apartments);
+  else if (state.metric === 'cleaning') yearly = aggregateCleaningByYear(apartments);
+  else yearly = aggregateMonthlyForChart(apartments);
+  return getChartYears(yearly, { all: true });
 }
 
 function getCurrentDataYear() {
   const currentYear = new Date().getFullYear();
   const years = getAvailableYears();
-  return years.includes(currentYear) ? currentYear : years[years.length - 1];
+  return years.includes(currentYear) ? currentYear : years[years.length - 1] || currentYear;
 }
 
 function getMaxEntryYear() {
@@ -1412,20 +1512,10 @@ function cumulativeMonthlyToDate(values, year) {
   let running = 0;
   return values.map((value, idx) => {
     const month = idx + 1;
-    if (Number(year) === currentYear && month > currentMonth) return null;
+    if (month > currentMonth && (Number(year) === currentYear || state.mode === 'cumulativo')) return null;
     running += Number(value) || 0;
     return running;
   });
-}
-
-function calendarDayIndex(month, day) {
-  return dayOfYear(2024, month, day);
-}
-
-function dayOfYear(year, month, day) {
-  const date = new Date(year, month - 1, day);
-  const start = new Date(year, 0, 1);
-  return Math.floor((date - start) / 86400000) + 1;
 }
 
 function daysInMonth(year, month) {
@@ -1439,6 +1529,30 @@ function isValidMonth(month) {
 
 function isValidDay(year, month, day) {
   return Number.isFinite(day) && day >= 1 && day <= daysInMonth(year, month);
+}
+
+function getStayPeriod(row) {
+  const date = parseLocalDate(row?.checkIn);
+  if (date) {
+    return {
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate()
+    };
+  }
+  return {
+    year: Number(row?.ano),
+    month: Number(row?.mes),
+    day: null
+  };
+}
+
+function isDetailedReservation(row) {
+  return Boolean(
+    parseLocalDate(row?.checkIn)
+    || Number(row?.noites || 0) >= 2
+    || row?.tipo === 'reserva'
+  );
 }
 
 function withAlpha(color, alpha) {
@@ -1477,5 +1591,6 @@ function cleanup() {
   viewButtonsController = null;
   tableButtonsController = null;
   progressButtonsController = null;
+  document.body.classList.remove('analisev4-table-open');
   resetChart();
 }

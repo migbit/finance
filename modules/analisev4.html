@@ -58,7 +58,18 @@
             <span class="progresso-v4-label">Para total anterior</span>
             <strong id="progresso-v4-target-value">—</strong>
             <small id="progresso-v4-target-meta">—</small>
-            <span class="progresso-v4-delta" id="progresso-v4-target-delta">—</span>
+            <div
+              class="progresso-v4-target-track"
+              id="progresso-v4-target-progress"
+              role="progressbar"
+              aria-label="Progresso para igualar o total do ano anterior"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+            >
+              <span id="progresso-v4-target-bar"></span>
+            </div>
+            <span class="progresso-v4-delta is-neutral" id="progresso-v4-target-delta">—</span>
           </article>
         </div>
       </div>
@@ -70,14 +81,10 @@
           <div class="segmented segmented--primary faturacao-v4-metric-switch" role="tablist" aria-label="Selecionar métrica do gráfico">
             <button class="filter-btn active" data-faturacao-v4-metric="revenue" role="tab" aria-pressed="true">Faturação</button>
             <button class="filter-btn" data-faturacao-v4-metric="occupancy" role="tab" aria-pressed="false">Ocupação</button>
-            <button class="filter-btn" data-faturacao-v4-metric="cleaning" role="tab" aria-pressed="false">Taxa de Limpeza</button>
+            <button class="filter-btn" data-faturacao-v4-metric="cleaning" role="tab" aria-pressed="false">Taxa de limpeza</button>
             <button class="filter-btn" data-faturacao-v4-metric="revpan" role="tab" aria-pressed="false">RevPAN</button>
             <button class="filter-btn" data-faturacao-v4-metric="avg-night" role="tab" aria-pressed="false">Média/noite</button>
           </div>
-        </div>
-
-        <div class="chart-wrap faturacao-v4-chart-wrap">
-          <canvas id="chart-faturacao-v4" aria-label="Gráfico de faturação, ocupação, taxa de limpeza, RevPAN ou média por noite" role="img"></canvas>
         </div>
 
         <div class="chart-toolbar faturacao-v4-toolbar">
@@ -92,11 +99,20 @@
             <button class="filter-btn" data-faturacao-v4-view="1248" role="tab" aria-pressed="false">1248</button>
             <button class="filter-btn" data-faturacao-v4-view="compare" role="tab" aria-pressed="false">123 vs 1248</button>
           </div>
+
+          <div class="toolbar-right">
+            <button type="button" class="chip-btn" id="faturacao-v4-toggle-chart-years" aria-pressed="false">Ver todos os anos</button>
+          </div>
+        </div>
+
+        <div class="chart-wrap faturacao-v4-chart-wrap">
+          <canvas id="chart-faturacao-v4" aria-label="Gráfico de faturação, ocupação, taxa de limpeza, RevPAN ou média por noite" role="img"></canvas>
         </div>
 
         <div class="faturacao-v4-table-actions">
           <button type="button" class="chip-btn" id="faturacao-v4-toggle-table" aria-expanded="false">Mostrar tabela</button>
           <button type="button" class="chip-btn faturacao-v4-history-btn" id="faturacao-v4-toggle-years" hidden>Mostrar anos desde 2024</button>
+          <button type="button" class="chip-btn faturacao-v4-expand-btn" id="faturacao-v4-expand-table" aria-expanded="false" hidden>Ver em largura total</button>
         </div>
 
         <div class="table-wrap faturacao-v4-table-wrap" id="faturacao-v4-table-wrap" hidden>
@@ -133,8 +149,25 @@
           </div>
         </div>
 
+        <div class="reservas-v4-table-actions">
+          <button type="button" class="chip-btn" id="reservas-v4-expand-table" aria-expanded="false">Ver em largura total</button>
+        </div>
+
         <div class="table-wrap reservas-v4-table-wrap">
           <div id="reservas-v4-table" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="mod-qualidade-v4" class="report-section" data-module="qualidade-v4">
+      <div class="viz-card qualidade-v4-card">
+        <div class="section-heading analisev4-card-heading qualidade-v4-heading">
+          <h4>Qualidade dos dados</h4>
+          <span class="qualidade-v4-count" id="qualidade-v4-count">—</span>
+          <button type="button" class="chip-btn" id="qualidade-v4-toggle" aria-expanded="false" hidden>Ver correções</button>
+        </div>
+        <div id="qualidade-v4-content" aria-live="polite">
+          <p class="faturacao-v4-empty">A verificar os registos…</p>
         </div>
       </div>
     </section>

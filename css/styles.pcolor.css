@@ -4434,7 +4434,8 @@ body[data-page="analisev4"] .chart-toolbar .segmented button {
 
 /* --- Analise V4 ---------------------------------------------------------- */
 body[data-page="analisev4"] main {
-  max-width: 100%;
+  max-width: 1500px;
+  margin-inline: auto;
 }
 
 body[data-page="analisev4"] .analisev4-intro {
@@ -4453,6 +4454,12 @@ body[data-page="analisev4"] .faturacao-v4-card {
 }
 
 body[data-page="analisev4"] .reservas-v4-card {
+  gap: 1rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+}
+
+body[data-page="analisev4"] .qualidade-v4-card {
   gap: 1rem;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-1);
@@ -4501,6 +4508,11 @@ body[data-page="analisev4"] .reservas-v4-table-wrap {
   margin-top: 0.25rem;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+body[data-page="analisev4"] .reservas-v4-table-actions {
+  display: flex;
+  justify-content: center;
 }
 
 body[data-page="analisev4"] .reservas-v4-table th,
@@ -4645,6 +4657,28 @@ body[data-page="analisev4"] .progresso-v4-delta.is-negative {
   color: #dc2626;
 }
 
+body[data-page="analisev4"] .progresso-v4-delta.is-neutral {
+  background: #eef2f7;
+  color: #475569;
+}
+
+body[data-page="analisev4"] .progresso-v4-target-track {
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+body[data-page="analisev4"] .progresso-v4-target-track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: #64748b;
+  transition: width 0.35s ease;
+}
+
 body[data-page="analisev4"] .analisev4-card-heading {
   justify-content: center;
   margin-bottom: 0;
@@ -4694,9 +4728,12 @@ body[data-page="analisev4"] .faturacao-v4-toolbar {
 }
 
 body[data-page="analisev4"] .faturacao-v4-toolbar::after {
-  content: '';
-  grid-area: right;
-  min-width: 1px;
+  content: none;
+}
+
+body[data-page="analisev4"] .faturacao-v4-toolbar .toolbar-right {
+  display: flex;
+  justify-content: flex-end;
 }
 
 body[data-page="analisev4"] .faturacao-v4-table-actions {
@@ -4708,22 +4745,48 @@ body[data-page="analisev4"] .faturacao-v4-table-actions {
 
 body[data-page="analisev4"] .faturacao-v4-table-wrap[hidden],
 body[data-page="analisev4"] .faturacao-v4-history-btn[hidden],
+body[data-page="analisev4"] .faturacao-v4-expand-btn[hidden],
 body[data-page="analisev4"] .faturacao-v4-table-actions[hidden],
 body[data-page="analisev4"] #faturacao-v4-mode-switch[hidden],
+body[data-page="analisev4"] #faturacao-v4-toggle-chart-years[hidden],
 body[data-page="analisev4"] [data-faturacao-v4-mode][hidden] {
   display: none;
 }
 
 body[data-page="analisev4"] .faturacao-v4-table-wrap {
   margin-top: 0.25rem;
+  overflow: auto;
 }
 
 body[data-page="analisev4"] .faturacao-v4-table th,
 body[data-page="analisev4"] .faturacao-v4-table td {
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 body[data-page="analisev4"] .faturacao-v4-table thead th {
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table th:first-child,
+body[data-page="analisev4"] .faturacao-v4-table td:first-child,
+body[data-page="analisev4"] .reservas-v4-table th:first-child,
+body[data-page="analisev4"] .reservas-v4-table td:first-child,
+body[data-page="analisev4"] .qualidade-v4-table th:first-child,
+body[data-page="analisev4"] .qualidade-v4-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--card);
+}
+
+body[data-page="analisev4"] .faturacao-v4-table thead th:first-child,
+body[data-page="analisev4"] .reservas-v4-table thead th:first-child,
+body[data-page="analisev4"] .qualidade-v4-table thead th:first-child {
+  z-index: 4;
   background: #f8fafc;
 }
 
@@ -4762,6 +4825,124 @@ body[data-page="analisev4"] .faturacao-v4-empty {
   text-align: center;
 }
 
+body[data-page="analisev4"] .reservas-v4-table,
+body[data-page="analisev4"] .qualidade-v4-table {
+  font-variant-numeric: tabular-nums;
+}
+
+body[data-page="analisev4"] .reservas-v4-table thead th,
+body[data-page="analisev4"] .qualidade-v4-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f8fafc;
+}
+
+body[data-page="analisev4"] .table-wrap.is-expanded {
+  position: fixed;
+  inset: 1rem;
+  z-index: 2000;
+  max-height: none;
+  margin: 0;
+  padding: 3.75rem 1rem 1rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--shadow-2);
+}
+
+body.analisev4-table-open {
+  overflow: hidden;
+}
+
+body[data-page="analisev4"] .table-expand-btn-active {
+  position: fixed;
+  top: 1.75rem;
+  right: 1.75rem;
+  z-index: 2002;
+}
+
+body[data-page="analisev4"] .qualidade-v4-heading {
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+body[data-page="analisev4"] .qualidade-v4-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+body[data-page="analisev4"] .qualidade-v4-count.is-complete {
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+body[data-page="analisev4"] .qualidade-v4-success {
+  margin: 0;
+  padding: 1rem;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #166534;
+  text-align: center;
+  font-weight: 700;
+}
+
+body[data-page="analisev4"] .qualidade-v4-table-wrap {
+  max-height: 460px;
+  overflow: auto;
+}
+
+body[data-page="analisev4"] .qualidade-v4-issues {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+body[data-page="analisev4"] .qualidade-v4-issues span {
+  display: inline-flex;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+body[data-page="analisev4"] .qualidade-v4-edit {
+  display: inline-flex;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+body[data-page="analisev4"] .qualidade-v4-no-link {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 1180px) {
+  body[data-page="analisev4"] .progresso-v4-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body[data-page="analisev4"] .progresso-v4-tile[data-progress-kpi="target"] {
+    grid-column: span 2;
+  }
+}
+
 @media (max-width: 768px) {
   body[data-page="analisev4"] .faturacao-v4-card,
   body[data-page="analisev4"] .report-section {
@@ -4783,7 +4964,20 @@ body[data-page="analisev4"] .faturacao-v4-empty {
   }
 
   body[data-page="analisev4"] .progresso-v4-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  body[data-page="analisev4"] .progresso-v4-tile {
+    padding: 0.8rem;
+  }
+
+  body[data-page="analisev4"] .progresso-v4-tile strong {
+    font-size: 1.15rem;
+  }
+
+  body[data-page="analisev4"] .progresso-v4-tile[data-progress-kpi="target"] {
+    grid-column: 1 / -1;
   }
 
   body[data-page="analisev4"] .progresso-v4-switch {
@@ -4797,7 +4991,7 @@ body[data-page="analisev4"] .faturacao-v4-empty {
 
   body[data-page="analisev4"] .faturacao-v4-toolbar {
     grid-template-columns: 1fr;
-    grid-template-areas: 'center' 'left';
+    grid-template-areas: 'center' 'left' 'right';
     justify-items: stretch;
   }
 
@@ -4816,8 +5010,23 @@ body[data-page="analisev4"] .faturacao-v4-empty {
     flex: 0 0 auto;
   }
 
+  body[data-page="analisev4"] .faturacao-v4-toolbar .toolbar-right {
+    justify-content: center;
+  }
+
   body[data-page="analisev4"] .table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  body[data-page="analisev4"] .table-wrap.is-expanded {
+    inset: 0.4rem;
+    padding: 3.5rem 0.5rem 0.5rem;
+    border-radius: 10px;
+  }
+
+  body[data-page="analisev4"] .table-expand-btn-active {
+    top: 0.9rem;
+    right: 0.9rem;
   }
 }

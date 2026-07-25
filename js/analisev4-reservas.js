@@ -47,10 +47,20 @@ async function loadData() {
     state.nightlyEntries = nightlyEntries;
     syncYearSelect();
     render();
+    renderQualityDashboard();
   } catch (error) {
     state.rows = [];
     state.nightlyEntries = [];
     renderMessage('Sem dados disponíveis.');
+    const qualityTarget = document.getElementById('qualidade-v4-content');
+    const qualityCount = document.getElementById('qualidade-v4-count');
+    const qualityToggle = document.getElementById('qualidade-v4-toggle');
+    if (qualityTarget) {
+      qualityTarget.hidden = false;
+      qualityTarget.innerHTML = '<p class="faturacao-v4-empty">Não foi possível verificar os registos.</p>';
+    }
+    if (qualityCount) qualityCount.textContent = '—';
+    if (qualityToggle) qualityToggle.hidden = true;
     window.errorHandler?.handleError('reservas-v4', error, 'loadData', loadData);
   } finally {
     window.loadingManager?.hide('reservas-v4');
@@ -87,6 +97,31 @@ function bindControls() {
     state.year = event.target.value || 'all';
     render();
   }, { signal });
+
+  document.getElementById('reservas-v4-expand-table')?.addEventListener('click', (event) => {
+    const wrap = document.querySelector('.reservas-v4-table-wrap');
+    const expanded = !wrap?.classList.contains('is-expanded');
+    wrap?.classList.toggle('is-expanded', expanded);
+    document.body.classList.toggle('analisev4-table-open', expanded);
+    event.currentTarget.classList.toggle('table-expand-btn-active', expanded);
+    event.currentTarget.textContent = expanded ? 'Fechar largura total' : 'Ver em largura total';
+    event.currentTarget.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }, { signal });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const button = document.getElementById('reservas-v4-expand-table');
+    if (document.querySelector('.reservas-v4-table-wrap')?.classList.contains('is-expanded')) button?.click();
+  }, { signal });
+
+  document.getElementById('qualidade-v4-toggle')?.addEventListener('click', (event) => {
+    const content = document.getElementById('qualidade-v4-content');
+    if (!content) return;
+    const expanded = content.hidden;
+    content.hidden = !expanded;
+    event.currentTarget.textContent = expanded ? 'Ocultar correções' : 'Ver correções';
+    event.currentTarget.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }, { signal });
   updateControls();
 }
 
@@ -112,7 +147,7 @@ function syncYearSelect() {
   const allowed = new Set(apartments.map(String));
   const years = [...new Set(state.rows
     .filter((row) => allowed.has(String(row.apartamento ?? '')))
-    .map((row) => Number(row.ano))
+    .map((row) => analysisYear(row))
     .filter((year) => Number.isFinite(year) && year >= 2025)
   )].sort((a, b) => b - a);
 
@@ -138,11 +173,15 @@ function render() {
 function filterRows(rows) {
   const apartments = VIEW_APTS[state.view] || VIEW_APTS.total;
   const allowed = new Set(apartments.map(String));
-  return (rows || []).filter((row) =>
-    allowed.has(String(row.apartamento ?? row.apartment ?? ''))
-    && Number(row.ano) >= 2025
-    && (state.year === 'all' || Number(row.ano) === Number(state.year))
-  );
+  const today = new Date();
+  return (rows || []).filter((row) => {
+    const year = analysisYear(row);
+    const date = analysisDate(row);
+    return allowed.has(String(row.apartamento ?? row.apartment ?? ''))
+      && year >= 2025
+      && (state.year === 'all' || year === Number(state.year))
+      && (!date || date <= today);
+  });
 }
 
 function renderNightsTable(rows) {
@@ -155,7 +194,7 @@ function renderNightsTable(rows) {
     Object.fromEntries(NIGHT_BUCKETS.map((bucket) => [bucket, 0]))
   );
   rows.forEach((row) => {
-    const month = Number(row.mes);
+    const month = analysisMonth(row);
     const bucket = nightBucket(row.noites);
     if (!isMonth(month) || !bucket) return;
     matrix[month - 1][bucket] += 1;
@@ -172,6 +211,10 @@ function renderNightsTable(rows) {
       `<td class="${bucket === dominantBucket ? 'reservas-v4-highlight' : ''}">${matrix[monthIdx][bucket]}</td>`).join('')}<td><strong>${total}</strong></td></tr>`;
   }).join('');
   const grandTotal = NIGHT_BUCKETS.reduce((sum, bucket) => sum + totals[bucket], 0);
+  if (!grandTotal) {
+    renderMessage('Sem reservas com número de noites registado.');
+    return;
+  }
   const totalRow = `<tr class="reservas-v4-total-row"><td><strong>${periodTotalLabel()}</strong></td>${
     NIGHT_BUCKETS.map((bucket) => `<td class="${bucket === dominantBucket ? 'reservas-v4-highlight' : ''}"><strong>${totals[bucket]}</strong></td>`).join('')
   }<td><strong>${grandTotal}</strong></td></tr>`;
@@ -201,9 +244,11 @@ function renderGuestsTable(rows) {
     Object.fromEntries(GUEST_BUCKETS.map((bucket) => [bucket, 0]))
   );
   rows.forEach((row) => {
-    const month = Number(row.mes);
+    const month = analysisMonth(row);
+    const bucket = guestBucket(row);
     if (!isMonth(month)) return;
-    matrix[month - 1][guestBucket(row)] += 1;
+    if (!bucket) return;
+    matrix[month - 1][bucket] += 1;
   });
 
   const totals = Object.fromEntries(GUEST_BUCKETS.map((bucket) => [bucket, 0]));
@@ -217,6 +262,10 @@ function renderGuestsTable(rows) {
       `<td class="${bucket === dominantBucket ? 'reservas-v4-highlight' : ''}">${matrix[monthIdx][bucket]}</td>`).join('')}<td><strong>${total}</strong></td></tr>`;
   }).join('');
   const grandTotal = GUEST_BUCKETS.reduce((sum, bucket) => sum + totals[bucket], 0);
+  if (!grandTotal) {
+    renderMessage('Sem reservas com hóspedes registados.');
+    return;
+  }
   const totalRow = `<tr class="reservas-v4-total-row"><td><strong>${periodTotalLabel()}</strong></td>${
     GUEST_BUCKETS.map((bucket) => `<td class="${bucket === dominantBucket ? 'reservas-v4-highlight' : ''}"><strong>${totals[bucket]}</strong></td>`).join('')
   }<td><strong>${grandTotal}</strong></td></tr>`;
@@ -254,7 +303,7 @@ function renderLeadtimeTable(rows) {
   renderTable(`
     <p class="reservas-v4-note">Antecedência entre a data da reserva e o check-in · ${periodLabel()}.</p>
     <table class="media-faturacao reservas-v4-table">
-      <thead><tr><th>Lead time</th><th>Reservas</th><th>Preço/noite</th><th>% do total</th></tr></thead>
+      <thead><tr><th>Antecedência</th><th>Reservas</th><th>Preço/noite</th><th>% do total</th></tr></thead>
       <tbody>${body}<tr class="reservas-v4-total-row"><td><strong>Total</strong></td><td><strong>${result.total}</strong></td><td>—</td><td><strong>100%</strong></td></tr></tbody>
     </table>
   `);
@@ -262,7 +311,8 @@ function renderLeadtimeTable(rows) {
 
 function renderWeekpartTable(rows, entries) {
   const apartments = VIEW_APTS[state.view] || VIEW_APTS.total;
-  const metrics = computeWeekpartMetrics(entries, { apartments });
+  const years = [...new Set(rows.map((row) => analysisYear(row)).filter((year) => year >= 2025))];
+  const metrics = computeWeekpartMetrics(entries, { apartments, years });
   if (!metrics) {
     renderMessage('Sem datas precisas suficientes para comparar os dias.');
     return;
@@ -348,6 +398,138 @@ function renderBookingMonthTable(rows) {
   `);
 }
 
+function renderQualityDashboard() {
+  const target = document.getElementById('qualidade-v4-content');
+  const count = document.getElementById('qualidade-v4-count');
+  const toggle = document.getElementById('qualidade-v4-toggle');
+  if (!target || !count || !toggle) return;
+
+  const rows = state.rows.filter((row) => analysisYear(row) >= 2025);
+  const duplicateCounts = new Map();
+  rows.forEach((row) => {
+    const key = duplicateKey(row);
+    if (key) duplicateCounts.set(key, (duplicateCounts.get(key) || 0) + 1);
+  });
+
+  const findings = rows.map((row) => {
+    const issues = [];
+    const checkIn = strictLocalDate(row.checkIn);
+    const checkOut = strictLocalDate(row.checkOut);
+    const booking = strictLocalDate(row.dataReserva);
+    const nights = Number(row.noites);
+    const guests = (Number(row.hospedesAdultos) || 0) + (Number(row.hospedesCriancas) || 0);
+
+    if (!checkIn) issues.push('Sem check-in');
+    if (!checkOut) issues.push('Sem checkout');
+    if (!booking) issues.push('Sem data da reserva');
+    const minimumNights = isDirectInvoice(row) ? 1 : 2;
+    if (!Number.isInteger(nights) || nights < minimumNights) issues.push('Noites inválidas');
+    if (guests < 1) issues.push('Sem hóspedes');
+    const key = duplicateKey(row);
+    if (key && duplicateCounts.get(key) > 1) issues.push('Possível duplicado');
+    return issues.length ? { row, issues, checkIn } : null;
+  }).filter(Boolean);
+
+  if (!findings.length) {
+    count.textContent = 'Completo';
+    count.classList.add('is-complete');
+    toggle.hidden = true;
+    target.hidden = false;
+    target.innerHTML = '<p class="qualidade-v4-success">Todos os registos desde 2025 têm os dados essenciais preenchidos.</p>';
+    return;
+  }
+
+  count.classList.remove('is-complete');
+  count.textContent = `${findings.length} ${findings.length === 1 ? 'registo' : 'registos'}`;
+  toggle.hidden = false;
+  toggle.textContent = 'Ver correções';
+  toggle.setAttribute('aria-expanded', 'false');
+  target.hidden = true;
+  const body = findings.map(({ row, issues, checkIn }) => {
+    const reference = row.numeroFatura || row.id || 'Sem referência';
+    const editLink = row.id
+      ? `<a class="qualidade-v4-edit" href="faturas.html?editar=${encodeURIComponent(row.id)}">Corrigir</a>`
+      : '<span class="qualidade-v4-no-link">Sem ligação</span>';
+    return `
+      <tr>
+        <td><strong>${escapeHtml(reference)}</strong></td>
+        <td>${escapeHtml(String(row.apartamento || '—'))}</td>
+        <td>${checkIn ? formatShortDate(checkIn) : '—'}</td>
+        <td><div class="qualidade-v4-issues">${issues.map((issue) =>
+          `<span>${escapeHtml(issue)}</span>`).join('')}</div></td>
+        <td>${editLink}</td>
+      </tr>
+    `;
+  }).join('');
+
+  target.innerHTML = `
+    <p class="reservas-v4-note">Registos que podem afetar os cálculos. Os bebés não entram na validação de hóspedes e as extensões diretas da série D podem ter uma noite.</p>
+    <div class="table-wrap qualidade-v4-table-wrap">
+      <table class="media-faturacao qualidade-v4-table">
+        <thead><tr><th>Fatura</th><th>Apartamento</th><th>Check-in</th><th>A corrigir</th><th>Ação</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function analysisDate(row) {
+  const checkIn = strictLocalDate(row?.checkIn);
+  if (checkIn) return checkIn;
+  const year = Number(row?.ano);
+  const month = Number(row?.mes);
+  const day = Number(row?.dia);
+  if (!Number.isInteger(year) || !isMonth(month) || !Number.isInteger(day) || day < 1) return null;
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function analysisYear(row) {
+  return analysisDate(row)?.getFullYear() || Number(row?.ano);
+}
+
+function analysisMonth(row) {
+  return analysisDate(row)?.getMonth() + 1 || Number(row?.mes);
+}
+
+function strictLocalDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = parseLocalDate(value);
+  if (!date) return null;
+  const normalized = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')
+  ].join('-');
+  return normalized === value ? date : null;
+}
+
+function isDirectInvoice(row) {
+  const channel = String(row?.canal || '').trim().toUpperCase();
+  const reference = String(row?.numeroFatura || '').trim();
+  return channel === 'DIRETO' || /^D\d+$/i.test(reference);
+}
+
+function duplicateKey(row) {
+  const checkIn = strictLocalDate(row?.checkIn);
+  const checkOut = strictLocalDate(row?.checkOut);
+  if (!checkIn || !checkOut) return null;
+  return `${String(row.apartamento || '')}|${row.checkIn}|${row.checkOut}`;
+}
+
+function formatShortDate(date) {
+  return date.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function nightBucket(value) {
   const nights = Number(value);
   if (!Number.isFinite(nights) || nights < 2) return null;
@@ -356,10 +538,10 @@ function nightBucket(value) {
 }
 
 function guestBucket(row) {
-  const guests = Math.round(Math.max(
-    1,
+  const guests = Math.round(
     (Number(row.hospedesAdultos) || 0) + (Number(row.hospedesCriancas) || 0)
-  ));
+  );
+  if (guests < 1) return null;
   return guests >= 8 ? '8+' : String(guests);
 }
 
@@ -421,4 +603,5 @@ function renderMessage(message) {
 function cleanup() {
   controlsController?.abort();
   controlsController = null;
+  document.body.classList.remove('analisev4-table-open');
 }
