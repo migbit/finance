@@ -3607,11 +3607,13 @@ function renderSummaries(summaries) {
     showBtn.type = 'button';
     showBtn.textContent = 'Mostrar';
     showBtn.setAttribute('aria-expanded', 'false');
-    header.append(title, showBtn);
 
     const details = document.createElement('div');
     details.className = 'gym-summary-details';
+    details.id = `gym-summary-${normalizeKey(summaryDoc.id || `${summaryDoc.date}-${summaryDoc.gym}-${summaryDoc.treino}`)}`;
     details.hidden = true;
+    showBtn.setAttribute('aria-controls', details.id);
+    header.append(title, showBtn);
     const actions = document.createElement('div');
     actions.className = 'gym-summary-actions';
     const copyBtn = document.createElement('button');
