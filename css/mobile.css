@@ -982,3 +982,40 @@
    - Input zoom prevention on iOS
    
    ========================================================= */
+
+/* Análise: leitura rápida das tabelas em ecrãs pequenos */
+@media (max-width: 768px) {
+  body[data-page="analisev4"] .faturacao-v4-metric-switch,
+  body[data-page="analisev4"] .reservas-v4-table-switch,
+  body[data-page="analisev4"] .chart-toolbar .segmented {
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  body[data-page="analisev4"] .faturacao-v4-table th:first-child,
+  body[data-page="analisev4"] .faturacao-v4-table td:first-child,
+  body[data-page="analisev4"] .reservas-v4-table th:first-child,
+  body[data-page="analisev4"] .reservas-v4-table td:first-child {
+    position: sticky !important;
+    left: 0;
+    z-index: 2;
+    background: var(--card, #fff);
+    box-shadow: 1px 0 rgba(15, 23, 42, 0.08);
+  }
+
+  body[data-page="analisev4"] .faturacao-v4-table thead th:first-child,
+  body[data-page="analisev4"] .reservas-v4-table thead th:first-child {
+    z-index: 4;
+    background: #f8fafc;
+  }
+
+  body[data-page="analisev4"] .faturacao-v4-total-row td:first-child,
+  body[data-page="analisev4"] .reservas-v4-total-row td:first-child {
+    background: #f8fafc !important;
+  }
+
+  body[data-page="analisev4"] .qualidade-v4-alert {
+    padding: 0.75rem;
+    border-radius: 10px;
+  }
+}

@@ -4459,12 +4459,6 @@ body[data-page="analisev4"] .reservas-v4-card {
   box-shadow: var(--shadow-1);
 }
 
-body[data-page="analisev4"] .qualidade-v4-card {
-  gap: 1rem;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-1);
-}
-
 body[data-page="analisev4"] .reservas-v4-controls {
   display: flex;
   flex-direction: column;
@@ -4528,13 +4522,30 @@ body[data-page="analisev4"] .reservas-v4-table td:first-child {
 
 body[data-page="analisev4"] .reservas-v4-total-row td {
   background: #f8fafc !important;
+  border-top: 2px solid #cbd5e1;
 }
 
 body[data-page="analisev4"] .reservas-v4-highlight,
 body[data-page="analisev4"] tr.reservas-v4-highlight td {
-  background: #dcfce7 !important;
+  background: #ecfdf5 !important;
   color: #166534;
+  font-weight: 700;
+  box-shadow: inset 0 -2px rgba(22, 101, 52, 0.14);
+}
+
+body[data-page="analisev4"] .reservas-v4-diff-positive {
+  color: #15803d;
   font-weight: 800;
+}
+
+body[data-page="analisev4"] .reservas-v4-diff-negative {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+body[data-page="analisev4"] .reservas-v4-diff-neutral {
+  color: var(--text-dim);
+  font-weight: 700;
 }
 
 body[data-page="analisev4"] .reservas-v4-note {
@@ -4792,6 +4803,7 @@ body[data-page="analisev4"] .qualidade-v4-table thead th:first-child {
 
 body[data-page="analisev4"] .faturacao-v4-total-row td {
   background: #f8fafc !important;
+  border-top: 2px solid #cbd5e1;
 }
 
 body[data-page="analisev4"] .faturacao-v4-table .faturacao-v4-diff-positive {
@@ -4804,8 +4816,19 @@ body[data-page="analisev4"] .faturacao-v4-table .faturacao-v4-diff-negative {
   font-weight: 700;
 }
 
+body[data-page="analisev4"] .faturacao-v4-table .faturacao-v4-diff-neutral {
+  color: var(--text-dim) !important;
+  font-weight: 700;
+}
+
 body[data-page="analisev4"] .faturacao-v4-table .faturacao-v4-diff-empty {
   color: var(--text-dim) !important;
+}
+
+body[data-page="analisev4"] .faturacao-v4-table td.faturacao-v4-best {
+  background: #ecfdf5 !important;
+  font-weight: 800;
+  box-shadow: inset 0 -2px rgba(22, 101, 52, 0.14);
 }
 
 body[data-page="analisev4"] .faturacao-v4-cell-123,
@@ -4863,66 +4886,48 @@ body[data-page="analisev4"] .table-expand-btn-active {
   z-index: 2002;
 }
 
-body[data-page="analisev4"] .qualidade-v4-heading {
-  flex-direction: row;
-  justify-content: center;
-  gap: 0.65rem;
+body[data-page="analisev4"] .qualidade-v4-alert {
+  margin: 0 0 18px;
+  padding: 0.85rem 1rem;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #dc2626;
+  border-radius: 12px;
+  background: #fff1f2;
+  color: #991b1b;
+  box-shadow: 0 8px 24px rgba(153, 27, 27, 0.08);
 }
 
-body[data-page="analisev4"] .qualidade-v4-count {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0.2rem 0.65rem;
-  border-radius: 999px;
-  background: #fff7ed;
-  color: #c2410c;
-  font-size: 0.78rem;
-  font-weight: 800;
+body[data-page="analisev4"] .qualidade-v4-alert[hidden] {
+  display: none;
 }
 
-body[data-page="analisev4"] .qualidade-v4-count.is-complete {
-  background: #ecfdf5;
-  color: #15803d;
-}
-
-body[data-page="analisev4"] .qualidade-v4-success {
-  margin: 0;
-  padding: 1rem;
-  border-radius: 10px;
-  background: #f0fdf4;
-  color: #166534;
-  text-align: center;
+body[data-page="analisev4"] .qualidade-v4-alert-title {
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
-body[data-page="analisev4"] .qualidade-v4-table-wrap {
-  max-height: 460px;
-  overflow: auto;
+body[data-page="analisev4"] .qualidade-v4-alert-list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
 }
 
-body[data-page="analisev4"] .qualidade-v4-issues {
+body[data-page="analisev4"] .qualidade-v4-alert-item {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.35rem;
-}
-
-body[data-page="analisev4"] .qualidade-v4-issues span {
-  display: inline-flex;
-  padding: 0.16rem 0.5rem;
-  border-radius: 999px;
-  background: #fff7ed;
-  color: #9a3412;
-  font-size: 0.75rem;
-  font-weight: 700;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid rgba(220, 38, 38, 0.16);
+  font-size: 0.84rem;
 }
 
 body[data-page="analisev4"] .qualidade-v4-edit {
   display: inline-flex;
+  flex: 0 0 auto;
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
-  background: var(--primary);
+  background: #dc2626;
   color: #fff;
   font-size: 0.78rem;
   font-weight: 700;
@@ -5028,5 +5033,11 @@ body[data-page="analisev4"] .qualidade-v4-no-link {
   body[data-page="analisev4"] .table-expand-btn-active {
     top: 0.9rem;
     right: 0.9rem;
+  }
+
+  body[data-page="analisev4"] .qualidade-v4-alert-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 }

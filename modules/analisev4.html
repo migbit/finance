@@ -18,6 +18,16 @@
       <h2>Análise</h2>
     </div>
 
+    <aside
+      class="qualidade-v4-alert"
+      id="qualidade-v4-alert"
+      role="alert"
+      aria-live="assertive"
+      hidden
+    >
+      <div id="qualidade-v4-alert-content"></div>
+    </aside>
+
     <section id="mod-progresso-v4" class="report-section" data-module="progresso-v4">
       <div class="viz-card progresso-v4-card">
         <div class="analisev4-dashboard-header">
@@ -159,18 +169,6 @@
       </div>
     </section>
 
-    <section id="mod-qualidade-v4" class="report-section" data-module="qualidade-v4">
-      <div class="viz-card qualidade-v4-card">
-        <div class="section-heading analisev4-card-heading qualidade-v4-heading">
-          <h4>Qualidade dos dados</h4>
-          <span class="qualidade-v4-count" id="qualidade-v4-count">—</span>
-          <button type="button" class="chip-btn" id="qualidade-v4-toggle" aria-expanded="false" hidden>Ver correções</button>
-        </div>
-        <div id="qualidade-v4-content" aria-live="polite">
-          <p class="faturacao-v4-empty">A verificar os registos…</p>
-        </div>
-      </div>
-    </section>
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>

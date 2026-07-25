@@ -903,18 +903,23 @@ function buildOccupancyYearTable(years, apartments) {
   const diffHeading = showYearDiff ? `<th>Δ ${currentYear} vs ${previousYear}</th>` : '';
   const heading = visibleYears.map((year) => `<th>${year}</th>`).join('') + diffHeading;
   const rows = MONTH_LABELS.map((label, monthIdx) => {
+    const monthValues = visibleYears.map((year) => occupancy[year]?.[monthIdx] || 0);
+    const bestValue = Math.max(0, ...monthValues);
     const cells = visibleYears.map((year) => {
       const empty = monthIdx + 1 > currentMonth;
-      return `<td>${empty ? '—' : formatPercent(occupancy[year]?.[monthIdx] || 0)}</td>`;
+      const value = occupancy[year]?.[monthIdx] || 0;
+      return `<td class="${bestValueClass(value, bestValue, empty)}">${empty ? '—' : formatPercent(value)}</td>`;
     }).join('');
     const diff = showYearDiff
       ? occupancyDiffCell((occupancy[currentYear]?.[monthIdx] || 0) - (occupancy[previousYear]?.[monthIdx] || 0), monthIdx + 1 > currentMonth)
       : '';
     return `<tr><td>${label}</td>${cells}${diff}</tr>`;
   }).join('');
-  const totals = visibleYears.map((year) => {
-    const value = occupancyYtdForYear(apartments, year);
-    return `<td><strong>${formatPercent(value)}</strong></td>`;
+  const totalValues = visibleYears.map((year) => occupancyYtdForYear(apartments, year));
+  const bestTotal = Math.max(0, ...totalValues);
+  const totals = visibleYears.map((year, index) => {
+    const value = totalValues[index];
+    return `<td class="${bestValueClass(value, bestTotal)}"><strong>${formatPercent(value)}</strong></td>`;
   }).join('');
   const totalDiff = showYearDiff
     ? occupancyDiffCell(occupancyYtdForYear(apartments, currentYear) - occupancyYtdForYear(apartments, previousYear), false, true)
@@ -974,8 +979,8 @@ function occupancyCompareCells(value123, value1248, strong = false, empty = fals
   const open = strong ? '<strong>' : '';
   const close = strong ? '</strong>' : '';
   return `
-    <td class="faturacao-v4-cell-123">${open}${formatPercent(value123)}${close}</td>
-    <td class="faturacao-v4-cell-1248">${open}${formatPercent(value1248)}${close}</td>
+    <td class="faturacao-v4-cell-123 ${diff > 0 ? 'faturacao-v4-best' : ''}">${open}${formatPercent(value123)}${close}</td>
+    <td class="faturacao-v4-cell-1248 ${diff < 0 ? 'faturacao-v4-best' : ''}">${open}${formatPercent(value1248)}${close}</td>
     <td>${open}${formatSignedPercent(diff)}${close}</td>
   `;
 }
@@ -993,19 +998,32 @@ function buildCleaningTable(years, apartments) {
   const heading = visibleYears.map((year) => `<th colspan="2">${year}</th>`).join('');
   const subHeading = visibleYears.map(() => '<th>N.º</th><th>Total</th>').join('');
   const rows = MONTH_LABELS.map((label, monthIdx) => {
+    const monthStats = visibleYears.map((year) => stats[year][monthIdx]);
+    const maxCount = Math.max(0, ...monthStats.map((month) => month.count));
+    const maxTotal = Math.max(0, ...monthStats.map((month) => month.total));
     const cells = visibleYears.map((year) => {
       if (monthIdx + 1 > currentMonth) return '<td>—</td><td>—</td>';
       const month = stats[year][monthIdx];
-      return `<td>${formatNumber(month.count)}</td><td>${formatEuro(month.total)}</td>`;
+      return `
+        <td class="${bestValueClass(month.count, maxCount)}">${formatNumber(month.count)}</td>
+        <td class="${bestValueClass(month.total, maxTotal)}">${formatEuro(month.total)}</td>
+      `;
     }).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
   }).join('');
-  const totals = visibleYears.map((year) => {
-    const total = stats[year].slice(0, currentMonth).reduce((summary, month) => ({
+  const yearTotals = visibleYears.map((year) =>
+    stats[year].slice(0, currentMonth).reduce((summary, month) => ({
       count: summary.count + month.count,
       value: summary.value + month.total
-    }), { count: 0, value: 0 });
-    return `<td><strong>${formatNumber(total.count)}</strong></td><td><strong>${formatEuro(total.value)}</strong></td>`;
+    }), { count: 0, value: 0 })
+  );
+  const maxTotalCount = Math.max(0, ...yearTotals.map((total) => total.count));
+  const maxTotalValue = Math.max(0, ...yearTotals.map((total) => total.value));
+  const totals = yearTotals.map((total) => {
+    return `
+      <td class="${bestValueClass(total.count, maxTotalCount)}"><strong>${formatNumber(total.count)}</strong></td>
+      <td class="${bestValueClass(total.value, maxTotalValue)}"><strong>${formatEuro(total.value)}</strong></td>
+    `;
   }).join('');
 
   return `
@@ -1042,11 +1060,13 @@ function buildCleaningCompareTable(years) {
       }
       const apt123 = stats123[year][monthIdx];
       const apt1248 = stats1248[year][monthIdx];
+      const countDiff = apt123.count - apt1248.count;
+      const totalDiff = apt123.total - apt1248.total;
       return `
-        <td class="faturacao-v4-cell-123">${formatNumber(apt123.count)}</td>
-        <td class="faturacao-v4-cell-123">${formatEuro(apt123.total)}</td>
-        <td class="faturacao-v4-cell-1248">${formatNumber(apt1248.count)}</td>
-        <td class="faturacao-v4-cell-1248">${formatEuro(apt1248.total)}</td>
+        <td class="faturacao-v4-cell-123 ${countDiff > 0 ? 'faturacao-v4-best' : ''}">${formatNumber(apt123.count)}</td>
+        <td class="faturacao-v4-cell-123 ${totalDiff > 0 ? 'faturacao-v4-best' : ''}">${formatEuro(apt123.total)}</td>
+        <td class="faturacao-v4-cell-1248 ${countDiff < 0 ? 'faturacao-v4-best' : ''}">${formatNumber(apt1248.count)}</td>
+        <td class="faturacao-v4-cell-1248 ${totalDiff < 0 ? 'faturacao-v4-best' : ''}">${formatEuro(apt1248.total)}</td>
       `;
     }).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
@@ -1054,11 +1074,13 @@ function buildCleaningCompareTable(years) {
   const totals = visibleYears.map((year) => {
     const apt123 = cleaningYearTotal(stats123[year].slice(0, currentMonth));
     const apt1248 = cleaningYearTotal(stats1248[year].slice(0, currentMonth));
+    const countDiff = apt123.count - apt1248.count;
+    const totalDiff = apt123.total - apt1248.total;
     return `
-      <td class="faturacao-v4-cell-123"><strong>${formatNumber(apt123.count)}</strong></td>
-      <td class="faturacao-v4-cell-123"><strong>${formatEuro(apt123.total)}</strong></td>
-      <td class="faturacao-v4-cell-1248"><strong>${formatNumber(apt1248.count)}</strong></td>
-      <td class="faturacao-v4-cell-1248"><strong>${formatEuro(apt1248.total)}</strong></td>
+      <td class="faturacao-v4-cell-123 ${countDiff > 0 ? 'faturacao-v4-best' : ''}"><strong>${formatNumber(apt123.count)}</strong></td>
+      <td class="faturacao-v4-cell-123 ${totalDiff > 0 ? 'faturacao-v4-best' : ''}"><strong>${formatEuro(apt123.total)}</strong></td>
+      <td class="faturacao-v4-cell-1248 ${countDiff < 0 ? 'faturacao-v4-best' : ''}"><strong>${formatNumber(apt1248.count)}</strong></td>
+      <td class="faturacao-v4-cell-1248 ${totalDiff < 0 ? 'faturacao-v4-best' : ''}"><strong>${formatEuro(apt1248.total)}</strong></td>
     `;
   }).join('');
 
@@ -1090,15 +1112,22 @@ function buildYearTable(years, apartments) {
   const heading = years.map((year) => `<th>${year}</th>`).join('') + diffHeading;
   const rows = MONTH_LABELS.map((label, monthIdx) => {
     const empty = monthIdx + 1 > currentMonth;
-    const cells = years.map((year) => `<td>${empty ? '—' : formatEuro(monthly[year]?.[monthIdx] || 0)}</td>`).join('');
+    const monthValues = years.map((year) => monthly[year]?.[monthIdx] || 0);
+    const bestValue = Math.max(0, ...monthValues);
+    const cells = years.map((year) => {
+      const value = monthly[year]?.[monthIdx] || 0;
+      return `<td class="${bestValueClass(value, bestValue, empty)}">${empty ? '—' : formatEuro(value)}</td>`;
+    }).join('');
     const diff = showYearDiff
       ? yearDiffCell((monthly[currentYear]?.[monthIdx] || 0) - (monthly[previousYear]?.[monthIdx] || 0), false, monthIdx + 1 > currentMonth)
       : '';
     return `<tr><td>${label}</td>${cells}${diff}</tr>`;
   }).join('');
-  const totals = years.map((year) => {
-    const total = sumUntilMonth(monthly[year], currentMonth);
-    return `<td><strong>${formatEuro(total)}</strong></td>`;
+  const totalValues = years.map((year) => sumUntilMonth(monthly[year], currentMonth));
+  const bestTotal = Math.max(0, ...totalValues);
+  const totals = years.map((year, index) => {
+    const total = totalValues[index];
+    return `<td class="${bestValueClass(total, bestTotal)}"><strong>${formatEuro(total)}</strong></td>`;
   }).join('');
   const currentYtd = sumUntilMonth(monthly[currentYear], currentMonth);
   const previousYtd = sumUntilMonth(monthly[previousYear], currentMonth);
@@ -1116,14 +1145,22 @@ function sumUntilMonth(values, month) {
   return (values || []).slice(0, month).reduce((sum, value) => sum + value, 0);
 }
 
+function bestValueClass(value, best, empty = false) {
+  return !empty && Number(best) > 0 && Number(value) === Number(best)
+    ? 'faturacao-v4-best'
+    : '';
+}
+
 function yearDiffCell(diff, strong = false, empty = false) {
   if (empty) return '<td class="faturacao-v4-diff-empty">—</td>';
   const value = Math.round(Number(diff) || 0);
-  const isPositive = value >= 0;
-  const cls = isPositive ? 'faturacao-v4-diff-positive' : 'faturacao-v4-diff-negative';
-  const color = isPositive ? '#16a34a' : '#dc2626';
+  const cls = value > 0
+    ? 'faturacao-v4-diff-positive'
+    : value < 0
+      ? 'faturacao-v4-diff-negative'
+      : 'faturacao-v4-diff-neutral';
   const label = value === 0 ? formatEuro(0) : `${value > 0 ? '+ ' : '- '}${formatEuro(Math.abs(value))}`;
-  const content = `<span class="${cls}" style="color:${color} !important;">${label}</span>`;
+  const content = `<span class="${cls}">${label}</span>`;
   return `<td>${strong ? `<strong>${content}</strong>` : content}</td>`;
 }
 
@@ -1165,12 +1202,12 @@ function compareCells(value123, value1248, strong = false, empty = false) {
     return '<td class="faturacao-v4-diff-empty">—</td><td class="faturacao-v4-diff-empty">—</td><td class="faturacao-v4-diff-empty">—</td>';
   }
   const diff = value123 - value1248;
-  const winnerClass = diff >= 0 ? 'apt-123' : 'apt-1248';
+  const winnerClass = diff > 0 ? 'apt-123' : diff < 0 ? 'apt-1248' : 'faturacao-v4-diff-neutral';
   const open = strong ? '<strong>' : '';
   const close = strong ? '</strong>' : '';
   return `
-    <td class="faturacao-v4-cell-123">${open}${formatEuro(value123)}${close}</td>
-    <td class="faturacao-v4-cell-1248">${open}${formatEuro(value1248)}${close}</td>
+    <td class="faturacao-v4-cell-123 ${diff > 0 ? 'faturacao-v4-best' : ''}">${open}${formatEuro(value123)}${close}</td>
+    <td class="faturacao-v4-cell-1248 ${diff < 0 ? 'faturacao-v4-best' : ''}">${open}${formatEuro(value1248)}${close}</td>
     <td>${open}<span class="${winnerClass}">${formatEuro(Math.abs(diff))}</span>${close}</td>
   `;
 }
@@ -1404,9 +1441,13 @@ function formatPercent(value) {
 
 function formatSignedPercent(value) {
   const num = Number(value) || 0;
-  const cls = num >= 0 ? 'faturacao-v4-diff-positive' : 'faturacao-v4-diff-negative';
-  const sign = num >= 0 ? '+' : '-';
-  return `<span class="${cls}">${sign} ${formatPercent(Math.abs(num))}</span>`;
+  const cls = num > 0
+    ? 'faturacao-v4-diff-positive'
+    : num < 0
+      ? 'faturacao-v4-diff-negative'
+      : 'faturacao-v4-diff-neutral';
+  const sign = num > 0 ? '+' : num < 0 ? '-' : '';
+  return `<span class="${cls}">${sign ? `${sign} ` : ''}${formatPercent(Math.abs(num))}</span>`;
 }
 
 function prepareChartData(values, year) {

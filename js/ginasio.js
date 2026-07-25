@@ -2,7 +2,6 @@ import { db, copiarMensagem } from './script.js';
 import { showConfirm, showToast } from './toast.js';
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -11,6 +10,8 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
+  writeBatch,
   where
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
@@ -1041,7 +1042,10 @@ const activeRestEl = document.getElementById('gym-active-rest');
 const activeRestMachineEl = document.getElementById('gym-active-rest-machine');
 const activeRestTimeEl = document.getElementById('gym-active-rest-time');
 const restAddBtn = document.getElementById('gym-rest-add');
+const restAddSmallBtn = document.getElementById('gym-rest-add-small');
+const restSubtractBtn = document.getElementById('gym-rest-subtract');
 const restCancelBtn = document.getElementById('gym-rest-cancel');
+const restAnnouncementEl = document.getElementById('gym-rest-announcement');
 const clearDraftBtn = document.getElementById('gym-clear-draft');
 const enableNotificationsBtn = document.getElementById('gym-enable-notifications');
 const testSoundBtn = document.getElementById('gym-test-sound');
@@ -1056,12 +1060,17 @@ const machineSeriesList = document.getElementById('gym-series-list');
 const machineAddSeriesBtn = document.getElementById('gym-add-series');
 const machineAddBtn = document.getElementById('gym-add-machine');
 const machineNoteInput = document.getElementById('gym-machine-note');
+const evolutionMachineSelect = document.getElementById('gym-evolution-machine');
+const evolutionChartEl = document.getElementById('gym-evolution-chart');
+const evolutionLatestEl = document.getElementById('gym-evolution-latest');
+const evolutionChangeEl = document.getElementById('gym-evolution-change');
 
 const state = {
   gym: '',
   treino: '',
   date: '',
   session: null,
+  createdAt: null,
   baseWeights: {},
   lastReps: {},
   lastRir: {},
@@ -1084,6 +1093,8 @@ const warmupTimerIntervals = new Map();
 const LOCAL_DRAFT_CURRENT_KEY = 'ginasio-current-draft-v1';
 const LOCAL_DRAFT_PREFIX = 'ginasio-session-draft-v1';
 const MUSIC_MODE_KEY = 'ginasio-music-mode-v1';
+const RECENT_SUMMARY_LIMIT = 5;
+const EVOLUTION_WORKOUT_LIMIT = 16;
 let localDraftTimer = null;
 let localDraftDirty = false;
 let totalTimerInterval = null;
@@ -1091,6 +1102,8 @@ let activeRest = null;
 let restAudioContext = null;
 let restCountdownAudio = null;
 let restCountdownAudioUrl = '';
+let loadSessionRequestId = 0;
+let evolutionSeries = new Map();
 
 function formatWeight(value) {
   if (value === null || Number.isNaN(value)) return '';
@@ -1309,19 +1322,23 @@ function startRestCountdownAudio(machine, seconds, endAt) {
 
 async function playRestAudioTest() {
   const testMachine = { name: 'Teste de som' };
-  const endAt = Date.now() + 1000;
+  const testSeconds = 15;
+  const endAt = Date.now() + testSeconds * 1000;
   if (isMusicModeEnabled()) {
     unlockRestAudio();
-    setTimeout(playRestFinishedBeep, 1000);
+    setTimeout(playRestFinishedBeep, testSeconds * 1000);
   } else {
-    startRestCountdownAudio(testMachine, 1, endAt);
+    startRestCountdownAudio(testMachine, testSeconds, endAt);
   }
   const notificationsEnabled = await requestNotificationPermission();
   if (notificationsEnabled) {
-    showRestNotification('test', testMachine, 1, false, endAt);
-    setTimeout(() => showRestNotification('test', testMachine, 0, true, endAt), 1000);
+    const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
+    await showRestNotification('test', testMachine, remaining, false, endAt);
+    setTimeout(() => {
+      void showRestNotification('test', testMachine, 0, true, endAt);
+    }, Math.max(0, endAt - Date.now()));
   }
-  showToast('O bip deve tocar dentro de 1 segundo. Confirma o volume multimédia.', 'success', 2200);
+  showToast('Bloqueia o ecrã: o alerta de teste termina dentro de 15 segundos.', 'success', 3500);
 }
 
 function isMusicModeEnabled() {
@@ -1366,11 +1383,11 @@ function updateNotificationStatus() {
 
   if (permission === 'granted') {
     if (isMusicModeEnabled()) {
-      notificationStatusEl.textContent = 'Modo música ativo: notificações e vibração mantêm-se, sem ocupar o áudio multimédia.';
+      notificationStatusEl.textContent = 'Modo música ativo. No Brave Android, mantém a aplicação aberta em segundo plano para o alerta terminar; o sistema pode suspender aplicações fechadas.';
     } else {
       notificationStatusEl.textContent = isSamsungDevice()
-        ? 'Ativas. O contador no ecrã bloqueado e o bip usam o áudio multimédia; confirma também o volume e o Galaxy Wearable.'
-        : 'Ativas. O contador no ecrã bloqueado e o bip usam o áudio multimédia do telemóvel.';
+        ? 'Ativas. Mantém a aplicação aberta em segundo plano e confirma o volume multimédia e o Galaxy Wearable.'
+        : 'Ativas. Mantém a aplicação aberta em segundo plano; o bip usa o volume multimédia.';
     }
     notificationStatusEl.dataset.state = 'ready';
     return;
@@ -1474,7 +1491,6 @@ function removeLocalKey(key) {
 }
 
 function saveCurrentSelection() {
-  setStateFromInputs();
   if (!state.gym && !state.treino && !state.date) return;
   writeLocalJson(LOCAL_DRAFT_CURRENT_KEY, {
     gym: state.gym,
@@ -1498,23 +1514,38 @@ function readLocalDraft(gym, treino, date) {
 }
 
 function persistLocalDraft() {
-  setStateFromInputs();
   saveCurrentSelection();
-  if (!state.gym || !state.treino || !state.date) return;
-  if (!workoutWrap?.querySelector('.gym-machine-card')) return;
+  if (!state.gym || !state.treino || !state.date) {
+    localDraftDirty = false;
+    return;
+  }
+  if (!workoutWrap?.querySelector('.gym-machine-card')) {
+    localDraftDirty = false;
+    return;
+  }
   const session = buildSessionFromDom();
   writeLocalJson(getLocalDraftKey(state.gym, state.treino, state.date), {
     session,
     updatedAt: Date.now()
   });
+  localDraftDirty = false;
 }
 
 function scheduleLocalDraftSave() {
   localDraftDirty = true;
   if (localDraftTimer) clearTimeout(localDraftTimer);
   localDraftTimer = setTimeout(() => {
+    localDraftTimer = null;
     persistLocalDraft();
   }, 250);
+}
+
+function flushLocalDraft() {
+  if (localDraftTimer) {
+    clearTimeout(localDraftTimer);
+    localDraftTimer = null;
+  }
+  if (localDraftDirty) persistLocalDraft();
 }
 
 function clearLocalDraft(gym, treino, date) {
@@ -1544,9 +1575,9 @@ function clearCurrentDraft() {
   });
 }
 
-function getBaseWeightId(machineId, variantId, seriesIndex) {
+function getBaseWeightId(gym, machineId, variantId, seriesIndex) {
   const variantKey = variantId ? normalizeKey(variantId) : 'base';
-  return `${normalizeKey(machineId)}-${variantKey}-s${seriesIndex}`;
+  return `${normalizeKey(gym)}-${normalizeKey(machineId)}-${variantKey}-s${seriesIndex}`;
 }
 
 function getSeriesKey(machineId, variantId, seriesIndex) {
@@ -2007,10 +2038,12 @@ function createRirSelect(value) {
   return select;
 }
 
-async function saveBaseWeight(machineId, variantId, seriesIndex, baseWeight) {
-  const docId = getBaseWeightId(machineId, variantId, seriesIndex);
+async function saveBaseWeight(gym, machineId, variantId, seriesIndex, baseWeight) {
+  if (!gym) return;
+  const docId = getBaseWeightId(gym, machineId, variantId, seriesIndex);
   const ref = doc(collection(db, 'ginasio_pesos'), docId);
   await setDoc(ref, {
+    gym,
     machineId,
     variantId: variantId || '',
     seriesIndex,
@@ -2019,12 +2052,12 @@ async function saveBaseWeight(machineId, variantId, seriesIndex, baseWeight) {
   }, { merge: true });
 }
 
-async function saveRecommendedRep(machineId, variantId, seriesIndex, reps) {
-  if (!state.gym) return;
-  const docId = getRecommendedId(state.gym, machineId, variantId, seriesIndex);
+async function saveRecommendedRep(gym, machineId, variantId, seriesIndex, reps) {
+  if (!gym) return;
+  const docId = getRecommendedId(gym, machineId, variantId, seriesIndex);
   const ref = doc(collection(db, 'ginasio_reps_recomendadas'), docId);
   await setDoc(ref, {
-    gym: state.gym,
+    gym,
     machineId,
     variantId: variantId || '',
     seriesIndex,
@@ -2051,36 +2084,44 @@ async function saveWarmupDefault(gym, machineId, variantId, warmupIndex, warmup)
 
 function scheduleBaseWeightSave(machineId, variantId, seriesIndex, baseWeight) {
   if (!state.gym) return;
-  const key = getSeriesKey(machineId, variantId, seriesIndex);
-  if (baseWeightTimers.has(key)) {
-    clearTimeout(baseWeightTimers.get(key));
+  const gym = state.gym;
+  const stateKey = getSeriesKey(machineId, variantId, seriesIndex);
+  const timerKey = `${gym}|${stateKey}`;
+  if (baseWeightTimers.has(timerKey)) {
+    clearTimeout(baseWeightTimers.get(timerKey));
   }
-  baseWeightTimers.set(key, setTimeout(async () => {
+  baseWeightTimers.set(timerKey, setTimeout(async () => {
     try {
-      await saveBaseWeight(machineId, variantId, seriesIndex, baseWeight);
-      state.baseWeights[key] = baseWeight;
+      await saveBaseWeight(gym, machineId, variantId, seriesIndex, baseWeight);
+      if (state.gym === gym) state.baseWeights[stateKey] = baseWeight;
       showToast('Peso extra guardado.', 'success', 1200);
     } catch (err) {
       console.error('Erro ao gravar peso extra:', err);
       showToast('Erro ao gravar peso extra.', 'error');
+    } finally {
+      baseWeightTimers.delete(timerKey);
     }
   }, 700));
 }
 
 function scheduleRecommendedSave(machineId, variantId, seriesIndex, reps) {
   if (!state.gym) return;
-  const key = getSeriesKey(machineId, variantId, seriesIndex);
-  if (recommendedTimers.has(key)) {
-    clearTimeout(recommendedTimers.get(key));
+  const gym = state.gym;
+  const stateKey = getSeriesKey(machineId, variantId, seriesIndex);
+  const timerKey = `${gym}|${stateKey}`;
+  if (recommendedTimers.has(timerKey)) {
+    clearTimeout(recommendedTimers.get(timerKey));
   }
-  recommendedTimers.set(key, setTimeout(async () => {
+  recommendedTimers.set(timerKey, setTimeout(async () => {
     try {
-      await saveRecommendedRep(machineId, variantId, seriesIndex, reps);
-      state.recommendedReps[key] = reps;
+      await saveRecommendedRep(gym, machineId, variantId, seriesIndex, reps);
+      if (state.gym === gym) state.recommendedReps[stateKey] = reps;
       showToast('Reps recomendadas guardadas.', 'success', 1200);
     } catch (err) {
       console.error('Erro ao gravar reps recomendadas:', err);
       showToast('Erro ao gravar reps recomendadas.', 'error');
+    } finally {
+      recommendedTimers.delete(timerKey);
     }
   }, 700));
 }
@@ -2160,10 +2201,10 @@ function createSeriesTable(machine, variant, savedMachine) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th>Série</th>
-        <th>Peso (kg)</th>
-        <th>Reps feitas</th>
-        <th>RIR</th>
+        <th scope="col">Série</th>
+        <th scope="col">Peso (kg)</th>
+        <th scope="col">Reps feitas</th>
+        <th scope="col">RIR</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -2232,6 +2273,7 @@ function createSeriesTable(machine, variant, savedMachine) {
 
     const baseInput = row.querySelector('[data-base-weight]');
     if (baseInput) {
+      baseInput.setAttribute('aria-label', `${machine.name}, série ${index + 1}, peso em quilogramas`);
       baseInput.addEventListener('input', () => {
         updateTotalDisplay(row, initialResistance);
         const value = parseFloat(baseInput.value) || 0;
@@ -2241,8 +2283,13 @@ function createSeriesTable(machine, variant, savedMachine) {
     const repsCell = row.querySelector('td:nth-child(3)');
     if (repsCell) {
       const repsSelect = createRepsSelect(repsValue);
+      repsSelect.setAttribute('aria-label', `${machine.name}, série ${index + 1}, repetições feitas`);
       repsCell.appendChild(repsSelect);
     }
+    row.querySelector('[data-rir]')?.setAttribute(
+      'aria-label',
+      `${machine.name}, série ${index + 1}, repetições em reserva`
+    );
     updateTotalDisplay(row, initialResistance);
     tbody.appendChild(row);
   });
@@ -2385,6 +2432,27 @@ function canProgress(machine, variantId) {
   });
 }
 
+function getRestMetaKey(key) {
+  return `${key}-meta`;
+}
+
+function writeRestTimerMeta(key, meta) {
+  try {
+    localStorage.setItem(getRestMetaKey(key), JSON.stringify(meta));
+  } catch (err) {
+    console.warn('Não foi possível guardar os dados do descanso:', err);
+  }
+}
+
+function readRestTimerMeta(key) {
+  try {
+    return JSON.parse(localStorage.getItem(getRestMetaKey(key)) || 'null');
+  } catch (err) {
+    console.warn('Dados de descanso inválidos:', err);
+    return null;
+  }
+}
+
 async function startRestTimer(machine, variantId, seconds, label, button) {
   if (!state.gym || !state.treino) return;
   if (!Number.isFinite(seconds) || seconds <= 0) {
@@ -2394,7 +2462,7 @@ async function startRestTimer(machine, variantId, seconds, label, button) {
   unlockRestAudio();
   const endAt = Date.now() + seconds * 1000;
   if (!isMusicModeEnabled()) startRestCountdownAudio(machine, seconds, endAt);
-  const notificationsEnabled = await requestNotificationPermission();
+  const notificationsEnabled = 'Notification' in window && Notification.permission === 'granted';
   if (activeRest?.key) {
     await cancelRestTimer(activeRest.key, { silent: true });
     const remaining = Math.max(1, Math.ceil((endAt - Date.now()) / 1000));
@@ -2403,11 +2471,17 @@ async function startRestTimer(machine, variantId, seconds, label, button) {
   const key = `gym-rest-${normalizeKey(state.gym)}-${normalizeKey(state.treino)}-${machine.id}-${variantId || 'base'}`;
   localStorage.setItem(key, String(endAt));
   localStorage.removeItem(`${key}-completed`);
+  writeRestTimerMeta(key, {
+    machineId: machine.id,
+    machineName: machine.name,
+    variantId: variantId || '',
+    label
+  });
   runRestTimer(key, machine, variantId, label, button);
   if (notificationsEnabled) {
-    showRestNotification(key, machine, seconds, false, endAt);
+    await showRestNotification(key, machine, seconds, false, endAt);
   } else if (!('Notification' in window) || Notification.permission !== 'denied') {
-    showToast('Descanso iniciado sem notificação do sistema.', 'warning');
+    showToast('Descanso iniciado. Ativa as notificações no botão próprio para receber alertas.', 'warning');
   }
 }
 
@@ -2463,6 +2537,7 @@ async function cancelRestTimer(key, { silent = false } = {}) {
   restTimerUpdates.delete(key);
   localStorage.removeItem(key);
   localStorage.removeItem(`${key}-completed`);
+  localStorage.removeItem(getRestMetaKey(key));
   stopRestCountdownAudio();
   if (current?.button) current.button.textContent = `Descanso ${current.label}`;
   clearActiveRestPanel(key);
@@ -2470,30 +2545,40 @@ async function cancelRestTimer(key, { silent = false } = {}) {
   if (!silent) showToast('Descanso cancelado.', 'success');
 }
 
-function addTimeToActiveRest(seconds) {
+async function addTimeToActiveRest(seconds) {
   if (!activeRest?.key) return;
   const endAt = Number(localStorage.getItem(activeRest.key) || 0);
   if (!endAt) return;
-  const nextEndAt = Math.max(Date.now(), endAt) + seconds * 1000;
+  const nextEndAt = Math.max(Date.now() + 1000, endAt + seconds * 1000);
   localStorage.setItem(activeRest.key, String(nextEndAt));
   localStorage.removeItem(`${activeRest.key}-completed`);
   activeRest.update?.();
   const remaining = Math.max(0, Math.ceil((nextEndAt - Date.now()) / 1000));
   if (!isMusicModeEnabled()) startRestCountdownAudio(activeRest.machine, remaining, nextEndAt);
-  showRestNotification(activeRest.key, activeRest.machine, remaining, false, nextEndAt);
+  if ('Notification' in window && Notification.permission === 'granted') {
+    await showRestNotification(activeRest.key, activeRest.machine, remaining, false, nextEndAt);
+  }
 }
 
 function showFallbackNotification(title, options) {
   try {
-    const notification = new Notification(title, options);
-    notification.onclick = () => notification.close();
+    const fallbackOptions = { ...options };
+    delete fallbackOptions.actions;
+    const notification = new Notification(title, fallbackOptions);
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+    return true;
   } catch (err) {
     console.warn('Notificação direta não suportada:', err);
+    return false;
   }
 }
 
 async function showRestNotification(key, machine, remaining, done = false, endAt = null) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return false;
+  if (!done && endAt && Date.now() >= endAt) return false;
   const tag = `gym-rest-${key}`;
   const finishLabel = endAt ? formatTimeOfDay(endAt) : '';
   const title = done
@@ -2508,27 +2593,27 @@ async function showRestNotification(key, machine, remaining, done = false, endAt
     tag,
     icon,
     badge: icon,
-    renotify: true,
+    renotify: done,
     silent: !done,
     requireInteraction: true,
-    vibrate: done ? [300, 150, 300, 150, 500] : [120],
-    timestamp: Date.now(),
+    timestamp: done ? Date.now() : (endAt || Date.now()),
     lang: 'pt-PT',
     data: { url: location.href, tag, restKey: key },
     actions: [{ action: 'dismiss', title: 'Fechar' }]
   };
+  if (done) options.vibrate = [300, 150, 300, 150, 500];
   try {
     const registration = await getNotificationRegistration();
-    if (!done && endAt && Date.now() >= endAt) return;
+    if (!done && endAt && Date.now() >= endAt) return false;
     if (registration) {
       await registration.showNotification(title, options);
-      return;
+      return true;
     }
   } catch (err) {
     console.warn('Notificação pelo service worker indisponível:', err);
   }
-  if (!done && endAt && Date.now() >= endAt) return;
-  showFallbackNotification(title, options);
+  if (!done && endAt && Date.now() >= endAt) return false;
+  return showFallbackNotification(title, options);
 }
 
 function runRestTimer(key, machine, variantId, label, button) {
@@ -2542,12 +2627,19 @@ function runRestTimer(key, machine, variantId, label, button) {
     const remaining = Math.max(0, Math.ceil((endAt - Date.now()) / 1000));
     if (!remaining) {
       localStorage.removeItem(key);
+      localStorage.removeItem(getRestMetaKey(key));
       if (button) button.textContent = `Descanso ${label}`;
       if (!localStorage.getItem(`${key}-completed`)) {
         localStorage.setItem(`${key}-completed`, String(Date.now()));
         showToast(`Descanso terminado: ${machine.name}`, 'success');
+        if (restAnnouncementEl) {
+          restAnnouncementEl.textContent = '';
+          requestAnimationFrame(() => {
+            restAnnouncementEl.textContent = `Descanso terminado: ${machine.name}.`;
+          });
+        }
         if (!restCountdownAudio) playRestFinishedBeep();
-        showRestNotification(key, machine, 0, true, endAt);
+        void showRestNotification(key, machine, 0, true, endAt);
         if ('vibrate' in navigator) navigator.vibrate([300, 150, 300, 150, 500]);
       }
       if (restTimerIntervals.has(key)) {
@@ -2575,6 +2667,43 @@ function runRestTimer(key, machine, variantId, label, button) {
 
 function refreshRestTimers() {
   restTimerUpdates.forEach(update => update());
+}
+
+function restoreActiveRestTimer(template) {
+  if (!state.gym || !state.treino) return;
+  const prefix = `gym-rest-${normalizeKey(state.gym)}-${normalizeKey(state.treino)}-`;
+  const timers = [];
+
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (!key?.startsWith(prefix) || key.endsWith('-completed') || key.endsWith('-meta')) continue;
+    const endAt = Number(localStorage.getItem(key) || 0);
+    if (Number.isFinite(endAt)) timers.push({ key, endAt });
+  }
+
+  const mostRecent = timers.sort((a, b) => b.endAt - a.endAt)[0];
+  if (!mostRecent) return;
+  const meta = readRestTimerMeta(mostRecent.key) || {};
+  const machine = template.find(item => item.id === meta.machineId)
+    || template.find(item => mostRecent.key.startsWith(`${prefix}${item.id}-`));
+  if (!machine) {
+    localStorage.removeItem(mostRecent.key);
+    localStorage.removeItem(getRestMetaKey(mostRecent.key));
+    return;
+  }
+
+  const card = workoutWrap.querySelector(`[data-machine-id="${CSS.escape(machine.id)}"]`);
+  const button = card?.querySelector('.gym-rest-btn') || null;
+  const label = meta.label
+    || button?.textContent.replace('Descanso ', '').trim()
+    || 'Descanso';
+  runRestTimer(
+    mostRecent.key,
+    { ...machine, name: meta.machineName || machine.name },
+    meta.variantId || '',
+    label,
+    button
+  );
 }
 
 function parseRestLabel(label) {
@@ -2638,6 +2767,7 @@ function renderMachine(machine) {
   if (machine.variants) {
     const variantSelect = document.createElement('select');
     variantSelect.setAttribute('data-variant-select', 'true');
+    variantSelect.setAttribute('aria-label', `Selecionar variante de ${machine.name}`);
     machine.variants.forEach(opt => {
       const option = document.createElement('option');
       option.value = opt.id;
@@ -2678,9 +2808,24 @@ function renderMachine(machine) {
           warmupTimerIntervals.delete(warmupKey);
         }
         card.querySelector('[data-warmup-block]')?.remove();
-        await loadBaseWeights(state.gym);
-        await loadRecommendedReps(state.gym);
-        await loadLastReps(state.gym, state.treino);
+        const selectedGym = state.gym;
+        const selectedTraining = state.treino;
+        try {
+          const [baseWeights, recommendedReps, history] = await Promise.all([
+            loadBaseWeights(selectedGym),
+            loadRecommendedReps(selectedGym),
+            loadLastReps(selectedGym, selectedTraining)
+          ]);
+          if (state.gym !== selectedGym || state.treino !== selectedTraining) return;
+          state.baseWeights = baseWeights;
+          state.recommendedReps = recommendedReps;
+          state.lastReps = history.lastReps;
+          state.lastRir = history.lastRir;
+          state.lastWeights = history.lastWeights;
+        } catch (err) {
+          console.error('Erro ao atualizar a variante:', err);
+          showToast('Não foi possível atualizar os dados da variante.', 'error');
+        }
         renderWarmupBlock(card, machine, selected || machine, savedMachine);
         seriesWrap.appendChild(createSeriesTable(machine, selected || machine, savedMachine));
         renderRecommendations(card, machine);
@@ -2733,17 +2878,7 @@ function renderWorkout() {
     stopTotalTimer();
   }
   updateBaseMachineOptions(template);
-
-  Array.from(workoutWrap.querySelectorAll('.gym-rest-btn')).forEach(button => {
-    const machineId = button.closest('.gym-machine-card')?.dataset.machineId;
-    const variantId = button.closest('.gym-machine-card')?.dataset.variantId || 'base';
-    if (!machineId || !state.gym || !state.treino) return;
-    const key = `gym-rest-${normalizeKey(state.gym)}-${normalizeKey(state.treino)}-${machineId}-${variantId}`;
-    if (!localStorage.getItem(key)) return;
-    const label = button.textContent.replace('Descanso ', '').trim() || 'Descanso';
-    const machine = template.find(item => item.id === machineId);
-    if (machine) runRestTimer(key, machine, variantId, label, button);
-  });
+  restoreActiveRestTimer(template);
 }
 
 function updateBaseMachineOptions(template) {
@@ -2875,8 +3010,11 @@ async function saveCustomMachine() {
 
 async function loadSession() {
   setStateFromInputs();
-  if (!state.gym) {
+  const requestId = ++loadSessionRequestId;
+  const { gym, treino, date } = state;
+  if (!gym) {
     state.session = null;
+    state.createdAt = null;
     state.baseWeights = {};
     state.lastReps = {};
     state.lastRir = {};
@@ -2888,61 +3026,58 @@ async function loadSession() {
     renderWorkout();
     return;
   }
-  try {
-    await loadBaseWeights(state.gym);
-  } catch (err) {
-    console.error('Erro ao carregar pesos:', err);
-    showToast('Erro ao carregar pesos guardados.', 'error');
-  }
-  try {
-    await loadRecommendedReps(state.gym);
-  } catch (err) {
-    console.error('Erro ao carregar reps recomendadas:', err);
-    showToast('Erro ao carregar reps recomendadas.', 'error');
-  }
-  try {
-    await loadWarmupDefaults(state.gym);
-  } catch (err) {
-    console.error('Erro ao carregar aquecimentos:', err);
-    showToast('Erro ao carregar valores dos aquecimentos.', 'error');
-  }
-  try {
-    await loadCustomMachines(state.gym, state.treino);
-  } catch (err) {
-    console.error('Erro ao carregar máquinas customizadas:', err);
-    showToast('Erro ao carregar máquinas customizadas.', 'error');
-  }
-  if (!state.treino) {
-    state.session = null;
-    state.lastReps = {};
-    state.lastRir = {};
-    state.lastWeights = {};
-    resetWorkoutTiming();
-    renderWorkout();
-    return;
-  }
-  try {
-    await loadLastReps(state.gym, state.treino);
-  } catch (err) {
-    console.error('Erro ao carregar reps:', err);
-    showToast('Erro ao carregar reps do último treino.', 'error');
-  }
-  if (!state.date) {
-    state.session = null;
-    resetWorkoutTiming();
-    renderWorkout();
-    return;
-  }
-  try {
-    const ref = doc(collection(db, 'ginasio_treinos'), getSessionId(state.gym, state.treino, state.date));
+
+  let loadHadErrors = false;
+  const loadSafely = async (loader, fallback, errorLabel) => {
+    try {
+      return await loader();
+    } catch (err) {
+      loadHadErrors = true;
+      console.error(errorLabel, err);
+      return fallback;
+    }
+  };
+  const emptyHistory = { lastReps: {}, lastRir: {}, lastWeights: {} };
+  const sessionLoader = async () => {
+    if (!treino || !date) return { session: null, createdAt: null };
+    const ref = doc(collection(db, 'ginasio_treinos'), getSessionId(gym, treino, date));
     const snap = await getDoc(ref);
-    state.session = snap.exists() ? snap.data() : null;
-  } catch (err) {
-    console.error('Erro ao carregar treino:', err);
-    state.session = null;
-    showToast('Erro ao carregar treino do Firebase.', 'error');
+    const session = snap.exists() ? snap.data() : null;
+    return { session, createdAt: session?.createdAt || null };
+  };
+  const [
+    baseWeights,
+    recommendedReps,
+    warmupDefaults,
+    customMachines,
+    history,
+    remote
+  ] = await Promise.all([
+    loadSafely(() => loadBaseWeights(gym), {}, 'Erro ao carregar pesos:'),
+    loadSafely(() => loadRecommendedReps(gym), {}, 'Erro ao carregar reps recomendadas:'),
+    loadSafely(() => loadWarmupDefaults(gym), {}, 'Erro ao carregar aquecimentos:'),
+    loadSafely(() => loadCustomMachines(gym, treino), [], 'Erro ao carregar máquinas customizadas:'),
+    treino
+      ? loadSafely(() => loadLastReps(gym, treino), emptyHistory, 'Erro ao carregar reps:')
+      : emptyHistory,
+    loadSafely(sessionLoader, { session: null, createdAt: null }, 'Erro ao carregar treino:')
+  ]);
+
+  if (requestId !== loadSessionRequestId) return;
+  if (loadHadErrors) {
+    showToast('Alguns dados do treino não puderam ser carregados. Confirma a ligação.', 'warning');
   }
-  const localDraft = readLocalDraft(state.gym, state.treino, state.date);
+  state.baseWeights = baseWeights;
+  state.recommendedReps = recommendedReps;
+  state.warmupDefaults = warmupDefaults;
+  state.customMachines = customMachines;
+  state.lastReps = history.lastReps;
+  state.lastRir = history.lastRir;
+  state.lastWeights = history.lastWeights;
+  state.session = remote.session;
+  state.createdAt = remote.createdAt;
+
+  const localDraft = readLocalDraft(gym, treino, date);
   if (localDraft) {
     state.session = localDraft.session;
     localDraftDirty = true;
@@ -2956,25 +3091,23 @@ async function loadSession() {
 }
 
 async function loadBaseWeights(gym) {
-  if (!gym) {
-    state.baseWeights = {};
-    return;
-  }
+  if (!gym) return {};
   const snap = await getDocs(collection(db, 'ginasio_pesos'));
   const weights = {};
+  const scopedKeys = new Set();
   snap.forEach(docSnap => {
     const data = docSnap.data();
+    if (data.gym && data.gym !== gym) return;
     const key = getSeriesKey(data.machineId, data.variantId, data.seriesIndex);
+    if (!data.gym && scopedKeys.has(key)) return;
     weights[key] = data.baseWeight;
+    if (data.gym === gym) scopedKeys.add(key);
   });
-  state.baseWeights = weights;
+  return weights;
 }
 
 async function loadRecommendedReps(gym) {
-  if (!gym) {
-    state.recommendedReps = {};
-    return;
-  }
+  if (!gym) return {};
   const q = query(collection(db, 'ginasio_reps_recomendadas'), where('gym', '==', gym));
   const snap = await getDocs(q);
   const repsMap = {};
@@ -2983,14 +3116,11 @@ async function loadRecommendedReps(gym) {
     const key = getSeriesKey(data.machineId, data.variantId, data.seriesIndex);
     repsMap[key] = data.reps;
   });
-  state.recommendedReps = repsMap;
+  return repsMap;
 }
 
 async function loadWarmupDefaults(gym) {
-  if (!gym) {
-    state.warmupDefaults = {};
-    return;
-  }
+  if (!gym) return {};
   const q = query(collection(db, 'ginasio_aquecimentos'), where('gym', '==', gym));
   const snap = await getDocs(q);
   const warmups = {};
@@ -3003,26 +3133,18 @@ async function loadWarmupDefaults(gym) {
       rir: String(data.rir || '?')
     };
   });
-  state.warmupDefaults = warmups;
+  return warmups;
 }
 
 async function loadCustomMachines(gym, treino) {
-  if (!gym || !treino) {
-    state.customMachines = [];
-    return;
-  }
+  if (!gym || !treino) return [];
   const docId = `${normalizeKey(gym)}-${normalizeKey(treino)}`;
   const snap = await getDoc(doc(collection(db, 'ginasio_maquinas_custom'), docId));
-  state.customMachines = snap.exists() ? (snap.data().machines || []) : [];
+  return snap.exists() ? (snap.data().machines || []) : [];
 }
 
 async function loadLastReps(gym, treino) {
-  if (!gym || !treino) {
-    state.lastReps = {};
-    state.lastRir = {};
-    state.lastWeights = {};
-    return;
-  }
+  if (!gym || !treino) return { lastReps: {}, lastRir: {}, lastWeights: {} };
   const q = query(
     collection(db, 'ginasio_treinos'),
     where('treino', '==', treino)
@@ -3056,9 +3178,7 @@ async function loadLastReps(gym, treino) {
       });
     });
   }
-  state.lastReps = lastReps;
-  state.lastRir = lastRir;
-  state.lastWeights = lastWeights;
+  return { lastReps, lastRir, lastWeights };
 }
 
 function buildSessionFromDom() {
@@ -3248,24 +3368,27 @@ async function saveSession() {
   }
 
   try {
-    await setDoc(ref, {
-      ...session,
-      createdAt: state.session?.createdAt || serverTimestamp(),
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-
     const summary = buildSummaryText(session);
     const summaryRef = doc(collection(db, 'ginasio_resumos'), docId);
-    await setDoc(summaryRef, {
+    const createdAt = state.createdAt || state.session?.createdAt || Timestamp.now();
+    const batch = writeBatch(db);
+    batch.set(ref, {
+      ...session,
+      createdAt,
+      updatedAt: serverTimestamp()
+    });
+    batch.set(summaryRef, {
       date: session.date,
       gym: session.gym,
       treino: session.treino,
       summary,
-      createdAt: state.session?.createdAt || serverTimestamp(),
+      createdAt,
       updatedAt: serverTimestamp()
-    }, { merge: true });
+    });
+    await batch.commit();
 
-    state.session = { ...session };
+    state.session = { ...session, createdAt };
+    state.createdAt = createdAt;
     clearLocalDraft(session.gym, session.treino, session.date);
     stopTotalTimer();
     if (totalTimerEl) totalTimerEl.textContent = formatClockDuration(session.timing?.durationSec || 0);
@@ -3285,14 +3408,18 @@ async function saveSession() {
 
 async function deleteSessionById(docId, workoutLabel = 'este treino') {
   try {
-    await deleteDoc(doc(collection(db, 'ginasio_treinos'), docId));
-    await deleteDoc(doc(collection(db, 'ginasio_resumos'), docId));
+    const batch = writeBatch(db);
+    batch.delete(doc(collection(db, 'ginasio_treinos'), docId));
+    batch.delete(doc(collection(db, 'ginasio_resumos'), docId));
+    await batch.commit();
     removeLocalKey(`${LOCAL_DRAFT_PREFIX}-${docId}`);
     const isCurrentSession = Boolean(state.gym && state.treino && state.date)
       && getSessionId(state.gym, state.treino, state.date) === docId;
     if (isCurrentSession) {
       state.session = null;
+      state.createdAt = null;
       localDraftDirty = false;
+      resetWorkoutTiming();
       renderWorkout();
     }
     showToast('Treino apagado.', 'success');
@@ -3303,9 +3430,163 @@ async function deleteSessionById(docId, workoutLabel = 'este treino') {
   }
 }
 
+function formatWorkoutDate(date) {
+  if (!date) return 'Data desconhecida';
+  const parsed = new Date(`${date}T00:00:00`);
+  return Number.isNaN(parsed.getTime())
+    ? String(date)
+    : parsed.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function createSvgElement(tag, attributes = {}) {
+  const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.entries(attributes).forEach(([name, value]) => element.setAttribute(name, String(value)));
+  return element;
+}
+
+function buildEvolutionSeries(workouts) {
+  const seriesMap = new Map();
+  [...workouts]
+    .sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')))
+    .forEach(workout => {
+      Object.entries(workout.machines || {}).forEach(([machineId, machine]) => {
+        const completed = (Array.isArray(machine?.series) ? machine.series : Object.values(machine?.series || {}))
+          .filter(item => Number(item?.reps || 0) > 0);
+        if (!completed.length) return;
+        const initialResistance = Number.isFinite(Number(machine.initialResistance))
+          ? Number(machine.initialResistance)
+          : 0;
+        const bestLoad = Math.max(...completed.map(item => Number(item.baseWeight || 0) + initialResistance));
+        const variantId = machine.variantId || '';
+        const key = `${workout.gym || 'sem-ginasio'}|${machineId}|${variantId}`;
+        const exerciseLabel = machine.variantLabel
+          ? `${machine.name} · ${machine.variantLabel}`
+          : (machine.name || machineId);
+        const label = workout.gym ? `${exerciseLabel} · ${workout.gym}` : exerciseLabel;
+        if (!seriesMap.has(key)) seriesMap.set(key, { label, points: [] });
+        seriesMap.get(key).points.push({ date: workout.date, value: bestLoad });
+      });
+    });
+  return new Map(
+    [...seriesMap.entries()]
+      .filter(([, item]) => item.points.length)
+      .sort(([, a], [, b]) => a.label.localeCompare(b.label, 'pt'))
+  );
+}
+
+function renderEvolutionChart(seriesKey) {
+  if (!evolutionChartEl || !evolutionLatestEl || !evolutionChangeEl) return;
+  evolutionChartEl.innerHTML = '';
+  const selected = evolutionSeries.get(seriesKey);
+  if (!selected?.points.length) {
+    const empty = document.createElement('div');
+    empty.className = 'gym-empty';
+    empty.textContent = 'Ainda não existem séries concluídas para mostrar a evolução.';
+    evolutionChartEl.appendChild(empty);
+    evolutionChartEl.setAttribute('aria-label', 'Sem dados de evolução');
+    evolutionLatestEl.textContent = '—';
+    evolutionChangeEl.textContent = '—';
+    return;
+  }
+
+  const points = selected.points;
+  const first = points[0].value;
+  const latest = points[points.length - 1].value;
+  const difference = latest - first;
+  const percent = first > 0 ? difference / first * 100 : 0;
+  const sign = difference > 0 ? '+' : '';
+  evolutionLatestEl.textContent = `${formatWeight(latest)} kg`;
+  evolutionChangeEl.textContent = points.length > 1
+    ? `${sign}${formatWeight(difference)} kg (${sign}${percent.toFixed(1)}%)`
+    : 'Só 1 treino';
+
+  const width = 760;
+  const height = 300;
+  const margin = { top: 22, right: 24, bottom: 50, left: 62 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const values = points.map(point => point.value);
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const padding = rawMin === rawMax ? Math.max(rawMax * 0.08, 1) : (rawMax - rawMin) * 0.12;
+  const minValue = Math.max(0, rawMin - padding);
+  const maxValue = rawMax + padding;
+  const xAt = index => margin.left + (points.length === 1 ? plotWidth / 2 : index / (points.length - 1) * plotWidth);
+  const yAt = value => margin.top + (maxValue - value) / (maxValue - minValue || 1) * plotHeight;
+  const svg = createSvgElement('svg', { viewBox: `0 0 ${width} ${height}`, 'aria-hidden': 'true' });
+
+  for (let index = 0; index <= 4; index += 1) {
+    const y = margin.top + index / 4 * plotHeight;
+    const value = maxValue - index / 4 * (maxValue - minValue);
+    svg.appendChild(createSvgElement('line', {
+      x1: margin.left, y1: y, x2: width - margin.right, y2: y, class: 'gym-evolution-grid'
+    }));
+    const label = createSvgElement('text', {
+      x: margin.left - 9, y: y + 4, 'text-anchor': 'end', class: 'gym-evolution-label'
+    });
+    label.textContent = `${formatWeight(value)} kg`;
+    svg.appendChild(label);
+  }
+
+  const path = createSvgElement('path', {
+    d: points.map((point, index) => `${index ? 'L' : 'M'} ${xAt(index)} ${yAt(point.value)}`).join(' '),
+    class: 'gym-evolution-line'
+  });
+  svg.appendChild(path);
+  const dateStep = Math.max(1, Math.ceil(points.length / 6));
+  points.forEach((point, index) => {
+    const circle = createSvgElement('circle', {
+      cx: xAt(index), cy: yAt(point.value), r: 5, class: 'gym-evolution-point'
+    });
+    const title = createSvgElement('title');
+    title.textContent = `${formatWorkoutDate(point.date)}: ${formatWeight(point.value)} kg`;
+    circle.appendChild(title);
+    svg.appendChild(circle);
+    if (index % dateStep === 0 || index === points.length - 1) {
+      const label = createSvgElement('text', {
+        x: xAt(index), y: height - 20, 'text-anchor': 'middle', class: 'gym-evolution-label'
+      });
+      label.textContent = new Date(`${point.date}T00:00:00`)
+        .toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
+      svg.appendChild(label);
+    }
+  });
+  evolutionChartEl.appendChild(svg);
+  evolutionChartEl.setAttribute(
+    'aria-label',
+    `${selected.label}: carga entre ${formatWeight(first)} e ${formatWeight(latest)} quilogramas em ${points.length} treinos.`
+  );
+}
+
+function renderEvolution(workouts) {
+  if (!evolutionMachineSelect) return;
+  const previousSelection = evolutionMachineSelect.value;
+  evolutionSeries = buildEvolutionSeries(workouts);
+  evolutionMachineSelect.innerHTML = '';
+  if (!evolutionSeries.size) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'Sem dados';
+    evolutionMachineSelect.appendChild(option);
+    evolutionMachineSelect.disabled = true;
+    renderEvolutionChart('');
+    return;
+  }
+  evolutionMachineSelect.disabled = false;
+  evolutionSeries.forEach((item, key) => {
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = item.label;
+    evolutionMachineSelect.appendChild(option);
+  });
+  evolutionMachineSelect.value = evolutionSeries.has(previousSelection)
+    ? previousSelection
+    : evolutionSeries.keys().next().value;
+  renderEvolutionChart(evolutionMachineSelect.value);
+}
+
 function renderSummaries(summaries) {
   summariesWrap.innerHTML = '';
-  summariesWrap.dataset.expanded = 'false';
   if (!summaries.length) {
     const empty = document.createElement('div');
     empty.className = 'gym-empty';
@@ -3321,7 +3602,16 @@ function renderSummaries(summaries) {
     const header = document.createElement('div');
     header.className = 'gym-summary-header';
     const title = document.createElement('strong');
-    title.textContent = `${summaryDoc.date} • ${summaryDoc.gym} / ${summaryDoc.treino}`;
+    title.textContent = `${formatWorkoutDate(summaryDoc.date)} • ${summaryDoc.gym} / ${summaryDoc.treino}`;
+    const showBtn = document.createElement('button');
+    showBtn.type = 'button';
+    showBtn.textContent = 'Mostrar';
+    showBtn.setAttribute('aria-expanded', 'false');
+    header.append(title, showBtn);
+
+    const details = document.createElement('div');
+    details.className = 'gym-summary-details';
+    details.hidden = true;
     const actions = document.createElement('div');
     actions.className = 'gym-summary-actions';
     const copyBtn = document.createElement('button');
@@ -3339,59 +3629,60 @@ function renderSummaries(summaries) {
       });
     });
     actions.append(deleteBtn, copyBtn);
-    header.append(title, actions);
 
     const body = document.createElement('pre');
     body.textContent = summaryDoc.summary || '';
+    details.append(actions, body);
+    showBtn.addEventListener('click', () => {
+      const willShow = details.hidden;
+      details.hidden = !willShow;
+      showBtn.textContent = willShow ? 'Ocultar' : 'Mostrar';
+      showBtn.setAttribute('aria-expanded', String(willShow));
+    });
 
-    card.append(header, body);
+    card.append(header, details);
     summariesWrap.appendChild(card);
   });
-
-  if (summaries.length > 1) {
-    const moreBtn = document.createElement('button');
-    moreBtn.type = 'button';
-    moreBtn.className = 'gym-summary-more';
-    moreBtn.textContent = 'Mostrar mais';
-    moreBtn.addEventListener('click', () => {
-      const expanded = summariesWrap.dataset.expanded === 'true';
-      summariesWrap.dataset.expanded = expanded ? 'false' : 'true';
-      moreBtn.textContent = expanded ? 'Mostrar mais' : 'Mostrar menos';
-    });
-    summariesWrap.appendChild(moreBtn);
-  }
 }
 
 async function loadSummaries() {
   try {
-    const q = query(collection(db, 'ginasio_treinos'), orderBy('date', 'desc'));
+    const q = query(
+      collection(db, 'ginasio_treinos'),
+      orderBy('date', 'desc'),
+      limit(EVOLUTION_WORKOUT_LIMIT)
+    );
     const snap = await getDocs(q);
-    const summaries = await Promise.all(snap.docs.map(async docSnap => {
+    const workouts = snap.docs.map(docSnap => {
       const data = docSnap.data();
-      const summaryText = buildSummaryText(data);
-      if (summaryText) {
-        await setDoc(doc(collection(db, 'ginasio_resumos'), docSnap.id), {
-          date: data.date,
-          gym: data.gym,
-          treino: data.treino,
-          summary: summaryText,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
-      }
       return {
         id: docSnap.id,
-        date: data.date,
-        gym: data.gym,
-        treino: data.treino,
-        summary: summaryText
+        ...data,
+        summary: buildSummaryText(data)
       };
-    }));
-    renderSummaries(summaries);
+    });
+    renderSummaries(workouts.slice(0, RECENT_SUMMARY_LIMIT));
+    renderEvolution(workouts);
   } catch (err) {
     console.error('Erro ao carregar resumos:', err);
     renderSummaries([]);
+    renderEvolution([]);
     showToast('Erro ao carregar resumos do Firebase.', 'error');
   }
+}
+
+function updateTrainingOptions(gym, preferredTraining = '') {
+  if (!trainingSelect) return;
+  const trainings = Object.keys(WORKOUT_TEMPLATES[gym] || {});
+  trainingSelect.innerHTML = '<option value="">Selecionar</option>';
+  trainings.forEach(training => {
+    const option = document.createElement('option');
+    option.value = training;
+    option.textContent = training;
+    trainingSelect.appendChild(option);
+  });
+  trainingSelect.value = trainings.includes(preferredTraining) ? preferredTraining : '';
+  trainingSelect.disabled = !gym;
 }
 
 function init() {
@@ -3404,21 +3695,27 @@ function init() {
       musicModeInput.checked = false;
     }
   }
-  trainingSelect.disabled = !gymSelect.value;
+  updateTrainingOptions(gymSelect.value, trainingSelect.value);
   updateNotificationStatus();
 
   gymSelect.addEventListener('change', () => {
-    trainingSelect.disabled = !gymSelect.value;
+    flushLocalDraft();
+    updateTrainingOptions(gymSelect.value);
+    setStateFromInputs();
     saveCurrentSelection();
-    loadSession();
+    void loadSession();
   });
   trainingSelect.addEventListener('change', () => {
+    flushLocalDraft();
+    setStateFromInputs();
     saveCurrentSelection();
-    loadSession();
+    void loadSession();
   });
   dateInput.addEventListener('change', () => {
+    flushLocalDraft();
+    setStateFromInputs();
     saveCurrentSelection();
-    loadSession();
+    void loadSession();
   });
   workoutWrap.addEventListener('input', scheduleLocalDraftSave);
   workoutWrap.addEventListener('input', event => {
@@ -3457,12 +3754,10 @@ function init() {
     }
   });
   window.addEventListener('pagehide', () => {
-    if (localDraftDirty) persistLocalDraft();
+    flushLocalDraft();
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && localDraftDirty) {
-      persistLocalDraft();
-    }
+    if (document.visibilityState === 'hidden') flushLocalDraft();
     if (document.visibilityState === 'visible') {
       refreshRestTimers();
       updateNotificationStatus();
@@ -3481,11 +3776,16 @@ function init() {
   });
   window.matchMedia?.('(display-mode: standalone)')
     .addEventListener?.('change', updateNotificationStatus);
-  restAddBtn?.addEventListener('click', () => addTimeToActiveRest(30));
+  restSubtractBtn?.addEventListener('click', () => void addTimeToActiveRest(-15));
+  restAddSmallBtn?.addEventListener('click', () => void addTimeToActiveRest(15));
+  restAddBtn?.addEventListener('click', () => void addTimeToActiveRest(30));
   restCancelBtn?.addEventListener('click', () => {
     if (activeRest?.key) cancelRestTimer(activeRest.key);
   });
   summariesRefreshBtn.addEventListener('click', loadSummaries);
+  evolutionMachineSelect?.addEventListener('change', () => {
+    renderEvolutionChart(evolutionMachineSelect.value);
+  });
   if (machineAddSeriesBtn) {
     machineAddSeriesBtn.addEventListener('click', () => addSeriesRow());
   }

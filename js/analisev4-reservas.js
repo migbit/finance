@@ -52,15 +52,12 @@ async function loadData() {
     state.rows = [];
     state.nightlyEntries = [];
     renderMessage('Sem dados disponíveis.');
-    const qualityTarget = document.getElementById('qualidade-v4-content');
-    const qualityCount = document.getElementById('qualidade-v4-count');
-    const qualityToggle = document.getElementById('qualidade-v4-toggle');
-    if (qualityTarget) {
-      qualityTarget.hidden = false;
-      qualityTarget.innerHTML = '<p class="faturacao-v4-empty">Não foi possível verificar os registos.</p>';
+    const qualityAlert = document.getElementById('qualidade-v4-alert');
+    const qualityContent = document.getElementById('qualidade-v4-alert-content');
+    if (qualityAlert && qualityContent) {
+      qualityAlert.hidden = false;
+      qualityContent.innerHTML = '<strong>ERRO:</strong> não foi possível verificar a qualidade dos registos.';
     }
-    if (qualityCount) qualityCount.textContent = '—';
-    if (qualityToggle) qualityToggle.hidden = true;
     window.errorHandler?.handleError('reservas-v4', error, 'loadData', loadData);
   } finally {
     window.loadingManager?.hide('reservas-v4');
@@ -114,14 +111,6 @@ function bindControls() {
     if (document.querySelector('.reservas-v4-table-wrap')?.classList.contains('is-expanded')) button?.click();
   }, { signal });
 
-  document.getElementById('qualidade-v4-toggle')?.addEventListener('click', (event) => {
-    const content = document.getElementById('qualidade-v4-content');
-    if (!content) return;
-    const expanded = content.hidden;
-    content.hidden = !expanded;
-    event.currentTarget.textContent = expanded ? 'Ocultar correções' : 'Ver correções';
-    event.currentTarget.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-  }, { signal });
   updateControls();
 }
 
@@ -319,13 +308,17 @@ function renderWeekpartTable(rows, entries) {
   }
   const priceDiff = metrics.weekendPrice - metrics.weekdayPrice;
   const occupancyDiff = metrics.weekendOcc - metrics.weekdayOcc;
+  const weekdayPriceClass = metrics.weekdayPrice > metrics.weekendPrice ? 'reservas-v4-highlight' : '';
+  const weekendPriceClass = metrics.weekendPrice > metrics.weekdayPrice ? 'reservas-v4-highlight' : '';
+  const weekdayOccupancyClass = metrics.weekdayOcc > metrics.weekendOcc ? 'reservas-v4-highlight' : '';
+  const weekendOccupancyClass = metrics.weekendOcc > metrics.weekdayOcc ? 'reservas-v4-highlight' : '';
   renderTable(`
     <p class="reservas-v4-note">Preço e ocupação das noites de sexta/sábado face aos restantes dias · ${periodLabel()}.</p>
     <table class="media-faturacao reservas-v4-table">
       <thead><tr><th>Métrica</th><th>Dias úteis</th><th>Fim de semana</th><th>Diferença</th></tr></thead>
       <tbody>
-        <tr><td>Preço médio</td><td>${formatEuro(metrics.weekdayPrice)}</td><td>${formatEuro(metrics.weekendPrice)}</td><td>${formatSignedEuro(priceDiff)}</td></tr>
-        <tr><td>Ocupação</td><td>${formatPercent(metrics.weekdayOcc)}</td><td>${formatPercent(metrics.weekendOcc)}</td><td>${formatSignedPoints(occupancyDiff)}</td></tr>
+        <tr><td>Preço médio</td><td class="${weekdayPriceClass}">${formatEuro(metrics.weekdayPrice)}</td><td class="${weekendPriceClass}">${formatEuro(metrics.weekendPrice)}</td><td>${formatSignedEuro(priceDiff)}</td></tr>
+        <tr><td>Ocupação</td><td class="${weekdayOccupancyClass}">${formatPercent(metrics.weekdayOcc)}</td><td class="${weekendOccupancyClass}">${formatPercent(metrics.weekendOcc)}</td><td>${formatSignedPoints(occupancyDiff)}</td></tr>
         <tr class="reservas-v4-total-row"><td><strong>Prémio de fim de semana</strong></td><td>—</td><td><strong>${formatSignedPercent(metrics.premium)}</strong></td><td>—</td></tr>
       </tbody>
     </table>
@@ -345,13 +338,15 @@ function renderWeekdaysTable(rows) {
     renderMessage('Sem datas suficientes para analisar os dias da semana.');
     return;
   }
+  const maxCheckins = Math.max(0, ...checkins);
+  const maxBookings = Math.max(0, ...bookings);
   const body = WEEKDAY_LABELS.map((label, idx) => `
     <tr>
       <td>${label}</td>
-      <td>${checkins[idx]}</td>
-      <td>${totalCheckins ? formatPercent((checkins[idx] / totalCheckins) * 100) : '—'}</td>
-      <td>${bookings[idx]}</td>
-      <td>${totalBookings ? formatPercent((bookings[idx] / totalBookings) * 100) : '—'}</td>
+      <td class="${checkins[idx] === maxCheckins && maxCheckins > 0 ? 'reservas-v4-highlight' : ''}">${checkins[idx]}</td>
+      <td class="${checkins[idx] === maxCheckins && maxCheckins > 0 ? 'reservas-v4-highlight' : ''}">${totalCheckins ? formatPercent((checkins[idx] / totalCheckins) * 100) : '—'}</td>
+      <td class="${bookings[idx] === maxBookings && maxBookings > 0 ? 'reservas-v4-highlight' : ''}">${bookings[idx]}</td>
+      <td class="${bookings[idx] === maxBookings && maxBookings > 0 ? 'reservas-v4-highlight' : ''}">${totalBookings ? formatPercent((bookings[idx] / totalBookings) * 100) : '—'}</td>
     </tr>
   `).join('');
   renderTable(`
@@ -376,33 +371,35 @@ function renderBookingMonthTable(rows) {
     renderMessage('Sem datas suficientes para cruzar estadias e reservas.');
     return;
   }
+  const rowTotals = matrix.map((months) => months.reduce((sum, value) => sum + value, 0));
+  const columnTotals = Array.from({ length: 12 }, (_, bookingIdx) =>
+    matrix.reduce((sum, stayMonths) => sum + stayMonths[bookingIdx], 0)
+  );
+  const maxRowTotal = Math.max(0, ...rowTotals);
+  const maxColumnTotal = Math.max(0, ...columnTotals);
   const body = MONTH_LABELS.map((stayLabel, stayIdx) => {
-    const total = matrix[stayIdx].reduce((sum, value) => sum + value, 0);
+    const total = rowTotals[stayIdx];
     const cells = matrix[stayIdx].map((value) => {
       const alpha = value ? 0.08 + (value / max) * 0.32 : 0;
       return `<td style="background:rgba(20, 78, 3, ${alpha.toFixed(3)})">${value || '—'}</td>`;
     }).join('');
-    return `<tr><td>${stayLabel}</td>${cells}<td><strong>${total}</strong></td></tr>`;
+    return `<tr><td>${stayLabel}</td>${cells}<td class="${total === maxRowTotal && maxRowTotal > 0 ? 'reservas-v4-highlight' : ''}"><strong>${total}</strong></td></tr>`;
   }).join('');
-  const columnTotals = Array.from({ length: 12 }, (_, bookingIdx) =>
-    matrix.reduce((sum, stayMonths) => sum + stayMonths[bookingIdx], 0)
-  );
   const grandTotal = columnTotals.reduce((sum, value) => sum + value, 0);
   renderTable(`
     <p class="reservas-v4-note">Linhas: mês da estadia · Colunas: mês em que a reserva foi feita · ${periodLabel()}.</p>
     <table class="media-faturacao reservas-v4-table">
       <thead><tr><th>Estadia ↓ / Reserva →</th>${MONTH_LABELS.map((label) => `<th>${label}</th>`).join('')}<th>Total</th></tr></thead>
       <tbody>${body}<tr class="reservas-v4-total-row"><td><strong>Total</strong></td>${columnTotals.map((value) =>
-        `<td><strong>${value}</strong></td>`).join('')}<td><strong>${grandTotal}</strong></td></tr></tbody>
+        `<td class="${value === maxColumnTotal && maxColumnTotal > 0 ? 'reservas-v4-highlight' : ''}"><strong>${value}</strong></td>`).join('')}<td><strong>${grandTotal}</strong></td></tr></tbody>
     </table>
   `);
 }
 
 function renderQualityDashboard() {
-  const target = document.getElementById('qualidade-v4-content');
-  const count = document.getElementById('qualidade-v4-count');
-  const toggle = document.getElementById('qualidade-v4-toggle');
-  if (!target || !count || !toggle) return;
+  const alert = document.getElementById('qualidade-v4-alert');
+  const content = document.getElementById('qualidade-v4-alert-content');
+  if (!alert || !content) return;
 
   const rows = state.rows.filter((row) => analysisYear(row) >= 2025);
   const duplicateCounts = new Map();
@@ -431,46 +428,37 @@ function renderQualityDashboard() {
   }).filter(Boolean);
 
   if (!findings.length) {
-    count.textContent = 'Completo';
-    count.classList.add('is-complete');
-    toggle.hidden = true;
-    target.hidden = false;
-    target.innerHTML = '<p class="qualidade-v4-success">Todos os registos desde 2025 têm os dados essenciais preenchidos.</p>';
+    alert.hidden = true;
+    content.innerHTML = '';
     return;
   }
 
-  count.classList.remove('is-complete');
-  count.textContent = `${findings.length} ${findings.length === 1 ? 'registo' : 'registos'}`;
-  toggle.hidden = false;
-  toggle.textContent = 'Ver correções';
-  toggle.setAttribute('aria-expanded', 'false');
-  target.hidden = true;
-  const body = findings.map(({ row, issues, checkIn }) => {
+  const items = findings.map(({ row, issues, checkIn }) => {
     const reference = row.numeroFatura || row.id || 'Sem referência';
     const editLink = row.id
       ? `<a class="qualidade-v4-edit" href="faturas.html?editar=${encodeURIComponent(row.id)}">Corrigir</a>`
       : '<span class="qualidade-v4-no-link">Sem ligação</span>';
     return `
-      <tr>
-        <td><strong>${escapeHtml(reference)}</strong></td>
-        <td>${escapeHtml(String(row.apartamento || '—'))}</td>
-        <td>${checkIn ? formatShortDate(checkIn) : '—'}</td>
-        <td><div class="qualidade-v4-issues">${issues.map((issue) =>
-          `<span>${escapeHtml(issue)}</span>`).join('')}</div></td>
-        <td>${editLink}</td>
-      </tr>
+      <div class="qualidade-v4-alert-item">
+        <span>
+          <strong>${escapeHtml(reference)}</strong>
+          · Apto. ${escapeHtml(String(row.apartamento || '—'))}
+          · ${checkIn ? formatShortDate(checkIn) : 'sem check-in'}
+          · ${issues.map((issue) => escapeHtml(issue)).join(' · ')}
+        </span>
+        ${editLink}
+      </div>
     `;
   }).join('');
 
-  target.innerHTML = `
-    <p class="reservas-v4-note">Registos que podem afetar os cálculos. Os bebés não entram na validação de hóspedes e as extensões diretas da série D podem ter uma noite.</p>
-    <div class="table-wrap qualidade-v4-table-wrap">
-      <table class="media-faturacao qualidade-v4-table">
-        <thead><tr><th>Fatura</th><th>Apartamento</th><th>Check-in</th><th>A corrigir</th><th>Ação</th></tr></thead>
-        <tbody>${body}</tbody>
-      </table>
+  content.innerHTML = `
+    <div class="qualidade-v4-alert-title">
+      <strong>ERRO:</strong>
+      ${findings.length} ${findings.length === 1 ? 'registo precisa' : 'registos precisam'} de correção
     </div>
+    <div class="qualidade-v4-alert-list">${items}</div>
   `;
+  alert.hidden = false;
 }
 
 function analysisDate(row) {
@@ -578,17 +566,23 @@ function formatPercent(value) {
 
 function formatSignedPercent(value) {
   const number = Number(value) || 0;
-  return `${number >= 0 ? '+' : '−'}${formatPercent(Math.abs(number))}`;
+  return `<span class="${signedValueClass(number)}">${number >= 0 ? '+' : '−'}${formatPercent(Math.abs(number))}</span>`;
 }
 
 function formatSignedPoints(value) {
   const number = Number(value) || 0;
-  return `${number >= 0 ? '+' : '−'}${Math.abs(number).toFixed(1).replace('.', ',')} pp`;
+  return `<span class="${signedValueClass(number)}">${number >= 0 ? '+' : '−'}${Math.abs(number).toFixed(1).replace('.', ',')} pp</span>`;
 }
 
 function formatSignedEuro(value) {
   const number = Number(value) || 0;
-  return `${number >= 0 ? '+' : '−'} ${formatEuro(Math.abs(number))}`;
+  return `<span class="${signedValueClass(number)}">${number >= 0 ? '+' : '−'} ${formatEuro(Math.abs(number))}</span>`;
+}
+
+function signedValueClass(value) {
+  if (value > 0) return 'reservas-v4-diff-positive';
+  if (value < 0) return 'reservas-v4-diff-negative';
+  return 'reservas-v4-diff-neutral';
 }
 
 function renderTable(html) {
