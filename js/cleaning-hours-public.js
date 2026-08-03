@@ -72,7 +72,7 @@ function renderCalendar(payload) {
     '123': buildSchedule(dates, calendars['123']),
     '1248': buildSchedule(dates, calendars['1248'])
   };
-  addDeferredCleaningAlternatives(dates, schedules);
+  addDeferredCleaningAlternatives(dates, schedules, calendars);
   const weeks = [dates.slice(0, 7), dates.slice(7, 14)];
 
   calendarWeeks.innerHTML = weeks.map((weekDates, index) => `
@@ -140,7 +140,7 @@ function buildSchedule(dates, calendar) {
     const checkout = booking.end;
     const nextBooking = bookings.slice(index + 1).find((candidate) => candidate.start >= checkout);
     const nextCheckIn = nextBooking?.start || null;
-    const required = nextCheckIn !== null && nextCheckIn <= addDays(checkout, 1);
+    const required = nextCheckIn === checkout;
 
     if (required) {
       if (Object.hasOwn(schedule, checkout)) schedule[checkout] = 'required';
@@ -164,7 +164,7 @@ function buildSchedule(dates, calendar) {
   return schedule;
 }
 
-function addDeferredCleaningAlternatives(dates, schedules) {
+function addDeferredCleaningAlternatives(dates, schedules, calendars) {
   const dateSet = new Set(dates);
   const alternatives = [];
 
@@ -180,7 +180,14 @@ function addDeferredCleaningAlternatives(dates, schedules) {
   });
 
   alternatives.forEach(({ apartment, dateKey }) => {
-    if (dateSet.has(dateKey) && schedules[apartment][dateKey] === 'free') {
+    const status = schedules[apartment][dateKey];
+    const hasCheckIn = calendars[apartment].bookings.some((booking) =>
+      booking.start === dateKey
+    );
+    if (
+      dateSet.has(dateKey) &&
+      (status === 'free' || (status === 'occupied' && hasCheckIn))
+    ) {
       schedules[apartment][dateKey] = 'optional';
     }
   });

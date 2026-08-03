@@ -105,7 +105,7 @@ function drawCalendar(payload) {
     '123': buildCleaningSchedule(dates, calendars['123']),
     '1248': buildCleaningSchedule(dates, calendars['1248'])
   };
-  addDeferredCleaningAlternatives(dates, schedules);
+  addDeferredCleaningAlternatives(dates, schedules, calendars);
 
   ctx.fillStyle = '#f4f7fb';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -246,7 +246,7 @@ function drawCleaningSummary(ctx, dates, schedules) {
 
   ctx.fillStyle = '#687588';
   ctx.font = '600 19px Arial, sans-serif';
-  ctx.fillText('VERMELHO = limpar nesse dia  •  PRETO = primeira data possível', 48, 1510);
+  ctx.fillText('VERMELHO = limpar nesse dia  •  PRETO = pode limpar nesse dia', 48, 1510);
   ctx.fillText(`Atualizado em ${new Date().toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}`, 48, 1545);
 }
 
@@ -283,7 +283,7 @@ function buildCleaningSchedule(dates, calendar) {
     const checkout = booking.end;
     const nextBooking = bookings.slice(index + 1).find((candidate) => candidate.start >= checkout);
     const nextCheckIn = nextBooking?.start || null;
-    const required = nextCheckIn !== null && nextCheckIn <= addDays(checkout, 1);
+    const required = nextCheckIn === checkout;
 
     if (required) {
       if (Object.hasOwn(schedule, checkout)) schedule[checkout] = 'required';
@@ -307,7 +307,7 @@ function buildCleaningSchedule(dates, calendar) {
   return schedule;
 }
 
-function addDeferredCleaningAlternatives(dates, schedules) {
+function addDeferredCleaningAlternatives(dates, schedules, calendars) {
   const dateSet = new Set(dates);
   const alternatives = [];
 
@@ -323,7 +323,14 @@ function addDeferredCleaningAlternatives(dates, schedules) {
   });
 
   alternatives.forEach(({ apartment, dateKey }) => {
-    if (dateSet.has(dateKey) && schedules[apartment][dateKey] === 'free') {
+    const status = schedules[apartment][dateKey];
+    const hasCheckIn = calendars[apartment].bookings.some((booking) =>
+      booking.start === dateKey
+    );
+    if (
+      dateSet.has(dateKey) &&
+      (status === 'free' || (status === 'occupied' && hasCheckIn))
+    ) {
       schedules[apartment][dateKey] = 'optional';
     }
   });
