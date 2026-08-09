@@ -703,7 +703,7 @@ function historicalAverageDataset(data, label) {
     isHistoricalAverage: true,
     borderColor: HISTORICAL_AVERAGE_COLOR,
     backgroundColor: 'transparent',
-    borderDash: [3, 5],
+    borderDash: [],
     borderWidth: 1.5,
     pointRadius: 0,
     pointHoverRadius: 3,
