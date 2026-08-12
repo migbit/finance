@@ -1,0 +1,84 @@
+[debug] [2026-08-09T13:44:46.467Z] ----------------------------------------------------------------------
+[debug] [2026-08-09T13:44:46.470Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\apart\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js functions:list --project apartments-a4b17
+[debug] [2026-08-09T13:44:46.470Z] CLI Version:   15.22.3
+[debug] [2026-08-09T13:44:46.470Z] Platform:      win32
+[debug] [2026-08-09T13:44:46.471Z] Node Version:  v24.14.0
+[debug] [2026-08-09T13:44:46.471Z] Detected Agent: unknown
+[debug] [2026-08-09T13:44:46.471Z] Time:          Sun Aug 09 2026 14:44:46 GMT+0100 (Hora de verão da Europa Ocidental)
+[debug] [2026-08-09T13:44:46.471Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-09T13:44:46.474Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-08-09T13:44:47.263Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-09T13:44:47.263Z] > authorizing via signed-in user (migbit84@gmail.com)
+[debug] [2026-08-09T13:44:47.264Z] [iam] checking project apartments-a4b17 for permissions ["cloudfunctions.functions.list","firebase.projects.get","run.services.list"]
+[debug] [2026-08-09T13:44:47.265Z] Checked if tokens are valid: false, expires at: 1785788187350
+[debug] [2026-08-09T13:44:47.266Z] Checked if tokens are valid: false, expires at: 1785788187350
+[debug] [2026-08-09T13:44:47.266Z] > refreshing access token with scopes: []
+[debug] [2026-08-09T13:44:47.269Z] >>> [apiv2][query] POST https://www.googleapis.com/oauth2/v3/token [none]
+[debug] [2026-08-09T13:44:47.269Z] >>> [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-08-09T13:44:47.509Z] <<< [apiv2][status] POST https://www.googleapis.com/oauth2/v3/token 200
+[debug] [2026-08-09T13:44:47.509Z] <<< [apiv2][body] POST https://www.googleapis.com/oauth2/v3/token [omitted]
+[debug] [2026-08-09T13:44:47.574Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions [none]
+[debug] [2026-08-09T13:44:47.574Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions  x-goog-user-project=apartments-a4b17
+[debug] [2026-08-09T13:44:47.575Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["cloudfunctions.functions.list","firebase.projects.get","run.services.list"]}
+[debug] [2026-08-09T13:44:47.578Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-08-09T13:44:47.578Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-08-09T13:44:47.914Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions 200
+[debug] [2026-08-09T13:44:47.915Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["cloudfunctions.functions.list","firebase.projects.get","run.services.list"]}
+[debug] [2026-08-09T13:44:47.915Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:44:47.916Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:44:47.916Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v1/projects/apartments-a4b17/locations/-/functions [none]
+[debug] [2026-08-09T13:44:48.710Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v1/projects/apartments-a4b17/locations/-/functions 200
+[debug] [2026-08-09T13:44:48.710Z] <<< [apiv2][body] GET https://cloudfunctions.googleapis.com/v1/projects/apartments-a4b17/locations/-/functions {}
+[debug] [2026-08-09T13:44:48.711Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:44:48.711Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:44:48.711Z] >>> [apiv2][query] GET https://cloudfunctions.googleapis.com/v2/projects/apartments-a4b17/locations/-/functions filter=environment%3D%22GEN_2%22
+[debug] [2026-08-09T13:44:49.848Z] <<< [apiv2][status] GET https://cloudfunctions.googleapis.com/v2/projects/apartments-a4b17/locations/-/functions 200
+[debug] [2026-08-09T13:45:01.916Z] ----------------------------------------------------------------------
+[debug] [2026-08-09T13:45:01.919Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\apart\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js functions:log --only cleaningCalendar --lines 40 --project apartments-a4b17
+[debug] [2026-08-09T13:45:01.919Z] CLI Version:   15.22.3
+[debug] [2026-08-09T13:45:01.919Z] Platform:      win32
+[debug] [2026-08-09T13:45:01.919Z] Node Version:  v24.14.0
+[debug] [2026-08-09T13:45:01.919Z] Detected Agent: unknown
+[debug] [2026-08-09T13:45:01.919Z] Time:          Sun Aug 09 2026 14:45:01 GMT+0100 (Hora de verão da Europa Ocidental)
+[debug] [2026-08-09T13:45:01.919Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-09T13:45:02.140Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-09T13:45:02.140Z] > authorizing via signed-in user (migbit84@gmail.com)
+[debug] [2026-08-09T13:45:02.141Z] [iam] checking project apartments-a4b17 for permissions ["firebase.projects.get","logging.logEntries.list","logging.logs.list"]
+[debug] [2026-08-09T13:45:02.143Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:45:02.143Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:45:02.144Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions [none]
+[debug] [2026-08-09T13:45:02.144Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions  x-goog-user-project=apartments-a4b17
+[debug] [2026-08-09T13:45:02.145Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["firebase.projects.get","logging.logEntries.list","logging.logs.list"]}
+[debug] [2026-08-09T13:45:02.449Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions 200
+[debug] [2026-08-09T13:45:02.449Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["firebase.projects.get","logging.logEntries.list","logging.logs.list"]}
+[debug] [2026-08-09T13:45:02.450Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:45:02.450Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:45:02.450Z] >>> [apiv2][query] POST https://logging.googleapis.com/v2/entries:list [none]
+[debug] [2026-08-09T13:45:02.450Z] >>> [apiv2][body] POST https://logging.googleapis.com/v2/entries:list {"resourceNames":["projects/apartments-a4b17"],"filter":"resource.type=\"cloud_function\" OR (resource.type=\"cloud_run_revision\" AND labels.\"goog-managed-by\"=\"cloudfunctions\")\n(resource.labels.function_name=\"cleaningCalendar\" OR resource.labels.service_name=\"cleaningCalendar\")","orderBy":"timestamp desc","pageSize":"40"}
+[debug] [2026-08-09T13:45:09.722Z] <<< [apiv2][status] POST https://logging.googleapis.com/v2/entries:list 200
+[debug] [2026-08-09T13:57:18.633Z] ----------------------------------------------------------------------
+[debug] [2026-08-09T13:57:18.636Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\apart\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js functions:log --only cleaningCalendar --lines 5 --project apartments-a4b17
+[debug] [2026-08-09T13:57:18.636Z] CLI Version:   15.22.3
+[debug] [2026-08-09T13:57:18.636Z] Platform:      win32
+[debug] [2026-08-09T13:57:18.637Z] Node Version:  v24.14.0
+[debug] [2026-08-09T13:57:18.637Z] Detected Agent: unknown
+[debug] [2026-08-09T13:57:18.637Z] Time:          Sun Aug 09 2026 14:57:18 GMT+0100 (Hora de verão da Europa Ocidental)
+[debug] [2026-08-09T13:57:18.637Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-08-09T13:57:18.898Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-08-09T13:57:18.900Z] > authorizing via signed-in user (migbit84@gmail.com)
+[debug] [2026-08-09T13:57:18.900Z] [iam] checking project apartments-a4b17 for permissions ["firebase.projects.get","logging.logEntries.list","logging.logs.list"]
+[debug] [2026-08-09T13:57:18.902Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:57:18.903Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:57:18.904Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions [none]
+[debug] [2026-08-09T13:57:18.904Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions  x-goog-user-project=apartments-a4b17
+[debug] [2026-08-09T13:57:18.904Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["firebase.projects.get","logging.logEntries.list","logging.logs.list"]}
+[debug] [2026-08-09T13:57:19.266Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions 200
+[debug] [2026-08-09T13:57:19.267Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/apartments-a4b17:testIamPermissions {"permissions":["firebase.projects.get","logging.logEntries.list","logging.logs.list"]}
+[debug] [2026-08-09T13:57:19.267Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:57:19.268Z] Checked if tokens are valid: true, expires at: 1786286686510
+[debug] [2026-08-09T13:57:19.268Z] >>> [apiv2][query] POST https://logging.googleapis.com/v2/entries:list [none]
+[debug] [2026-08-09T13:57:19.268Z] >>> [apiv2][body] POST https://logging.googleapis.com/v2/entries:list {"resourceNames":["projects/apartments-a4b17"],"filter":"resource.type=\"cloud_function\" OR (resource.type=\"cloud_run_revision\" AND labels.\"goog-managed-by\"=\"cloudfunctions\")\n(resource.labels.function_name=\"cleaningCalendar\" OR resource.labels.service_name=\"cleaningCalendar\")","orderBy":"timestamp desc","pageSize":"5"}
+[debug] [2026-08-09T13:57:21.388Z] <<< [apiv2][status] POST https://logging.googleapis.com/v2/entries:list 200
