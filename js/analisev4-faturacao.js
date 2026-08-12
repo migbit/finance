@@ -1465,9 +1465,8 @@ function monthlyToDate(values, year) {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
   const series = Array.isArray(values) ? [...values] : Array(12).fill(0);
-  const limitAllYears = state.mode === 'cumulativo';
   return series.map((value, idx) => (
-    idx + 1 > currentMonth && (Number(year) === currentYear || limitAllYears)
+    idx + 1 > currentMonth && Number(year) === currentYear
       ? null
       : value
   ));
@@ -1553,7 +1552,7 @@ function cumulativeMonthlyToDate(values, year) {
   let running = 0;
   return values.map((value, idx) => {
     const month = idx + 1;
-    if (month > currentMonth && (Number(year) === currentYear || state.mode === 'cumulativo')) return null;
+    if (month > currentMonth && Number(year) === currentYear) return null;
     running += Number(value) || 0;
     return running;
   });
