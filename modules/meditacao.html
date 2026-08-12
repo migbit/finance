@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4f1ea">
+  <title>Meditação</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/meditacao.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="manifest" href="../manifest.json">
+</head>
+<body data-page="meditacao">
+  <button id="menu-icon" aria-label="Abrir menu">☰</button>
+  <header><nav id="nav-menu"></nav></header>
+
+  <main class="meditation-page">
+    <section class="meditation-hero" aria-labelledby="meditation-title">
+      <div>
+        <p class="meditation-eyebrow">Catálogo contemplativo pessoal</p>
+        <h1 id="meditation-title">Meditação</h1>
+        <p class="meditation-intro">Explora práticas documentadas de diferentes épocas e tradições, experimenta-as e deixa que as tuas próprias sessões melhorem as recomendações.</p>
+      </div>
+      <button type="button" id="meditation-lock" class="meditation-lock" hidden>Bloquear</button>
+    </section>
+
+    <section id="meditation-access" class="meditation-access card" aria-labelledby="access-title">
+      <div id="meditation-auth-gate">
+        <span class="meditation-gate-icon" aria-hidden="true">◌</span>
+        <h2 id="access-title">Área pessoal</h2>
+        <p>Inicia sessão com a tua conta Google para carregar o histórico guardado no Firebase.</p>
+        <button type="button" class="primary" id="meditation-login">Abrir início de sessão</button>
+      </div>
+      <form id="meditation-pin-form" class="meditation-pin-form" hidden>
+        <span class="meditation-gate-icon" aria-hidden="true">⌁</span>
+        <h2>Introduz o PIN</h2>
+        <p>Este bloqueio protege apenas a interface neste dispositivo.</p>
+        <label for="meditation-pin">PIN de 4 dígitos</label>
+        <div class="meditation-pin-row">
+          <input id="meditation-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required>
+          <button type="submit" class="primary">Desbloquear</button>
+        </div>
+        <p id="meditation-pin-error" class="meditation-field-error" role="alert" hidden>PIN incorreto.</p>
+      </form>
+    </section>
+
+    <div id="meditation-app" hidden>
+      <section id="meditation-active" class="meditation-active" hidden>
+        <div>
+          <span class="meditation-active-label">Sessão em curso</span>
+          <strong id="meditation-active-name">—</strong>
+          <span id="meditation-active-time">00:00</span>
+        </div>
+        <button type="button" class="primary" id="meditation-active-open">Continuar</button>
+      </section>
+
+      <section class="meditation-overview" aria-label="Resumo pessoal">
+        <article><strong id="meditation-stat-total">—</strong><span>práticas revistas</span></article>
+        <article><strong id="meditation-stat-new">—</strong><span>por experimentar</span></article>
+        <article><strong id="meditation-stat-tried">—</strong><span>experimentadas</span></article>
+        <article><strong id="meditation-stat-sessions">—</strong><span>sessões concluídas</span></article>
+      </section>
+
+      <section class="meditation-controls card" aria-labelledby="catalog-heading">
+        <div class="meditation-heading-row">
+          <div>
+            <p class="meditation-eyebrow">Descobrir</p>
+            <h2 id="catalog-heading">Catálogo</h2>
+          </div>
+          <button type="button" id="meditation-clear-filters" class="ghost">Limpar filtros</button>
+        </div>
+
+        <div class="meditation-primary-filters">
+          <label class="meditation-search">
+            Procurar
+            <input type="search" id="meditation-search" placeholder="Nome, tradição, objetivo, âncora…">
+          </label>
+          <label>
+            Mostrar
+            <select id="meditation-status-filter">
+              <option value="all">Todas</option>
+              <option value="new">Novas</option>
+              <option value="tried">Experimentadas</option>
+            </select>
+          </label>
+          <label>
+            Ordenar
+            <select id="meditation-sort">
+              <option value="recommended">Recomendadas para mim</option>
+              <option value="rating">Minha classificação</option>
+              <option value="sessions">Número de sessões</option>
+              <option value="recent">Prática mais recente</option>
+              <option value="duration">Duração sugerida</option>
+              <option value="name">Nome</option>
+              <option value="random">Explorar ao acaso</option>
+            </select>
+          </label>
+        </div>
+
+        <details class="meditation-advanced-filters">
+          <summary>Filtros detalhados <span id="meditation-filter-count"></span></summary>
+          <div class="meditation-filter-grid">
+            <label>Sistema de crença<select id="filter-beliefSystems"><option value="">Todos</option></select></label>
+            <label>Tradição<select id="filter-traditions"><option value="">Todas</option></select></label>
+            <label>Família da prática<select id="filter-families"><option value="">Todas</option></select></label>
+            <label>Modo de atenção<select id="filter-attentionModes"><option value="">Todos</option></select></label>
+            <label>Âncora<select id="filter-anchors"><option value="">Todas</option></select></label>
+            <label>Característica<select id="filter-features"><option value="">Todas</option></select></label>
+            <label>Objetivo<select id="filter-goals"><option value="">Todos</option></select></label>
+            <label>Posição<select id="filter-positions"><option value="">Todas</option></select></label>
+            <label>Respiração como âncora<select id="filter-breath"><option value="all">Todas</option><option value="yes">Com respiração</option><option value="no">Sem respiração</option></select></label>
+            <label>Visualização<select id="filter-visualization"><option value="all">Todas</option><option value="yes">Com visualização</option><option value="no">Sem visualização</option></select></label>
+            <label>Mantra ou recitação<select id="filter-mantra"><option value="all">Todas</option><option value="yes">Com mantra/recitação</option><option value="no">Sem mantra/recitação</option></select></label>
+            <label>Movimento<select id="filter-movement"><option value="all">Todas</option><option value="yes">Com movimento</option><option value="no">Sem movimento</option></select></label>
+            <label>Flexibilidade<select id="filter-flexibility"><option value="">Todas</option><option value="low">Baixa</option><option value="medium">Média</option><option value="high">Alta</option></select></label>
+            <label>Dificuldade<select id="filter-difficulty"><option value="">Todas</option><option value="beginner">Iniciante</option><option value="intermediate">Intermédia</option><option value="advanced">Avançada</option></select></label>
+            <label>Intensidade<select id="filter-intensity"><option value="">Todas</option><option value="low">Baixa</option><option value="moderate">Moderada</option><option value="high">Alta</option></select></label>
+            <label>Psilocibina<select id="filter-psilocybin"><option value="all">Todas</option><option value="yes">Relacionadas</option><option value="no">Sem psilocibina</option></select></label>
+          </div>
+        </details>
+
+        <div class="meditation-recommendation-note" id="meditation-learning-note" role="status"></div>
+      </section>
+
+      <div class="meditation-results-heading">
+        <p id="meditation-results-count">A carregar catálogo…</p>
+        <p class="meditation-catalog-note">Catálogo vivo e auditável: amplo, mas não pretende representar práticas orais, perdidas ou não publicadas.</p>
+      </div>
+      <section id="meditation-list" class="meditation-list" aria-live="polite" aria-busy="true"></section>
+      <div class="meditation-more-wrap"><button type="button" id="meditation-show-more" hidden>Mostrar mais</button></div>
+    </div>
+  </main>
+
+  <dialog id="meditation-detail-dialog" class="meditation-dialog meditation-detail-dialog" aria-label="Detalhes da meditação">
+    <div class="meditation-dialog-shell">
+      <button type="button" class="meditation-dialog-close" data-close-dialog aria-label="Fechar">×</button>
+      <div id="meditation-detail-content"></div>
+    </div>
+  </dialog>
+
+  <dialog id="meditation-session-dialog" class="meditation-dialog meditation-session-dialog" aria-labelledby="meditation-session-name">
+    <div class="meditation-dialog-shell">
+      <button type="button" class="meditation-dialog-close" id="meditation-session-hide" aria-label="Minimizar sessão">×</button>
+      <p class="meditation-eyebrow">Sessão individual</p>
+      <h2 id="meditation-session-name">—</h2>
+      <div id="meditation-session-clock" class="meditation-session-clock">20:00</div>
+      <p id="meditation-session-phase" class="meditation-session-phase">Tempo restante</p>
+      <div class="meditation-session-progress"><span id="meditation-session-progress-bar"></span></div>
+      <div class="meditation-session-target">
+        <label for="meditation-session-minutes">Objetivo (minutos)</label>
+        <input id="meditation-session-minutes" type="number" min="1" max="240" value="20">
+      </div>
+      <details class="meditation-session-guide">
+        <summary>Consultar passos</summary>
+        <ol id="meditation-session-steps"></ol>
+      </details>
+      <div class="meditation-session-actions">
+        <button type="button" id="meditation-session-pause">Pausar</button>
+        <button type="button" id="meditation-session-cancel" class="meditation-danger">Cancelar</button>
+        <button type="button" id="meditation-session-finish" class="primary">Terminar</button>
+      </div>
+      <p class="meditation-session-hint">O temporizador é silencioso e calcula o tempo corretamente quando regressas à aplicação. Usa o alarme do relógio se precisares de um aviso.</p>
+    </div>
+  </dialog>
+
+  <dialog id="meditation-rating-dialog" class="meditation-dialog meditation-form-dialog" aria-labelledby="meditation-rating-title">
+    <form id="meditation-rating-form" class="meditation-dialog-shell">
+      <button type="button" class="meditation-dialog-close" data-close-dialog aria-label="Fechar">×</button>
+      <p class="meditation-eyebrow">Sessão concluída</p>
+      <h2 id="meditation-rating-title">Como correu?</h2>
+      <label for="meditation-rating">Classificação de 0 a 20</label>
+      <div class="meditation-rating-control">
+        <input id="meditation-rating" type="range" min="0" max="20" step="1" value="10">
+        <output id="meditation-rating-output" for="meditation-rating">10</output>
+      </div>
+      <label for="meditation-session-note">Nota opcional</label>
+      <textarea id="meditation-session-note" rows="4" maxlength="2000" placeholder="O que sentiste, o que funcionou, o que mudarias…"></textarea>
+      <button type="submit" class="primary">Guardar sessão</button>
+    </form>
+  </dialog>
+
+  <dialog id="meditation-edit-dialog" class="meditation-dialog meditation-form-dialog" aria-labelledby="meditation-edit-title">
+    <form id="meditation-edit-form" class="meditation-dialog-shell">
+      <button type="button" class="meditation-dialog-close" data-close-dialog aria-label="Fechar">×</button>
+      <p class="meditation-eyebrow">Corrigir registo</p>
+      <h2 id="meditation-edit-title">Editar sessão</h2>
+      <label for="meditation-edit-rating">Classificação de 0 a 20</label>
+      <input id="meditation-edit-rating" type="number" min="0" max="20" step="1" required>
+      <label for="meditation-edit-note">Nota</label>
+      <textarea id="meditation-edit-note" rows="4" maxlength="2000"></textarea>
+      <button type="submit" class="primary">Guardar alterações</button>
+    </form>
+  </dialog>
+
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/meditacao.js"></script>
+</body>
+</html>

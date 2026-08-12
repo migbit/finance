@@ -11,10 +11,18 @@
       "firebase.json",
       ".firebaserc",
       "firebase/**",
+      ".firebase/**",
+      ".claude/**",
+      ".agents/**",
+      ".codex",
+      ".codex/**",
+      "firebase-debug.log",
       ".git/**",
       "node_modules/**",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "docs/**",
+      "tests/**"
     ],
     "rewrites": [
       {

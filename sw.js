@@ -1,6 +1,6 @@
 /* Migbit Finance – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v32`;
+const CACHE = `${CACHE_PREFIX}v33`;
 
 const CORE = [
   './',
@@ -11,7 +11,14 @@ const CORE = [
   './js/script.js',
   './js/toast.js',
   './js/ginasio.js',
+  './js/meditacao.js',
+  './js/meditacao-recommender.js',
   './modules/ginasio.html',
+  './modules/meditacao.html',
+  './css/meditacao.css',
+  './data/meditations/buddhist.json',
+  './data/meditations/asian-non-buddhist.json',
+  './data/meditations/global-modern.json',
   './manifest.json',
   './icons/icon-192-v2.png',
   './icons/icon-512-v2.png'

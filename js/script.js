@@ -58,7 +58,8 @@ const NAV_GROUPS = [
     label: '🙋 Miguel',
     key: 'miguel',
     links: [
-      { label: '🏋️ Ginásio', key: 'ginasio', slug: 'modules/ginasio.html', module: true }
+      { label: '🏋️ Ginásio', key: 'ginasio', slug: 'modules/ginasio.html', module: true },
+      { label: '🧘 Meditação', key: 'meditacao', slug: 'modules/meditacao.html', module: true }
     ]
   }
 ];
@@ -81,6 +82,7 @@ const ACTIVE_KEY_MATCHERS = [
   { key: 'datas', patterns: ['datas'] },
   { key: 'dca', patterns: ['dca'] },
   { key: 'crypto', patterns: ['crypto'] },
+  { key: 'meditacao', patterns: ['meditacao'] },
   { key: 'ginasio', patterns: ['ginasio'] }
 ];
 
