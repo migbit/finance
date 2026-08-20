@@ -1,6 +1,6 @@
 /* Migbit Finance – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v36`;
+const CACHE = `${CACHE_PREFIX}v39`;
 
 const CORE = [
   './',
@@ -73,8 +73,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Treat HTML/documents as network-first so new markup (like your KPI card)
-  // shows up on the first reload after a deploy.
+  // Treat HTML/documents as network-first so updated markup is shown on the
+  // first reload after a deploy.
   const isHTML =
     req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html');
