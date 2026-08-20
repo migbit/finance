@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "2026-08-12",
+  "catalogVersion": "2026-08-20",
   "scope": "Práticas contemplativas asiáticas não budistas documentadas: hinduísmo, Vedānta, yoga, tantra público, Kashmir Shaivism, Jainismo, Sikhismo, Daoismo, Confucionismo e artes contemplativas de movimento. Sinónimos foram agregados; variantes aparecem separadamente apenas quando o procedimento muda.",
   "meditations": [
     {
@@ -21,7 +21,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Na prática tradicional pode integrar iniciação, regras de pronúncia e sandhyā. Esta versão pública conserva texto, sentido e atenção sem reclamar substituir essa transmissão.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma cadeira ou assento estável, com coluna confortável e joelhos sem esforço.", "Lê uma tradução do mantra e decide se trabalharás com o sentido devocional ou com a luz como símbolo de lucidez."],
         "steps": ["Faz três respirações naturais e deixa o rosto e a garganta soltos.", "Recita uma vez lentamente: Om bhūr bhuvaḥ svaḥ, tat savitur vareṇyaṃ, bhargo devasya dhīmahi, dhiyo yo naḥ pracodayāt.", "Repete em voz baixa ou mentalmente, mantendo a pronúncia tão estável quanto possível sem prender a respiração.", "A cada repetição, acompanha o sentido: contemplar o esplendor que ilumina a inteligência.", "Se surgir distração, regressa à sílaba exata em que estavas, sem recomeçar nem acelerar.", "Nos minutos finais, reduz gradualmente o volume até a repetição mental e depois repousa no silêncio."],
@@ -54,7 +53,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Mantras de iniciação pertencem à relação com uma linhagem; para exploração individual usa apenas um mantra publicamente transmitido e compreendido.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um mantra público cujo significado conheças e uma mālā de 108 contas ou um contador simples.", "Senta-te ou caminha num percurso seguro; segura a mālā sem criar tensão na mão."],
         "steps": ["Começa na conta ao lado da conta maior, sem contar a conta maior.", "Em cada conta, repete mentalmente o mantra uma vez com articulação interior clara.", "Move a conta com polegar e dedo médio quando a repetição terminar.", "Mantém a respiração espontânea; não é preciso sincronizar palavra e ar.", "Quando perceberes que repetiste mecanicamente, recupera simultaneamente som mental, sentido e intenção.", "Ao chegar à conta maior, para ou inverte a direção em vez de a atravessar."],
@@ -87,7 +85,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "A forma e o mantra variam por tradição. A visualização pública não equivale a sādhana tântrica iniciática de uma deidade.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma representação tradicional e lê quais as qualidades que ela expressa.", "Coloca a imagem à altura dos olhos ou memoriza primeiro os seus elementos principais."],
         "steps": ["Observa a imagem durante dois minutos, percorrendo base, postura, mãos, rosto e símbolos.", "Fecha os olhos e reconstrói um elemento de cada vez, sem inventar detalhes quando a memória falhar.", "Abre brevemente os olhos para corrigir a imagem e fecha-os de novo.", "Quando a forma estiver estável, associa-lhe duas ou três qualidades, como compaixão, coragem ou sabedoria.", "Imagina essas qualidades como presença viva diante de ti ou no centro do peito.", "Deixa a forma perder nitidez no fim e permanece com a qualidade sentida."],
@@ -120,7 +117,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "A ficha segue a leitura vedântica da Māṇḍūkya; outras escolas interpretam as correspondências de maneira própria.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Revê as correspondências: A–vigília, U–sonho, M–sono profundo, silêncio–turīya.", "Senta-te ou deita-te sem comprimir garganta e peito."],
         "steps": ["Escuta primeiro os sons presentes, sem tentar criar silêncio.", "Numa expiração confortável, entoa A e sente a ressonância ampla da boca e do corpo.", "Desliza para U, percebendo a continuidade da vibração, e fecha suavemente em M.", "Quando M cessar, não inspires à força: recebe o intervalo silencioso e depois deixa a respiração regressar.", "Durante o ciclo seguinte, recorda sucintamente o estado de consciência associado a cada parte.", "Após várias entoações, faz A-U-M apenas mentalmente e repousa repetidamente no silêncio final."],
@@ -153,7 +149,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "Coração significa aqui um centro contemplativo, não uma localização anatómica de Brahman. A identidade metafísica depende da leitura vedântica adotada.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê Chāndogya 8.1 e escolhe uma formulação curta: ‘o pequeno espaço no coração não é pequeno’.", "Apoia o corpo numa postura sem dor e deixa a respiração natural."],
         "steps": ["Sente inicialmente a região central do peito sem procurar pulsação precisa.", "Imagina ali um espaço claro, do tamanho que surgir espontaneamente.", "Reconhece sons, sensações e pensamentos como aparecendo nesse espaço de consciência.", "Pergunta silenciosamente se o espaço que conhece a experiência tem uma fronteira observável.", "Deixa o foco expandir-se para incluir todo o corpo e o ambiente sonoro sem abandonar o centro.", "Alterna por alguns ciclos entre ‘pequeno espaço’ e ‘vastidão sem medida’, sem fabricar visões."],
@@ -186,7 +181,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "As cinco bainhas são um modelo contemplativo tradicional e não cinco estruturas anatómicas. Nididhyāsana pressupõe normalmente estudo e reflexão prévios.",
       "duration": {"defaultMinutes":25,"minMinutes":12,"maxMinutes":50},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Revê os cinco nomes: annamaya, prāṇamaya, manomaya, vijñānamaya e ānandamaya.", "Escolhe postura imóvel mas não rígida; deitado é especialmente adequado se não adormeceres."],
         "steps": ["Reconhece o corpo material como conhecido através de pressão, temperatura e forma.", "Passa à vitalidade: respiração, pulsação e sensação de energia, sem alterar o ritmo.", "Observa pensamentos, imagens e emoções como conteúdos da bainha mental.", "Nota a faculdade que discrimina, decide e formula ‘eu compreendo’ como outro processo observável.", "Inclui quietude, prazer ou ausência relativa de conflito como estados também conhecidos e mutáveis.", "Pergunta em cada camada: ‘isto é conhecido; será todo o conhecedor?’, e repousa no facto de conhecer sem criar resposta verbal."],
@@ -219,7 +213,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "Interpretações de Śaṅkara, Rāmānuja e outras escolas divergem. Esta ficha apresenta a leitura advaita de discriminação, não uma prova metafísica.",
       "duration": {"defaultMinutes":20,"minMinutes":10,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Define ‘não sou apenas isto’ como sentido operacional; evita transformar a fórmula em rejeição.", "Começa com olhos abertos e contacto claro dos pés ou costas para manter orientação."],
         "steps": ["Nota uma sensação corporal e reconhece: ela aparece, muda e é conhecida; ‘não apenas isto’.", "Faz o mesmo com um som, sem negar que o som existe.", "Observa um pensamento sobre ti e aplica a mesma discriminação ao conteúdo mental.", "Inclui a emoção e o próprio sentimento de autoria ou ‘eu estou a meditar’.", "Pergunta o que permanece como condição de conhecer todas essas mudanças, sem procurar uma imagem.", "Quando surgir uma resposta conceptual, reconhece-a também como conhecida e regressa à abertura não verbal."],
@@ -252,7 +245,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "Tradicionalmente segue śravaṇa e manana com um professor. Sem esse contexto, serve como exploração filosófica, não como substituto da exegese.",
       "duration": {"defaultMinutes":25,"minMinutes":12,"maxMinutes":50},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe apenas uma sentença e lê uma explicação tradicional; por exemplo, tat tvam asi, ‘tu és Isso’.", "Escreve em linguagem própria o que a sentença afirma e o que não afirma."],
         "steps": ["Recita a sentença uma vez e deixa o significado completo formar-se.", "Distingue o ‘tu’ superficial — corpo, papéis e pensamentos — da consciência pela qual são conhecidos.", "Distingue ‘Isso’ de uma imagem de objeto distante ou entidade limitada.", "Contempla a identidade indicada ao nível da consciência, sem negar diferenças funcionais.", "Quando surgir uma objeção, examina-a brevemente à luz do estudo em vez de a suprimir.", "Abandona as palavras e permanece alguns minutos com o entendimento que apontam."],
@@ -285,7 +277,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "A pergunta é uma direção da atenção, não um kōan budista nem uma procura de resposta intelectual. A prática tradicional inclui vida ética, devoção e/ou rendição conforme o praticante.",
       "duration": {"defaultMinutes":20,"minMinutes":10,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te de modo simples e distingue o sentido imediato de existir da tua história pessoal.", "Decide usar a pergunta apenas quando houver um pensamento claro, evitando repetição mecânica."],
         "steps": ["Deixa a atenção assentar e nota o próximo pensamento, imagem ou impulso.", "Pergunta interiormente: ‘a quem surgiu isto?’.", "Reconhece a resposta espontânea ‘a mim’ e volta-te para esse ‘mim’ sentido antes de o descrever.", "Pergunta ‘quem sou eu?’ uma vez e permanece na direção interior aberta pela pergunta.", "Quando aparecer outro pensamento, não o completes; repete a investigação a partir dele.", "Nos períodos sem pensamento evidente, não fabriques perguntas: permanece como presença consciente."],
@@ -318,7 +309,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "A ‘testemunha’ é uma perspetiva contemplativa, não uma segunda personalidade. Em Yoga Integral deve continuar ligada à ação e transformação da vida.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma postura em que consigas sentir claramente suporte e orientação.", "Define a intenção de incluir, não afastar, cada conteúdo que apareça."],
         "steps": ["Reconhece três sensações corporais como ‘sensação conhecida’.", "Inclui os sons, notando que chegam sem decisão tua.", "Quando surgir pensamento, rotula apenas ‘pensar’ e observa começo, mudança e fim.", "Nota emoções também no corpo, sem te colocares imaginariamente fora dele.", "Pergunta suavemente o que é comum ao conhecer de sensação, som e pensamento.", "Amplia para todo o campo e deixa a distinção testemunha/conteúdo tornar-se menos verbal."],
@@ -351,7 +341,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "A Gītā liga meditação, ação, devoção e moderação. ‘Corpo, cabeça e pescoço alinhados’ pode ser realizado numa cadeira; não exige lótus.",
       "duration": {"defaultMinutes":20,"minMinutes":10,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um lugar simples e uma altura de assento que não cause dor nos joelhos.", "Define se o foco será presença divina, Self ou simples recolhimento conforme a tua leitura da Gītā."],
         "steps": ["Alinha cabeça e tronco de forma natural, com olhar baixo e suave.", "Deixa a respiração equilibrar-se sem manipulação.", "Recolhe a atenção das solicitações externas para o foco escolhido.", "Quando a mente vaguear, reconhece onde foi e traz-a de volta, como instrui 6.26.", "Mantém esforço regular sem lutar com cada pensamento e sem procurar êxtase.", "Nos minutos finais, inclui amigos, estranhos e adversários numa atitude de equanimidade."],
@@ -384,7 +373,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "‘Coração’ refere-se ao centro interior atrás das emoções superficiais. O Yoga Integral é um caminho de vida completo; uma sessão isolada testa apenas este gesto contemplativo.",
       "duration": {"defaultMinutes":20,"minMinutes":10,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma aspiração simples e honesta, como verdade, abertura ou entrega ao Divino.", "Senta-te ou deita-te sem pressionar fisicamente o peito."],
         "steps": ["Sente a área central do peito e depois imagina a atenção a recuar suavemente para trás dela.", "Formula a aspiração uma vez, com palavras próprias.", "Permanece recetivo, sem fabricar resposta, calor ou imagem.", "Quando emoções superficiais surgirem, reconhece-as e oferece-as à aspiração em vez de as expulsar.", "Se houver quietude, deixa a concentração tornar-se menos localizada e mais presente em todo o ser.", "Antes do fim, escolhe como a aspiração pode acompanhar uma ação concreta do dia."],
@@ -417,7 +405,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "moderate",
       "contextNote": "Dhāraṇā, dhyāna e samādhi são graus relacionados no sistema de Patañjali; uma sessão de concentração não deve ser rotulada automaticamente como samādhi.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um único objeto simples: contacto das mãos, som contínuo ou pequeno ponto visual.", "Remove fontes de dor postural que competiriam desnecessariamente com o treino."],
         "steps": ["Define com precisão o que pertence ao objeto e o que será distração.", "Dirige a atenção para o objeto e explora os seus detalhes reais.", "Quando notares desvio, identifica-o brevemente e regressa sem censura.", "Evita apertar olhos, testa ou respiração para ‘segurar’ a mente.", "Observa se os períodos de continuidade aumentam, sem os contar durante a prática.", "Nos minutos finais, mantém o mesmo objeto e reduz o esforço voluntário."],
@@ -450,7 +437,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "As palavras coincidem com quatro brahmavihāras conhecidos também no budismo, mas esta ficha segue a função específica dada por Patañjali: prasādana, clarificação da mente.",
       "duration": {"defaultMinutes":20,"minMinutes":10,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe quatro exemplos reais mas não esmagadores, um para cada atitude.", "Estabelece uma base corporal calma antes de introduzir pessoas difíceis."],
         "steps": ["Recorda alguém feliz e ensaia amizade sem comparação nem inveja.", "Recorda sofrimento e permite compaixão, perguntando qual cuidado seria apropriado.", "Recorda uma ação virtuosa e pratica alegria apreciativa sem te diminuir.", "Recorda conduta nociva de intensidade moderada e cultiva equanimidade com limites claros.", "Nota qual atitude encontra resistência e repete a respetiva frase em linguagem própria.", "Larga as imagens e sente o efeito conjunto das quatro disposições na mente."],
@@ -483,7 +469,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "moderate",
       "contextNote": "Usa apenas chama de vela estável a distância confortável. Olhar para o sol, mesmo mencionado em algumas fontes históricas, é excluído desta ficha.",
       "duration": {"defaultMinutes":15,"minMinutes":5,"maxMinutes":25},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Coloca uma vela segura à altura dos olhos, a cerca de um braço, sem correntes de ar.", "Retira lentes se forem desconfortáveis e garante que podes apagar a vela sem te levantar depressa."],
         "steps": ["Olha para a base luminosa do pavio com rosto e olhos relaxados.", "Mantém o olhar estável apenas enquanto for confortável; piscar é permitido.", "Ao surgir ardor claro ou lacrimejo forte, fecha os olhos sem apertar pálpebras.", "Observa a pós-imagem no campo escuro, seguindo cor, forma e deslocação sem a forçar.", "Quando desaparecer, abre os olhos e inicia outro ciclo mais curto.", "Termina com olhos fechados, abandonando imagem e mantendo atenção estável."],
@@ -516,7 +501,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "So'ham significa tradicionalmente ‘Eu sou Isso’. Algumas linhagens ouvem Haṃ na inspiração e Sa na expiração; são convenções relacionadas, não erros respiratórios.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe postura em que a respiração esteja livre; não endireites a coluna à custa dos joelhos.", "Observa alguns ciclos para conhecer o ritmo real antes de introduzir sílabas."],
         "steps": ["Na inspiração natural, ouve mentalmente ‘So’ ao longo de todo o movimento.", "Na expiração natural, ouve ‘Ham’, sem prolongar o ar.", "Sente simultaneamente a passagem do ar ou o movimento abdominal.", "Se respiração e palavra se desencontrarem, larga a palavra por um ciclo e recomeça.", "Quando houver estabilidade, reduz o esforço de dizer e escuta como se o mantra já acompanhasse a respiração.", "Nos minutos finais, contempla suavemente o sentido ‘Eu sou Isso’ ou fica apenas com som e ar."],
@@ -549,7 +533,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "As descrições tradicionais usam cosmologia de nāda e por vezes śanmukhī mudrā. A versão inicial não tapa canais auditivos nem interpreta zumbidos como conquista.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um local silencioso mas não exijas silêncio absoluto.", "Senta-te ou deita-te com mandíbula, língua e pescoço soltos."],
         "steps": ["Escuta primeiro os sons mais distantes do ambiente.", "Passa gradualmente para sons próximos e para o som corporal geral.", "Com olhos fechados, nota qualquer tom, vibração ou textura auditiva interna sem a fabricar.", "Escolhe o fenómeno mais contínuo e pousa nele a atenção.", "Se mudar de tom ou localização, segue a mudança sem procurar a versão anterior.", "Quando desaparecer, escuta a própria abertura silenciosa em vez de forçar outro som."],
@@ -582,7 +565,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "Os seis estágios completos são progressivos. Uma sessão não precisa forçar o estágio final; domínio de cada fase costuma exigir semanas.",
       "duration": {"defaultMinutes":25,"minMinutes":12,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe postura estável e decide parar no estágio de observação espontânea se houver sobrecarga.", "Faz uma passagem breve pelo corpo para reduzir ajustes desnecessários."],
         "steps": ["Escuta todos os sons externos, mudando deliberadamente do mais distante ao mais próximo.", "Retira o interesse dos sons e observa o fluxo espontâneo de pensamentos como cenas.", "Deixa surgir um pensamento claro; acompanha-o sem o prolongar e depois larga-o conscientemente.", "Cria de propósito uma imagem neutra, sustenta-a alguns segundos e dissolve-a.", "Volta ao fluxo espontâneo e nota o contraste entre produzir e receber pensamento.", "Se a mente ficar naturalmente quieta, permanece nesse intervalo; se não, continua a observar sem suprimir."],
@@ -615,7 +597,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "A sequência Satyananda tem elementos específicos e costuma ser conduzida por gravação ou professor. Esta síntese preserva a arquitetura sem copiar um guião protegido.",
       "duration": {"defaultMinutes":30,"minMinutes":18,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Deita-te com suporte sob joelhos e cabeça, temperatura confortável e intenção de permanecer desperto.", "Formula um sankalpa curto, positivo e pessoal que não prometa controlar resultados externos."],
         "steps": ["Reconhece sons e corpo inteiro, depois repete mentalmente o sankalpa três vezes.", "Move a atenção rapidamente por dedos, mão, braço, lado direito, lado esquerdo, costas, frente e face, sem mover o corpo.", "Conta respirações naturais para trás durante alguns ciclos, recomeçando se perderes a conta.", "Evoca pares leves — pesado/leve, quente/fresco — apenas dentro de limites confortáveis.", "Deixa passar uma pequena série de imagens neutras ou simbólicas sem construir histórias.", "Repete o mesmo sankalpa, volta a sentir corpo e sala e abre os olhos gradualmente."],
@@ -648,7 +629,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Termos como ‘purificar nāḍīs’ pertencem ao modelo energético tradicional. A ficha não afirma desobstrução anatómica nem benefício médico específico.",
       "duration": {"defaultMinutes":12,"minMinutes":5,"maxMinutes":20},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te numa cadeira ou assento alto com o braço direito apoiado se necessário.", "Assoa suavemente o nariz se precisares; não pratiques com congestão que exija puxar o ar."],
         "steps": ["Fecha a narina direita sem esmagar o septo e inspira pela esquerda.", "Troca os dedos e expira pela direita.", "Inspira pela direita, troca, e expira pela esquerda: isto completa um ciclo.", "Mantém volume pequeno e ritmo confortável, sem pausas deliberadas.", "Segue mentalmente o toque do ar em cada narina e conta até dez ciclos se isso ajudar.", "Pousa a mão no fim e observa a respiração livre por alguns minutos."],
@@ -681,7 +661,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Formas tradicionais podem incluir mudrās que fecham os sentidos. A versão inicial mantém ouvidos livres e usa volume confortável.",
       "duration": {"defaultMinutes":12,"minMinutes":5,"maxMinutes":20},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Liberta mandíbula e escolhe tom médio confortável; bebe água se a garganta estiver seca.", "Senta-te ou deita-te com o pescoço neutro e ouvidos destapados."],
         "steps": ["Inspira pelo nariz sem encher ao limite.", "Com lábios fechados e dentes separados, expira num ‘mmm’ suave e uniforme.", "Sente onde a vibração é mais nítida, sem tentar empurrá-la para um ponto.", "No fim natural da expiração, escuta o silêncio e inspira quando o corpo pedir.", "Repete entre cinco e dez vezes, variando ligeiramente o tom apenas se for confortável.", "Depois do último som, permanece alguns minutos a ouvir sons internos e externos."],
@@ -714,7 +693,6 @@
       "flexibility": "medium", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "Existem sequências diferentes. Esta ficha pressupõe que o praticante já conhece uma versão segura; descreve o modo contemplativo, não ensina alinhamento completo de cada āsana.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma sequência que conheças e adapta previamente flexões, prancha e joelhos.", "Faz um ciclo lento de ensaio e define um espaço sem obstáculos."],
         "steps": ["Em pé, sente os quatro cantos dos pés e estabelece uma respiração natural.", "Inicia cada movimento apenas depois de reconhecer o começo da inspiração ou expiração apropriada.", "Mantém atenção no deslocamento de peso e nas transições, não apenas na forma final.", "Ao notar esforço que prende o ar, reduz amplitude ou usa a adaptação preparada.", "Repete ciclos lentos, tratando lado direito e esquerdo como uma única unidade atencional.", "No último ciclo, abranda e termina em pé sentindo pulsação, calor e respiração sem os controlar."],
@@ -747,7 +725,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "As traduções divergem sobre prāṇa, apāna e os pontos interno/externo. Esta adaptação conserva a atenção ao madhya sem manipulação energética avançada.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe postura que deixe abdómen e garganta livres.", "Observa cinco ciclos sem procurar qualquer pausa."],
         "steps": ["Segue a inspiração desde o começo até ao instante em que muda de direção.", "Nesse ponto, reconhece a ausência breve de movimento sem a prolongar.", "Segue a expiração até à segunda viragem e reconhece o mesmo tipo de intervalo.", "Deixa a inspiração seguinte começar por si; não esperes para produzir um estado.", "Quando a mente comentar a pausa, regressa à sensação concreta do próximo ciclo.", "Gradualmente inclui a consciência que permanece contínua através de movimento e intervalo."],
@@ -780,7 +757,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "high",
       "contextNote": "Na transmissão Trika, termos e pontos subtis têm comentários específicos. Sem professor, trata isto como visualização simbólica e não como engenharia de energia.",
       "duration": {"defaultMinutes":15,"minMinutes":5,"maxMinutes":25},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Faz primeiro cinco minutos de enraizamento no contacto do corpo.", "Imagina apenas um eixo simples do pavimento pélvico ao topo da cabeça, sem localizar cakras."],
         "steps": ["Na inspiração natural, percebe um ponto de luz na base do eixo.", "Deixa-o subir lentamente pelo centro, sem contrair músculos.", "Ao chegar ao topo, imagina que se abre e dissolve no espaço imediatamente acima.", "Na expiração, mantém atenção ampla sem empurrar energia para baixo.", "Repete poucos ciclos, reduzindo a nitidez se houver excesso de excitação.", "Termina a visualização e sente simultaneamente pés, mãos e ambiente."],
@@ -813,7 +789,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "Pode usar uma vogal pública, sino ou som ambiente. Bīja-mantras iniciáticos não são necessários nem fornecidos.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma vogal suave, uma taça/sino ou um som ambiente que termine claramente.", "Garante volume baixo e postura sem tensão na garganta."],
         "steps": ["Produz um som curto numa expiração confortável ou toca o sino uma vez.", "Escuta a textura inicial sem lhe dar nome.", "Segue a diminuição até ao ponto em que não consegues localizar o último instante.", "Permanece no silêncio seguinte sem perguntar se ‘resultou’.", "Quando pensamento surgir, deixa-o terminar e reconhece também o silêncio posterior.", "Repete e, no fim, abandona a produção de som, mantendo escuta ampla."],
@@ -846,7 +821,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "Śūnya neste contexto é uma porta contemplativa do Trika, não uma afirmação de que o corpo não existe. Começa por uma área pequena e mantém proprioceção.",
       "duration": {"defaultMinutes":18,"minMinutes":7,"maxMinutes":30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Orienta-te no espaço e sente pontos fortes de contacto.", "Escolhe primeiro uma mão ou antebraço, não o corpo inteiro."],
         "steps": ["Sente contorno, temperatura e peso da área escolhida.", "Imagina que o volume dentro do contorno é espaço claro e aberto.", "Permite que formigueiro, calor e pressão flutuem nesse espaço sem desaparecerem.", "Expande a imagem para o braço ou outra região apenas se a orientação continuar estável.", "Experimenta por instantes o corpo inteiro como um recipiente espacial permeável a sons.", "Regressa alternadamente ao peso físico, integrando abertura e contacto."],
@@ -879,7 +853,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Pratica à sombra ou com o sol atrás de ti. Nunca é sun-gazing; céu nublado ou uma parede ampla e homogénea também servem.",
       "duration": {"defaultMinutes":15,"minMinutes":5,"maxMinutes":30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um local seguro, sem trânsito, precipício nem sol no campo de visão.", "Senta-te, fica de pé ou deita-te com cabeça apoiada e olhos confortáveis."],
         "steps": ["Deixa o olhar pousar numa área vazia de céu, piscando normalmente.", "Solta a fixação num ponto e inclui a periferia do campo visual.", "Nota que cores, nuvens e pássaros aparecem dentro da abertura sem a limitar.", "Permite que pensamentos sejam experienciados do mesmo modo: eventos na abertura da consciência.", "Quando o olhar endurecer, fecha os olhos por um ciclo e reabre suavemente.", "Nos minutos finais, sente simultaneamente vastidão visual e peso do corpo."],
@@ -912,7 +885,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "A tradição enquadra prazer em consciência e não em compulsão. Escolhe estímulos comuns e seguros; a ficha não inclui sexualidade ritual nem substâncias.",
       "duration": {"defaultMinutes":15,"minMinutes":5,"maxMinutes":30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um estímulo simples, como uma peça musical curta, fruta, tecido ou paisagem.", "Remove distrações concorrentes e decide uma quantidade ou duração limitada."],
         "steps": ["Recebe a primeira impressão antes de lhe dar nome.", "Explora textura, mudança, intensidade e localização com toda a atenção.", "Quando surgir ‘gosto/não gosto’ ou memória, reconhece-a e regressa à sensação nua.", "No ponto mais vivo, nota a consciência e o prazer como um único acontecimento experiencial.", "Acompanha o enfraquecimento do estímulo sem procurar repeti-lo imediatamente.", "Repousa no espaço deixado pela experiência e inclui de novo o ambiente."],
@@ -945,7 +917,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "high",
       "contextNote": "Comentários tradicionais incluem emoções súbitas e estados extremos; a versão individual limita-se a emoções moderadas e mantém escolha e orientação.",
       "duration": {"defaultMinutes":12,"minMinutes":3,"maxMinutes":20},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Avalia a intensidade de 0 a 10; pratica apenas entre 3 e 6 e com saída fácil.", "Sente pés, costas e objetos visíveis antes de te voltares para dentro."],
         "steps": ["Nomeia a emoção uma vez e deixa a história em suspenso.", "Localiza as sensações corporais mais claras: calor, pressão, movimento ou vazio.", "Encontra a zona mais central sem a apertar nem respirar para dentro dela.", "Permite que a energia mude de forma e intensidade enquanto manténs atenção ampla.", "Nota o espaço de consciência que não é ferido pela mudança momentânea da sensação.", "Antes de saturar, abre os olhos, volta aos pés e inclui a sala."],
@@ -978,7 +949,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "Vikalpa no Trika tem significado técnico; reconhecer a consciência não equivale a eliminar conceitos permanentemente.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Começa com dois minutos de som ou respiração para estabilizar.", "Assume que pensamentos podem continuar; o objetivo é perceber a articulação entre eles."],
         "steps": ["Deixa um pensamento completar-se sem acrescentar deliberadamente outro.", "Nota o momento em que imagem, frase ou impulso perde definição.", "Permanece disponível ao intervalo, por mais breve que seja.", "Quando o pensamento seguinte aparece, reconhece também o seu primeiro instante.", "Se começares a esperar tensamente, inclui ‘esperar’ como pensamento e observa o seu fim.", "Depois de vários ciclos, relaxa a procura e reconhece a abertura em que todo o fluxo ocorre."],
@@ -1011,7 +981,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "low",
       "contextNote": "Adormecer é um resultado normal e não uma falha. A prática não promete sonhos lúcidos e não deve reduzir o sono.",
       "duration": {"defaultMinutes":20,"minMinutes":10,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Faz a prática à hora habitual de dormir, sem alarme de conclusão.", "Deita-te confortavelmente e decide não sacrificar sono para manter consciência."],
         "steps": ["Sente o corpo inteiro como uma única massa apoiada.", "Deixa a respiração desaparecer do primeiro plano.", "Observa imagens, fragmentos verbais e mudanças de escala sem os seguir.", "Quando o corpo perder contorno, mantém apenas o reconhecimento simples ‘há consciência’.", "Não reanimes a atenção quando ela se desfizer; permite o sono.", "Se despertares naturalmente, recorda o último fenómeno conhecido sem o reconstruir."],
@@ -1044,7 +1013,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "Pratyabhijñā é uma filosofia e via de realização apoiada por iniciação e exegese em muitas linhagens. Esta sessão é uma experiência orientada do gesto de reconhecimento.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê uma explicação curta de prakāśa-vimarśa: consciência luminosa que também se conhece.", "Mantém olhos abertos e postura quotidiana para evitar procurar transe."],
         "steps": ["Escolhe um objeto e reconhece simultaneamente o objeto visto e o facto de ver.", "Passa para um som e nota que o conhecer muda de conteúdo sem perder presença.", "Inclui um pensamento e reconhece que ele também é uma forma conhecida dentro da consciência.", "Pergunta se essa consciência está ausente entre objetos ou apenas deixa de ser notada.", "Larga a pergunta e permite que experiência e conhecer sejam um único campo vivo.", "Faz um movimento deliberado e verifica se a mesma consciência está presente na ação."],
@@ -1077,7 +1045,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "No contexto ascético, kāyotsarga envolve significado ético e espiritual profundo. A posição deitada é explicitamente recomendada para principiantes no manual Prekṣā.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Deita-te, fica de pé ou usa cadeira; escolhe a forma em que possas ficar imóvel sem dor.", "Define a intenção de relaxar a atividade, não de ignorar sinais corporais."],
         "steps": ["Alinha o corpo sem rigidez e fecha suavemente os olhos.", "Leva atenção aos pés e permite que esforço desnecessário se solte.", "Sobe por pernas, abdómen, costas, mãos, braços, pescoço e rosto, nomeando e relaxando cada área.", "Depois do percurso, mantém o corpo imóvel e reconhece sensações como conhecidas.", "Repete mentalmente que és observador consciente do corpo, sem o rejeitar.", "Durante os minutos finais, permanece com consciência global e mínima atividade voluntária."],
@@ -1110,7 +1077,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Prekṣā significa observar/perceber com cuidado. As interpretações sobre prāṇa pertencem ao sistema; a instrução prática mantém-se na respiração observável.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Faz dois a cinco minutos de kāyotsarga ou simplesmente solta tensões evidentes.", "Escolhe cadeira ou posição deitada se o joelho não tolerar assento no chão."],
         "steps": ["Sente a respiração em todo o tronco sem a tornar mais profunda.", "Acompanha uma inspiração completa e uma expiração completa.", "Leva o foco para a zona à entrada das narinas.", "Nota temperatura, toque e lado dominante em cada ciclo.", "Quando a mente se afastar, regressa ao próximo contacto real do ar.", "No fim, amplia novamente para o corpo inteiro a respirar."],
@@ -1143,7 +1109,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "O manual usa categorias de corpo subtil e fisiologia tradicional; esta ficha distingue observação sentida de alegações anatómicas.",
       "duration": {"defaultMinutes":25,"minMinutes":10,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Adota posição deitada ou cadeira e faz um minuto de imobilidade consciente.", "Decide observar sensação presente sem procurar ‘relaxar tudo’."],
         "steps": ["Começa pelos dedos do pé direito e sobe lentamente até à anca.", "Repete no lado esquerdo e compara sem preferir.", "Percorre pelve, abdómen, peito e costas, incluindo áreas neutras.", "Passa por dedos, braços, ombros, pescoço, rosto e couro cabeludo.", "Em cada região nota pressão, temperatura, pulso, formigueiro ou ausência de sensação.", "Termina percebendo todo o corpo simultaneamente como um campo mutável."],
@@ -1176,7 +1141,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "Nomes, localizações e qualidades variam entre apresentações. A sessão usa quatro centros públicos e evita alegações endocrinológicas.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Faz alguns minutos de kāyotsarga e mantém contacto dos pés ou costas.", "Revê os quatro pontos escolhidos e não acrescentes retenção respiratória."],
         "steps": ["Foca a região central do peito e observa sensações reais durante alguns ciclos.", "Passa para a garganta, mantendo mandíbula e respiração soltas.", "Move a atenção para o centro da testa sem cruzar nem forçar os olhos.", "Inclui o topo da cabeça apenas como área tátil ou espacial.", "Volta lentamente pelos mesmos pontos, comparando clareza sem hierarquizar experiências.", "Termina com todo o corpo, integrando os centros num único campo."],
@@ -1209,7 +1173,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "O sistema completo emprega várias cores e centros. Para uma sessão autónoma usa-se branco luminoso associado a paz/equanimidade, sem diagnóstico de aura.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe branco suave como símbolo de equanimidade e um fundo visual neutro.", "Faz dois minutos de respiração ou kāyotsarga antes da imagem."],
         "steps": ["Imagina uma pequena luz branca à frente da testa ou no centro indicado pelo manual.", "Deixa a luz tornar-se difusa, sem exigir nitidez visual.", "Associa a frase curta ‘equanimidade perante todos os seres’.", "Sente como essa disposição mudaria rosto, peito e impulso de agir.", "Inclui uma situação real moderada e banha-a simbolicamente na mesma luz.", "Larga cor e frase, permanecendo com a qualidade ética sem imagem."],
@@ -1242,7 +1205,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "Os temas pressupõem cosmologia e doutrina Jain. Podes testá-los como contemplações históricas sem fingir assentimento; escolhe apenas um por sessão.",
       "duration": {"defaultMinutes":25,"minMinutes":12,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um dos doze temas e lê a definição numa fonte Jain.", "Escreve uma pergunta aberta relacionada com a tua experiência, sem reduzir o tema a slogan."],
         "steps": ["Recita o nome e definição do tema uma vez.", "Recorda dois exemplos concretos que o confirmam ou desafiam.", "Observa a resposta emocional e corporal sem sair imediatamente para argumento.", "Examina uma objeção honesta ou limite da tua compreensão.", "Pergunta que mudança de conduta não violenta decorreria se vivesses este tema hoje.", "Abandona o raciocínio e permanece alguns minutos com a impressão global."],
@@ -1275,7 +1237,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "Procedimentos e sūtras variam por seita, comunidade e estatuto iniciado. A versão de teste não reclama cumprir todos os requisitos rituais.",
       "duration": {"defaultMinutes":48,"minMinutes":20,"maxMinutes":60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um local limpo e período sem interrupção; resolve necessidades práticas antes.", "Formula um compromisso temporário de não ferir, mentir ou agir por impulso durante a sessão."],
         "steps": ["Faz uma saudação ou recitação Jain pública, reconhecendo mestres e caminho.", "Declara interiormente o período de equanimidade e deixa papéis sociais em suspenso.", "Pratica alguns minutos de kāyotsarga ou respiração observada.", "Revê atitudes de amizade, respeito, compaixão e neutralidade perante seres.", "Lê um pequeno texto Jain e contempla uma implicação concreta.", "Permanece em silêncio até ao fim e conclui explicitamente o compromisso temporário."],
@@ -1308,7 +1269,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "Recitações, vestes e sequência diferem por tradição. A prática individual é uma revisão inspirada no núcleo de pratikramaṇa, não uma celebração ritual completa.",
       "duration": {"defaultMinutes":20,"minMinutes":10,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Reserva um momento no fim do dia e traz papel para uma reparação concreta.", "Estabelece tom factual: responsabilidade sem humilhação nem autoataque."],
         "steps": ["Reconstrói o dia em ordem, da manhã até agora.", "Nota ações, palavras, omissões e intenções que possam ter causado dano a seres.", "Distingue facto, impacto conhecido e suposição; não inventes culpa.", "Reconhece internamente o erro e formula pedido de perdão sem exigir que a outra pessoa o conceda.", "Escolhe reparação possível e uma barreira prática contra repetição.", "Termina estendendo perdão a ti e aos outros, compatível com limites e justiça."],
@@ -1341,7 +1301,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Aprende pronúncia de uma fonte Jain. O mantra reverencia qualidades e categorias, não indivíduos específicos nem um deus criador.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê transliteração e sentido das cinco linhas antes de recitar.", "Escolhe voz suave ou repetição mental e postura sem dor."],
         "steps": ["Recita a primeira linha e contempla os Arihants, que venceram paixões.", "Recita a segunda e contempla os Siddhas, almas libertadas.", "Continua com Ācāryas, Upādhyāyas e todos os Sādhus, associando função e qualidade.", "Repete a sequência inteira num ritmo que conserve sílabas claras.", "Quando surgir automatismo, abranda uma volta e recupera significado.", "Termina com uma volta mental e silêncio."],
@@ -1374,7 +1333,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "high",
       "contextNote": "O texto descreve cinco conceções com cosmologia Jain e imagética intensa. A transmissão e o estudo do Jñānārṇava dão contexto que uma ficha não substitui.",
       "duration": {"defaultMinutes":25,"minMinutes":12,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê uma descrição Jain das cinco dhāraṇās e escolhe uma versão curta sem retenções.", "Senta-te ou deita-te com contacto corporal claro e capacidade de abrir os olhos."],
         "steps": ["Imagina o corpo sentado num lótus estável sobre um oceano imóvel.", "Visualiza um fogo simbólico que consome apenas impurezas kármicas, não o corpo real.", "Deixa vento simbólico dispersar as cinzas da imagem.", "Imagina chuva clara a lavar o espaço e revelar um lótus limpo.", "Contempla a alma como consciente e dotada de potencial de conhecimento, distinta da imagem corporal.", "Dissolve toda a visualização e regressa às sensações reais do corpo."],
@@ -1407,7 +1365,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "Textos completos dispõem alfabetos e mantras em lótus internos. Esta forma reduzida conserva letra-som-significado com material público.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe ARHAM e lê a sua interpretação Jain antes de começar.", "Escreve as letras diante de ti ou memoriza a forma."],
         "steps": ["Observa A-R-H-A-M como uma unidade visual.", "Fecha os olhos e coloca mentalmente uma letra de cada vez num lótus simples no centro do peito.", "Recita o som lentamente, acompanhando cada letra.", "Contempla as qualidades do Arihant em vez de procurar poderes na sílaba.", "Alterna uma repetição visual com uma puramente auditiva.", "Dissolve letras e som, repousando no significado ético."],
@@ -1440,7 +1397,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "Iconografia nua ou vestida varia entre Digambara e Śvetāmbara. Escolhe uma imagem respeitosa da tradição consultada.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma imagem tradicional de um Jina e lê quais as qualidades representadas.", "Coloca-a à altura dos olhos e senta-te numa cadeira se necessário."],
         "steps": ["Observa postura, simetria, rosto e ausência de gesto agressivo.", "Fecha os olhos e reconstrói a serenidade geral, não cada ornamento.", "Contempla desapego como liberdade de compulsão.", "Contempla ausência de hostilidade para com todos os seres.", "Abre os olhos brevemente e alterna forma visível e qualidade interior.", "No fim, larga a imagem mental e permanece com equanimidade."],
@@ -1473,7 +1429,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "A prática pressupõe doutrina Jain sobre jīva, karma e Siddhaśilā. Sem estudo, testa-se a estrutura contemplativa, não se reivindica realização de śukla-dhyāna.",
       "duration": {"defaultMinutes":25,"minMinutes":12,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Revê as qualidades atribuídas ao Siddha numa fonte Jain: conhecimento, perceção, bem-aventurança e energia infinitos, livres de karma.", "Senta-te ou deita-te de modo a não depender de uma pose idealizada."],
         "steps": ["Começa com a memória de uma imagem do Jina apenas para estabilizar.", "Retira mentalmente nome, história, corpo, roupa, ornamentos e localização da imagem.", "Conserva apenas a qualidade de consciência livre de apego e aversão.", "Contempla cada qualidade sem criar uma figura que a possua.", "Quando a mente produzir forma, reconhece-a e volta à qualidade abstrata.", "Larga também as palavras e repousa em atenção clara, sem proclamar equivalência ao Siddha."],
@@ -1506,7 +1461,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "A Sikh Rehat Maryada manda concentrar o pensamento no Ser Imortal e repetir Vāhigurū. A prática individual é válida, embora sangat, Gurbani e vida ética sejam inseparáveis no contexto Sikh.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Aprende a pronúncia Vā-hi-gu-rū numa fonte Sikh e lê o seu sentido devocional.", "Escolhe cadeira, caminhada ou outra postura digna que não force os joelhos."],
         "steps": ["Faz algumas repetições audíveis, ouvindo cada sílaba em vez de acelerar.", "Deixa a voz baixar para sussurro e depois para repetição interior.", "Mantém atenção simultânea no Naam e no sentido do Um presente.", "Quando a mente vaguear, regressa à próxima repetição sem condenação.", "Alterna brevemente escuta silenciosa e repetição, deixando o Naam ressoar.", "Nos minutos finais, alarga a recordação ao corpo, ambiente e seres, sem abandonar a palavra."],
@@ -1539,7 +1493,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Gurbani recomenda recordar a cada respiração e bocado; escolas variam na divisão fonética. Esta ficha usa ‘Vāhi’ ao inspirar e ‘gurū’ ao expirar, sem declarar exclusividade.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te, deita-te ou caminha e observa o ritmo respiratório sem o alterar.", "Repete Vāhigurū algumas vezes inteiro antes de o associar às fases."],
         "steps": ["Durante a inspiração natural, ouve mentalmente ‘Vāhi’.", "Durante a expiração, ouve ‘gurū’ sem alongar o ar.", "Mantém a qualidade de maravilhamento e recordação, não apenas a mecânica silábica.", "Se perderes o ritmo, diz a palavra inteira numa expiração e recomeça suavemente.", "Depois de estabilidade, deixa a sílaba tornar-se mais subtil e acompanha atividades simples.", "No fim sentado, larga a divisão e repousa com Naam como um todo."],
@@ -1572,7 +1525,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "Traduções ajudam mas não esgotam Gurmukhi, contexto de rāg e exegese Sikh. Usa uma fonte que mostre original e tradução e não isoles uma linha para justificar ideia prévia.",
       "duration": {"defaultMinutes":25,"minMinutes":12,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um śabad curto numa edição Sikh com Gurmukhi, transliteração e tradução.", "Lê contexto, autor/Guru, rāg e ang quando disponíveis."],
         "steps": ["Ouve ou lê o original lentamente, mesmo que ainda não compreendas cada palavra.", "Lê a tradução inteira e identifica a imagem ou afirmação central.", "Volta a uma linha e repete-a com atenção ao som e sentido.", "Pergunta o que a linha revela sobre haumai, Naam, hukam, verdade ou relação.", "Testa a interpretação no conjunto do śabad e corrige simplificações.", "Fica em silêncio e deixa uma implicação prática tornar-se clara."],
@@ -1605,7 +1557,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Escolhe gravação que identifique o śabad e mostre tradução. Kīrtan não é música ambiente: reserva atenção principal às palavras do Guru.",
       "duration": {"defaultMinutes":25,"minMinutes":8,"maxMinutes":60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um śabad de 8–20 minutos numa plataforma Sikh sem interrupções.", "Lê a tradução e identifica o refrão antes de ouvir."],
         "steps": ["Ouve a introdução e estabelece atenção na pulsação sem te perder em análise musical.", "Quando a voz entrar, segue o Gurmukhi ou transliteração linha a linha.", "No refrão, deixa significado e melodia tornar-se uma única lembrança.", "Se fores levado apenas pela emoção musical, volta às palavras.", "Permite cantar suavemente o refrão se isso aprofundar atenção, sem competir com a gravação.", "No final da faixa, permanece em silêncio com a última linha."],
@@ -1638,7 +1589,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "A Rehat Maryada prescreve Japjī entre as composições matinais. Aprender santhiyā/pronúncia com Sikh qualificado aprofunda a prática; cadeira não diminui reverência.",
       "duration": {"defaultMinutes":30,"minMinutes":10,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Usa uma edição com Gurmukhi, transliteração e tradução e escolhe texto completo ou pauṛī de estudo.", "Lava mãos/rosto conforme te fizer sentido e escolhe um local respeitoso."],
         "steps": ["Começa pelo Mūl Mantar num ritmo claro.", "Recita linha a linha, ouvindo a própria voz em vez de correr para terminar.", "Mantém um dedo ou marcador no texto para não perder o lugar.", "Ao concluir cada pauṛī, faz uma pausa de uma respiração e recorda o tema.", "Se a pronúncia falhar, corrige suavemente pela gravação sem abandonar a reverência.", "No fim, permanece em silêncio e recolhe uma linha para o dia."],
@@ -1671,7 +1621,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "O procedimento pleno de tomar Hukam de um saroop do Guru Granth Sahib tem protocolo religioso. A ficha usa a passagem diária já tomada e publicada pelo Harmandir Sahib.",
       "duration": {"defaultMinutes":20,"minMinutes":10,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Abre o Hukamnamā oficial do dia e mostra Gurmukhi e tradução.", "Suspende uma pergunta que procure resposta sim/não; recebe primeiro o texto no seu próprio contexto."],
         "steps": ["Ouve a recitação do original se estiver disponível.", "Lê o texto completo e identifica imagens ou palavras repetidas.", "Lê a tradução e verifica notas sobre autor, rāg e ang.", "Resume a orientação em termos de virtude, relação com Naam ou atitude perante Hukam.", "Pergunta como se aplica sem forçar correspondência literal com acontecimentos.", "Permanece em silêncio com uma linha e decide uma ação humilde."],
@@ -1704,7 +1653,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "A passagem é literária e tem interpretações filosóficas e religiosas. Esta instrução segue leituras daoistas de cultivo e mantém o vínculo entre receptividade e ação no mundo.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê a passagem de Yan Hui e Confúcio no capítulo ‘In the World of Men’.", "Senta-te ou fica de pé com corpo relaxado e visão periférica."],
         "steps": ["Escuta sons sem procurar a fonte nem nomeá-los.", "Nota julgamentos e planos que cada som ou pensamento provoca.", "Deixa essas respostas perder força sem as substituir por uma frase.", "Escuta agora com o corpo inteiro, incluindo respiração e espaço, em vez de apenas com os ouvidos.", "Permite que qualquer acontecimento entre e saia sem ser agarrado pela preferência.", "Nos minutos finais, imagina responder a uma situação real a partir desta disponibilidade."],
@@ -1737,7 +1685,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "O ‘esquecimento’ não é amnésia nem torpor. A progressão completa inclui ética, desapego, observação e estabilidade, e beneficia de orientação daoista.",
       "duration": {"defaultMinutes":25,"minMinutes":10,"maxMinutes":50},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te com bacia estável, coluna natural e mãos apoiadas; cadeira é plenamente adequada.", "Faz a intenção de soltar, não apagar, corpo e mente."],
         "steps": ["Reconhece o corpo e permite que tensões desnecessárias se desfaçam.", "Deixa sons e sensações surgir sem os seguir.", "Quando aparecer uma distinção ou preocupação, não a resolves agora; permite que se afaste.", "Solta também a ideia de estar a obter um estado especial.", "Permanece claro e desperto enquanto o conteúdo perde centralidade.", "Se houver torpor, endireita ligeiramente, abre o olhar e volta à abertura sem esforço."],
@@ -1770,7 +1717,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "Algumas formas posteriores visualizam divindades ou ‘True One’. A versão descrita é a forma clássica/apofática, sem reivindicar representar todas as linhagens.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Ajusta corpo, respiração e coração-mente como três aspetos de uma prática.", "Escolhe um centro simples, como abdómen inferior, sem imaginar anatomia energética complexa."],
         "steps": ["Sente o corpo inteiro como uma unidade em vez de partes isoladas.", "Inclui a respiração dentro dessa unidade sem a regular.", "Permite que pensamentos surjam e regressem ao todo, sem os expulsar.", "Mantém uma intenção leve de não dispersar por cada estímulo.", "Quando a unidade parecer estável, larga o ponto abdominal e guarda apenas a inteireza.", "Termina incluindo ambiente e corpo numa continuidade sem perder limites funcionais."],
@@ -1803,7 +1749,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "Qì e ‘essência vital’ são conceitos tradicionais. A respiração fina deve emergir do sossego e não de restrição voluntária.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Alinha o corpo e distribui peso de forma confortável.", "Deixa o coração-mente pousar no centro do tronco sem apontar para um órgão."],
         "steps": ["Observa a respiração como chega, áspera ou fina, sem corrigir.", "Solta peito, abdómen e rosto para que o movimento fique desimpedido.", "Mantém atenção no centro enquanto inspiração e expiração se tornam regulares por si.", "Quando desejos ou planos dispersarem a mente, reconhece-os e regressa à inteireza.", "Nota vitalidade e quietude como qualidades sentidas, sem medir qì.", "Termina permitindo que respiração e atenção se expandam ao corpo e ao espaço."],
@@ -1836,7 +1781,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "A tradução de qing como pureza pode sugerir moralismo; ‘clareza’ evita tratar pensamentos normais como impuros. O texto integra cosmologia yin-yang e prática.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê uma secção curta do Qingjing Jing e escolhe ‘observar desejo sem agir’ como orientação.", "Ajusta corpo e respiração sem procurar imobilidade absoluta."],
         "steps": ["Nota movimentos sensoriais e mentais tal como surgem.", "Quando um desejo aparece, reconhece impulso, objeto e sensação sem o alimentar nem condenar.", "Observa que o movimento muda e pode cessar sem ação tua.", "Reconhece a clareza disponível quando não estás fundido com o impulso.", "Inclui sons e corpo, deixando quietude coexistir com movimento.", "No fim, larga as categorias e repousa numa presença simples."],
@@ -1869,7 +1813,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "A prática recebeu influências budistas mas possui enquadramento daoista próprio. Visualizações de órgãos/divindades variam; esta forma começa por processos observáveis.",
       "duration": {"defaultMinutes":25,"minMinutes":10,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te ou deita-te e estabelece contacto seguro com o exterior.", "Distingue sensação diretamente percebida de imagem aprendida sobre órgãos."],
         "steps": ["Observa respiração e pulsação como movimentos internos.", "Inclui tensões, temperatura e espaços aparentemente silenciosos.", "Nota emoções e pensamentos como movimentos do coração-mente incorporado.", "Pergunta de onde surge cada movimento e para onde regressa, sem responder teoricamente.", "Permite que observação se torne clara e não intrusiva, incluindo interior e exterior.", "Termina repousando na totalidade corpo-ambiente em vez de num órgão."],
@@ -1902,7 +1845,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Dāntián é um campo tradicional, não um órgão. Localizações exatas variam; usa a região alguns centímetros abaixo do umbigo, sentida de forma ampla.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Coloca uma ou ambas as mãos sobre o abdómen inferior.", "Senta-te, fica de pé ou deita-te com a cintura descomprimida."],
         "steps": ["Observa como a parede abdominal se move sem mudar o ar.", "Deixa a inspiração expandir suavemente a região e a expiração recolher por elasticidade.", "Pousa a atenção no volume por trás das mãos, não num ponto minúsculo.", "Se aparecer calor ou pulsação, nota sem tentar amplificar.", "Retira as mãos e conserva o centro percebido por alguns minutos.", "No fim, inclui pés, mãos e visão periférica mantendo sensação central."],
@@ -1935,7 +1877,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Associações órgão-emoção são parte do modelo das cinco fases e não evidência biomédica. A sequência é moderna e específica do Universal Healing Tao.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te perto da borda de uma cadeira ou deita-te e deixa a coluna confortável.", "Recorda um rosto, animal, lugar ou momento que evoque um sorriso genuíno e suave."],
         "steps": ["Sente a qualidade do sorriso nos olhos e deixa o rosto suavizar.", "Dirige essa atenção amistosa à garganta, coração e peito sem procurar sensação especial.", "Move-a para abdómen e órgãos digestivos como gesto imaginativo de gratidão.", "Inclui costas, rins e toda a coluna sem alegar que estás a tratar órgãos.", "Reúne a sensação no abdómen inferior e deixa-a espalhar pelo corpo.", "Abandona o mapa e repousa com uma atitude globalmente amigável ao corpo."],
@@ -1968,7 +1909,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "high",
       "contextNote": "Linhas, pontos e respiração diferem entre escolas. Sem professor, pratica como atenção imaginativa e mantém a prioridade no conforto e enraizamento.",
       "duration": {"defaultMinutes":15,"minMinutes":5,"maxMinutes":25},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Faz pelo menos cinco minutos de respiração no dāntián inferior.", "Revê o circuito simples e decide não adicionar contrações, língua forçada ou retenção."],
         "steps": ["Coloca atenção no abdómen inferior e sente-o de forma ampla.", "Na inspiração natural, imagina um ponto morno a subir suavemente pelo centro das costas.", "Passa pelo topo da cabeça sem parar nem criar pressão.", "Na expiração, deixa a atenção descer pela linha média da face, peito e abdómen.", "Completa poucos circuitos; se a respiração não coincidir, deixa-a livre e move só a atenção.", "Termina recolhendo toda a imagem no abdómen e sentindo pés e mãos."],
@@ -2001,7 +1941,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "moderate",
       "contextNote": "É intrinsecamente uma prática em pé; sentado ou deitado seriam outras técnicas. Usa apoio próximo se o equilíbrio não for seguro.",
       "duration": {"defaultMinutes":15,"minMinutes":3,"maxMinutes":30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Fica junto a uma parede ou cadeira, com pés paralelos à largura confortável.", "Desbloqueia joelhos sem agachar e deixa braços pender."],
         "steps": ["Distribui peso pelo calcanhar, base do dedo grande e base do dedo pequeno.", "Deixa bacia e caixa torácica empilharem sem enrijecer lombar.", "Imagina o topo da cabeça suspenso e ombros a cair.", "Observa microajustes e tremor sem tentar ficar congelado.", "Mantém respiração natural e atenção no corpo inteiro em pé.", "Antes de fadiga forte, transfere peso lentamente de um pé ao outro e termina."],
@@ -2034,7 +1973,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Nomes tradicionais associam movimentos a órgãos e males; são enquadramento histórico, não promessas clínicas. Aprende a forma por fonte visual qualificada.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Revê visualmente os oito movimentos e escolhe amplitude sem dor.", "Fica em superfície plana com espaço para braços e uma cadeira próxima."],
         "steps": ["Começa em wújí, sentindo pés e eixo antes do primeiro gesto.", "Executa cada movimento devagar, iniciando pelo centro e deixando braços seguir.", "Coordena respiração apenas onde for natural; não a prendas nas extensões.", "Mantém atenção nas transições e no retorno ao centro entre repetições.", "Reduz amplitude quando joelhos, ombros ou coluna perderem conforto.", "Após o oitavo movimento, fica imóvel e sente o eco global da série."],
@@ -2067,7 +2005,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "A ordem, pronúncia e movimento devem ser aprendidos numa fonte demonstrativa. ‘Healing’ é nome tradicional, não garantia de tratar órgãos.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Aprende por áudio/vídeo as seis pronúncias e a forma de boca antes da sessão.", "Escolhe versão em pé ou sentada e mantém garganta hidratada."],
         "steps": ["Inspira naturalmente enquanto preparas o primeiro gesto.", "Expira com o primeiro som em volume suave e acompanha o movimento correspondente.", "Deixa a expiração terminar antes de regressar ao centro e inspirar.", "Percorre os seis sons na ordem ensinada, sem prolongar nenhum até falta de ar.", "Mantém atenção na sensação de boca, vibração e gesto, não em imaginar cura.", "Repete poucas voltas e termina em silêncio com mãos no abdómen."],
@@ -2100,7 +2037,6 @@
       "flexibility": "medium", "difficulty": "intermediate", "intensity": "moderate",
       "contextNote": "Aprende a sequência e aplicações com professor; instruções escritas não substituem correção postural. A forma curta de 24 movimentos é opção moderna acessível, não a totalidade do tàijíquán.",
       "duration": {"defaultMinutes":25,"minMinutes":10,"maxMinutes":60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma forma que saibas de memória e revê apenas a secção segura.", "Aquece articulações, define espaço e mantém posturas altas para proteger joelhos."],
         "steps": ["Começa em wújí, sentindo eixo e distribuição de peso.", "Deixa cada gesto nascer da transferência do centro, com braços conectados ao tronco.", "Mantém cabeça suspensa, peito sem colapso e articulações sem bloqueio.", "Segue a intenção do movimento e visão periférica, não olhes fixamente para as mãos.", "Quando esqueceres a forma, para com estabilidade e retoma; não improvises depressa.", "Conclui reunindo movimento e quietude no centro, sem cortar abruptamente."],
@@ -2133,7 +2069,6 @@
       "flexibility": "medium", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "A história de origem daoista é parcialmente lendária e escolas discordam na mecânica. Esta ficha usa caminhada básica, sem passos rituais bugang nem aplicações de combate.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Marca um círculo largo num piso plano e remove obstáculos.", "Aprende primeiro passo natural e postura das mãos com fonte de linhagem; evita postura baixa."],
         "steps": ["Caminha lentamente no círculo com passos curtos e joelhos alinhados aos pés.", "Mantém topo da cabeça alto e bacia nivelada.", "Dirige visão suavemente ao centro sem rodar o pescoço ao limite.", "Sente transferência completa antes de avançar o pé seguinte.", "Depois de algumas voltas, para com controlo, muda de direção e repete.", "Termina alargando o círculo e regressando a caminhada reta."],
@@ -2166,7 +2101,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Yang Shi, Zhu Xi, Wang Yangming e outros divergiram sobre função e risco de quietismo. A prática termina sempre por reconectar quietude à conduta concreta.",
       "duration": {"defaultMinutes":20,"minMinutes":8,"maxMinutes":40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe cadeira ou assento que permita dignidade sem dor e uma situação ética moderada para rever no fim.", "Alinha o corpo, solta respiração e estabelece intenção de recuperar centralidade, não de fugir às relações."],
         "steps": ["Sente pés ou base e permite que agitação física assente.", "Observa pensamentos e desejos sem os perseguir nem tentar esvaziar a mente à força.", "Quando dispersares, regressa à postura inteira e à respiração espontânea.", "Reconhece momentos de equilíbrio antes de preferência ou reação impulsiva.", "Mantém clareza desperta; se surgir torpor, abre os olhos e endireita ligeiramente.", "Nos minutos finais, traz a situação escolhida à mente e considera como agir com humanidade e justeza a partir da centralidade."],
@@ -2199,7 +2133,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "low",
       "contextNote": "Jìng também significa reverência/respeito em contextos rituais. Esta ficha treina a dimensão atencional sem a separar de relações, papéis e li, o comportamento apropriado.",
       "duration": {"defaultMinutes":20,"minMinutes":5,"maxMinutes":45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma tarefa quotidiana delimitada, como preparar chá, arrumar uma mesa, ler ou ouvir alguém.", "Pára um instante e recorda quem ou o que é servido por fazer essa tarefa com cuidado."],
         "steps": ["Assume postura estável e orienta olhos e mãos para a tarefa.", "Faz uma coisa de cada vez, sentindo movimentos e intenção antes de os executar.", "Quando surgir pressa ou distração, reúne a atenção sem autoacusação.", "Nota como objetos, normas e outras pessoas requerem respostas diferentes, em vez de aplicar atenção indiferenciada.", "Mantém seriedade leve: cuidado sem contrair respiração ou rosto.", "Ao concluir, verifica o efeito da ação no contexto e corrige o que ficou negligenciado."],
@@ -2232,7 +2165,6 @@
       "flexibility": "low", "difficulty": "beginner", "intensity": "moderate",
       "contextNote": "‘Três vezes’ pode significar os três aspetos enumerados, não obrigação de repetir compulsivamente. A revisão confucionista é relacional e conduz a reparação e aprendizagem.",
       "duration": {"defaultMinutes":15,"minMinutes":5,"maxMinutes":25},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["No fim do dia, cria uma linha temporal factual das principais interações.", "Adota tom de professor benevolente: rigor e possibilidade de aprender."],
         "steps": ["Pergunta: ao tratar de assuntos de outros, dei atenção leal ou fui negligente?", "Recorda factos específicos e distingue impacto, intenção e informação em falta.", "Pergunta: fui digno de confiança com amigos e pessoas com quem me comprometi?", "Pergunta: pratiquei e verifiquei aquilo que ensinei, aconselhei ou aprendi?", "Escolhe no máximo uma reparação e uma prática de aprendizagem para amanhã.", "Reconhece também uma ação correta, para fortalecer discernimento em vez de culpa global."],
@@ -2265,7 +2197,6 @@
       "flexibility": "low", "difficulty": "intermediate", "intensity": "low",
       "contextNote": "Wang Yangming criticou leituras externalistas e enfatizou a mente e ação. A prática inclui fonte, contexto e relação, não observação visual isolada.",
       "duration": {"defaultMinutes":25,"minMinutes":10,"maxMinutes":50},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma coisa delimitada que tenha consequência ética ou prática: ferramenta, hábito, regra, planta, transação ou passagem clássica.", "Reúne uma fonte fiável e formula o que ainda não compreendes."],
         "steps": ["Observa propriedades e relações diretamente, separando facto de suposição.", "Estuda origem, função e efeitos no contexto, usando a fonte escolhida.", "Pergunta que padrões se repetem e que exceções impedem generalização apressada.", "Examina como desejos e interesses teus distorcem a investigação.", "Relaciona o que aprendeste com cuidado de pessoas, uso correto e conduta apropriada.", "Formula uma conclusão provisória e testa-a numa ação ou observação posterior."],
@@ -2299,7 +2230,6 @@
       "flexibility": "low", "difficulty": "advanced", "intensity": "moderate",
       "contextNote": "Wang usou quiet sitting pedagogicamente mas advertiu contra apego à quietude e insistiu em ‘polir-se nos assuntos’. A deliberação não substitui informação, diálogo nem responsabilidade.",
       "duration": {"defaultMinutes":20,"minMinutes":10,"maxMinutes":35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma situação moral real mas não uma crise que exija decisão profissional imediata.", "Reúne factos conhecidos e identifica pessoas afetadas antes de fechar os olhos."],
         "steps": ["Senta em quietude até distinguir agitação de uma resposta moral simples.", "Recorda a situação e nota a primeira inclinação de cuidado ou correção.", "Examina desejos de ganho, reputação, conforto ou vingança que possam obscurecê-la.", "Pergunta se aplicarias o mesmo princípio a ti, a um amigo e a um estranho.", "Formula uma ação pequena que possa testar conhecimento e realidade juntos.", "Abre os olhos e verifica a ação com informação, diálogo e consequências antes de executar."],

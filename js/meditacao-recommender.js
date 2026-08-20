@@ -9,8 +9,7 @@ const DIMENSION_WEIGHTS = Object.freeze({
   positions: 0.7,
   flexibility: 0.65,
   difficulty: 0.45,
-  intensity: 0.45,
-  psilocybin: 0.6
+  intensity: 0.45
 });
 
 const DEFAULT_PREFERENCES = Object.freeze({
@@ -266,8 +265,6 @@ export function matchesFilters(item, filters = {}) {
 
   if (filters.status === 'new' && progress.tried) return false;
   if (filters.status === 'tried' && !progress.tried) return false;
-  if (filters.psilocybin === 'yes' && !meditation.psilocybin) return false;
-  if (filters.psilocybin === 'no' && meditation.psilocybin) return false;
 
   const modalityText = [
     ...(meditation.anchors || []),

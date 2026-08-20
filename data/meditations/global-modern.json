@@ -1,6 +1,6 @@
 {
-  "catalogVersion": "2026-08-12",
-  "scope": "Curadoria global, versionada e não exaustiva, de métodos contemplativos cristãos, judaicos, islâmicos, indígenas publicamente ensináveis, seculares, somáticos, de movimento, de inquérito e de contextos legais de investigação com psilocibina. Agrega sinónimos quando o procedimento é o mesmo e separa variantes apenas quando muda a execução. Exclui hipnose, afirmações, relaxamento simples e substâncias diferentes de psilocibina. Cerimónias comunitárias, iniciáticas ou protegidas não são convertidas em guiões: as entradas correspondentes oferecem apenas estudo, escuta ou preparação individual explicitamente contextualizados. As práticas com psilocibina não ensinam aquisição, cultivo, dose, preparação, administração nem combinações; limitam-se a história, enquadramento, preparação contemplativa não farmacológica e integração.",
+  "catalogVersion": "2026-08-20",
+  "scope": "Curadoria global, versionada e não exaustiva, de métodos contemplativos cristãos, judaicos, islâmicos, indígenas publicamente ensináveis, seculares, somáticos, de movimento e de inquérito. Agrega sinónimos quando o procedimento é o mesmo e separa variantes apenas quando muda a execução. Exclui hipnose, afirmações, relaxamento simples e práticas relacionadas com o uso de substâncias. Cerimónias comunitárias, iniciáticas ou protegidas não são convertidas em guiões: as entradas correspondentes oferecem apenas estudo, escuta ou preparação individual explicitamente contextualizados.",
   "meditations": [
     {
       "id": "chr-orthodox-jesus-prayer",
@@ -26,7 +26,6 @@
       "intensity": "moderate",
       "contextNote": "Na tradição ortodoxa, métodos psicofísicos avançados pertencem ao acompanhamento de um guia espiritual. Esta versão mantém respiração natural e a oração no seu sentido cristológico.",
       "duration": {"defaultMinutes": 10, "minMinutes": 3, "maxMinutes": 30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um lugar simples e silencioso e assume uma postura desperta.", "Formula uma intenção de oração e deixa a respiração seguir o seu ritmo natural."],
         "steps": ["Diz uma vez, com atenção ao significado: ‘Senhor Jesus Cristo, Filho de Deus, tem piedade de mim’.", "Repete a frase devagar, em voz baixa ou interiormente, sem procurar sensações especiais.", "Quando surgirem pensamentos, reconhece-os sem discussão e volta à invocação.", "Mantém uma atitude de humildade e escuta; não forces a frase a acompanhar inspiração ou expiração.", "Se a atenção estabilizar, permite que as palavras fiquem mais suaves, conservando o seu sentido de oração."],
@@ -61,7 +60,6 @@
       "intensity": "low",
       "contextNote": "As quatro fases são movimentos permeáveis, não uma escada rígida. Usa uma tradução bíblica reconhecida pela tua comunidade quando o contexto confessional for importante.",
       "duration": {"defaultMinutes": 25, "minMinutes": 10, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma passagem bíblica curta e lê o contexto que a rodeia.", "Senta-te em silêncio, reconhece a intenção de escutar e evita entrar com uma conclusão pronta."],
         "steps": ["Lectio: lê a passagem devagar duas ou três vezes e nota a palavra ou expressão que chama a atenção.", "Meditatio: permanece com essa expressão e considera o que revela no contexto do texto e da tua vida.", "Oratio: responde a Deus com palavras próprias, incluindo perguntas, gratidão ou pedido.", "Contemplatio: deixa as palavras repousarem e permanece em presença silenciosa, regressando suavemente à expressão se te dispersares.", "Actio: identifica uma resposta concreta, pequena e coerente para levar à vida quotidiana."],
@@ -96,7 +94,6 @@
       "intensity": "low",
       "contextNote": "A palavra não é mantra para produzir um estado; é símbolo de intenção. ‘Pensamentos’ inclui sensações, imagens, emoções e comentários interiores.",
       "duration": {"defaultMinutes": 20, "minMinutes": 10, "maxMinutes": 40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma palavra sagrada breve que exprima consentimento à presença de Deus.", "Senta-te confortavelmente, fecha ou baixa os olhos e renova a intenção de consentir."],
         "steps": ["Introduz interiormente a palavra uma vez, de modo muito leve.", "Permanece em silêncio, sem vigiar a respiração nem procurar vazio mental.", "Quando deres conta de envolvimento com um pensamento, regressa muito suavemente à palavra.", "Não repitas mecanicamente: usa-a apenas quando necessária para renovar o consentimento.", "Continua a acolher o silêncio, aceitando distrações e regressos como parte da oração."],
@@ -134,7 +131,6 @@
       "intensity": "low",
       "contextNote": "Ao contrário da oração centrante, a palavra é repetida durante a sessão inteira. Pronuncia-se normalmente em quatro sílabas: ma-ra-na-tha.",
       "duration": {"defaultMinutes": 25, "minMinutes": 10, "maxMinutes": 30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te imóvel, com a coluna direita mas não rígida e os pés ou pernas apoiados.", "Fecha suavemente os olhos e dispõe-te a permanecer em silêncio durante o tempo escolhido."],
         "steps": ["Começa a dizer interiormente ‘ma-ra-na-tha’, sílaba a sílaba.", "Mantém um ritmo natural e constante, sem coordenar deliberadamente com a respiração.", "Escuta a palavra enquanto a pronuncias interiormente, dando-lhe atenção plena.", "Quando te distraíres, regressa à palavra sem avaliar a sessão.", "Continua a repetição com simplicidade até soar o temporizador, mesmo quando houver silêncio ou bem-estar."],
@@ -169,7 +165,6 @@
       "intensity": "moderate",
       "contextNote": "A imaginação é um modo de oração, não uma pretensão de reconstrução histórica nem de receber informação infalível.",
       "duration": {"defaultMinutes": 30, "minMinutes": 15, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma cena evangélica curta e lê-a uma ou duas vezes.", "Pede uma graça concreta coerente com a passagem, como conhecer e seguir melhor Jesus."],
         "steps": ["Compõe o lugar imaginando o espaço, luz, sons, temperatura e pessoas sem exigir nitidez visual.", "Observa o que as personagens fazem e dizem, deixando a cena avançar ao ritmo do texto.", "Coloca-te honestamente na cena como observador ou participante e nota a tua resposta afetiva.", "Permanece no momento que mais te tocar, sem ter de cobrir toda a passagem.", "Conversa com Cristo ou outra figura da cena como uma pessoa fala com outra, e escuta em silêncio."],
@@ -204,7 +199,6 @@
       "intensity": "moderate",
       "contextNote": "Não é inventário punitivo. A revisão procura perceber presença, liberdade e padrões, incluindo o bem recebido e praticado.",
       "duration": {"defaultMinutes": 15, "minMinutes": 5, "maxMinutes": 30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Faz uma pausa no fim do dia e reconhece que estás diante de Deus.", "Pede luz para rever com verdade e misericórdia, não para te acusares."],
         "steps": ["Recorda dois ou três dons concretos do dia e agradece-os.", "Percorre o dia por períodos, encontros ou lugares, observando acontecimentos e reações.", "Nota onde houve vida, liberdade e amor, e onde te fechaste, feriste ou foste ferido.", "Pede perdão pelo que precisa de reconciliação e distingue responsabilidade de vergonha global.", "Olha para o dia seguinte e escolhe uma resposta pequena, concreta e reparadora."],
@@ -239,7 +233,6 @@
       "intensity": "low",
       "contextNote": "A forma plena é comunitária e não equivale a uma sessão privada de mindfulness. A adaptação individual prepara para participar, mas não substitui uma reunião de adoração.",
       "duration": {"defaultMinutes": 60, "minMinutes": 15, "maxMinutes": 90},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Se possível, participa numa reunião não programada e consulta as orientações da comunidade local.", "Senta-te com o grupo em pontualidade, simplicidade e disponibilidade para escutar."],
         "steps": ["Aquieta-te sem tentar fabricar silêncio mental; reconhece corpo, respiração e pessoas presentes.", "Volta a atenção para a espera receptiva e para o que a tradição chama Luz ou orientação interior.", "Deixa pensamentos e emoções passar sem os transformar imediatamente em mensagem para o grupo.", "Se surgir um impulso persistente de falar, testa se é para todos, se pode ser breve e se vem de algo mais fundo do que opinião.", "Depois de qualquer ministério vocal, regressa ao silêncio e deixa espaço; permanece até ao encerramento indicado pelos responsáveis."],
@@ -274,7 +267,6 @@
       "intensity": "low",
       "contextNote": "A repetição vocal sustenta a contemplação do mistério; não se pretende velocidade nem recitação desligada do conteúdo.",
       "duration": {"defaultMinutes": 25, "minMinutes": 8, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um conjunto de mistérios ou apenas uma dezena e lê a passagem evangélica associada.", "Segura um rosário ou usa os dedos para manter a sequência sem depender do ecrã."],
         "steps": ["Faz o sinal da cruz e as orações introdutórias segundo a tua tradição.", "Anuncia o mistério e imagina ou recorda sobriamente a cena evangélica.", "Reza o Pai-Nosso e dez Ave-Marias, deixando o ritmo das palavras sustentar a atenção ao mistério.", "Ao dispersar, regressa à cena ou a uma frase da oração sem te repreender.", "Conclui a dezena com o Glória; prossegue para outro mistério ou permanece em silêncio."],
@@ -309,7 +301,6 @@
       "intensity": "low",
       "contextNote": "A forma característica é comunitária, simples e ecuménica. Usa gravações e partituras oficiais, respeitando direitos de autor.",
       "duration": {"defaultMinutes": 30, "minMinutes": 10, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um refrão oficial curto e uma passagem bíblica coerente com ele.", "Cria um espaço sóbrio e combina previamente a duração do canto e do silêncio."],
         "steps": ["Começa com um breve momento de quietude e uma leitura bíblica lenta.", "Canta o refrão em uníssono ou ouve uma gravação, repetindo-o sem pressa.", "Deixa a frase passar da atenção intelectual à escuta interior, sem procurar êxtase.", "Cessa o canto e permanece vários minutos em silêncio, permitindo que a palavra continue a ressoar.", "Se houver intercessões, oferece-as de forma breve e regressa ao refrão ou ao silêncio."],
@@ -344,7 +335,6 @@
       "intensity": "moderate",
       "contextNote": "‘Esquecimento’ significa não alimentar conteúdos durante a oração, não negar memória, história ou responsabilidade. O texto recomenda prudência e orientação.",
       "duration": {"defaultMinutes": 20, "minMinutes": 10, "maxMinutes": 40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê uma pequena secção do texto ou recebe instrução de uma fonte cristã competente.", "Escolhe uma palavra breve, como ‘Deus’ ou ‘amor’, que exprima a direção do desejo."],
         "steps": ["Senta-te em recolhimento e orienta o desejo inteiro para Deus, sem construir uma imagem.", "Permite que conceitos, memórias e planos fiquem sob a metáfora da nuvem de esquecimento.", "Quando um conteúdo reclamar atenção, usa suavemente a palavra breve para renovar a intenção.", "Não ataques os pensamentos nem tentes alcançar uma experiência extraordinária.", "Permanece no movimento simples de amor e desconhecimento pelo tempo estabelecido."],
@@ -379,7 +369,6 @@
       "intensity": "moderate",
       "contextNote": "A tradição recomenda uma duração extensa, mas uma introdução curta pode preservar o núcleo: fala pessoal, regular e dirigida a Deus.",
       "duration": {"defaultMinutes": 20, "minMinutes": 5, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Encontra um lugar privado e seguro onde possas falar sem representar para outra pessoa.", "Escolhe a tua língua habitual e reconhece que não precisas de fórmulas eloquentes."],
         "steps": ["Dirige-te a Deus como numa conversa pessoal e começa pelo que está realmente presente.", "Exprime gratidão concreta, dificuldade, dúvida, pedido ou arrependimento sem censurar a sinceridade.", "Se faltarem palavras, diz isso mesmo e permanece um pouco em silêncio.", "Escuta as próprias reações sem inventar uma resposta divina nem exigir emoção.", "Termina escolhendo um pedido ou passo ético possível para o dia."],
@@ -414,7 +403,6 @@
       "intensity": "moderate",
       "contextNote": "Escolhe conteúdo publicamente ensinado e bem compreendido; conceitos esotéricos ou Nomes divinos requerem enquadramento judaico qualificado.",
       "duration": {"defaultMinutes": 20, "minMinutes": 10, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Estuda uma passagem curta com comentário fiável e resume a ideia numa frase.", "Senta-te sem o texto por alguns instantes e formula a questão que queres compreender."],
         "steps": ["Repete interiormente a ideia central e esclarece o significado de cada termo.", "Examina uma implicação de cada vez, usando exemplos concretos em vez de abstração vaga.", "Relaciona as partes num todo e verifica se a formulação continua fiel à fonte.", "Nota que emoção ou resistência emerge quando a ideia se torna pessoal.", "Pergunta como essa compreensão pode alterar uma ação, relação ou mitzvá concreta."],
@@ -452,7 +440,6 @@
       "intensity": "low",
       "contextNote": "A entrada não substitui as regras litúrgicas do Shemá. Quem o pratica como obrigação religiosa deve seguir o costume e orientação da sua comunidade.",
       "duration": {"defaultMinutes": 10, "minMinutes": 3, "maxMinutes": 20},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê a tradução e aprende a pronúncia de uma fonte judaica competente.", "Faz uma pausa para formular kavanah: escutar e responder, não apenas produzir som."],
         "steps": ["Senta-te ou assume a postura litúrgica habitual e sente o apoio do corpo.", "Recita a primeira linha do Shemá devagar, ouvindo cada palavra que pronuncias.", "Permanece em silêncio com o sentido de escuta e unidade, sem fabricar imagens de Deus.", "Lê ou recita o parágrafo apropriado conforme o teu contexto e nota a ligação entre amor, ensino e ação.", "Volta à palavra ‘Shemá’ — escuta — e reconhece um apelo ético concreto no momento presente."],
@@ -487,7 +474,6 @@
       "intensity": "moderate",
       "contextNote": "O método observa comportamentos concretos, não atribui uma nota ao valor da pessoa. Idealmente integra estudo, prática e apoio de uma va’ad ou parceiro.",
       "duration": {"defaultMinutes": 12, "minMinutes": 5, "maxMinutes": 30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma middah, como paciência, humildade ou generosidade, com definição operacional clara.", "Abre um diário privado e recorda que o objetivo é aprender, não punir-te."],
         "steps": ["Revê o dia cronologicamente e localiza situações em que a middah esteve presente ou ausente.", "Regista factos observáveis, separando ação, emoção e interpretação.", "Reconhece condições que facilitaram ou dificultaram a resposta ética.", "Escolhe um episódio e imagina uma alternativa realista coerente com a middah.", "Formula um pequeno compromisso para uma situação provável do dia seguinte."],
@@ -522,7 +508,6 @@
       "intensity": "moderate",
       "contextNote": "Melodias específicas pertencem a comunidades e ocasiões particulares; aprende a proveniência e segue quem conduz, em vez de tratar todo nigun como repertório genérico.",
       "duration": {"defaultMinutes": 15, "minMinutes": 5, "maxMinutes": 40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um nigun publicamente ensinado e identifica, se possível, a linhagem ou comunidade de origem.", "Ouve primeiro a melodia completa e combina um tom confortável para todas as vozes."],
         "steps": ["Começa com a melodia em volume suave, usando sílabas sem significado lexical.", "Repete o ciclo e escuta simultaneamente a própria voz e o conjunto.", "Deixa a respiração encontrar pausas naturais; não forces frases além do conforto.", "Permite que intensidade e movimento cresçam apenas se o grupo os sustentar com segurança.", "Abranda gradualmente e deixa a última repetição desembocar em silêncio."],
@@ -558,7 +543,6 @@
       "intensity": "moderate",
       "contextNote": "Não é a prática tradicional completa. Exclui Nomes divinos, fórmulas sagradas, retenções respiratórias, movimentos de cabeça e objetivos extáticos. Para a tradição, estuda com professor judeu qualificado.",
       "duration": {"defaultMinutes": 12, "minMinutes": 5, "maxMinutes": 20},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê uma introdução histórica e escolhe uma única letra ou uma palavra hebraica comum, não um Nome divino.", "Confirma a forma, pronúncia e significado numa fonte linguística judaica fiável."],
         "steps": ["Observa a letra impressa e segue lentamente os seus traços com o olhar.", "Copia-a algumas vezes, prestando atenção ao gesto e ao espaço branco.", "Pronuncia o som em respiração natural, sem prolongar até ao desconforto.", "Se usares uma palavra comum, reorganiza duas letras apenas como exercício visual e volta à forma correta.", "Termina contemplando o significado ordinário da palavra e o que aprendeste sobre a história do método."],
@@ -596,7 +580,6 @@
       "intensity": "moderate",
       "contextNote": "Fórmulas, contagens, melodias e movimentos variam por escola. Esta versão usa apenas uma fórmula pública e respiração natural; numa tariqa, segue a autorização e condução próprias.",
       "duration": {"defaultMinutes": 15, "minMinutes": 5, "maxMinutes": 40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma fórmula pública cujo árabe e significado compreendes, como uma expressão de louvor ou o testemunho de unidade.", "Senta-te ou fica de pé com estabilidade e define um volume que não force voz nem respiração."],
         "steps": ["Formula a intenção de recordar Deus, não de acumular desempenho ou provocar transe.", "Recita a frase claramente e escuta o seu som e significado.", "Repete num ritmo sustentável, deixando a inspiração surgir naturalmente entre recitações.", "Quando a atenção se dispersar, regressa ao sentido da fórmula; se estiveres em grupo, segue quem conduz.", "Abranda o volume e o ritmo nas últimas repetições, passando da voz ao silêncio."],
@@ -634,7 +617,6 @@
       "intensity": "low",
       "contextNote": "Algumas linhagens associam o dhikr silencioso a centros subtis, contagens e transmissão. Esses elementos não são incluídos nesta introdução pública.",
       "duration": {"defaultMinutes": 15, "minMinutes": 3, "maxMinutes": 40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma fórmula pública simples e confirma significado e pronúncia numa fonte islâmica competente.", "Senta-te em limpeza e quietude, com a respiração não manipulada."],
         "steps": ["Renova a intenção de recordar Deus e pronuncia a fórmula uma vez em voz baixa.", "Repete-a interiormente, ouvindo mentalmente as palavras sem mover a boca se isso ajudar.", "Mantém o sentido da fórmula em primeiro plano, não apenas a cadência.", "Quando pensamentos te absorverem, reconhece-os e volta à recordação sem irritação.", "Nos últimos minutos, torna a repetição mais subtil e repousa na consciência de estar diante de Deus."],
@@ -669,7 +651,6 @@
       "intensity": "moderate",
       "contextNote": "Métodos de linhagem diferem e podem requerer iniciação. Esta forma pública limita-se à vigilância silenciosa e à consciência teísta, sem centros subtis nem visualização do mestre.",
       "duration": {"defaultMinutes": 20, "minMinutes": 10, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Faz a preparação devocional habitual da tua comunidade e escolhe um lugar limpo e tranquilo.", "Senta-te com dignidade, olhos baixos ou fechados, e deixa a respiração natural."],
         "steps": ["Recorda interiormente que Deus conhece e vê o teu estado, sem criar uma imagem de Deus.", "Leva atenção à região do coração como lugar simbólico de intenção e consciência.", "Observa pensamentos, emoções e impulsos como acontecimentos conhecidos, sem os seguir nem combater.", "Quando te perderes, renova uma vez a intenção de presença e regressa ao silêncio.", "Permanece receptivo, sem medir sucesso por visões, êxtase ou ausência de pensamento."],
@@ -704,7 +685,6 @@
       "intensity": "low",
       "contextNote": "Fontes de linhagem descrevem versões avançadas. Esta entrada ensina apenas atenção à respiração espontânea e recordação; não inclui retenção nem controlo do ar.",
       "duration": {"defaultMinutes": 12, "minMinutes": 3, "maxMinutes": 30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma postura em que o ar flua sem compressão e solta qualquer intenção de respirar de modo especial.", "Recorda o princípio: não deixar uma respiração passar em completa desatenção."],
         "steps": ["Sente uma inspiração natural do início ao fim, sem a alongar.", "Sente a expiração e nota a qualidade mental presente nesse ciclo.", "Associa uma intenção silenciosa de recordação, sem impor palavras a cada fase.", "Quando descobrires vários ciclos esquecidos, regressa simplesmente ao próximo.", "Alarga gradualmente a atenção para postura, sons e ação, mantendo a respiração como lembrete discreto."],
@@ -739,7 +719,6 @@
       "intensity": "low",
       "contextNote": "Tafakkur é reflexão disciplinada, não especulação sobre a essência de Deus nem procura de presságios na natureza.",
       "duration": {"defaultMinutes": 20, "minMinutes": 7, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um sinal observável — céu, água, planta, ciclo do dia — e um verso corânico relacionado.", "Vai para um lugar seguro ou usa uma observação junto de uma janela, deixando de lado notificações."],
         "steps": ["Observa detalhes concretos de forma, mudança, interdependência e limite antes de interpretar.", "Lê o verso devagar e nota como orienta o olhar para o fenómeno.", "Pergunta o que a observação revela sobre dependência, medida, transitoriedade ou cuidado.", "Distingue factos observados de associações pessoais e evita transformar coincidências em mensagens.", "Responde com gratidão e identifica uma responsabilidade prática para com pessoas ou criação."],
@@ -774,7 +753,6 @@
       "intensity": "low",
       "contextNote": "Tadabbur pessoal não substitui tafsir, domínio do árabe ou parecer jurídico. Usa traduções e comentários reconhecidos.",
       "duration": {"defaultMinutes": 25, "minMinutes": 10, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma passagem curta e consulta a tradução e o contexto imediato.", "Faz a preparação respeitosa conforme a tua tradição e define uma intenção de compreender e responder."],
         "steps": ["Ouve ou recita a passagem devagar, prestando atenção à estrutura e repetições.", "Lê uma tradução fiável e identifica palavras ou relações que precisas de esclarecer.", "Consulta um comentário reconhecido para evitar retirar a frase do contexto.", "Pergunta que atitude, advertência, esperança ou responsabilidade o texto torna visível.", "Permanece em silêncio e formula uma aplicação concreta e proporcional."],
@@ -809,7 +787,6 @@
       "intensity": "moderate",
       "contextNote": "A revisão equilibra esperança e responsabilidade. Não é licença para autoaversão, vigilância de terceiros ou confissão pública indevida.",
       "duration": {"defaultMinutes": 12, "minMinutes": 5, "maxMinutes": 30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um momento regular e privado e pede sinceridade com misericórdia.", "Limita a revisão a um dia ou a um tema específico para evitar ruminação sem fim."],
         "steps": ["Recorda intenções importantes com que começaste o dia.", "Revê ações e omissões concretas, incluindo o bem feito e recebido.", "Distingue erro deliberado, limitação e circunstância, assumindo responsabilidade sem condenar a pessoa inteira.", "Faz tawba pelo que requer arrependimento e identifica reparação possível a quem foi afetado.", "Define uma intenção e uma salvaguarda prática para uma situação provável de amanhã."],
@@ -847,7 +824,6 @@
       "intensity": "low",
       "contextNote": "O Sema é uma cerimónia religiosa complexa e património cultural, aprendida com treino prolongado. Esta entrada deliberadamente não contém passos de rotação, vestes, gestos ou encenação ritual.",
       "duration": {"defaultMinutes": 25, "minMinutes": 15, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê a descrição oficial turca ou da UNESCO e reconhece a origem Mevlevi antes de ver uma apresentação.", "Escolhe uma gravação documental creditada e senta-te para ouvir, sem espaço preparado para rodopiar."],
         "steps": ["Observa o enquadramento: músicos, sequência, disciplina coletiva e caráter devocional.", "Escuta alguns minutos de música sem imitar gestos, notando ritmo, silêncio e recitação.", "Lê o significado simbólico fornecido por uma fonte Mevlevi ou institucional, distinguindo-o de projeções pessoais.", "Reflete sobre como treino, comunidade e ética contêm uma prática intensa.", "Escreve uma resposta de respeito: o que aprendeste e o que não te pertence reproduzir."],
@@ -882,7 +858,6 @@
       "intensity": "low",
       "contextNote": "Dadirri não é ‘mindfulness aborígene’ genérico. É um presente publicamente partilhado por uma anciã específica e permanece ligado a povo, parentesco e Country; esta entrada não confere autoridade cultural.",
       "duration": {"defaultMinutes": 20, "minMinutes": 8, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Lê ou ouve primeiro Miriam-Rose Ungunmerr e reconhece o povo e o lugar de onde vem o ensino.", "Escolhe um local seguro e identifica honestamente em que território estás e que relações o sustentam."],
         "steps": ["Pára e permite que o corpo se torne quieto sem exigir silêncio ao ambiente.", "Escuta em camadas: sons próximos, distantes, humanos e não humanos, sem os nomear imediatamente.", "Nota como o lugar te afeta e como a tua presença o afeta, incluindo deveres de cuidado.", "Quando surgir pressa por interpretar, regressa à paciência e deixa o entendimento amadurecer.", "Termina escutando uma pessoa, comunidade ou necessidade concreta que normalmente interrompes ou apressas."],
@@ -921,7 +896,6 @@
       "intensity": "low",
       "contextNote": "O discurso pertence a povos Haudenosaunee e tem função comunitária. Pessoas externas podem escutar versões públicas e aprender; a prática individual abaixo é uma resposta de gratidão própria, não o rito Haudenosaunee.",
       "duration": {"defaultMinutes": 25, "minMinutes": 12, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma gravação ou texto publicado por uma instituição Haudenosaunee ou em colaboração explícita e identifica a Nação e o orador.", "Reconhece em que território estás e evita adotar palavras numa língua que não compreendes como adereço."],
         "steps": ["Escuta ou lê a versão pública inteira sem saltar diretamente para uma lista pessoal.", "Nota a progressão de relações — pessoas, terra, águas, plantas, animais, ventos, astros e forças espirituais — conforme a fonte.", "Permanece em silêncio e identifica de que relações depende a tua vida hoje.", "Formula, nas tuas próprias palavras e cultura, agradecimento específico a três dessas relações.", "Escolhe uma ação de reciprocidade ou aprendizagem que corresponda à gratidão expressa."],
@@ -957,7 +931,6 @@
       "intensity": "moderate",
       "contextNote": "Hoʻoponopono tradicional é um processo familiar ou comunitário conduzido por pessoa reconhecida. A popular fórmula de quatro frases como mantra individual não é o procedimento tradicional e foi excluída por ser afirmação e por apagar o contexto.",
       "duration": {"defaultMinutes": 20, "minMinutes": 10, "maxMinutes": 35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma relação específica e confirma primeiro se qualquer contacto futuro seria seguro e desejado por todas as partes.", "Lê uma descrição Native Hawaiian do processo e reconhece que esta sessão é apenas preparação pessoal."],
         "steps": ["Descreve por escrito o conflito em factos observáveis, sem atribuir motivos à outra pessoa.", "Nomeia a tua parte de responsabilidade, incluindo ação, omissão e impacto provável.", "Identifica o que precisas de ouvir sem interromper e que perguntas abertas poderiam permitir essa escuta.", "Lista formas proporcionais de reparação, aceitando que perdão e reconciliação não podem ser exigidos.", "Decide se deves procurar facilitador culturalmente competente, mediador, terapeuta ou simplesmente manter distância segura."],
@@ -993,7 +966,6 @@
       "intensity": "moderate",
       "contextNote": "Mindfulness não garante relaxamento e a prática não procura esvaziar a mente. O curso MBSR completo inclui ensino, inquérito e várias práticas; esta é uma componente isolada.",
       "duration": {"defaultMinutes": 30, "minMinutes": 10, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te numa cadeira ou almofada com apoio estável e postura desperta, sem rigidez.", "Escolhe um temporizador suave e decide antecipadamente se manterás olhos fechados ou olhar baixo."],
         "steps": ["Sente os pontos de contacto e observa algumas respirações naturais onde forem mais nítidas.", "Quando a mente se afastar, reconhece o conteúdo e conduz a atenção de volta sem censura.", "Amplia para sensações do corpo inteiro, incluindo agradáveis, desagradáveis e neutras, sem procurar corrigi-las.", "Inclui sons como acontecimentos que aparecem e desaparecem; depois faz o mesmo com pensamentos e emoções.", "Nos minutos finais, deixa o campo aberto à experiência inteira, usando respiração ou corpo como base quando precisares."],
@@ -1029,7 +1001,6 @@
       "intensity": "moderate",
       "contextNote": "O objetivo é conhecer a experiência corporal, que pode ou não relaxar. Não se imagina que o ar viaje anatomicamente para cada parte.",
       "duration": {"defaultMinutes": 35, "minMinutes": 10, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Deita-te num suporte firme ou senta-te com apoio; ajusta temperatura e roupa sem criar risco de adormecer.", "Define uma ordem corporal e dá permissão para saltar zonas que não sejam seguras hoje."],
         "steps": ["Sente o corpo como um todo e alguns movimentos naturais da respiração.", "Leva atenção aos dedos e pé de um lado, notando pressão, temperatura, pulsação ou ausência de sensação.", "Percorre lentamente perna, bacia, tronco, mão, braço, ombros, pescoço e cabeça; repete do outro lado quando aplicável.", "Em cada zona, recebe o que existe sem contrair para sentir mais nem tentar libertar tensão.", "No fim, amplia para o corpo inteiro como um campo único em contacto com o chão ou cadeira."],
@@ -1065,7 +1036,6 @@
       "intensity": "low",
       "contextNote": "Esta microsequência não substitui fisioterapia nem uma aula completa de MBSR. A agência — fazer menos, adaptar ou não fazer — integra o método.",
       "duration": {"defaultMinutes": 20, "minMinutes": 8, "maxMinutes": 40},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Liberta uma área sem obstáculos e usa cadeira ou parede estável ao alcance.", "Verifica dor, equilíbrio e restrições conhecidas; escolhe amplitude pequena e sem objetivo de alongar."],
         "steps": ["De pé ou sentado, sente os apoios e desloca o peso alguns milímetros, observando a resposta.", "Eleva e baixa os ombros lentamente uma vez de cada vez, percebendo início, percurso, limite e repouso.", "Move braços para a frente ou lados apenas até uma amplitude confortável e devolve-os com igual atenção.", "Inclina ou roda o tronco muito pouco, mantendo respiração natural e escolhendo parar antes da dor.", "Fica imóvel por vários ciclos e compara sensações sem decidir que um lado está ‘melhor’."],
@@ -1100,7 +1070,6 @@
       "intensity": "low",
       "contextNote": "É uma prática formal num percurso seguro, não uma instrução para diminuir atenção ao trânsito ou ao ambiente.",
       "duration": {"defaultMinutes": 15, "minMinutes": 5, "maxMinutes": 30},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um percurso plano de cinco a dez metros, sem trânsito, escadas, obstáculos ou necessidade de navegar.", "Mantém olhos abertos e usa apoio ou companhia se o equilíbrio for incerto."],
         "steps": ["Fica de pé e sente ambos os pés antes de iniciar.", "Nota intenção, deslocação de peso, elevação, avanço e colocação de um pé sem decompor de modo rígido.", "Deixa os braços naturais e caminha a uma velocidade sustentável, sentindo alguns passos por inteiro.", "Ao chegar ao fim, pára, reconhece a intenção de virar e muda de direção com atenção.", "Quando pensamentos absorverem a atenção, volta a um contacto do pé e mantém simultaneamente consciência do espaço."],
@@ -1135,7 +1104,6 @@
       "intensity": "low",
       "contextNote": "A intenção oficial não é distrair, relaxar ou consertar a experiência. A prática breve complementa, não substitui, o treino formal do MBCT.",
       "duration": {"defaultMinutes": 3, "minMinutes": 2, "maxMinutes": 10},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Pára a atividade quando for seguro e assume uma postura estável, aberta e desperta.", "Define três períodos aproximadamente iguais; não precisas de controlar exatamente cada minuto."],
         "steps": ["Consciência: pergunta ‘o que está aqui agora?’ e reconhece pensamentos, emoções e sensações.", "Nomeia mentalmente o que notas de forma leve, sem analisar nem tentar alterar.", "Reunião: conduz toda a atenção às sensações de uma respiração natural no abdómen ou noutro ponto claro.", "Permanece com alguns ciclos, regressando quando a mente se afasta.", "Expansão: inclui corpo inteiro, postura, expressão facial e espaço ao redor, levando essa amplitude ao próximo momento."],
@@ -1170,7 +1138,6 @@
       "intensity": "moderate",
       "contextNote": "RAIN não obriga a mergulhar numa emoção nem a perdoar. ‘Permitir’ significa reconhecer a realidade deste momento, mantendo escolha e limites.",
       "duration": {"defaultMinutes": 20, "minMinutes": 5, "maxMinutes": 35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma dificuldade de intensidade baixa ou média, não o trauma mais avassalador.", "Orienta-te ao espaço, sente apoio e define que podes parar a qualquer momento."],
         "steps": ["Reconhecer: nomeia o que predomina — pensamento, emoção, impulso ou sensação — com linguagem simples.", "Permitir: admite que isto está presente agora, sem aprovar dano nem exigir que permaneça.", "Investigar: pergunta com curiosidade onde se sente no corpo, que crença carrega e do que precisa; não interrogues agressivamente.", "Nutrir: oferece uma frase, gesto ou imagem de cuidado que seja credível e respeite limites.", "Depois do RAIN, nota a consciência que contém a experiência e escolhe se deves agir, descansar ou procurar ajuda."],
@@ -1206,7 +1173,6 @@
       "intensity": "low",
       "contextNote": "As frases são exemplos a adaptar com honestidade; não são afirmações positivas para negar a realidade. Por isso a prática permanece no catálogo apesar da exclusão de afirmações.",
       "duration": {"defaultMinutes": 5, "minMinutes": 1, "maxMinutes": 15},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma situação realmente difícil mas manejável neste momento.", "Sente os pés ou outro apoio e decide se toque no peito, braço ou nenhuma forma de toque é confortável."],
         "steps": ["Traz a situação à mente apenas o suficiente para reconhecer a resposta corporal.", "Mindfulness: nomeia factualmente ‘isto dói’, ‘isto é stress’ ou palavras igualmente verdadeiras.", "Humanidade comum: reconhece que dificuldade e imperfeição fazem parte da experiência humana, sem comparar sofrimentos.", "Bondade: pergunta ‘de que preciso ouvir ou receber agora?’ e oferece uma resposta credível e específica.", "Permanece alguns ciclos com o gesto ou tom de apoio e nota se é necessária uma ação protetora."],
@@ -1242,7 +1208,6 @@
       "intensity": "moderate",
       "contextNote": "Os seis passos são andaimes de aprendizagem, não uma sequência rígida. O instituto recomenda aprendizagem com professor ou parceiro para maior profundidade.",
       "duration": {"defaultMinutes": 25, "minMinutes": 10, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe tempo sem interrupções e uma questão de intensidade tolerável; lembra que podes não obter resposta.", "Sente a zona central do corpo e adota uma atitude amigável, não analítica."],
         "steps": ["Criar espaço: nota temas presentes e coloca cada um simbolicamente a alguma distância, sem o resolver.", "Felt sense: escolhe um tema e espera pela sensação corporal global, vaga, de ‘tudo isto’.", "Pega: deixa surgir uma palavra, frase, imagem ou gesto que capte a qualidade dessa sensação.", "Ressonância: compara símbolo e sensação, ajustando até haver correspondência suficiente, sem forçar alívio.", "Perguntar e receber: pergunta gentilmente o que torna isto assim ou de que precisa; acolhe qualquer pequeno movimento e protege-o antes de terminar."],
@@ -1278,7 +1243,6 @@
       "intensity": "low",
       "contextNote": "A finalidade não é fazer pensamentos desaparecer nem provar que são falsos, mas alterar a relação com eles para escolher ação.",
       "duration": {"defaultMinutes": 10, "minMinutes": 5, "maxMinutes": 20},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te confortavelmente e escolhe manter olhos fechados ou olhar fixo no chão.", "Imagina um ribeiro seguro com folhas que passam; se água não funcionar, escolhe nuvens ou uma passadeira rolante."],
         "steps": ["Observa a respiração por alguns ciclos para te orientares.", "Quando surgir um pensamento em palavras, imagem ou memória, coloca a sua representação sobre uma folha.", "Vê a folha entrar na corrente e mover-se ao seu ritmo, sem a empurrar nem esperar que desapareça.", "Se te encontrares dentro da história, nota ‘fui levado’ e regressa à margem imaginada.", "Inclui pensamentos como ‘isto não funciona’ ou espaços sem pensamento exatamente da mesma maneira."],
@@ -1313,7 +1277,6 @@
       "intensity": "moderate",
       "contextNote": "‘Ver’ inclui imagem mental, ‘ouvir’ inclui conversa interior e ‘sentir’ inclui sensação emocional no corpo. Os rótulos são discretos e podem ser abandonados.",
       "duration": {"defaultMinutes": 20, "minMinutes": 5, "maxMinutes": 45},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe praticar com todas as categorias ou apenas uma e define um período sem conduzir ou operar equipamento.", "Assume postura estável e permite que olhos estejam abertos ou fechados conforme o campo escolhido."],
         "steps": ["Nota o acontecimento mais evidente neste instante: imagem/visão, som/fala interna ou sensação corporal.", "Se ajudar, aplica uma vez o rótulo suave ‘ver’, ‘ouvir’ ou ‘sentir’.", "Contacta diretamente a textura, localização, intensidade ou mudança do acontecimento sem explicar a história.", "Permite que desapareça, continue ou mude; escolhe o próximo acontecimento evidente.", "Quando estiveres perdido, regressa a um som externo ou contacto corporal claro e retoma a seleção livre."],
@@ -1348,7 +1311,6 @@
       "intensity": "moderate",
       "contextNote": "O CCT é um curso manualizado mais amplo. Esta sequência introdutória não representa o currículo completo nem promete resultados clínicos.",
       "duration": {"defaultMinutes": 20, "minMinutes": 8, "maxMinutes": 35},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe primeiro uma pessoa segura ou situação de sofrimento manejável; não comeces por alguém que te traumatizou.", "Estabiliza com apoios corporais e lembra que compaixão inclui limites e não exige resolver tudo."],
         "steps": ["Recorda uma experiência de cuidado recebido ou oferecido e nota como aparece no corpo.", "Reconhece que, tal como tu, outras pessoas procuram bem-estar e encontram dificuldade.", "Traz a pessoa escolhida à mente e distingue empatia pelo sofrimento de assumir a responsabilidade total por o eliminar.", "Formula um desejo simples de alívio e capacidade, em palavras que sejam credíveis.", "Pergunta que ação pequena, sustentável e consentida poderia expressar essa intenção — ou reconhece que hoje basta não causar dano."],
@@ -1384,7 +1346,6 @@
       "intensity": "high",
       "contextNote": "5Rhythms é uma marca e disciplina ensinada por professores acreditados. Uma sessão autónoma é introdução, não substitui uma Wave conduzida nem autoriza ensinar o método.",
       "duration": {"defaultMinutes": 60, "minMinutes": 25, "maxMinutes": 120},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Liberta um piso seguro, hidrata-te antes e escolhe música com cinco fases distinguíveis ou uma gravação autorizada.", "Verifica dor, equilíbrio e capacidade cardiovascular; decide antecipadamente que podes sentar, abrandar ou parar."],
         "steps": ["Flowing: deixa os pés conduzir movimentos contínuos, circulares e próximos do chão, descobrindo o espaço.", "Staccato: explora movimentos claros, angulares e com princípio e fim, mantendo articulações soltas.", "Chaos: permite movimento menos planeado e solta padrões, mas protege cabeça, coluna e joelhos e não colidas com ninguém.", "Lyrical: nota formas mais leves, lúdicas ou repetitivas que emergem depois do esforço, sem representar alegria.", "Stillness: reduz gradualmente até gestos mínimos ou imobilidade de pé/sentado, sentindo respiração e ressonância."],
@@ -1420,7 +1381,6 @@
       "intensity": "moderate",
       "contextNote": "A forma-base requer outra pessoa e aprendizagem adequada. Esta descrição introdutória preserva papéis e limites; não é psicoterapia nem licença para facilitar grupos.",
       "duration": {"defaultMinutes": 35, "minMinutes": 20, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um parceiro de confiança, remove obstáculos e delimita claramente o espaço de movimento.", "Combina duração, sinal de paragem, proibição de toque sem consentimento e confidencialidade; decide quem move primeiro."],
         "steps": ["O movente fecha ou baixa os olhos, espera e segue apenas o impulso presente para mover ou permanecer imóvel.", "A testemunha mantém olhos abertos, assegura o espaço e observa simultaneamente o movente e as próprias sensações, imagens e julgamentos.", "Ambos evitam interpretar durante o período; a testemunha intervém apenas por segurança ou sinal combinado.", "Ao sinal de fim, o movente encontra uma posição estável, abre os olhos e orienta-se ao espaço.", "Depois de silêncio ou desenho breve, o movente fala da própria experiência; a testemunha partilha apenas a sua experiência em primeira pessoa, sem explicar o outro."],
@@ -1456,7 +1416,6 @@
       "intensity": "low",
       "contextNote": "Awareness Through Movement é marca profissional e conjunto vasto de lições, não uma sequência fixa. Usa de preferência uma gravação gratuita de um Guild ou professor certificado.",
       "duration": {"defaultMinutes": 35, "minMinutes": 15, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma lição áudio para principiantes publicada por um Feldenkrais Guild e confirma a posição requerida.", "Retira objetos que pressionem o corpo, usa tapete firme e apoia a cabeça o suficiente para conforto neutro."],
         "steps": ["Antes da primeira instrução, observa contactos, assimetrias e facilidade sem tentar alinhar-te.", "Segue um movimento de cada vez lentamente e em amplitude menor do que a máxima, parando antes de dor ou esforço.", "Experimenta as variações propostas com curiosidade e nota diferenças de direção, respiração e participação de outras partes.", "Faz as pausas completas e sente efeitos sem concluir que mudança maior é melhor.", "No fim da sequência, repete a observação inicial e levanta-te por etapas, comparando apenas o que está realmente presente."],
@@ -1492,7 +1451,6 @@
       "intensity": "high",
       "contextNote": "A sequência oficial é exigente e não é apropriada para muitas pessoas. A primeira sessão deve ocorrer num centro responsável, com facilitador experiente, música oficial, triagem e espaço protegido; não é necessário praticá-la para obter benefícios de meditação.",
       "duration": {"defaultMinutes": 60, "minMinutes": 60, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Antes de participar, consulta um profissional de saúde se houver qualquer condição clínica e informa o facilitador; evita praticar sozinho.", "Usa roupa livre, estômago confortável, pés seguros e uma área sem objetos, pisos duros expostos ou proximidade de outras pessoas."],
         "steps": ["Primeira fase, dez minutos: respiração rápida, profunda e irregular pelo nariz, mantendo consciência e parando imediatamente perante sintomas de alarme.", "Segunda fase, dez minutos: permite expressão física e vocal sem atingir pessoas, objetos ou o próprio corpo e sem ultrapassar consentimento e regras do local.", "Terceira fase, dez minutos: com braços elevados, salta aterrando com joelhos desbloqueados e vocaliza ‘Hoo’; quem não pode saltar não deve improvisar sem facilitador.", "Quarta fase, quinze minutos: ao sinal ‘Stop’, fica na posição alcançada sem ajustar deliberadamente, salvo necessidade de segurança, e observa.", "Quinta fase, quinze minutos: dança e celebra em movimento livre, reduzindo gradualmente antes do fim."],
@@ -1528,7 +1486,6 @@
       "intensity": "moderate",
       "contextNote": "Krishnamurti rejeita transformar isto em sistema progressivo. Os passos abaixo são apenas um enquadramento temporário para observar, que deve ser largado durante a própria observação.",
       "duration": {"defaultMinutes": 20, "minMinutes": 5, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um período sem tarefa de risco e deixa de lado a expectativa de alcançar calma ou estado especial.", "Começa onde estás, sentado ou a caminhar, sem criar ritual necessário."],
         "steps": ["Ouve sons e vê formas sem escolher imediatamente um objeto preferido.", "Inclui sensações, emoções e pensamentos como parte do mesmo campo de acontecimentos.", "Nota cada movimento de nomear, comparar, condenar ou controlar sem condenar também esse movimento.", "Observa se existe uma separação criada pelo pensamento entre ‘eu que observa’ e aquilo que é observado.", "Permanece com o que é novo a cada instante; quando perceberes que aplicas uma fórmula, observa isso e larga-a."],
@@ -1564,7 +1521,6 @@
       "intensity": "moderate",
       "contextNote": "A evidência clínica é preliminar e o método não substitui terapia nem verificação factual. Inversões são hipóteses a testar, nunca ordens para assumir culpa.",
       "duration": {"defaultMinutes": 30, "minMinutes": 15, "maxMinutes": 60},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe uma situação específica de intensidade tolerável e escreve uma frase curta que acreditas sobre ela.", "Mantém disponíveis factos, limites e apoio; não escolhas abuso grave ou trauma para uma primeira prática a sós."],
         "steps": ["Pergunta ‘É verdade?’ e espera uma resposta simples antes de justificar.", "Pergunta ‘Posso saber com certeza absoluta que é verdade?’ e deixa a dúvida ou certeza ser examinada honestamente.", "Pergunta como reages — corpo, imagens, ações e tratamento de ti e dos outros — quando acreditas nesse pensamento.", "Pergunta quem serias nessa situação sem conseguir acreditar no pensamento, imaginando sem apagar factos.", "Cria as inversões propostas pelo método e encontra exemplos específicos genuínos; rejeita qualquer inversão falsa, abusiva ou culpabilizante."],
@@ -1600,7 +1556,6 @@
       "intensity": "moderate",
       "contextNote": "É um teste fenomenológico dentro de um ensino não dual, não prova científica de que o corpo ou a cabeça não existem. Mantém simultaneamente a perspetiva comum de terceira pessoa.",
       "duration": {"defaultMinutes": 10, "minMinutes": 3, "maxMinutes": 20},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Senta-te ou fica de pé num local estável, sem espelho nem necessidade de te mover.", "Levanta uma mão à frente e decide observar experiência visual direta antes de a interpretar."],
         "steps": ["Aponta para um objeto distante e nota cor, forma e limite para onde o dedo aponta.", "Aponta para um objeto mais próximo, depois para o próprio tronco, observando o que aparece em cada caso.", "Inverte lentamente o dedo e aponta para o lugar de onde estás a ver.", "Pergunta o que é visualmente dado ali agora — uma face vista, ou espaço aberto para o campo — sem negar o que um espelho e outras pessoas mostram.", "Alterna duas ou três vezes entre objeto e ponto de vista, deixando coexistir experiência de primeira pessoa e conhecimento corporal comum."],
@@ -1636,7 +1591,6 @@
       "intensity": "low",
       "contextNote": "O objetivo filosófico é ver proporção e interdependência, não minimizar sofrimento nem induzir relaxamento.",
       "duration": {"defaultMinutes": 12, "minMinutes": 5, "maxMinutes": 25},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Escolhe um problema concreto e escreve numa frase o que depende e não depende diretamente da tua escolha.", "Senta-te com apoio e imagina a partir de lugares que conheces, sem exigir visualização nítida."],
         "steps": ["Vê-te no espaço onde estás, incluindo outras pessoas próximas com preocupações próprias.", "Amplia para o bairro e cidade, notando muitas vidas e atividades simultâneas.", "Amplia para região, planeta e passagem das gerações, observando escala e transitoriedade.", "Considera o problema sem o negar: que importância conserva e que dramatização perde nesta perspetiva?", "Regressa gradualmente ao corpo e identifica a ação virtuosa que está realmente sob a tua responsabilidade."],
@@ -1672,7 +1626,6 @@
       "intensity": "moderate",
       "contextNote": "A disciplina visa corrigir juízos e conduta, não suprimir emoções nem cultivar uma identidade ‘dura’.",
       "duration": {"defaultMinutes": 12, "minMinutes": 5, "maxMinutes": 25},
-      "psilocybin": false,
       "instructions": {
         "preparation": ["Reserva alguns minutos antes de dormir com diário privado e luz suficiente.", "Adota o papel de examinador justo: rigoroso com factos, sem insultar nem absolver automaticamente."],
         "steps": ["Percorre o dia e identifica uma ação de acordo com sabedoria, coragem, justiça ou moderação.", "Identifica uma ocasião em que um juízo precipitado conduziu a ação menos hábil.", "Pergunta o que dependia da tua escolha e o que era externo ao teu controlo.", "Formula como poderias responder numa situação semelhante, incluindo palavras e comportamento concretos.", "Escolhe uma intenção curta para amanhã e qualquer reparação que devas fazer."],
@@ -1684,153 +1637,6 @@
         {"title": "On Anger, Book III", "author": "Seneca", "year": 45, "type": "primary-philosophical-text", "language": "en", "url": "https://en.wikisource.org/wiki/Of_Anger/Book_III"},
         {"title": "Stoic Week Handbook", "author": "Modern Stoicism", "year": 2015, "type": "academic-public-practice-handbook", "language": "en", "url": "https://modernstoicism.com/wp-content/uploads/2021/06/Stoic-Week-2015-Handbook-Stoicism-Today.pdf"},
         {"title": "Seneca Philosophus", "author": "Jula Wildberger and Marcia L. Colish, editors", "year": 2014, "type": "academic-book", "language": "en", "url": "https://cpcglobal.org/publications/Seneca%20Philosophus.pdf"}
-      ],
-      "review": {"confidence": "high", "reviewedAt": "2026-08-12"}
-    },
-    {
-      "id": "psy-clinical-preparation-reflection",
-      "name": "Reflexão de preparação para contexto legal e supervisionado com psilocibina",
-      "originalNames": [{"text": "psilocybin session preparation", "language": "en", "script": "Latn"}],
-      "aliases": ["preparação contemplativa psicadélica", "intention and safety preparation", "pré-sessão de investigação"],
-      "summary": "Preparação exclusivamente não farmacológica para investigação clínica ou serviço legal: clarifica motivação, consentimento, apoios, incerteza e recursos de orientação com um profissional responsável.",
-      "traditions": ["investigação clínica com psilocibina", "serviços regulados"],
-      "beliefSystems": ["secular", "clínico"],
-      "regions": ["contextos legais e regulamentados"],
-      "families": ["preparação contemplativa", "clarificação de intenção"],
-      "attentionModes": ["reflexão", "planeamento de segurança", "consciência corporal"],
-      "anchors": ["valores", "consentimento", "apoios", "orientação sensorial"],
-      "features": ["sem administração", "supervisão profissional", "incerteza"],
-      "goals": ["consentimento informado", "preparação psicológica", "segurança", "intenção flexível"],
-      "period": "protocolos modernos de investigação desde o século XXI",
-      "positions": ["chair", "walking"],
-      "flexibility": "low",
-      "difficulty": "advanced",
-      "intensity": "moderate",
-      "contextNote": "Não é aconselhamento para usar psilocibina nem critério de elegibilidade. Só se aplica quando um investigador, clínico ou facilitador legalmente autorizado conduz triagem, consentimento e protocolo; não contém dose, produto, aquisição ou preparação da substância.",
-      "duration": {"defaultMinutes": 30, "minMinutes": 15, "maxMinutes": 60},
-      "psilocybin": true,
-      "instructions": {
-        "preparation": ["Confirma que a reflexão ocorre dentro de um estudo aprovado ou serviço legal com profissional responsável; se não, usa-a apenas como educação e não prossigas para administração.", "Tem à mão documentos de consentimento e contactos fornecidos pelo programa, sem alterar medicação ou cuidados por conta própria."],
-        "steps": ["Escreve a motivação em termos de valores e sofrimento real, distinguindo esperança de promessa de cura.", "Lista perguntas sobre triagem, confidencialidade, toque, música, interrupção, eventos adversos, seguimento e direito de retirar consentimento.", "Identifica sinais corporais de sobrecarga e pratica orientação sóbria: nome, data, cinco objetos visíveis e contacto dos pés.", "Define uma intenção flexível, como curiosidade ou honestidade, e uma permissão igualmente clara para não obter determinada experiência.", "Revê com o profissional a rede de apoio e o plano de acompanhamento, incluindo a quem recorrer se o sofrimento aumentar depois."],
-        "closing": ["Entrega perguntas ao profissional e não interpretes a conclusão desta meditação como autorização clínica.", "Regista uma atividade sóbria e estável para o resto do dia e mantém decisões dentro do processo formal de consentimento."],
-        "adaptations": ["Se decidires não participar, usa a reflexão para discutir alternativas baseadas em evidência com profissional licenciado.", "Faz a sessão acompanhado pelo facilitador, lendo cada pergunta em voz alta em vez de meditar sozinho." ]
-      },
-      "precautions": ["Psilocibina pode ser ilegal e pode causar reações psicológicas ou físicas graves; esta entrada não recomenda uso nem substitui triagem profissional.", "História pessoal ou familiar de psicose, perturbação bipolar, risco suicida, condições médicas ou interações medicamentosas exigem avaliação especializada; nunca alteres medicação por instrução deste catálogo.", "Nenhuma parte ensina dose, aquisição, cultivo, preparação da substância ou combinações."],
-      "sources": [
-        {"title": "Human Hallucinogen Research: Guidelines for Safety", "author": "Matthew W. Johnson, William A. Richards, Roland R. Griffiths", "year": 2008, "type": "peer-reviewed-safety-guideline", "language": "en", "url": "https://pubmed.ncbi.nlm.nih.gov/18593734/"},
-        {"title": "What are Psilocybin Services?", "author": "Oregon Health Authority", "year": 2024, "type": "government-regulatory-guide", "language": "en", "url": "https://www.oregon.gov/oha/ph/preventionwellness/pages/psilocybin-what-are-psilocybin-services.aspx"},
-        {"title": "Oregon Administrative Rules Guidance", "author": "Oregon Psilocybin Services", "year": 2025, "type": "government-regulatory-guidance", "language": "en", "url": "https://www.oregon.gov/oha/PH/PREVENTIONWELLNESS/Documents/OPS-Guidance-on-Administrative-Rules.pdf"}
-      ],
-      "review": {"confidence": "high", "reviewedAt": "2026-08-12"}
-    },
-    {
-      "id": "psy-research-mindfulness-retreat-context",
-      "name": "Mindfulness contextual à investigação com psilocibina em retiro",
-      "originalNames": [{"text": "psilocybin-assisted mindfulness group retreat", "language": "en", "script": "Latn"}],
-      "aliases": ["mindfulness-psilocybin research context", "contemplação do estudo Smigielski"],
-      "summary": "Prática sóbria de mindfulness para compreender criticamente investigação que combinou retiro com psilocibina em meditadores experientes; não reproduz o estudo nem orienta autoexperimentação.",
-      "traditions": ["investigação contemplativa psicadélica", "mindfulness secular"],
-      "beliefSystems": ["secular", "científico"],
-      "regions": ["Suíça", "contextos internacionais de investigação"],
-      "families": ["mindfulness", "literacia científica", "integração contemplativa"],
-      "attentionModes": ["atenção à respiração", "monitorização aberta", "reflexão crítica"],
-      "anchors": ["respiração natural", "corpo", "artigo científico"],
-      "features": ["prática sóbria", "população experiente", "não generalização"],
-      "goals": ["literacia científica", "estabilidade atencional", "discernimento"],
-      "period": "estudo publicado em 2019; investigação contemporânea",
-      "positions": ["chair", "cushion-cross-legged", "walking"],
-      "flexibility": "medium",
-      "difficulty": "advanced",
-      "intensity": "moderate",
-      "contextNote": "O estudo ocorreu num retiro estruturado, com participantes experientes, desenho controlado e supervisão. Os resultados não autorizam combinar por conta própria psilocibina e meditação nem se aplicam automaticamente a principiantes.",
-      "duration": {"defaultMinutes": 25, "minMinutes": 12, "maxMinutes": 45},
-      "psilocybin": true,
-      "instructions": {
-        "preparation": ["Realiza esta sessão completamente sóbrio e abre o artigo ou resumo académico, não relatos promocionais.", "Senta-te com apoio e define uma pergunta crítica: população, contexto, resultado ou limitação."],
-        "steps": ["Pratica cinco minutos de atenção natural à respiração, reconhecendo expectativas que trazes ao tema.", "Amplia ao corpo e pensamentos, notando desejo, medo ou entusiasmo sem os tratar como evidência.", "Lê a descrição da amostra e do contexto de retiro e identifica por que não equivale a uso informal.", "Lê resultados e limitações, distinguindo associação aguda, seguimento e alegações que o estudo não testou.", "Fecha o artigo e observa como a informação muda — ou não — a tua posição, mantendo incerteza legítima."],
-        "closing": ["Escreve três colunas: o estudo mostra, não mostra e ainda pergunta.", "Se o tema for pessoal, leva essas perguntas a um profissional legalmente qualificado; não planeies administração a partir da sessão."],
-        "adaptations": ["Usa apenas o resumo e uma leitura guiada por professor de metodologia se o artigo técnico não for acessível.", "Substitui a prática sentada por caminhada sóbria e reflexão sobre limites de generalização." ]
-      },
-      "precautions": ["Não reproduzir um protocolo de investigação fora de aprovação ética, triagem, equipa e contexto legal.", "Retiro intensivo e mindfulness podem também desestabilizar; experiência meditativa não elimina riscos da psilocibina.", "Nenhuma parte fornece administração, dose, produto ou preparação da substância."],
-      "sources": [
-        {"title": "Characterization and prediction of acute and sustained response to psychedelic psilocybin in a mindfulness group retreat", "author": "Lukasz Smigielski et al.", "year": 2019, "type": "peer-reviewed-controlled-study", "language": "en", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC6813317/"},
-        {"title": "Human Hallucinogen Research: Guidelines for Safety", "author": "Matthew W. Johnson, William A. Richards, Roland R. Griffiths", "year": 2008, "type": "peer-reviewed-safety-guideline", "language": "en", "url": "https://pubmed.ncbi.nlm.nih.gov/18593734/"}
-      ],
-      "review": {"confidence": "high", "reviewedAt": "2026-08-12"}
-    },
-    {
-      "id": "psy-ace-integration-reflection",
-      "name": "Integração ACE — aceitar, conectar e incorporar",
-      "originalNames": [{"text": "ACE model: Accept, Connect, Embody", "language": "en", "script": "Latn"}],
-      "aliases": ["ACE psychedelic integration", "modelo de flexibilidade psicológica", "Accept Connect Embody"],
-      "summary": "Reflexão pós-experiência baseada no modelo ACE de Watts e Luoma: acolher material difícil, ligar-se a valores e relações e traduzir significado em ação incorporada.",
-      "traditions": ["psicoterapia assistida por psicadélicos", "Acceptance and Commitment Therapy"],
-      "beliefSystems": ["secular", "psicologia clínica"],
-      "regions": ["Reino Unido", "América do Norte", "contextos clínicos internacionais"],
-      "families": ["integração contemplativa", "flexibilidade psicológica", "reflexão de valores"],
-      "attentionModes": ["reflexão", "consciência corporal", "clarificação de valores"],
-      "anchors": ["memória da experiência", "corpo", "valores", "ação"],
-      "features": ["aceitação", "conexão", "incorporação", "seguimento"],
-      "goals": ["integração", "flexibilidade psicológica", "ação orientada por valores"],
-      "period": "modelo ACE publicado em 2020",
-      "positions": ["chair", "walking"],
-      "flexibility": "medium",
-      "difficulty": "advanced",
-      "intensity": "moderate",
-      "contextNote": "Destina-se a seguimento dentro de contexto legal e profissional ou a reflexão académica. Não valida toda imagem como verdade e não inclui instrução de administração.",
-      "duration": {"defaultMinutes": 35, "minMinutes": 15, "maxMinutes": 60},
-      "psilocybin": true,
-      "instructions": {
-        "preparation": ["Faz a integração sóbrio, depois de sono e estabilização suficientes, idealmente com o profissional responsável.", "Escolhe apenas um fragmento da experiência e confirma que tens apoio se surgir desregulação."],
-        "steps": ["Aceitar: descreve sensações, emoções e imagens como experiências ocorridas, sem as suprimir nem tomar literalmente.", "Desfusão e presente: usa ‘estou a recordar…’ e volta aos apoios corporais para distinguir memória de situação atual.", "Conectar: identifica valores, relações e pertenças que o fragmento torna importantes, verificando-os com vida e pessoas reais.", "Perspetiva: considera explicações alternativas e separa significado pessoal de diagnóstico, profecia ou facto histórico.", "Incorporar: escolhe uma ação pequena, mensurável e reversível para viver um valor, combinando revisão posterior com o profissional."],
-        "closing": ["Orienta-te ao local e agenda seguimento se restarem medo, confusão ou euforia intensa.", "Guarda o registo privado e adia decisões irreversíveis até estabilidade e consulta adequada."],
-        "adaptations": ["Usa desenho ou mapa de valores em vez de narrativa detalhada se palavras forem difíceis.", "Faz apenas orientação e contacto com apoio quando a memória estiver fora da janela de tolerância; integra mais tarde com profissional." ]
-      },
-      "precautions": ["Ideação suicida, mania, psicose, insónia persistente, pânico ou perda de funcionamento após uma experiência exigem avaliação urgente, não mais meditação.", "Evita decisões financeiras, relacionais, médicas ou espirituais irreversíveis baseadas numa única experiência.", "Não contém nem deve ser complementada aqui com aquisição, cultivo, dose, preparação ou combinações."],
-      "sources": [
-        {"title": "The use of the psychological flexibility model to support psychedelic assisted therapy", "author": "Rosalind Watts and Jason B. Luoma", "year": 2020, "type": "peer-reviewed-theoretical-clinical-paper", "language": "en", "url": "https://www.sciencedirect.com/science/article/pii/S2212144719301140"},
-        {"title": "What are Psilocybin Services?", "author": "Oregon Health Authority", "year": 2024, "type": "government-regulatory-guide", "language": "en", "url": "https://www.oregon.gov/oha/ph/preventionwellness/pages/psilocybin-what-are-psilocybin-services.aspx"},
-        {"title": "Oregon Psilocybin Services — Guidance on Administrative Rules", "author": "Oregon Health Authority", "year": 2025, "type": "government-regulatory-guidance", "language": "en", "url": "https://www.oregon.gov/oha/PH/PREVENTIONWELLNESS/Documents/OPS-Guidance-on-Administrative-Rules.pdf"}
-      ],
-      "review": {"confidence": "high", "reviewedAt": "2026-08-12"}
-    },
-    {
-      "id": "psy-mazatec-velada-contextual-reflection",
-      "name": "Reflexão histórica e ética sobre a Velada Mazateca",
-      "originalNames": [
-        {"text": "velada", "language": "es", "script": "Latn"},
-        {"text": "ndi xijtho", "language": "maz", "script": "Latn"}
-      ],
-      "aliases": ["contexto de María Sabina", "Mazatec mushroom ceremony history", "contemplação ética não ritual"],
-      "summary": "Sessão sóbria de estudo e escuta sobre a Velada e María Sabina, centrada em história, soberania, extração cultural e reciprocidade; não reproduz canto, altar, cura ou uso de cogumelos.",
-      "traditions": ["medicina tradicional Mazateca", "história indígena da psilocibina"],
-      "beliefSystems": ["cosmologia e medicina Mazatecas", "catolicismo Mazateca sincrético"],
-      "regions": ["Sierra Mazateca", "Oaxaca", "México"],
-      "families": ["contemplação contextual", "literacia histórica", "ética de reciprocidade"],
-      "attentionModes": ["escuta", "reflexão crítica", "testemunho histórico"],
-      "anchors": ["arquivo", "voz de María Sabina", "história comunitária"],
-      "features": ["cerimónia protegida", "não reprodução", "soberania indígena", "memória histórica"],
-      "goals": ["literacia cultural", "respeito", "reciprocidade", "prevenção de apropriação"],
-      "period": "tradição Mazateca ancestral; exposição internacional a partir de 1955–1957",
-      "positions": ["chair", "walking"],
-      "flexibility": "low",
-      "difficulty": "intermediate",
-      "intensity": "moderate",
-      "contextNote": "Velada é um sistema de cura comunitário conduzido por especialistas Mazatecas, não uma técnica de meditação exportável. A publicação ocidental causou turismo, mercantilização e dano; esta entrada recusa qualquer guião cerimonial.",
-      "duration": {"defaultMinutes": 35, "minMinutes": 20, "maxMinutes": 60},
-      "psilocybin": true,
-      "instructions": {
-        "preparation": ["Faz a sessão sóbrio e escolhe fontes arquivísticas e académicas que centrem história e perspetivas Mazatecas.", "Reconhece que ouvir um registo público não concede direito de copiar cantos, símbolos, títulos de curador ou procedimentos."],
-        "steps": ["Lê a identificação de María Sabina e o enquadramento do registo no Smithsonian antes de ouvir qualquer excerto.", "Ouve um excerto curto como documento histórico, sem acompanhar, transcrever para uso ritual ou criar ambiente cerimonial.", "Estuda como a divulgação por visitantes externos alterou Huautla, a vida de María Sabina e a mercantilização do conhecimento.", "Identifica o que discursos clínicos contemporâneos omitem quando retiram a psilocibina de território, língua, comunidade e ética.", "Formula uma ação de reciprocidade ou correção: citar fontes indígenas, apoiar iniciativas lideradas pela comunidade ou recusar marketing apropriativo."],
-        "closing": ["Encerra o áudio e faz silêncio em memória das pessoas e comunidades afetadas, sem imitar oração Mazateca.", "Regista limites claros: o que podes estudar, o que deves creditar e o que não vais reproduzir."],
-        "adaptations": ["Em aula, usa apenas metadados do Smithsonian e artigos de ética, sem tocar o áudio.", "Se houver relação formal com representantes Mazatecas, segue as suas decisões sobre acesso, linguagem, remuneração e partilha, substituindo este enquadramento." ]
-      },
-      "precautions": ["Não executar ou ensinar Velada, cantos, altar, ingestão, diagnóstico ou cura a partir de arquivos; não usar o nome de María Sabina para legitimar serviços.", "Não viajar, comprar ou recolher com base nesta entrada; respeita leis, território, conservação, consentimento e autoridade comunitária.", "Esta sessão não contém aquisição, cultivo, dose, preparação da substância, administração ou combinações."],
-      "sources": [
-        {"title": "Maria Sabina sings her Mazatec mushroom velada", "author": "Smithsonian Institution", "year": 1957, "type": "archival-audio-catalog", "language": "maz-es", "url": "https://www.si.edu/object/maria-sabina-sings-her-mazatec-mushroom-velada%3Asiris_sil_1117373"},
-        {"title": "Insights for Modern Applications of Psilocybin Therapy from a Case Study of Traditional Mazatec Medicine", "author": "González-Mariscal et al.", "year": 2022, "type": "peer-reviewed-anthropology-article", "language": "en", "url": "https://anthrosource.onlinelibrary.wiley.com/doi/abs/10.1111/anoc.12168"},
-        {"title": "Ethical Concerns about Psilocybin Intellectual Property", "author": "Gerber et al.", "year": 2021, "type": "peer-reviewed-ethics-article", "language": "en", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8033603/"},
-        {"title": "Re-territorializing María Sabina: Huautla, Mushrooms, and Politics", "author": "Bia Labate", "year": 2020, "type": "academic-cultural-commentary", "language": "en", "url": "https://culanth.org/fieldsights/re-territorializing-mar%C3%ADa-sabina-huautla-mushrooms-and-politics"}
       ],
       "review": {"confidence": "high", "reviewedAt": "2026-08-12"}
     }

@@ -1,5 +1,5 @@
 {
-  "catalogVersion": "2026-08-12",
+  "catalogVersion": "2026-08-20",
   "scope": "Catálogo curado e não exaustivo de métodos contemplativos budistas documentados, agregando traduções e sinónimos mas separando variantes com procedimentos realmente distintos. Abrange budismo antigo e Theravāda, Zen/Chan/Seon/Thiền, Terra Pura, Tendai, Shingon, Nichiren, Mahāyāna indo-tibetano e práticas vajrayāna públicas; instruções reservadas são apenas contextualizadas e não reproduzidas.",
   "meditations": [
     {
@@ -82,7 +82,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma postura sustentável, de preferência sentada, com coluna desperta e sem tensão nos joelhos.",
@@ -208,7 +207,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Senta-te ou deita-te de modo a conseguires permanecer imóvel sem dor crescente.",
@@ -334,7 +332,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Adota uma postura confortável e escolhe o nariz, peito ou abdómen como zona de contacto.",
@@ -462,7 +459,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma postura estável e decide usar palavras muito curtas, ditas apenas mentalmente.",
@@ -586,7 +582,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Estabiliza a atenção por alguns minutos na respiração natural junto às narinas.",
@@ -710,7 +705,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma área segura para alternar entre sentar, levantar, andar e deitar.",
@@ -832,7 +826,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Estabiliza-te com três minutos de respiração ou contacto corporal.",
@@ -955,7 +948,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Assenta a atenção na respiração e corpo durante alguns minutos.",
@@ -1080,7 +1072,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Memoriza as duas listas ou mantém uma referência discreta disponível.",
@@ -1202,7 +1193,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um percurso plano de cinco a dez metros, sem obstáculos.",
@@ -1326,7 +1316,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Lê previamente a lista numa tradução fiável e escolhe cinco partes: cabelo, pelos, unhas, dentes e pele.",
@@ -1455,7 +1444,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Senta-te ou deita-te confortavelmente e sente o corpo inteiro.",
@@ -1583,7 +1571,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Lê as nove fases numa tradução canónica e escolhe apenas uma para a sessão.",
@@ -1712,7 +1699,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um momento emocionalmente estável e define duração limitada.",
@@ -1844,7 +1830,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe duas ou três frases realistas, como «que estejas seguro; que tenhas paz; que vivas com facilidade».",
@@ -1974,7 +1959,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Estabiliza-te com boa vontade e sente recursos presentes no corpo.",
@@ -2102,7 +2086,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Recorda alguém cuja felicidade te seja fácil celebrar.",
@@ -2230,7 +2213,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Começa com alguns minutos de mettā para que equilíbrio não se torne frieza.",
@@ -2365,7 +2347,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma das três joias e lê a sua fórmula tradicional numa fonte fiável.",
@@ -2497,7 +2478,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe virtude, generosidade ou qualidades luminosas como tema único.",
@@ -2623,7 +2603,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Lê uma passagem curta sobre despaixão, cessação ou libertação.",
@@ -2749,7 +2728,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um disco uniforme de 15–25 cm, sem brilho; começa por uma cor ou terra, nunca por chama intensa.",
@@ -2880,7 +2858,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma experiência recente e leve de querer ou rejeitar.",
@@ -3014,7 +2991,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma âncora já muito familiar, preferencialmente respiração confortável ou mettā.",
@@ -3141,7 +3117,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um local simples, luminosidade moderada e assento que deixe a bacia estável sem dor.",
@@ -3267,7 +3242,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Senta-te de forma estável e relaxa progressivamente rosto, ombros, abdómen e mãos.",
@@ -3395,7 +3369,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma pergunta de linhagem, como «o que é isto?» ou «quem repete o nome do Buda?», e mantém a mesma.",
@@ -3521,7 +3494,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Lê o caso uma vez e separa a pergunta central de comentários históricos.",
@@ -3646,7 +3618,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Senta-te ou fica de pé de forma confortável e deixa a respiração assentar.",
@@ -3769,7 +3740,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um percurso plano, silencioso e livre; fica de pé com coluna alinhada.",
@@ -3892,7 +3862,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um percurso seguro onde não precises chegar depressa.",
@@ -4026,7 +3995,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe 3, 9, 27 ou 108 repetições conforme condição física; coloca tapete e apoio estável.",
@@ -4160,7 +4128,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe a pronúncia da tua linhagem — por exemplo «Namu Amida Butsu» — e compreende a tradução básica.",
@@ -4293,7 +4260,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe «Námó Āmítuófó» ou outra forma recebida e fixa uma cadência confortável.",
@@ -4427,7 +4393,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Lê no sūtra a contemplação escolhida e não improvises detalhes doutrinais.",
@@ -4556,7 +4521,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um ambiente com sons moderados e postura que não exija esforço.",
@@ -4685,7 +4649,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Obtém uma imagem correta do honzon: lótus, disco branco e A Siddhaṃ; coloca-a à altura dos olhos.",
@@ -4807,7 +4770,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Coloca um círculo branco mate sobre fundo escuro à altura dos olhos.",
@@ -4939,7 +4901,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe a pronúncia correta e, se usares um foco visual, coloca um rolo ou transcrição respeitosa à frente.",
@@ -5069,7 +5030,6 @@
         "minMinutes": 10,
         "maxMinutes": 90
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Prepara um lugar limpo, texto de Zhiyi acessível e um bloco sem interrupções.",
@@ -5198,7 +5158,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Define um circuito limpo em torno de uma imagem respeitosa de Amitābha ou de um ponto central.",
@@ -5332,7 +5291,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma passagem curta do Sūtra do Lótus e uma ação concreta a reconhecer e transformar.",
@@ -5461,7 +5419,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma atividade individual comum e segura: arrumar, lavar loiça ou preparar chá.",
@@ -5591,7 +5548,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Senta confortavelmente e deixa a respiração tornar-se regular sem a forçar.",
@@ -5716,7 +5672,6 @@
         "minMinutes": 10,
         "maxMinutes": 90
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma passagem curta, modelo claro, papel e caneta ou pincel confortável.",
@@ -5854,7 +5809,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Lê o sūtra inteiro numa tradução fiável e escolhe uma linha para a sessão.",
@@ -5981,7 +5935,6 @@
         "minMinutes": 3,
         "maxMinutes": 15
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Senta-te sem comprimir os joelhos, com coluna alta e respiração completamente confortável.",
@@ -6112,7 +6065,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Coloca um objeto pequeno e não luminoso à altura confortável dos olhos, a um ou dois metros.",
@@ -6239,7 +6191,6 @@
         "minMinutes": 8,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Adota uma postura confortável, olhos entreabertos e olhar solto no espaço à frente.",
@@ -6377,7 +6328,6 @@
         "minMinutes": 10,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Estabiliza a atenção por alguns minutos e gera a intenção de investigar sem negar a experiência convencional.",
@@ -6510,7 +6460,6 @@
         "minMinutes": 10,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe três figuras manejáveis: alguém querido, alguém neutro e alguém difícil sem história traumática ativa.",
@@ -6642,7 +6591,6 @@
         "minMinutes": 8,
         "maxMinutes": 45
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma situação quotidiana de conflito de interesses que não envolva perigo ou abuso.",
@@ -6773,7 +6721,6 @@
         "minMinutes": 5,
         "maxMinutes": 40
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Estabelece estabilidade básica e uma intenção de cuidado sem te sobrecarregares.",
@@ -6903,7 +6850,6 @@
         "minMinutes": 10,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Estabiliza por alguns minutos numa âncora e deixa o olhar aberto e espaçoso.",
@@ -7041,7 +6987,6 @@
         "minMinutes": 8,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Senta-te de forma digna e confortável, com olhos abertos e olhar amplo sem fixação.",
@@ -7171,7 +7116,6 @@
         "minMinutes": 5,
         "maxMinutes": 30
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe céu difuso, sem sol no campo visual, num local fisicamente seguro e com temperatura confortável.",
@@ -7306,7 +7250,6 @@
         "minMinutes": 8,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma ação ou padrão concreto a reconhecer, sem transformar a sessão num julgamento global da tua pessoa.",
@@ -7446,7 +7389,6 @@
         "minMinutes": 5,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Senta-te confortavelmente e recorda uma intenção de aliviar sofrimento sem te atribuíres poder ilimitado.",
@@ -7583,7 +7525,6 @@
         "minMinutes": 7,
         "maxMinutes": 45
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um medo ou obstáculo realista e define que qualidade corajosa queres cultivar.",
@@ -7718,7 +7659,6 @@
         "minMinutes": 5,
         "maxMinutes": 45
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Acomoda o corpo segundo necessidades médicas, mantendo medicação, hidratação e dispositivos sem alteração.",
@@ -7860,7 +7800,6 @@
         "minMinutes": 15,
         "maxMinutes": 90
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Confirma se a prática específica requer empoderamento; sem ele, escolhe visualização frontal publicada.",
@@ -7995,7 +7934,6 @@
         "minMinutes": 8,
         "maxMinutes": 60
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma figura de referência segura e identifica qualidades observáveis que pretendes cultivar.",
@@ -8134,7 +8072,6 @@
         "minMinutes": 8,
         "maxMinutes": 45
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um momento relativamente estável e faz uma lista concreta das condições atualmente disponíveis.",
@@ -8266,7 +8203,6 @@
         "minMinutes": 10,
         "maxMinutes": 50
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Confirma que estás emocionalmente estável e escolhe um local seguro com tempo para recuperar depois.",
@@ -8400,7 +8336,6 @@
         "minMinutes": 5,
         "maxMinutes": 45
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Coloca um prato ou base estável e grãos limpos ao alcance, ou decide fazer tudo mentalmente.",
@@ -8533,7 +8468,6 @@
         "minMinutes": 5,
         "maxMinutes": 45
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Liberta uma área sem obstáculos e coloca uma superfície antiderrapante; testa joelhos, pulsos e equilíbrio.",
@@ -8672,7 +8606,6 @@
         "minMinutes": 8,
         "maxMinutes": 45
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe um espaço familiar e seguro e estabelece uma base forte de compaixão e sensação corporal.",
@@ -8811,7 +8744,6 @@
         "minMinutes": 5,
         "maxMinutes": 30
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Confirma que não farás retenção nem força respiratória e pratica num ambiente termicamente seguro.",
@@ -8949,7 +8881,6 @@
         "minMinutes": 3,
         "maxMinutes": 20
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Mantém um horário de sono suficiente e coloca um diário ao alcance sem ecrã luminoso.",
@@ -9083,7 +9014,6 @@
         "minMinutes": 3,
         "maxMinutes": 20
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Garante uma janela adequada de sono e termina atividades estimulantes antes de te deitares.",
@@ -9220,7 +9150,6 @@
         "minMinutes": 8,
         "maxMinutes": 40
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Escolhe uma transição quotidiana manejável, como adormecer, terminar uma tarefa ou entrar num local.",
@@ -9360,7 +9289,6 @@
         "minMinutes": 5,
         "maxMinutes": 30
       },
-      "psilocybin": false,
       "instructions": {
         "preparation": [
           "Confirma que desejas viver e que a prática é preparação ética, não fuga; em dúvida escolhe mettā e apoio humano.",

@@ -23,7 +23,6 @@ const base = {
   flexibility: 'low',
   difficulty: 'beginner',
   intensity: 'low',
-  psilocybin: false,
   duration: { defaultMinutes: 20 }
 };
 

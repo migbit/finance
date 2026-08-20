@@ -26,7 +26,7 @@ const CATALOG_URLS = [
   '../data/meditations/global-modern.json'
 ];
 const PAGE_SIZE = 24;
-const CATALOG_VERSION = '2026-08-12';
+const CATALOG_VERSION = '2026-08-20';
 const PIN_STORAGE_PREFIX = 'meditacao-pin-unlocked-v1';
 
 const LABELS = Object.freeze({
@@ -147,8 +147,7 @@ const FILTER_IDS = Object.freeze({
   movement: 'filter-movement',
   flexibility: 'filter-flexibility',
   difficulty: 'filter-difficulty',
-  intensity: 'filter-intensity',
-  psilocybin: 'filter-psilocybin'
+  intensity: 'filter-intensity'
 });
 
 const state = {
@@ -290,11 +289,9 @@ function getActiveElapsedSeconds(session = state.activeSession, at = Date.now())
 function getFilters() {
   const filters = {
     search: elements.search.value,
-    status: elements.status.value,
-    psilocybin: document.getElementById(FILTER_IDS.psilocybin).value
+    status: elements.status.value
   };
   Object.entries(FILTER_IDS).forEach(([dimension, id]) => {
-    if (dimension === 'psilocybin') return;
     filters[dimension] = document.getElementById(id)?.value || '';
   });
   return filters;
@@ -333,8 +330,10 @@ async function fetchSessions() {
 }
 
 function applySessions(sessions) {
-  state.sessions = sessions;
-  const activeSessions = sessions
+  const catalogIds = new Set(state.catalog.map(item => item.id));
+  const catalogSessions = sessions.filter(session => catalogIds.has(session.meditationId));
+  state.sessions = catalogSessions;
+  const activeSessions = catalogSessions
     .filter(session => session.status === 'in_progress')
     .sort((a, b) => Number(b.startedAtMs || 0) - Number(a.startedAtMs || 0));
   state.activeSession = activeSessions[0] || null;
@@ -479,8 +478,7 @@ function createMeditationCard(item) {
   const body = createElement('div', 'meditation-card-body');
   const topline = createElement('div', 'meditation-card-topline');
   topline.appendChild(createElement('span', `meditation-badge ${item.progress.tried ? 'meditation-badge--tried' : ''}`, item.progress.tried ? 'Experimentada' : 'Nova'));
-  if (meditation.psilocybin) topline.appendChild(createElement('span', 'meditation-badge meditation-badge--gold', 'Psilocibina'));
-  else if (item.exploration) topline.appendChild(createElement('span', 'meditation-badge meditation-badge--gold', 'Explorar'));
+  if (item.exploration) topline.appendChild(createElement('span', 'meditation-badge meditation-badge--gold', 'Explorar'));
   body.appendChild(topline);
   body.appendChild(createElement('h3', '', meditation.name));
 
@@ -627,21 +625,6 @@ function createSourcesSection(meditation) {
   return section;
 }
 
-function createPsilocybinContext() {
-  const section = createElement('section', 'meditation-detail-section');
-  section.appendChild(createElement('h3', '', 'Enquadramento da psilocibina'));
-  const note = createElement('p', 'meditation-context-note');
-  note.appendChild(document.createTextNode('Esta ficha aborda apenas contemplação, preparação não farmacológica e integração; não contém aquisição, cultivo, dosagem, preparação da substância ou combinações. Em Portugal, consumo, aquisição e detenção para consumo próprio continuam a constituir contraordenação; o limiar de dez dias é um critério legal, não uma autorização geral. '));
-  const link = createElement('a', '', 'Consultar a Lei n.º 30/2000 consolidada');
-  link.href = 'https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2000-34545875';
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  note.appendChild(link);
-  note.appendChild(document.createTextNode('.'));
-  section.appendChild(note);
-  return section;
-}
-
 function createRecommendationExplanation(item) {
   if (item.progress.tried) return `Média pessoal de ${formatNumber(item.progress.averageRating, 1)} / 20 em ${item.progress.sessionCount} ${item.progress.sessionCount === 1 ? 'sessão' : 'sessões'}.`;
   if (item.recommendation.compatibility === null) return 'A posição e a flexibilidade ajudam na ordem inicial; a compatibilidade personalizada aparece depois de cinco práticas diferentes.';
@@ -733,8 +716,6 @@ function renderMeditationDetail(meditationId) {
     appendInstructionGroup(precautions, 'Antes de experimentar', meditation.precautions);
     fragment.appendChild(precautions);
   }
-
-  if (meditation.psilocybin) fragment.appendChild(createPsilocybinContext());
 
   fragment.appendChild(createStartPanel(item));
   fragment.appendChild(createHistorySection(item));
@@ -1063,7 +1044,7 @@ function clearFilters() {
   elements.sort.value = 'recommended';
   Object.entries(FILTER_IDS).forEach(([dimension, id]) => {
     const select = document.getElementById(id);
-    if (select) select.value = ['psilocybin', 'breath', 'visualization', 'mantra', 'movement'].includes(dimension) ? 'all' : '';
+    if (select) select.value = ['breath', 'visualization', 'mantra', 'movement'].includes(dimension) ? 'all' : '';
   });
   state.visibleCount = PAGE_SIZE;
   renderCatalog();

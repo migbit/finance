@@ -28,7 +28,7 @@ const catalogs = await Promise.all(files.map(async file => {
 
 test('os shards têm versão, âmbito e fichas', () => {
   catalogs.forEach(({ file, data }) => {
-    assert.equal(data.catalogVersion, '2026-08-12', file);
+    assert.equal(data.catalogVersion, '2026-08-20', file);
     assert.equal(typeof data.scope, 'string', file);
     assert.ok(data.scope.length > 20, file);
     assert.ok(Array.isArray(data.meditations), file);
@@ -62,7 +62,6 @@ test('cada prática tem instruções profundas, metadados e pelo menos duas font
     assert.ok(Number.isFinite(item.duration?.defaultMinutes), `${item.id}: duration.defaultMinutes`);
     assert.ok(item.duration.minMinutes <= item.duration.defaultMinutes, `${item.id}: min/default duration`);
     assert.ok(item.duration.defaultMinutes <= item.duration.maxMinutes, `${item.id}: default/max duration`);
-    assert.equal(typeof item.psilocybin, 'boolean', `${item.id}: psilocybin`);
     assert.ok(item.instructions?.preparation?.length >= 2, `${item.id}: preparation`);
     assert.ok(item.instructions?.steps?.length >= 5, `${item.id}: steps`);
     assert.ok(item.instructions?.closing?.length >= 2, `${item.id}: closing`);
@@ -79,12 +78,8 @@ test('cada prática tem instruções profundas, metadados e pelo menos duas font
   });
 });
 
-test('as exclusões editoriais e o limite da psilocibina são explícitos', () => {
+test('as exclusões editoriais são explícitas', () => {
   const all = catalogs.flatMap(item => item.data.meditations);
-  const psilocybin = all.filter(item => item.psilocybin);
-  assert.equal(psilocybin.length, 4);
-  psilocybin.forEach(item => assert.match(item.id, /^psy-/, `${item.id}: prefixo psilocibina`));
-
   const identityText = all.map(item => [
     item.id,
     item.name,
@@ -94,6 +89,7 @@ test('as exclusões editoriais e o limite da psilocibina são explícitos', () =
     ...item.features
   ].join(' ').toLowerCase()).join('\n');
   assert.doesNotMatch(identityText, /hipnose|hypnosis|hypnotic/);
+  assert.doesNotMatch(identityText, /psiloc|cogumelo|psychedelic|psicad[eé]lic/);
 });
 
 test('o catálogo cobre as tradições e abordagens acordadas', () => {
@@ -106,7 +102,6 @@ test('o catálogo cobre as tradições e abordagens acordadas', () => {
   ].join(' ').toLowerCase()).join('\n');
   [
     'therav', 'zen', 'vajray', 'hindu', 'yoga', 'tantr', 'jain', 'sikh', 'dao',
-    'confuc', 'crist', 'juda', 'sufi', 'indígen', 'secular', 'psiloc'
+    'confuc', 'crist', 'juda', 'sufi', 'indígen', 'secular'
   ].forEach(term => assert.ok(searchable.includes(term), `cobertura em falta: ${term}`));
-  assert.ok(all.some(item => item.psilocybin), 'falta uma prática contemplativa relacionada com psilocibina');
 });

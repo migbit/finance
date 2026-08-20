@@ -4,9 +4,7 @@
 
 Este catálogo reúne práticas contemplativas documentadas em fontes históricas, tradicionais, académicas e práticas. É deliberadamente um catálogo vivo: práticas orais, perdidas, restritas, locais ou ainda não digitalizadas impedem qualquer alegação honesta de exaustividade.
 
-Inclui práticas budistas, hindus, de yoga e tantra público, jainistas, sikhs, daoistas, confucianas, cristãs, judaicas, sufis, indígenas publicamente documentadas e métodos seculares ou contemporâneos. Hipnose, afirmações, relaxamento simples e uso de substâncias são excluídos, com a única exceção de práticas contemplativas relacionadas com psilocibina.
-
-As fichas de psilocibina limitam-se a contexto histórico ou científico, preparação contemplativa não farmacológica e integração. Não incluem aquisição, cultivo, dosagem, preparação da substância nem combinações. Em Portugal, consumo, aquisição e detenção para consumo próprio continuam sujeitos ao regime de contraordenação; o período de dez dias é um critério legal e não uma autorização geral. O cultivo mantém enquadramento criminal. As referências legais devem ser verificadas antes de cada revisão do catálogo.
+Inclui práticas budistas, hindus, de yoga e tantra público, jainistas, sikhs, daoistas, confucianas, cristãs, judaicas, sufis, indígenas publicamente documentadas e métodos seculares ou contemporâneos. Hipnose, afirmações, relaxamento simples e práticas relacionadas com o uso de substâncias são excluídos.
 
 ## Critério de identidade
 
@@ -48,7 +46,7 @@ Depois de cinco técnicas diferentes, o recomendador compara:
 - âncoras e características procedurais;
 - objetivos;
 - posição e flexibilidade;
-- dificuldade, intensidade e relação com psilocibina.
+- dificuldade e intensidade.
 
 Posições com baixa exigência de flexibilidade, sobretudo cadeira e deitado, têm uma preferência inicial suave. Nunca são uma exclusão: filtros manuais podem selecionar qualquer posição e cada ficha deve indicar adaptações amigas dos joelhos sempre que forem procedimentalmente honestas.
 
@@ -63,5 +61,7 @@ O catálogo é estático e versionado no repositório. Apenas sessões pessoais 
 `users/{uid}/meditation_sessions/{sessionId}`
 
 Cada sessão começa como `in_progress` e só conta como experimentada depois de passar a `completed`. O documento conserva o ID e o título da técnica, datas, objetivo temporal, pausas, duração real, classificação e nota. Sessões canceladas não contam para ordenação nem aprendizagem.
+
+Quando uma técnica é retirada do catálogo, as sessões associadas deixam de aparecer e de influenciar estatísticas ou recomendações, mas o histórico remoto não é apagado automaticamente.
 
 O PIN da interface é uma barreira visual, não criptografia nem controlo de acesso. O UID separa os caminhos usados pela interface, mas as regras gerais atuais do projeto permitem acesso a utilizadores autenticados; isso deve ser revisto se a aplicação deixar de ser estritamente pessoal.
