@@ -17,7 +17,7 @@ function buildRecipe(recipe) {
   const totals = totalNutrition(recipe.components);
   return Object.freeze({
     ...recipe,
-    catalogVersion: 3,
+    catalogVersion: 4,
     ingredients: recipe.components.map(component => component.label).join('\n'),
     calories: Math.round(totals.calories),
     protein: round(totals.protein),
@@ -25,7 +25,7 @@ function buildRecipe(recipe) {
     fat: round(totals.fat),
     fiber: round(totals.fiber),
     source: 'curated',
-    meal: 'breakfast'
+    meal: recipe.meal || 'breakfast'
   });
 }
 
@@ -61,6 +61,10 @@ export const MIGUEL_PROFILE_DEFAULTS = Object.freeze({
   almondDrinkDetails: 'Substituir preferencialmente por bebida de soja sem açúcar fortificada; confirmar sempre o rótulo.',
   fruitDetails: 'Fruta sazonal, sobretudo pera, maçã, melancia, melão, laranja e nectarina.',
   fortifiedDrink: 'calcium_b12_d',
+  selectedBreakfastId: '',
+  selectedLunchId: '',
+  selectedDinnerId: '',
+  snacks: [],
   updatedAt: '2026-08-20T00:00:00.000Z'
 });
 
@@ -111,7 +115,7 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       { label: '50 g de flocos de aveia integrais', calories: 187, protein: 5.7, carbs: 30.5, fat: 3.4, fiber: 5 },
       { label: '200 g de skyr natural sem açúcar', calories: 118, protein: 20, carbs: 7.2, fat: 0.4, fiber: 0 },
       { label: '200 ml de bebida de soja sem açúcar fortificada', calories: 66, protein: 6.6, carbs: 0, fat: 3.6, fiber: 1.2 },
-      { label: '15 g de sementes de chia', calories: 73, protein: 2.5, carbs: 1.2, fat: 4.7, fiber: 5.2 },
+      { label: '10 g de sementes de chia', calories: 49, protein: 1.7, carbs: 0.8, fat: 3.1, fiber: 3.5 },
       { label: '150 g de fruta sazonal', calories: 64, protein: 0.6, carbs: 15.6, fat: 0.2, fiber: 3.5 },
       { label: '10 g de nozes', calories: 65, protein: 1.5, carbs: 0.7, fat: 6.5, fiber: 0.7 },
       { label: 'Canela a gosto (opcional)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
@@ -122,40 +126,40 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       'De manhã, juntar a fruta e as nozes.',
       'Se estiver demasiado espesso, adicionar um pouco de água ou bebida de soja.'
     ],
-    highlights: ['≈40 g de proteína', '≈15 g de fibra', 'Cálcio elevado', 'Sem whey', 'Melhor opção base'],
+    highlights: ['≈36 g de proteína', '≈14 g de fibra', 'Cálcio elevado', 'Sem whey', 'Melhor opção base'],
     cautions: ['Confirmar o rótulo do skyr; as marcas variam.', 'Usar chia inteira ou moída e beber líquidos normalmente ao longo do dia.'],
     evidenceNote: 'Bebida de soja calculada pelo rótulo Alpro; skyr, aveia, chia, nozes e fruta usam valores médios e devem ser afinados pela marca.'
   }),
   buildRecipe({
-    id: 'breakfast-tofu-scramble',
-    name: 'Tofu mexido com pão integral e legumes',
-    shortName: 'Tofu mexido e centeio',
-    description: 'A opção salgada de máxima saciedade, com muita soja e vegetais; a vitamina C da laranja acompanha o ferro dos alimentos vegetais.',
-    quality: 'very_high',
-    qualityLabel: 'Qualidade muito alta',
+    id: 'breakfast-protein-rice-cream',
+    name: 'Creme de arroz proteico com skyr e fruta',
+    shortName: 'Creme de arroz proteico',
+    description: 'Uma refeição doce e quente para dias de treino, com digestão relativamente fácil e arroz para variar as fontes de cereais.',
+    quality: 'high',
+    qualityLabel: 'Qualidade alta',
     rank: 3,
-    prepTime: '15 min',
-    batchFriendly: true,
+    prepTime: '10 min',
+    batchFriendly: false,
     components: [
-      { label: '200 g de tofu natural firme, idealmente coagulado com cálcio', calories: 286, protein: 32, carbs: 0, fat: 17, fiber: 3.4 },
-      { label: '80 g de pão integral de centeio Pema ou equivalente', calories: 160, protein: 4, carbs: 28.8, fat: 1, fiber: 8.8 },
-      { label: '200 g de espinafres, tomate e cogumelos', calories: 52, protein: 4, carbs: 5, fat: 0.6, fiber: 4.9 },
-      { label: '5 g de azeite virgem extra', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
-      { label: '1 laranja média (≈160 g)', calories: 67, protein: 1.4, carbs: 15, fat: 0.2, fiber: 3.4 },
-      { label: 'Alho, pimenta, paprika, curcuma ou outras especiarias a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
-      { label: 'Sal moderado', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+      { label: '50 g de creme ou farinha de arroz', calories: 180, protein: 3.5, carbs: 40, fat: 0.5, fiber: 0.5 },
+      { label: '250 ml de bebida de soja sem açúcar fortificada', calories: 82.5, protein: 8.3, carbs: 0, fat: 4.5, fiber: 1.5 },
+      { label: '150 g de skyr natural', calories: 88.5, protein: 15, carbs: 5.4, fat: 0.3, fiber: 0 },
+      { label: '10 g de whey, baunilha ou outro sabor que combine', calories: 38.3, protein: 7.8, carbs: 0.6, fat: 0.5, fiber: 0 },
+      { label: '150 g de fruta, por exemplo banana, frutos vermelhos, maçã ou pêssego', calories: 64, protein: 0.6, carbs: 15.6, fat: 0.2, fiber: 3.5 },
+      { label: 'Canela a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+      { label: '5 a 10 g de amêndoas ou nozes picadas (opcional)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
     ],
     instructions: [
-      'Esmagar grosseiramente o tofu com um garfo.',
-      'Aquecer o azeite e saltear primeiro os cogumelos e o tomate.',
-      'Juntar o tofu e temperar.',
-      'Adicionar os espinafres no final e cozinhar apenas até perderem volume.',
-      'Servir com o pão integral torrado.',
-      'Comer a laranja como sobremesa.'
+      'Aquecer a bebida de soja.',
+      'Juntar gradualmente o creme de arroz, mexendo até engrossar.',
+      'Retirar do lume e deixar arrefecer ligeiramente.',
+      'Misturar a whey.',
+      'Servir com o skyr, a fruta e a canela.',
+      'Para mais textura e saciedade, juntar 5 a 10 g de frutos secos.'
     ],
-    highlights: ['≈41 g de proteína', '≈21 g de fibra', 'Ferro vegetal + vitamina C', 'Muitos hortícolas', 'Sem whey'],
-    cautions: ['O valor do tofu varia bastante entre marcas; confirmar o rótulo antes de fechar o cálculo.', 'Pode preparar a mistura de tofu e legumes de véspera e aquecer de manhã.'],
-    evidenceNote: 'Pão calculado pelo rótulo Pema e tofu pelo rótulo Joya Natural; confirmar no tofu escolhido se o coagulante contém cálcio. Hortícolas e laranja usam valores médios.'
+    highlights: ['≈35 g de proteína', 'Digestão relativamente fácil', 'Cereal diferente da aveia', 'Doce e quente', 'Boa para dias de treino'],
+    cautions: ['O total apresentado não inclui os frutos secos opcionais.', 'Adicionar 5 g acrescenta cerca de 30 kcal; 10 g acrescenta aproximadamente 55–60 kcal.', 'Deixar arrefecer ligeiramente antes de juntar a whey ajuda a misturá-la sem formar grumos.'],
+    evidenceNote: 'Bebida de soja e whey calculadas pelos rótulos já registados; creme de arroz, skyr e fruta usam valores médios. Afinar quando estiverem definidas as marcas.'
   }),
   buildRecipe({
     id: 'breakfast-quick-pre-workout',
@@ -189,7 +193,321 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
   })
 ]);
 
-const RETIRED_BREAKFAST_IDS = new Set(['breakfast-eggs-rye']);
+export const DEFAULT_MAIN_MEALS = Object.freeze([
+  buildRecipe({
+    id: 'main-tofu-rice-edamame',
+    meal: 'main',
+    name: 'Tofu crocante, arroz integral e edamame',
+    shortName: 'Tofu, arroz e edamame',
+    description: 'Uma refeição muito completa e rica em proteína, especialmente adequada depois de treino, RPM ou atividade outdoor.',
+    quality: 'very_high',
+    qualityLabel: 'Qualidade muito alta',
+    rank: 1,
+    pairsAfter: ['breakfast-quick-pre-workout'],
+    prepTime: '25 min',
+    batchFriendly: true,
+    components: [
+      { label: '150 g de tofu firme', calories: 214.5, protein: 24, carbs: 0, fat: 12.8, fiber: 2.6 },
+      { label: '125 g de arroz Cigala Integral pronto a comer', calories: 210, protein: 4.5, carbs: 37.5, fat: 2.5, fiber: 4.8 },
+      { label: '80 g de edamame descascado', calories: 98, protein: 9.5, carbs: 5.6, fat: 4.2, fiber: 4 },
+      { label: '250 g de brócolos, pimento, courgette, cenoura e cogumelos', calories: 65, protein: 4, carbs: 10, fat: 0.8, fiber: 5 },
+      { label: '5 g de azeite virgem extra', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
+      { label: 'Molho de soja com teor reduzido de sal, alho, paprika, gengibre e pimenta', calories: 17.5, protein: 1, carbs: 2.9, fat: 0, fiber: 0 }
+    ],
+    instructions: [
+      'Cortar e temperar o tofu e cozinhar na air fryer até ficar crocante.',
+      'Assar os legumes ou salteá-los numa frigideira.',
+      'Cozer ou aquecer o edamame e aquecer o arroz durante cerca de um minuto.',
+      'Juntar tudo e finalizar com o molho de soja moderadamente.'
+    ],
+    highlights: ['≈43 g de proteína', '≈16 g de fibra', 'Soja em duas formas', 'Bom pós-treino', 'Preparável de véspera'],
+    cautions: ['Preferir tofu coagulado com cálcio e confirmar o respetivo rótulo.', 'Preparar tofu, legumes e edamame de véspera; manter o arroz fechado e aquecer apenas ao servir.', 'Os 250 g completos de arroz acrescentam cerca de 210 kcal e 37,5 g de hidratos.'],
+    evidenceNote: 'O arroz pronto usa os valores indicados para a embalagem Cigala; tofu, edamame e legumes usam valores médios que devem ser afinados pelos rótulos.',
+    calorieAdjustment: {
+      label: 'arroz integral pronto',
+      baseQuantity: 125,
+      unit: 'g',
+      calories: 210,
+      protein: 4.5,
+      carbs: 37.5,
+      fat: 2.5,
+      fiber: 4.8
+    },
+    scaleHint: 'Ajustar sobretudo a quantidade de arroz; manter tofu e edamame próximos da dose base.'
+  }),
+  buildRecipe({
+    id: 'main-egg-potato-frittata',
+    meal: 'main',
+    name: 'Frittata de ovos, batata e legumes',
+    shortName: 'Frittata com batata',
+    description: 'Uma opção prática para almoço ou jantar que recupera os ovos, combina bastante proteína com batata e é excelente para preparar de véspera.',
+    quality: 'high',
+    qualityLabel: 'Qualidade alta',
+    rank: 2,
+    prepTime: '30 min',
+    batchFriendly: true,
+    components: [
+      { label: '2 ovos', calories: 144, protein: 12.6, carbs: 0.8, fat: 9.6, fiber: 0 },
+      { label: '150 g de claras', calories: 69, protein: 15.8, carbs: 1.1, fat: 0.3, fiber: 0 },
+      { label: '300 g de batata', calories: 257, protein: 6, carbs: 57, fat: 0.3, fiber: 6.6 },
+      { label: '250 g de espinafres, cogumelos, cebola, tomate ou pimento', calories: 65, protein: 4, carbs: 10, fat: 0.8, fiber: 5 },
+      { label: '30 g de queijo suave, por exemplo mozzarella ou flamengo (feta apenas se gostares)', calories: 80, protein: 4.6, carbs: 1.2, fat: 6.4, fiber: 0 },
+      { label: '5 g de azeite virgem extra', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
+      { label: 'Pimenta, paprika, alho e ervas a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: [
+      'Cortar a batata em cubos e cozinhar na air fryer.',
+      'Saltear ligeiramente os legumes ou usar diretamente os que libertem pouca água.',
+      'Misturar os ovos, as claras, os legumes e o feta.',
+      'Cozinhar como frittata numa frigideira, no forno ou na air fryer e servir com a batata.'
+    ],
+    highlights: ['≈43 g de proteína', '≈12 g de fibra', 'Aproveita os ovos', 'Cálcio do feta', 'Excelente de véspera'],
+    cautions: ['Preparar completamente na véspera e aquecer durante poucos minutos.', 'Como não aprecias queijo de sabor forte, usar preferencialmente mozzarella, flamengo suave ou queijo fresco firme; confirmar o rótulo escolhido.'],
+    evidenceNote: 'Ovos, claras, batata e hortícolas usam valores médios; confirmar o rótulo das claras e do queijo escolhidos.',
+    calorieAdjustment: {
+      label: 'batata',
+      baseQuantity: 300,
+      unit: 'g',
+      calories: 257,
+      protein: 6,
+      carbs: 57,
+      fat: 0.3,
+      fiber: 6.6
+    },
+    scaleHint: 'Manter os ovos e as claras; ajustar sobretudo batata e legumes para aproximar a meta calórica.'
+  }),
+  buildRecipe({
+    id: 'main-red-lentil-pasta',
+    meal: 'main',
+    name: 'Massa de lentilhas com tomate, cogumelos e creme de skyr',
+    shortName: 'Massa de lentilhas e skyr',
+    description: 'Uma opção muito rica em proteína e relativamente baixa em gordura, especialmente interessante depois de treino de força.',
+    quality: 'very_high',
+    qualityLabel: 'Qualidade muito alta',
+    rank: 3,
+    pairsAfter: ['breakfast-quick-pre-workout', 'breakfast-oat-banana-pancakes'],
+    prepTime: '25 min',
+    batchFriendly: true,
+    components: [
+      { label: '90 g de massa de lentilhas vermelhas, peso em seco', calories: 308.7, protein: 23.9, carbs: 47.1, fat: 1.3, fiber: 5.8 },
+      { label: '200 g de passata ou polpa de tomate sem açúcar adicionado', calories: 70, protein: 3, carbs: 11, fat: 0.4, fiber: 3 },
+      { label: '200 g de cogumelos com espinafres ou courgette', calories: 60, protein: 4, carbs: 6, fat: 0.6, fiber: 4 },
+      { label: '150 g de skyr natural', calories: 88.5, protein: 15, carbs: 5.4, fat: 0.3, fiber: 0 },
+      { label: '10 g de parmesão', calories: 42, protein: 3.7, carbs: 0.3, fat: 2.8, fiber: 0 },
+      { label: '5 g de azeite virgem extra', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
+      { label: 'Alho, manjericão, orégãos e pimenta', calories: 5.8, protein: 0.4, carbs: 1.2, fat: 0, fiber: 0.3 }
+    ],
+    instructions: [
+      'Cozer a massa ligeiramente al dente.',
+      'Saltear os legumes no azeite e adicionar o tomate.',
+      'Guardar a massa e o molho preparados no frigorífico, se necessário.',
+      'Aquecer a massa com o molho e misturar o skyr apenas no final, fora do lume ou com lume muito baixo.',
+      'Finalizar com o parmesão.'
+    ],
+    highlights: ['≈50 g de proteína', '≈13 g de fibra', 'Pouca gordura', 'Inclui leguminosas', 'Boa pós-força'],
+    cautions: ['Não ferver o skyr para evitar separar o creme.', 'A massa Dalla Costa é pesada em seco; 90 g cozinhados terão um peso bastante superior.'],
+    evidenceNote: 'Massa Dalla Costa calculada pelo rótulo de 343 kcal e 26,5 g de proteína/100 g; restantes ingredientes usam valores médios.',
+    calorieAdjustment: {
+      label: 'massa de lentilhas seca',
+      baseQuantity: 90,
+      unit: 'g',
+      calories: 308.7,
+      protein: 23.9,
+      carbs: 47.1,
+      fat: 1.3,
+      fiber: 5.8
+    },
+    scaleHint: 'Ajustar a massa seca em pequenas quantidades; para aumentos maiores, combinar com pão integral ou fruta.'
+  }),
+  buildRecipe({
+    id: 'main-mexican-quinoa-beans',
+    meal: 'main',
+    name: 'Bowl mexicano de quinoa, feijão e molho de skyr',
+    shortName: 'Bowl de quinoa e feijão',
+    description: 'A opção mais rica em fibra e mais diferente da rotação, particularmente útil depois de um pequeno-almoço com pouca fibra.',
+    quality: 'very_high',
+    qualityLabel: 'Qualidade muito alta',
+    rank: 4,
+    pairsAfter: ['breakfast-protein-rice-cream'],
+    prepTime: '20 min',
+    batchFriendly: true,
+    components: [
+      { label: '125 g de quinoa Sabroz Real pronta', calories: 183.8, protein: 5.9, carbs: 30, fat: 3.9, fiber: 3.8 },
+      { label: '150 g de feijão-preto ou vermelho cozido e escorrido', calories: 180, protein: 12.8, carbs: 27, fat: 1, fiber: 10.5 },
+      { label: '250 g de pimento, tomate, cebola e/ou folhas verdes, incluindo no máximo 30 g de milho', calories: 100, protein: 4.2, carbs: 18, fat: 1, fiber: 6 },
+      { label: '100 g de skyr natural', calories: 59, protein: 10, carbs: 3.6, fat: 0.2, fiber: 0 },
+      { label: '50 g de abacate', calories: 80, protein: 1, carbs: 4.3, fat: 7.4, fiber: 3.4 },
+      { label: 'Sumo de lima ou limão, cominhos, paprika, alho, coentros e sal iodado moderado', calories: 7.2, protein: 0.1, carbs: 1.7, fat: 0, fiber: 0.1 }
+    ],
+    instructions: [
+      'Misturar o skyr com lima, alho e pimenta para preparar o molho.',
+      'Preparar a quinoa, o feijão e os legumes e guardar a base num recipiente.',
+      'Guardar o molho de skyr separadamente.',
+      'Aquecer a base, se desejado, e juntar o abacate e o molho apenas no final.'
+    ],
+    highlights: ['≈34 g de proteína', '≈24 g de fibra', 'Quinoa + feijão', 'Ótima após pequeno-almoço leve', 'Preparável de véspera'],
+    cautions: ['Escorrer e passar o feijão por água para reduzir o sal.', 'Medir o milho, porque uma quantidade livre altera facilmente os hidratos e as calorias.', 'Confirmar o rótulo concreto da quinoa Sabroz.'],
+    evidenceNote: 'Quinoa Sabroz calculada a 147 kcal e 4,7 g de proteína/100 g; feijão, hortícolas, skyr e abacate usam valores médios.',
+    calorieAdjustment: {
+      label: 'quinoa pronta',
+      baseQuantity: 125,
+      unit: 'g',
+      calories: 183.8,
+      protein: 5.9,
+      carbs: 30,
+      fat: 3.9,
+      fiber: 3.8
+    },
+    scaleHint: 'Ajustar sobretudo quinoa e feijão; manter o abacate e o molho próximos da dose base.'
+  })
+]);
+
+export const DEFAULT_SNACKS = Object.freeze([
+  buildRecipe({
+    id: 'snack-post-workout-shake',
+    meal: 'snack',
+    name: 'Shake pós-treino',
+    shortName: 'Shake pós-treino',
+    description: 'Recuperação rápida e prática: só Evowhey e água quando a refeição seguinte está próxima.',
+    quality: 'purpose',
+    qualityLabel: 'Pós-treino',
+    rank: 1,
+    prepTime: '1 min',
+    batchFriendly: false,
+    components: [
+      { label: '30 g de Evowhey', calories: 104, protein: 23, carbs: 1.5, fat: 0.7, fiber: 0 },
+      { label: '300 a 400 ml de água', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: ['Colocar a Evowhey e a água num shaker.', 'Agitar e beber.'],
+    highlights: ['23 g de proteína', 'Muito rápido', 'Baixa gordura', 'Pós-treino'],
+    cautions: ['Se fores almoçar dentro de cerca de 60 minutos, usar apenas whey e água.', 'Se faltarem 1h30–2h para a refeição ou o treino tiver sido exigente, escolher a variante com banana.', 'Não precisa de leite, aveia ou manteiga de amendoim para cumprir o objetivo deste lanche.'],
+    evidenceNote: 'A dose-base usa os valores fornecidos para a tua Evowhey: 104 kcal e 23 g de proteína/30 g. Confirmar quando mudares de sabor ou embalagem.',
+    addLabel: 'Só whey',
+    variants: [
+      {
+        id: 'with-banana',
+        label: 'Com banana',
+        name: 'Shake pós-treino com banana',
+        description: 'Para quando a refeição seguinte demora mais ou a sessão foi exigente.',
+        calories: 211,
+        protein: 24.3,
+        carbs: 28.9,
+        fat: 1.1,
+        fiber: 3.1
+      }
+    ]
+  }),
+  buildRecipe({
+    id: 'snack-greek-yogurt-fruit-cereal',
+    meal: 'snack',
+    name: 'Taça de iogurte grego, fruta e cereais',
+    shortName: 'Taça de iogurte e cereais',
+    description: 'Uma versão equilibrada do lanche habitual, com cereais simples e uma dose moderada de whey.',
+    quality: 'high',
+    qualityLabel: 'Qualidade alta',
+    rank: 2,
+    prepTime: '5 min',
+    batchFriendly: true,
+    components: [
+      { label: '200 g de iogurte grego magro natural', calories: 116, protein: 11.6, carbs: 8.4, fat: 4, fiber: 0 },
+      { label: '12,5 g de Evowhey', calories: 43.3, protein: 9.6, carbs: 0.6, fat: 0.3, fiber: 0 },
+      { label: '30 g de cereais integrais sem açúcar adicionado', calories: 111, protein: 3, carbs: 21.5, fat: 1.5, fiber: 3 },
+      { label: '150 g de fruta sazonal', calories: 64, protein: 0.6, carbs: 15.6, fat: 0.2, fiber: 3.5 },
+      { label: 'Canela (opcional)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: ['Misturar o iogurte com a whey.', 'Guardar no frigorífico e cortar a fruta na véspera, se for conveniente.', 'Juntar os cereais apenas no momento de comer para continuarem crocantes.'],
+    highlights: ['≈25 g de proteína', 'Fruta + cereal integral', 'Preparável de véspera', 'Whey moderada'],
+    cautions: ['Preferir cereais integrais simples e sem açúcar adicionado na maioria dos dias.', 'Se já tiveres bebido o shake pós-treino, o programa destaca a variante com 250 g de skyr e sem whey.', 'Os valores do iogurte variam bastante entre marcas; confirmar o rótulo.'],
+    evidenceNote: 'Dose-base calculada com 12,5 g de Evowhey e iogurte grego light de referência; cereais e fruta usam valores médios.',
+    addLabel: 'Com 12,5 g whey',
+    variants: [
+      {
+        id: 'without-whey',
+        label: 'Sem whey',
+        name: 'Taça de skyr, fruta e cereais sem whey',
+        description: 'Usa 250 g de skyr, sendo especialmente útil quando o shake já foi consumido.',
+        calories: 323,
+        protein: 28.6,
+        carbs: 46.1,
+        fat: 2.2,
+        fiber: 6.5
+      }
+    ]
+  }),
+  buildRecipe({
+    id: 'snack-bread-hacendado-whey',
+    meal: 'snack',
+    name: 'Pão integral e +Proteínas Whey Hacendado',
+    shortName: 'Pão e batido Hacendado',
+    description: 'Uma opção de escritório muito prática, saciante e com a porção já controlada.',
+    quality: 'high',
+    qualityLabel: 'Muito prático',
+    rank: 3,
+    prepTime: '1 min',
+    batchFriendly: false,
+    components: [
+      { label: '1 pão integral (≈60 g)', calories: 158, protein: 5, carbs: 30, fat: 2.2, fiber: 4.5 },
+      { label: '1 +Proteínas Whey Hacendado (330 ml)', calories: 152, protein: 26, carbs: 7.6, fat: 2, fiber: 0 },
+      { label: 'Café ou água', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: ['Levar ou comprar o pão e o batido.', 'Consumir com café ou água, conforme preferires.'],
+    highlights: ['31 g de proteína', '≈38 g de hidratos', 'Mercadona', 'Sem preparação'],
+    cautions: ['Acrescentar fruta apenas se houver fome ou um dia particularmente ativo.', 'Confirmar a embalagem: existem referências online com composições diferentes para batidos Hacendado semelhantes.'],
+    evidenceNote: 'O batido usa os valores que forneceste: 152 kcal e 26 g de proteína; o pão integral de 60 g usa valores médios.',
+    addLabel: 'Adicionar',
+    variants: [
+      {
+        id: 'with-fruit',
+        label: 'Com fruta',
+        name: 'Pão e batido Hacendado com fruta',
+        description: 'Acrescenta 150 g de fruta sazonal para dias com mais fome ou atividade.',
+        calories: 374,
+        protein: 31.6,
+        carbs: 53.2,
+        fat: 4.4,
+        fiber: 8
+      }
+    ]
+  }),
+  buildRecipe({
+    id: 'snack-skyr-banana-cereal',
+    meal: 'snack',
+    name: 'Skyr, banana e cereais crocantes',
+    shortName: 'Skyr, banana e cereais',
+    description: 'Um lanche proteico sem whey em pó nem bebida proteica, adequado para casa ou escritório.',
+    quality: 'very_high',
+    qualityLabel: 'Sem suplemento',
+    rank: 4,
+    prepTime: '5 min',
+    batchFriendly: true,
+    components: [
+      { label: '200 g de skyr natural', calories: 118, protein: 20, carbs: 7.2, fat: 0.4, fiber: 0 },
+      { label: '1 banana média (≈120 g)', calories: 107, protein: 1.3, carbs: 27.4, fat: 0.4, fiber: 3.1 },
+      { label: '25 g de cereais integrais sem açúcar adicionado', calories: 92, protein: 2.5, carbs: 18, fat: 1.2, fiber: 2.5 },
+      { label: 'Canela', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: ['Colocar o skyr e a banana num recipiente na véspera ou de manhã.', 'Levar os cereais separadamente e juntar apenas na hora.'],
+    highlights: ['≈24 g de proteína', 'Sem whey', '≈53 g de hidratos', 'Preparável de véspera'],
+    cautions: ['O total base usa 200 g de skyr e 25 g de cereais.', 'A variante com chocolate usa 5 g de chocolate preto; 10 g acrescentariam aproximadamente mais 30 kcal.'],
+    evidenceNote: 'Skyr, banana, cereais integrais e chocolate usam valores médios; confirmar as marcas compradas.',
+    addLabel: 'Adicionar',
+    variants: [
+      {
+        id: 'with-dark-chocolate',
+        label: 'Com chocolate',
+        name: 'Skyr, banana, cereais e chocolate preto',
+        description: 'Inclui 5 g de chocolate preto partido em pedaços.',
+        calories: 347,
+        protein: 24.2,
+        carbs: 54.9,
+        fat: 4.3,
+        fiber: 6.2
+      }
+    ]
+  })
+]);
+
+const RETIRED_BREAKFAST_IDS = new Set(['breakfast-eggs-rye', 'breakfast-tofu-scramble']);
 
 export function mergeBreakfastCatalog(storedRecipes = []) {
   const stored = Array.isArray(storedRecipes)
@@ -204,6 +522,23 @@ export function mergeBreakfastCatalog(storedRecipes = []) {
   });
   const custom = stored.filter(recipe => !DEFAULT_BREAKFASTS.some(item => item.id === recipe.id));
   return [...defaults, ...custom];
+}
+
+export function mergeRecipeCatalog(storedRecipes = []) {
+  const stored = Array.isArray(storedRecipes)
+    ? storedRecipes.filter(recipe => !RETIRED_BREAKFAST_IDS.has(recipe?.id))
+    : [];
+  const defaults = [...DEFAULT_BREAKFASTS, ...DEFAULT_MAIN_MEALS, ...DEFAULT_SNACKS];
+  const defaultIds = new Set(defaults.map(recipe => recipe.id));
+  const byId = new Map(stored.map(recipe => [recipe.id, recipe]));
+  const mergedDefaults = defaults.map(recipe => {
+    const saved = byId.get(recipe.id);
+    return saved?.source === 'manual' && saved.catalogVersion === recipe.catalogVersion
+      ? saved
+      : recipe;
+  });
+  const custom = stored.filter(recipe => !defaultIds.has(recipe.id));
+  return [...mergedDefaults, ...custom];
 }
 
 export function getBreakfastProteinTarget(weightKg) {

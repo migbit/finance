@@ -9,12 +9,22 @@ test('a página abre diretamente nas receitas sem o questionário antigo', () =>
   assert.match(html, /id="food-recipe-grid"/);
 });
 
-test('o resumo contém apenas os totais nutricionais da receita escolhida', () => {
+test('o resumo contém apenas os totais nutricionais das refeições escolhidas', () => {
   assert.match(html, /id="food-summary-calories"/);
   assert.match(html, /id="food-summary-protein"/);
   assert.match(html, /id="food-summary-carbs"/);
   assert.match(html, /id="food-summary-fat"/);
   assert.doesNotMatch(html, /Qualidade nutricional|Método e limites|food-completion-ring|food-nutrient-list/);
+});
+
+test('o plano encadeia almoço, jantar, lanches e balanço diário', () => {
+  assert.match(html, /id="food-lunch-stage"/);
+  assert.match(html, /id="food-dinner-stage"/);
+  assert.match(html, /id="food-snacks-stage"/);
+  assert.match(html, /id="food-snack-preset-grid"/);
+  assert.match(html, /id="food-snack-form"/);
+  assert.match(html, /id="food-day-balance"/);
+  assert.match(html, /value="main">Almoço ou jantar/);
 });
 
 test('a página não recupera a antiga secção separada para dias de endurance', () => {

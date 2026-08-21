@@ -1,6 +1,6 @@
 /* Migbit Finance – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v39`;
+const CACHE = `${CACHE_PREFIX}v42`;
 
 const CORE = [
   './',
@@ -13,6 +13,7 @@ const CORE = [
   './js/ginasio.js',
   './js/alimentacao.js',
   './js/alimentacao-core.js',
+  './js/alimentacao-planner.js',
   './js/alimentacao-recipes.js',
   './js/meditacao.js',
   './js/meditacao-recommender.js',

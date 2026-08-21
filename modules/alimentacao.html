@@ -91,13 +91,97 @@
             </div>
             <button type="button" id="food-clear-breakfast">Alterar escolha</button>
           </div>
+
+          <section id="food-lunch-stage" class="food-meal-stage" aria-labelledby="food-lunch-title" hidden>
+            <div class="food-meal-stage-heading">
+              <div>
+                <p class="food-eyebrow">Recomendação seguinte</p>
+                <h3 id="food-lunch-title">Escolher almoço</h3>
+                <p id="food-lunch-context">As opções são ordenadas pelo equilíbrio com o pequeno-almoço.</p>
+              </div>
+              <strong id="food-lunch-calorie-target">≈ 840 kcal</strong>
+            </div>
+            <div id="food-lunch-grid" class="food-main-meal-grid"></div>
+          </section>
+
+          <section id="food-dinner-stage" class="food-meal-stage" aria-labelledby="food-dinner-title" hidden>
+            <div class="food-meal-stage-heading">
+              <div>
+                <p class="food-eyebrow">Depois do almoço</p>
+                <h3 id="food-dinner-title">Escolher jantar</h3>
+                <p id="food-dinner-context">O jantar compensa o que já foi escolhido e não repete o almoço.</p>
+              </div>
+              <strong id="food-dinner-calorie-target">≈ 720 kcal</strong>
+            </div>
+            <div id="food-dinner-grid" class="food-main-meal-grid"></div>
+          </section>
+
+          <section id="food-snacks-stage" class="food-snacks-stage" aria-labelledby="food-snacks-title" hidden>
+            <div class="food-meal-stage-heading">
+              <div>
+                <p class="food-eyebrow">Flexível</p>
+                <h3 id="food-snacks-title">Lanches</h3>
+                <p>Acrescenta o que realmente vais comer. O programa desconta estas calorias ao jantar.</p>
+              </div>
+              <strong id="food-snack-budget">—</strong>
+            </div>
+
+            <div id="food-snack-preset-grid" class="food-snack-preset-grid" aria-label="Lanches guardados"></div>
+
+            <div class="food-snack-custom-heading">
+              <h4>Adicionar outro lanche</h4>
+              <p>Usa os valores do rótulo ou da receita; o jantar volta a ser calculado automaticamente.</p>
+            </div>
+            <form id="food-snack-form" class="food-snack-form">
+              <label>Nome
+                <input type="text" name="snackName" maxlength="100" required placeholder="Ex.: skyr com fruta">
+              </label>
+              <label>Energia
+                <input type="number" name="snackCalories" min="1" max="1000" step="1" inputmode="numeric" required placeholder="kcal">
+              </label>
+              <label>Proteína
+                <input type="number" name="snackProtein" min="0" max="150" step="0.1" inputmode="decimal" placeholder="g">
+              </label>
+              <label>Hidratos
+                <input type="number" name="snackCarbs" min="0" max="250" step="0.1" inputmode="decimal" placeholder="g">
+              </label>
+              <label>Gordura
+                <input type="number" name="snackFat" min="0" max="150" step="0.1" inputmode="decimal" placeholder="g">
+              </label>
+              <label>Fibra
+                <input type="number" name="snackFiber" min="0" max="50" step="0.1" inputmode="decimal" placeholder="g">
+              </label>
+              <button type="submit" class="primary">Adicionar lanche</button>
+            </form>
+            <p id="food-snack-limit" class="food-snack-limit"></p>
+            <div id="food-snack-list" class="food-snack-list"></div>
+          </section>
+
+          <section id="food-day-balance" class="food-day-balance" aria-labelledby="food-day-balance-title" hidden>
+            <div class="food-day-balance-heading">
+              <div>
+                <p class="food-eyebrow">Balanço diário</p>
+                <h3 id="food-day-balance-title">Fechar as 2 400 kcal</h3>
+              </div>
+              <strong id="food-day-balance-value">—</strong>
+            </div>
+            <div class="food-day-progress" role="progressbar" aria-label="Progresso calórico diário" aria-valuemin="0" aria-valuemax="2400" aria-valuenow="0">
+              <span id="food-day-progress-bar"></span>
+            </div>
+            <div class="food-day-balance-grid">
+              <div><span>Confirmado</span><strong id="food-day-confirmed">—</strong></div>
+              <div><span>Reserva de lanche</span><strong id="food-day-reserved">—</strong></div>
+              <div><span>Meta</span><strong id="food-day-target">2 400 kcal</strong></div>
+            </div>
+            <p id="food-day-balance-note"></p>
+          </section>
         </section>
       </div>
 
       <aside class="food-side-column" aria-label="Resumo de macronutrientes">
         <section class="food-summary-card card">
           <p class="food-eyebrow">Resumo</p>
-          <h2 id="food-macro-summary-title">Totais do pequeno-almoço</h2>
+          <h2 id="food-macro-summary-title">Totais selecionados</h2>
           <div class="food-summary-macros">
             <div><span>Energia</span><strong id="food-summary-calories">—</strong></div>
             <div><span>Proteína</span><strong id="food-summary-protein">—</strong></div>
@@ -122,6 +206,7 @@
         <label>Refeição
           <select name="recipeMeal">
             <option value="breakfast">Pequeno-almoço</option>
+            <option value="main">Almoço ou jantar</option>
             <option value="lunch">Almoço</option>
             <option value="dinner">Jantar</option>
             <option value="snack">Lanche</option>
