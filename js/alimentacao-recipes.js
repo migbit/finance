@@ -65,6 +65,7 @@ export const MIGUEL_PROFILE_DEFAULTS = Object.freeze({
   selectedLunchId: '',
   selectedDinnerId: '',
   snacks: [],
+  planDate: '',
   updatedAt: '2026-08-20T00:00:00.000Z'
 });
 

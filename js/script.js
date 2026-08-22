@@ -1,4 +1,4 @@
-// Finance repo – script.js (adapted from main app)
+// A APP – script.js (adapted from main app)
 /*
   Key changes vs main app:
   - Keeps Firebase v9 modular imports from gstatic CDN

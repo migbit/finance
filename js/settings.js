@@ -33,7 +33,7 @@ async function exportAllData() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `finance-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `a-app-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
 

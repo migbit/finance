@@ -24,7 +24,9 @@ import {
   mergeRecipeCatalog
 } from './alimentacao-recipes.js';
 import {
+  applyDailyPlanDate,
   calculateDailyPlan,
+  getLocalDateKey,
   getMaximumSnackCalories,
   recommendMainMeals,
   sumNutrition
@@ -57,7 +59,10 @@ function loadStored(key, fallback) {
 }
 
 function normalizeProfile(profile = {}) {
-  const merged = { ...MIGUEL_PROFILE_DEFAULTS, ...profile };
+  let merged = { ...MIGUEL_PROFILE_DEFAULTS, ...profile };
+  const dailyPlan = applyDailyPlanDate(merged, getLocalDateKey());
+  merged = dailyPlan.profile;
+  if (dailyPlan.didReset) merged.updatedAt = new Date().toISOString();
   merged.selectedBreakfastId = String(merged.selectedBreakfastId || '');
   merged.selectedLunchId = String(merged.selectedLunchId || '');
   merged.selectedDinnerId = String(merged.selectedDinnerId || '');
@@ -78,6 +83,7 @@ function normalizeProfile(profile = {}) {
 }
 
 const storedProfile = loadStored(PROFILE_STORAGE_KEY, {});
+const initialDailyResetNeeded = String(storedProfile.planDate || '') !== getLocalDateKey();
 const state = {
   profile: normalizeProfile(storedProfile),
   recipes: mergeRecipeCatalog(loadStored(RECIPES_STORAGE_KEY, [])),
@@ -179,6 +185,8 @@ function persistLocal() {
     : 'Guardado neste dispositivo';
 }
 
+if (initialDailyResetNeeded) persistLocal();
+
 async function syncToCloud({ quiet = false } = {}) {
   if (!state.user) return false;
   try {
@@ -209,6 +217,7 @@ async function loadRemoteProfile(user) {
 
     const remote = snapshot.data();
     const remoteProfile = remote.profile || {};
+    const remoteNeedsDailyReset = String(remoteProfile.planDate || '') !== getLocalDateKey();
     const localTime = Date.parse(state.profile.updatedAt || '') || 0;
     const remoteTime = remote.updatedAt?.toMillis?.() || Date.parse(remoteProfile.updatedAt || '') || 0;
     if (remoteTime >= localTime) {
@@ -217,6 +226,7 @@ async function loadRemoteProfile(user) {
       validateSelections();
       persistLocal();
       renderAll();
+      if (remoteNeedsDailyReset) await syncToCloud({ quiet: true });
     } else {
       await syncToCloud({ quiet: true });
     }
@@ -833,6 +843,35 @@ function renderAll() {
   renderMacroSummary();
 }
 
+let dailyResetTimeoutId;
+
+function scheduleDailyReset() {
+  clearTimeout(dailyResetTimeoutId);
+  const now = new Date();
+  const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+  dailyResetTimeoutId = setTimeout(() => resetDailyPlanIfNeeded({ notify: true }), nextDay - now);
+}
+
+function resetDailyPlanIfNeeded({ notify = false } = {}) {
+  const dateKey = getLocalDateKey();
+  const dailyPlan = applyDailyPlanDate(state.profile, dateKey);
+  if (!dailyPlan.didReset) {
+    scheduleDailyReset();
+    return false;
+  }
+  state.profile = normalizeProfile({
+    ...dailyPlan.profile,
+    updatedAt: new Date().toISOString()
+  });
+  validateSelections();
+  persistLocal();
+  renderAll();
+  syncToCloud({ quiet: true });
+  scheduleDailyReset();
+  if (notify) showToast('Novo dia: refeições escolhidas e lanches foram limpos.', 'info');
+  return true;
+}
+
 function openRecipeDialog(recipe = null) {
   elements.recipeForm.reset();
   elements.recipeDialogTitle.textContent = recipe ? 'Editar receita' : 'Criar receita';
@@ -1090,6 +1129,12 @@ function bindEvents() {
 
 bindEvents();
 renderAll();
+scheduleDailyReset();
+
+window.addEventListener('focus', () => resetDailyPlanIfNeeded({ notify: true }));
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) resetDailyPlanIfNeeded({ notify: true });
+});
 
 onAuthStateChanged(getAuth(), user => {
   state.user = user;

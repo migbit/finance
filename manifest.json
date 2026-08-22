@@ -1,7 +1,7 @@
 {
   "id": "/finance/",
-  "name": "Migbit Finance",
-  "short_name": "Finance",
+  "name": "A APP",
+  "short_name": "A APP",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

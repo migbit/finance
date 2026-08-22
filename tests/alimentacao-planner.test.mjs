@@ -5,8 +5,10 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../js/alimentacao-planner.js', import.meta.url), 'utf8');
 const module = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 const {
+  applyDailyPlanDate,
   adjustMealToCalories,
   calculateDailyPlan,
+  getLocalDateKey,
   getMaximumSnackCalories,
   recommendMainMeals
 } = module;
@@ -14,6 +16,42 @@ const {
 const breakfast = { id: 'breakfast', calories: 534, protein: 34.7, carbs: 68.1, fat: 10.7, fiber: 13.7 };
 const lunch = { id: 'lunch', name: 'Almoço', calories: 650, protein: 43, carbs: 56, fat: 25.3, fiber: 16.4 };
 const dinner = { id: 'dinner', name: 'Jantar', calories: 620, protein: 50, carbs: 71, fat: 10.4, fiber: 13.1 };
+
+test('gera uma chave de data local estável', () => {
+  assert.equal(getLocalDateKey(new Date(2026, 7, 21, 23, 59, 59)), '2026-08-21');
+});
+
+test('uma nova data limpa apenas escolhas e lanches', () => {
+  const profile = {
+    planDate: '2026-08-20',
+    selectedBreakfastId: 'breakfast',
+    selectedLunchId: 'lunch',
+    selectedDinnerId: 'dinner',
+    snacks: [{ calories: 104 }],
+    manualCalories: 2400,
+    favoriteFoods: 'Mantém-se'
+  };
+  const result = applyDailyPlanDate(profile, '2026-08-21');
+  assert.equal(result.didReset, true);
+  assert.equal(result.profile.planDate, '2026-08-21');
+  assert.equal(result.profile.selectedBreakfastId, '');
+  assert.equal(result.profile.selectedLunchId, '');
+  assert.equal(result.profile.selectedDinnerId, '');
+  assert.deepEqual(result.profile.snacks, []);
+  assert.equal(result.profile.manualCalories, 2400);
+  assert.equal(result.profile.favoriteFoods, 'Mantém-se');
+});
+
+test('a mesma data conserva o plano já escolhido', () => {
+  const profile = {
+    planDate: '2026-08-21',
+    selectedBreakfastId: 'breakfast',
+    snacks: [{ calories: 104 }]
+  };
+  const result = applyDailyPlanDate(profile, '2026-08-21');
+  assert.equal(result.didReset, false);
+  assert.equal(result.profile, profile);
+});
 
 test('ajusta uma receita a uma meta calórica mantendo proporções explícitas', () => {
   assert.deepEqual(adjustMealToCalories(lunch, 840), {
