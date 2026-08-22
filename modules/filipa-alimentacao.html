@@ -7,6 +7,7 @@
   <title>Alimentação · Filipa</title>
   <link rel="stylesheet" href="../css/styles.pcolor.css">
   <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/alimentacao.css">
   <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="manifest" href="../manifest.json">
 </head>
@@ -14,8 +15,256 @@
   <button id="menu-icon" aria-label="Abrir menu">☰</button>
   <header><nav id="nav-menu"></nav></header>
 
-  <main aria-label="Alimentação da Filipa"></main>
+  <main class="food-page" aria-label="Alimentação da Filipa">
+    <section class="food-hero" aria-labelledby="food-title">
+      <div>
+        <p class="food-eyebrow">Plano pessoal da Filipa</p>
+        <h1 id="food-title">Alimentação</h1>
+        <p>Escolhe as refeições do dia, inclui a ceia e usa a margem de extras sem perder de vista a meta diária.</p>
+      </div>
+      <div class="food-profile-state" data-state="complete">
+        <span aria-hidden="true"></span>
+        <div>
+          <strong>Base diária · 1 650 kcal</strong>
+          <small id="food-save-state">Guardado neste dispositivo</small>
+        </div>
+      </div>
+    </section>
+
+    <nav class="food-meal-switcher food-meal-switcher--five" aria-label="Escolher refeição a planear">
+      <button type="button" data-food-meal-jump="breakfast" aria-current="true">
+        <span>01</span><strong>Pequeno-almoço</strong><small id="food-breakfast-jump-state">Por escolher</small>
+      </button>
+      <button type="button" data-food-meal-jump="lunch">
+        <span>02</span><strong>Almoço</strong><small id="food-lunch-jump-state">Por escolher</small>
+      </button>
+      <button type="button" data-food-meal-jump="snack">
+        <span>03</span><strong>Lanche</strong><small id="food-snack-jump-state">Por escolher</small>
+      </button>
+      <button type="button" data-food-meal-jump="dinner">
+        <span>04</span><strong>Jantar</strong><small id="food-dinner-jump-state">Por escolher</small>
+      </button>
+      <button type="button" data-food-meal-jump="bedtime">
+        <span>05</span><strong>Ceia</strong><small id="food-bedtime-jump-state">Por escolher</small>
+      </button>
+    </nav>
+
+    <section class="food-layout">
+      <div class="food-main-column">
+        <section class="food-recipes card" id="food-breakfast-stage" aria-labelledby="food-recipes-title">
+          <div class="food-section-heading food-section-heading--actions">
+            <div>
+              <p class="food-eyebrow">Receitas aprovadas</p>
+              <h2 id="food-recipes-title">Pequenos-almoços</h2>
+              <p>Quatro opções doces e salgadas, todas sem carne ou peixe. As papas usam claras em vez de whey.</p>
+            </div>
+            <div class="food-heading-actions">
+              <button type="button" id="food-skip-breakfast">Não tomar hoje</button>
+              <button type="button" id="food-add-recipe">+ Criar receita</button>
+            </div>
+          </div>
+
+          <div class="food-breakfast-targets" aria-label="Metas do plano">
+            <div><span>Alvo diário</span><strong>1 650 kcal</strong></div>
+            <div><span>Refeições-base</span><strong>≈1 500 kcal</strong></div>
+            <div><span>Margem de extras</span><strong>150 kcal</strong></div>
+            <div><span>Proteína diária</span><strong>≈100–115 g</strong></div>
+          </div>
+
+          <div class="food-recipe-grid" id="food-recipe-grid"></div>
+        </section>
+
+        <section class="food-plan card" id="food-plan" aria-labelledby="food-plan-title">
+          <div class="food-section-heading">
+            <div>
+              <p class="food-eyebrow">Plano diário</p>
+              <h2 id="food-plan-title">Escolhe qualquer refeição</h2>
+              <p>As porções principais são ajustadas ao que escolheres. A margem para extras permanece separada e visível.</p>
+            </div>
+          </div>
+
+          <div id="food-energy-result">
+            <div class="food-energy-grid food-energy-grid--filipa">
+              <article class="food-energy-primary"><span>Alvo diário</span><strong id="food-energy-target">1 650 kcal</strong><small>défice ligeiro estimado</small></article>
+              <article><span>Pequeno-almoço</span><strong id="food-breakfast-target">≈330 kcal</strong><small>alvo atual</small></article>
+              <article><span>Almoço</span><strong id="food-lunch-target">≈400 kcal</strong><small>porção ajustada</small></article>
+              <article><span>Lanche</span><strong id="food-snack-target">≈220 kcal</strong><small>uma opção</small></article>
+              <article><span>Jantar</span><strong id="food-dinner-target">≈410 kcal</strong><small>porção ajustada</small></article>
+              <article><span>Ceia</span><strong id="food-bedtime-target">≈140 kcal</strong><small>uma opção</small></article>
+              <article><span>Extras</span><strong id="food-extras-target">150 kcal</strong><small>margem flexível</small></article>
+            </div>
+            <p id="food-energy-note" class="food-method-note">Os valores são estimativas e devem ser afinados pelos rótulos dos produtos utilizados.</p>
+          </div>
+
+          <div id="food-breakfast-selection" class="food-breakfast-selection" hidden>
+            <span aria-hidden="true">✓</span>
+            <div>
+              <small id="food-selected-breakfast-label">Pequeno-almoço escolhido</small>
+              <strong id="food-selected-breakfast-name">—</strong>
+              <p id="food-selected-breakfast-balance">—</p>
+            </div>
+            <button type="button" id="food-clear-breakfast">Alterar escolha</button>
+          </div>
+
+          <section id="food-lunch-stage" class="food-meal-stage" aria-labelledby="food-lunch-title">
+            <div class="food-meal-stage-heading">
+              <div>
+                <p class="food-eyebrow">Marmita</p>
+                <h3 id="food-lunch-title">Escolher almoço</h3>
+                <p id="food-lunch-context">As quatro receitas são adequadas para meal prep e usam pesos cozinhados.</p>
+              </div>
+              <div class="food-stage-heading-actions">
+                <strong id="food-lunch-calorie-target">Meta · 400 kcal</strong>
+                <button type="button" id="food-external-lunch">Almoço fora</button>
+              </div>
+            </div>
+            <div id="food-lunch-grid" class="food-main-meal-grid"></div>
+          </section>
+
+          <section id="food-snack-stage" class="food-snacks-stage" aria-labelledby="food-snack-title">
+            <div class="food-meal-stage-heading">
+              <div>
+                <p class="food-eyebrow">Para levar</p>
+                <h3 id="food-snack-title">Escolher lanche</h3>
+                <p>Quatro opções individuais, incluindo os bolinhos de cenoura e chocolate.</p>
+              </div>
+              <strong id="food-snack-calorie-target">Meta · 220 kcal</strong>
+            </div>
+            <div id="food-snack-grid" class="food-snack-preset-grid"></div>
+          </section>
+
+          <section id="food-dinner-stage" class="food-meal-stage" aria-labelledby="food-dinner-title">
+            <div class="food-meal-stage-heading">
+              <div>
+                <p class="food-eyebrow">Pode repetir o almoço</p>
+                <h3 id="food-dinner-title">Escolher jantar</h3>
+                <p id="food-dinner-context">A porção é ajustada ao pequeno-almoço, lanche, ceia e extras escolhidos.</p>
+              </div>
+              <strong id="food-dinner-calorie-target">Meta · 410 kcal</strong>
+            </div>
+            <div id="food-dinner-grid" class="food-main-meal-grid"></div>
+          </section>
+
+          <section id="food-bedtime-stage" class="food-snacks-stage" aria-labelledby="food-bedtime-title">
+            <div class="food-meal-stage-heading">
+              <div>
+                <p class="food-eyebrow">Fim do dia</p>
+                <h3 id="food-bedtime-title">Escolher ceia</h3>
+                <p>Inclui o fluff de frutos vermelhos na Bimby e uma opção portátil com skyr.</p>
+              </div>
+              <strong id="food-bedtime-calorie-target">Meta · 140 kcal</strong>
+            </div>
+            <div id="food-bedtime-grid" class="food-snack-preset-grid"></div>
+          </section>
+
+          <section id="food-extras-stage" class="food-snacks-stage" aria-labelledby="food-extras-title">
+            <div class="food-meal-stage-heading">
+              <div>
+                <p class="food-eyebrow">Flexível</p>
+                <h3 id="food-extras-title">Margem para extras</h3>
+                <p>Regista chocolate, fruta, queijo, cereais ou outra pequena adição. Estes valores já fazem parte das 1 650 kcal.</p>
+              </div>
+              <strong id="food-extra-budget">150 kcal disponíveis</strong>
+            </div>
+            <form id="food-extra-form" class="food-snack-form">
+              <label>Nome
+                <input type="text" name="extraName" maxlength="100" required placeholder="Ex.: 15 g de chocolate">
+              </label>
+              <label>Energia
+                <input type="number" name="extraCalories" min="1" max="600" step="1" inputmode="numeric" required placeholder="kcal">
+              </label>
+              <label>Proteína
+                <input type="number" name="extraProtein" min="0" max="100" step="0.1" inputmode="decimal" placeholder="g">
+              </label>
+              <label>Hidratos
+                <input type="number" name="extraCarbs" min="0" max="150" step="0.1" inputmode="decimal" placeholder="g">
+              </label>
+              <label>Gordura
+                <input type="number" name="extraFat" min="0" max="100" step="0.1" inputmode="decimal" placeholder="g">
+              </label>
+              <label>Fibra
+                <input type="number" name="extraFiber" min="0" max="50" step="0.1" inputmode="decimal" placeholder="g">
+              </label>
+              <button type="submit" class="primary">Adicionar</button>
+            </form>
+            <p id="food-extra-limit" class="food-snack-limit">A margem diária aprovada é de 150 kcal.</p>
+            <div id="food-extra-list" class="food-snack-list"></div>
+          </section>
+
+          <section id="food-day-balance" class="food-day-balance" aria-labelledby="food-day-balance-title">
+            <div class="food-day-balance-heading">
+              <div>
+                <p class="food-eyebrow">Balanço diário</p>
+                <h3 id="food-day-balance-title">Fechar as 1 650 kcal</h3>
+              </div>
+              <strong id="food-day-balance-value">—</strong>
+            </div>
+            <div class="food-day-progress" role="progressbar" aria-label="Progresso calórico diário" aria-valuemin="0" aria-valuemax="1650" aria-valuenow="0">
+              <span id="food-day-progress-bar"></span>
+            </div>
+            <div class="food-day-balance-grid">
+              <div><span>Confirmado</span><strong id="food-day-confirmed">—</strong></div>
+              <div><span>Reservas</span><strong id="food-day-reserved">—</strong></div>
+              <div><span>Meta</span><strong id="food-day-target">1 650 kcal</strong></div>
+            </div>
+            <p id="food-day-balance-note"></p>
+          </section>
+        </section>
+      </div>
+
+      <aside class="food-side-column" aria-label="Resumo de macronutrientes">
+        <section class="food-summary-card card">
+          <p class="food-eyebrow">Resumo</p>
+          <h2 id="food-macro-summary-title">Totais selecionados</h2>
+          <div class="food-summary-macros">
+            <div><span>Energia</span><strong id="food-summary-calories">—</strong></div>
+            <div><span>Proteína</span><strong id="food-summary-protein">—</strong></div>
+            <div><span>Hidratos</span><strong id="food-summary-carbs">—</strong></div>
+            <div><span>Gordura</span><strong id="food-summary-fat">—</strong></div>
+          </div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <dialog id="food-recipe-dialog" class="food-dialog" aria-labelledby="food-recipe-dialog-title">
+    <form id="food-recipe-form" class="food-dialog-shell">
+      <button type="button" class="food-dialog-close" data-close-dialog aria-label="Fechar">×</button>
+      <p class="food-eyebrow">Biblioteca pessoal</p>
+      <h2 id="food-recipe-dialog-title">Criar receita</h2>
+      <input type="hidden" name="recipeId">
+      <div class="food-field-grid food-field-grid--two">
+        <label>Nome <span class="required-mark">obrigatório</span>
+          <input type="text" name="recipeName" maxlength="120" required>
+        </label>
+        <label>Refeição
+          <select name="recipeMeal">
+            <option value="breakfast">Pequeno-almoço</option>
+            <option value="main">Almoço ou jantar</option>
+            <option value="snack">Lanche</option>
+            <option value="bedtime">Ceia</option>
+          </select>
+        </label>
+      </div>
+      <label>Ingredientes e quantidades <span class="required-mark">obrigatório</span>
+        <textarea name="recipeIngredients" rows="7" maxlength="3000" required placeholder="Um ingrediente por linha."></textarea>
+      </label>
+      <div class="food-recipe-editor-macros">
+        <label>Energia (kcal)<input type="number" name="recipeCalories" min="0" max="3000" step="1"></label>
+        <label>Proteína (g)<input type="number" name="recipeProtein" min="0" max="300" step="0.1"></label>
+        <label>Hidratos (g)<input type="number" name="recipeCarbs" min="0" max="500" step="0.1"></label>
+        <label>Gordura (g)<input type="number" name="recipeFat" min="0" max="300" step="0.1"></label>
+        <label>Fibra (g)<input type="number" name="recipeFiber" min="0" max="100" step="0.1"></label>
+      </div>
+      <label>Preparação e notas
+        <textarea name="recipeNotes" rows="4" maxlength="1200"></textarea>
+      </label>
+      <p class="food-dialog-note">Receitas pessoais ficam marcadas como composição a rever até os valores serem confirmados.</p>
+      <button type="submit" class="primary">Guardar receita</button>
+    </form>
+  </dialog>
 
   <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/filipa-alimentacao.js"></script>
 </body>
 </html>

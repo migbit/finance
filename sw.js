@@ -1,6 +1,6 @@
 /* A APP – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v46`;
+const CACHE = `${CACHE_PREFIX}v48`;
 
 const CORE = [
   './',
@@ -12,10 +12,15 @@ const CORE = [
   './js/access-control.js',
   './js/toast.js',
   './js/ginasio.js',
+  './js/filipa-ginasio-config.js',
+  './js/filipa-ginasio-page.js',
   './js/alimentacao.js',
   './js/alimentacao-core.js',
   './js/alimentacao-planner.js',
   './js/alimentacao-recipes.js',
+  './js/filipa-alimentacao.js',
+  './js/filipa-alimentacao-planner.js',
+  './js/filipa-alimentacao-recipes.js',
   './js/meditacao.js',
   './js/meditacao-recommender.js',
   './modules/ginasio.html',

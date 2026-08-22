@@ -1,5 +1,7 @@
 import { db, copiarMensagem } from './script.js';
 import { showConfirm, showToast } from './toast.js';
+import { FILIPA_UID } from './access-control.js';
+import { FILIPA_WORKOUT_TEMPLATES } from './filipa-ginasio-config.js';
 import {
   collection,
   doc,
@@ -15,7 +17,7 @@ import {
   where
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
-const WORKOUT_TEMPLATES = {
+const MIGUEL_WORKOUT_TEMPLATES = {
   'Dragão': {
     'Pernas': [
       {
@@ -1031,6 +1033,17 @@ const WORKOUT_TEMPLATES = {
   }
 };
 
+const IS_FILIPA_GYM = document.body.dataset.page === 'filipa-ginasio';
+const WORKOUT_TEMPLATES = IS_FILIPA_GYM
+  ? FILIPA_WORKOUT_TEMPLATES
+  : MIGUEL_WORKOUT_TEMPLATES;
+
+function gymCollection(name) {
+  return IS_FILIPA_GYM
+    ? collection(db, 'users', FILIPA_UID, name)
+    : collection(db, name);
+}
+
 const gymSelect = document.getElementById('gym-select');
 const trainingSelect = document.getElementById('training-select');
 const dateInput = document.getElementById('session-date');
@@ -1090,9 +1103,10 @@ const warmupDefaultTimers = new Map();
 const restTimerIntervals = new Map();
 const restTimerUpdates = new Map();
 const warmupTimerIntervals = new Map();
-const LOCAL_DRAFT_CURRENT_KEY = 'ginasio-current-draft-v1';
-const LOCAL_DRAFT_PREFIX = 'ginasio-session-draft-v1';
-const MUSIC_MODE_KEY = 'ginasio-music-mode-v1';
+const PROFILE_STORAGE_PREFIX = IS_FILIPA_GYM ? 'filipa-ginasio' : 'ginasio';
+const LOCAL_DRAFT_CURRENT_KEY = `${PROFILE_STORAGE_PREFIX}-current-draft-v1`;
+const LOCAL_DRAFT_PREFIX = `${PROFILE_STORAGE_PREFIX}-session-draft-v1`;
+const MUSIC_MODE_KEY = `${PROFILE_STORAGE_PREFIX}-music-mode-v1`;
 const RECENT_SUMMARY_LIMIT = 5;
 const EVOLUTION_WORKOUT_LIMIT = 16;
 let localDraftTimer = null;
@@ -1502,9 +1516,10 @@ function saveCurrentSelection() {
 
 function restoreCurrentSelection() {
   const current = readLocalJson(LOCAL_DRAFT_CURRENT_KEY);
-  if (!current) return;
+  if (!current) return null;
   if (current.gym && gymSelect) gymSelect.value = current.gym;
   if (current.treino && trainingSelect) trainingSelect.value = current.treino;
+  return current;
 }
 
 function readLocalDraft(gym, treino, date) {
@@ -2027,7 +2042,7 @@ function createRepsSelect(value = 0) {
 function createRirSelect(value) {
   const select = document.createElement('select');
   select.setAttribute('data-rir', 'true');
-  const options = ['falha', '?', '1', '2', '3', '4', '5', '2+', '3+', '4+', '1-2', '2-3', '2-4', '3-5', '4-5'];
+  const options = ['falha', '0-1', '?', '1', '2', '3', '4', '5', '2+', '3+', '4+', '1-2', '2-3', '2-4', '3-5', '4-5'];
   options.forEach(optionValue => {
     const option = document.createElement('option');
     option.value = optionValue;
@@ -2041,7 +2056,7 @@ function createRirSelect(value) {
 async function saveBaseWeight(gym, machineId, variantId, seriesIndex, baseWeight) {
   if (!gym) return;
   const docId = getBaseWeightId(gym, machineId, variantId, seriesIndex);
-  const ref = doc(collection(db, 'ginasio_pesos'), docId);
+  const ref = doc(gymCollection('ginasio_pesos'), docId);
   await setDoc(ref, {
     gym,
     machineId,
@@ -2055,7 +2070,7 @@ async function saveBaseWeight(gym, machineId, variantId, seriesIndex, baseWeight
 async function saveRecommendedRep(gym, machineId, variantId, seriesIndex, reps) {
   if (!gym) return;
   const docId = getRecommendedId(gym, machineId, variantId, seriesIndex);
-  const ref = doc(collection(db, 'ginasio_reps_recomendadas'), docId);
+  const ref = doc(gymCollection('ginasio_reps_recomendadas'), docId);
   await setDoc(ref, {
     gym,
     machineId,
@@ -2069,7 +2084,7 @@ async function saveRecommendedRep(gym, machineId, variantId, seriesIndex, reps) 
 async function saveWarmupDefault(gym, machineId, variantId, warmupIndex, warmup) {
   if (!gym) return;
   const docId = getWarmupDefaultId(gym, machineId, variantId, warmupIndex);
-  const ref = doc(collection(db, 'ginasio_aquecimentos'), docId);
+  const ref = doc(gymCollection('ginasio_aquecimentos'), docId);
   await setDoc(ref, {
     gym,
     machineId,
@@ -2256,6 +2271,7 @@ function createSeriesTable(machine, variant, savedMachine) {
       <td data-label="RIR">
         <select data-rir>
           <option value="falha" ${rirValue === 'falha' ? 'selected' : ''}>falha</option>
+          <option value="0-1" ${rirValue === '0-1' ? 'selected' : ''}>0-1</option>
           <option value="?" ${rirValue === '?' ? 'selected' : ''}>?</option>
           <option value="1" ${rirValue === '1' ? 'selected' : ''}>1</option>
           <option value="2" ${rirValue === '2' ? 'selected' : ''}>2</option>
@@ -2992,7 +3008,7 @@ async function saveCustomMachine() {
   const docId = `${normalizeKey(state.gym)}-${normalizeKey(state.treino)}`;
   const updatedMachines = [...state.customMachines, customMachine];
   try {
-    await setDoc(doc(collection(db, 'ginasio_maquinas_custom'), docId), {
+    await setDoc(doc(gymCollection('ginasio_maquinas_custom'), docId), {
       gym: state.gym,
       treino: state.treino,
       machines: updatedMachines,
@@ -3040,7 +3056,7 @@ async function loadSession() {
   const emptyHistory = { lastReps: {}, lastRir: {}, lastWeights: {} };
   const sessionLoader = async () => {
     if (!treino || !date) return { session: null, createdAt: null };
-    const ref = doc(collection(db, 'ginasio_treinos'), getSessionId(gym, treino, date));
+    const ref = doc(gymCollection('ginasio_treinos'), getSessionId(gym, treino, date));
     const snap = await getDoc(ref);
     const session = snap.exists() ? snap.data() : null;
     return { session, createdAt: session?.createdAt || null };
@@ -3092,7 +3108,7 @@ async function loadSession() {
 
 async function loadBaseWeights(gym) {
   if (!gym) return {};
-  const snap = await getDocs(collection(db, 'ginasio_pesos'));
+  const snap = await getDocs(gymCollection('ginasio_pesos'));
   const weights = {};
   const scopedKeys = new Set();
   snap.forEach(docSnap => {
@@ -3108,7 +3124,7 @@ async function loadBaseWeights(gym) {
 
 async function loadRecommendedReps(gym) {
   if (!gym) return {};
-  const q = query(collection(db, 'ginasio_reps_recomendadas'), where('gym', '==', gym));
+  const q = query(gymCollection('ginasio_reps_recomendadas'), where('gym', '==', gym));
   const snap = await getDocs(q);
   const repsMap = {};
   snap.forEach(docSnap => {
@@ -3121,7 +3137,7 @@ async function loadRecommendedReps(gym) {
 
 async function loadWarmupDefaults(gym) {
   if (!gym) return {};
-  const q = query(collection(db, 'ginasio_aquecimentos'), where('gym', '==', gym));
+  const q = query(gymCollection('ginasio_aquecimentos'), where('gym', '==', gym));
   const snap = await getDocs(q);
   const warmups = {};
   snap.forEach(docSnap => {
@@ -3139,14 +3155,14 @@ async function loadWarmupDefaults(gym) {
 async function loadCustomMachines(gym, treino) {
   if (!gym || !treino) return [];
   const docId = `${normalizeKey(gym)}-${normalizeKey(treino)}`;
-  const snap = await getDoc(doc(collection(db, 'ginasio_maquinas_custom'), docId));
+  const snap = await getDoc(doc(gymCollection('ginasio_maquinas_custom'), docId));
   return snap.exists() ? (snap.data().machines || []) : [];
 }
 
 async function loadLastReps(gym, treino) {
   if (!gym || !treino) return { lastReps: {}, lastRir: {}, lastWeights: {} };
   const q = query(
-    collection(db, 'ginasio_treinos'),
+    gymCollection('ginasio_treinos'),
     where('treino', '==', treino)
   );
   const snap = await getDocs(q);
@@ -3353,7 +3369,7 @@ async function saveSession() {
   window.lastGymSession = session;
   console.log('[ginasio] session payload', session);
   const docId = getSessionId(state.gym, state.treino, state.date);
-  const ref = doc(collection(db, 'ginasio_treinos'), docId);
+  const ref = doc(gymCollection('ginasio_treinos'), docId);
   const originalSaveLabel = saveBtn?.textContent || 'Guardar treino';
   if (saveBtn) {
     saveBtn.disabled = true;
@@ -3369,7 +3385,7 @@ async function saveSession() {
 
   try {
     const summary = buildSummaryText(session);
-    const summaryRef = doc(collection(db, 'ginasio_resumos'), docId);
+    const summaryRef = doc(gymCollection('ginasio_resumos'), docId);
     const createdAt = state.createdAt || state.session?.createdAt || Timestamp.now();
     const batch = writeBatch(db);
     batch.set(ref, {
@@ -3409,8 +3425,8 @@ async function saveSession() {
 async function deleteSessionById(docId, workoutLabel = 'este treino') {
   try {
     const batch = writeBatch(db);
-    batch.delete(doc(collection(db, 'ginasio_treinos'), docId));
-    batch.delete(doc(collection(db, 'ginasio_resumos'), docId));
+    batch.delete(doc(gymCollection('ginasio_treinos'), docId));
+    batch.delete(doc(gymCollection('ginasio_resumos'), docId));
     await batch.commit();
     removeLocalKey(`${LOCAL_DRAFT_PREFIX}-${docId}`);
     const isCurrentSession = Boolean(state.gym && state.treino && state.date)
@@ -3650,7 +3666,7 @@ function renderSummaries(summaries) {
 async function loadSummaries() {
   try {
     const q = query(
-      collection(db, 'ginasio_treinos'),
+      gymCollection('ginasio_treinos'),
       orderBy('date', 'desc'),
       limit(EVOLUTION_WORKOUT_LIMIT)
     );
@@ -3673,6 +3689,21 @@ async function loadSummaries() {
   }
 }
 
+function updateGymOptions(preferredGym = '') {
+  if (!gymSelect) return;
+  const gyms = Object.keys(WORKOUT_TEMPLATES);
+  gymSelect.innerHTML = '<option value="">Selecionar</option>';
+  gyms.forEach(gym => {
+    const option = document.createElement('option');
+    option.value = gym;
+    option.textContent = gym;
+    gymSelect.appendChild(option);
+  });
+  gymSelect.value = gyms.includes(preferredGym)
+    ? preferredGym
+    : (gyms.length === 1 ? gyms[0] : '');
+}
+
 function updateTrainingOptions(gym, preferredTraining = '') {
   if (!trainingSelect) return;
   const trainings = Object.keys(WORKOUT_TEMPLATES[gym] || {});
@@ -3688,7 +3719,8 @@ function updateTrainingOptions(gym, preferredTraining = '') {
 }
 
 function init() {
-  restoreCurrentSelection();
+  updateGymOptions();
+  const restoredSelection = restoreCurrentSelection();
   if (dateInput) dateInput.value = getTodayLocalISO();
   if (musicModeInput) {
     try {
@@ -3697,7 +3729,7 @@ function init() {
       musicModeInput.checked = false;
     }
   }
-  updateTrainingOptions(gymSelect.value, trainingSelect.value);
+  updateTrainingOptions(gymSelect.value, restoredSelection?.treino || trainingSelect.value);
   updateNotificationStatus();
 
   gymSelect.addEventListener('change', () => {

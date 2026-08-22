@@ -1,4 +1,5 @@
-body[data-page="alimentacao"] {
+body[data-page="alimentacao"],
+body[data-page="filipa-alimentacao"] {
   --food-ink: #18352b;
   --food-green: #246a4a;
   --food-green-dark: #174b35;
@@ -180,6 +181,10 @@ body[data-page="alimentacao"] {
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 12px 35px rgba(23, 75, 53, 0.08);
   backdrop-filter: blur(10px);
+}
+
+.food-meal-switcher--five {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .food-meal-switcher button {
@@ -691,6 +696,10 @@ body[data-page="alimentacao"] {
   display: grid;
   grid-template-columns: 1.35fr repeat(4, 1fr);
   gap: 0.7rem;
+}
+
+.food-energy-grid--filipa {
+  grid-template-columns: 1.35fr repeat(3, minmax(0, 1fr));
 }
 
 .food-energy-grid article {
@@ -1702,6 +1711,10 @@ body[data-page="alimentacao"] {
     justify-content: center;
     gap: 0.12rem;
     padding: 0.55rem;
+  }
+
+  .food-meal-switcher--five {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .food-meal-switcher button > span {
