@@ -39,9 +39,9 @@ const quantityUpdatedAt = new Map();
 const currencyFormatters = new Map();
 
 // Load shares from Firebase
-async function loadStoredQuantities() {
+async function loadStoredQuantities(readOnly = false) {
   try {
-    return await loadShareQuantities();
+    return await loadShareQuantities({ readOnly });
   } catch (err) {
     console.error('Error loading share quantities:', err);
     return { vwce: 0, aggh: 0 };
@@ -336,7 +336,7 @@ async function fetchQuotes() {
   };
 }
 
-export async function initEtfQuotes() {
+export async function initEtfQuotes({ readOnly = false } = {}) {
   const section = document.getElementById('dca-etf-quotes');
   if (!section) return;
 
@@ -347,7 +347,7 @@ export async function initEtfQuotes() {
   let isLoading = false;
 
   // Load shares from Firebase
-  const storedShares = await loadStoredQuantities();
+  const storedShares = await loadStoredQuantities(readOnly);
 
   // Initialize quantity inputs
   ETF_CONFIG.forEach(({ key }) => {

@@ -1,5 +1,6 @@
 import { CryptoPortfolioApp } from './crypto-ui.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
+import { getModuleAccess } from './access-control.js';
 
 const app = new CryptoPortfolioApp();
 window.cryptoApp = app;
@@ -17,11 +18,15 @@ function ensureInitialized(){
 }
 
 function handleAuthState(user){
-  if (user){
+  const accessMode = user ? getModuleAccess(user.uid, 'crypto', 'investimentos') : 'none';
+  if (user && accessMode !== 'none'){
+    app.setAccessMode(accessMode);
     ensureInitialized();
   } else {
     initPromise = null;
-    app.handleSignedOut();
+    app.handleSignedOut(user
+      ? 'A tua conta não tem autorização para consultar investimentos.'
+      : undefined);
   }
 }
 

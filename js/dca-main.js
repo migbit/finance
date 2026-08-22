@@ -23,6 +23,7 @@ import {
   exportToCSV
 } from './dca-ui.js';
 import { initEtfQuotes } from './dca-quotes.js';
+import { whenAccessResolved } from './script.js';
 
 // ---------- Mobile Menu ----------
 document.addEventListener('DOMContentLoaded', () => {
@@ -54,6 +55,7 @@ const state = {
   chartRange: null,
   chartData: null,
   rebalancingAlertSent: false,
+  accessMode: 'write',
 
   // NEW: Live data tracking
   liveData: {
@@ -63,6 +65,27 @@ const state = {
     juroLive: 0         // Live juro calculation (previous month)
   }
 };
+
+function applyDcaReadOnlyUI() {
+  if (state.accessMode !== 'read') return;
+
+  const inputs = [
+    '#etf-vwce-qty', '#etf-aggh-qty', '#juro-saldo', '#juro-saldo-display',
+    '#end-date', '#pct-swda', '#pct-aggh', '#monthly-contribution',
+    '#scenario-rate-conservative', '#scenario-rate-moderate', '#scenario-rate-optimistic',
+    '.swda', '.aggh', '.cash', '.inv-swda-extra', '.inv-aggh-extra'
+  ];
+  document.querySelectorAll(inputs.join(',')).forEach(element => { element.disabled = true; });
+
+  const writeButtons = [
+    '#btn-save-saldo', '#btn-juro-gravar', '#btn-save-params',
+    '.btn-save-qty', '.btn-save', '.btn-add-inv-swda', '.btn-add-inv-aggh'
+  ];
+  document.querySelectorAll(writeButtons.join(',')).forEach(element => {
+    element.disabled = true;
+    element.hidden = true;
+  });
+}
 
 const feedbackTimers = new Map();
 
@@ -76,7 +99,7 @@ async function loadLiveData() {
     };
 
     // Load shares from Firebase
-    const shares = await loadShareQuantities();
+    const shares = await loadShareQuantities({ readOnly: state.accessMode === 'read' });
 
     // Load saldo
     const juroData = await loadJuroSaldo();
@@ -615,7 +638,7 @@ async function boot(skipParamUI = false) {
 
     if (!skipParamUI) {
       if (wrapEl) showLoading(wrapEl, 'A carregar dados...');
-      state.params = await loadParams();
+      state.params = await loadParams({ readOnly: state.accessMode === 'read' });
       writeParamsToUI(state.params);
       updateScenarios(null, state.params);
     }
@@ -626,7 +649,9 @@ async function boot(skipParamUI = false) {
     state.liveData = await loadLiveData();
     updateJuroDisplay();
 
-    await ensureMonthsExist(state.params.endYM);
+    if (state.accessMode !== 'read') {
+      await ensureMonthsExist(state.params.endYM);
+    }
     const docs = await loadAllDocs();
 
     // Por defeito, mostrar o ano corrente completo (Jan–Dez). Se "anos futuros" estiver ativo,
@@ -672,6 +697,7 @@ async function boot(skipParamUI = false) {
       renderTable(rows, wrapEl);
       bindTableSaveHandler();
       applyYearVisibility({ showPastYears: state.showPastYears, showFutureYears: state.showFutureYears });
+      applyDcaReadOnlyUI();
       // Recalculate juro acumulado depois da tabela estar disponível
       updateJuroDisplay();
     }
@@ -777,18 +803,20 @@ window.addEventListener('resize', debounce(() => {
 }, 250));
 
 // ---------- Initialize ----------
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    bindGlobalButtons();
-    initJuroModule();
-    initializeChartControls();
-    initEtfQuotes();
-    boot();
-  }, { once: true });
-} else {
+async function initializeDcaPage() {
+  const access = await whenAccessResolved();
+  if (access.moduleKey !== 'dca' || access.mode === 'none') return;
+  state.accessMode = access.mode;
   bindGlobalButtons();
-  initJuroModule();
+  await initJuroModule();
   initializeChartControls();
-  initEtfQuotes();
-  boot();
+  await initEtfQuotes({ readOnly: state.accessMode === 'read' });
+  await boot();
+  applyDcaReadOnlyUI();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeDcaPage, { once: true });
+} else {
+  initializeDcaPage();
 }

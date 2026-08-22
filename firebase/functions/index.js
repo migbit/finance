@@ -7,6 +7,7 @@ const { defineSecret } = require("firebase-functions/params");
 const { loadCleaningCalendar } = require("./cleaning-calendar");
 const { findPotentialCleaningConflicts } = require("./cleaning-alerts");
 const { closePreviousMonthAndOpenCurrent } = require("./dca-monthly");
+const { authorizeInvestmentRequest } = require("./investment-access");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -654,6 +655,15 @@ exports.krakenPortfolio = onRequest(
         return;
       }
 
+      const investmentAccess = await authorizeInvestmentRequest(req, admin.auth());
+      if (!investmentAccess.allowed) {
+        res.status(investmentAccess.status).json({
+          error: investmentAccess.status === 401 ? "Autenticação necessária." : "Acesso não autorizado."
+        });
+        return;
+      }
+      res.set("Cache-Control", "private, no-store");
+
       const balanceResult = await krakenPrivate("/0/private/Balance");
       const earnResult = await krakenPrivate("/0/private/Earn/Allocations", {
         converted_asset: "USD",
@@ -800,6 +810,20 @@ exports.binancePortfolio = onRequest(
         res.status(204).send("");
         return;
       }
+
+      if (req.method !== "GET") {
+        sendMethodNotAllowed(res);
+        return;
+      }
+
+      const investmentAccess = await authorizeInvestmentRequest(req, admin.auth());
+      if (!investmentAccess.allowed) {
+        res.status(investmentAccess.status).json({
+          error: investmentAccess.status === 401 ? "Autenticação necessária." : "Acesso não autorizado."
+        });
+        return;
+      }
+      res.set("Cache-Control", "private, no-store");
 
       // 1) Fetch Spot + Earn (with pagination on Earn)
       const [account, flexRows, lockedRows] = await Promise.all([

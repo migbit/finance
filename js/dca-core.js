@@ -82,7 +82,7 @@ export async function ensureMonthsExist(endYM) {
   }));
 }
 
-export async function loadParams() {
+export async function loadParams({ readOnly = false } = {}) {
   try {
     const snap = await getDoc(SETTINGS_D);
     if (snap.exists()) {
@@ -108,13 +108,13 @@ export async function loadParams() {
       
       if (legacy55_45 || legacy75_25 || outdatedPlan || old152WithNewPct) {
         const upgraded = { ...normalized, pctSWDA: DEFAULTS.pctSWDA, pctAGGH: DEFAULTS.pctAGGH, monthlyContribution: DEFAULTS.monthlyContribution };
-        await saveParams(upgraded);
+        if (!readOnly) await saveParams(upgraded);
         return upgraded;
       }
       return normalized;
     }
     
-    await setDoc(SETTINGS_D, DEFAULTS);
+    if (!readOnly) await setDoc(SETTINGS_D, DEFAULTS);
     return { ...DEFAULTS };
   } catch (err) {
     console.error('Error loading params:', err);
@@ -249,7 +249,7 @@ function normalizeTimestamp(value) {
   return Number.isNaN(asDate.getTime()) ? null : asDate;
 }
 
-export async function loadShareQuantities() {
+export async function loadShareQuantities({ readOnly = false } = {}) {
   try {
     const snap = await getDoc(SHARES_DOC);
     if (snap.exists()) {
@@ -272,8 +272,12 @@ export async function loadShareQuantities() {
         vwce: Number(vwceLS) || 0,
         aggh: Number(agghLS) || 0
       };
-      await saveShareQuantities(shares);
-      console.log('Migrated shares from localStorage to Firebase');
+      if (!readOnly) {
+        await saveShareQuantities(shares);
+        localStorage.removeItem('dca_etf_qty_vwce');
+        localStorage.removeItem('dca_etf_qty_aggh');
+        console.log('Migrated shares from localStorage to Firebase');
+      }
       return shares;
     }
 

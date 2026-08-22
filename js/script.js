@@ -12,6 +12,28 @@
 // Global navigation builder
 // -------------------------------------------
 
+import {
+  filterNavigation,
+  findModuleGroup,
+  getModuleAccess,
+  isFilipa,
+  investmentsReleased
+} from './access-control.js';
+
+document.documentElement.classList.add('app-access-pending');
+const accessStyle = document.createElement('style');
+accessStyle.textContent = `
+  html.app-access-pending body main { visibility: hidden; }
+  .access-message { max-width: 680px; margin: 4rem auto; padding: 1.5rem; text-align: center; }
+  .access-readonly-banner { margin: 0 0 1rem; padding: .75rem 1rem; border-radius: 10px; background: #fff4ce; color: #5f4700; }
+`;
+document.head.appendChild(accessStyle);
+
+let currentUser = null;
+let accessResolved = false;
+let resolveAccessReady;
+const accessReady = new Promise(resolve => { resolveAccessReady = resolve; });
+
 const NAV_GROUPS = [
   {
     label: '🏠 Apartamentos',
@@ -111,10 +133,12 @@ function detectActiveKey() {
   const match = ACTIVE_KEY_MATCHERS.find(entry =>
     entry.patterns.some(pattern => path.includes(pattern))
   );
-  return match ? match.key : '';
+  if (match) return match.key;
+  if (!path.includes('/modules/')) return '';
+  return path.split('/').pop()?.replace(/\.html$/, '') || '';
 }
 
-function buildGlobalNav() {
+function buildGlobalNav(user = currentUser) {
   const body = document.body;
   if (!body) return;
 
@@ -146,7 +170,7 @@ function buildGlobalNav() {
   const activeKey = detectActiveKey();
   const linksWrap = header.querySelector('.nav-links');
 
-  NAV_GROUPS.forEach(group => {
+  filterNavigation(NAV_GROUPS, user?.uid).forEach(group => {
     const groupEl = document.createElement('div');
     groupEl.className = 'nav-group';
     groupEl.setAttribute('data-nav-group', '');
@@ -178,6 +202,94 @@ function buildGlobalNav() {
   });
 
   setupNavInteractions(header);
+  bindAuthControls(header);
+  atualizarInterface(user);
+}
+
+function bindAuthControls(root = document) {
+  const loginBtn = root.querySelector('#login-btn');
+  const logoutBtn = root.querySelector('#logout-btn');
+  if (loginBtn && !loginBtn.__authBound) {
+    loginBtn.__authBound = true;
+    loginBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      loginComGoogle();
+    });
+  }
+  if (logoutBtn && !logoutBtn.__authBound) {
+    logoutBtn.__authBound = true;
+    logoutBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      logout();
+    });
+  }
+}
+
+function currentPageAccess(user = currentUser) {
+  const moduleKey = detectActiveKey();
+  const groupKey = findModuleGroup(NAV_GROUPS, moduleKey);
+  return {
+    moduleKey,
+    groupKey,
+    mode: moduleKey ? getModuleAccess(user?.uid, moduleKey, groupKey) : (user ? 'write' : 'none')
+  };
+}
+
+function renderAccessMessage(message) {
+  const main = document.querySelector('main');
+  if (main) {
+    main.innerHTML = `<section class="card access-message"><h2>Acesso restrito</h2><p>${message}</p></section>`;
+  }
+}
+
+function clearPortfolioBrowserCache() {
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('portfolio_data_')) keys.push(key);
+    }
+    keys.forEach(key => localStorage.removeItem(key));
+  } catch { /* storage can be unavailable */ }
+}
+
+function enforcePageAccess(user = currentUser) {
+  if (isFilipa(user?.uid) && !investmentsReleased()) {
+    try {
+      clearPortfolioBrowserCache();
+      localStorage.removeItem('dca_etf_qty_vwce');
+      localStorage.removeItem('dca_etf_qty_aggh');
+    } catch { /* storage can be unavailable */ }
+  }
+
+  const access = currentPageAccess(user);
+  document.body.dataset.accessMode = access.mode;
+  document.body.classList.toggle('is-readonly', access.mode === 'read');
+
+  if (access.moduleKey && access.mode === 'none') {
+    renderAccessMessage(user
+      ? 'A tua conta não tem autorização para consultar esta área.'
+      : 'Inicia sessão para consultar esta área.');
+  } else if (access.mode === 'read') {
+    const main = document.querySelector('main');
+    if (main && !main.querySelector('.access-readonly-banner')) {
+      const banner = document.createElement('p');
+      banner.className = 'access-readonly-banner';
+      banner.textContent = 'Modo de consulta: podes ver estes dados, mas não alterá-los.';
+      main.prepend(banner);
+    }
+  }
+
+  document.documentElement.classList.remove('app-access-pending');
+  return access;
+}
+
+export function whenAccessResolved() {
+  return accessReady;
+}
+
+export function getCurrentPageAccess() {
+  return currentPageAccess(currentUser);
 }
 
 function initNavWhenReady() {
@@ -326,24 +438,22 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e){ /* ignore */ }
   });
 
-  // Auth UI bindings if present
-  const loginBtn = document.getElementById('login-btn');
-  const logoutBtn = document.getElementById('logout-btn');
-  if (loginBtn) {
-    console.log("Login button found, adding event listener");
-    loginBtn.addEventListener('click', loginComGoogle);
-  } else {
-    console.log("Login button not found on this page.");
-  }
-  if (logoutBtn) {
-    console.log("Logout button found, adding event listener");
-    logoutBtn.addEventListener('click', logout);
-  } else {
-    console.log("Logout button not found on this page.");
-  }
+  bindAuthControls();
 
   // Auth state
   onAuthStateChanged(auth, (user) => {
+    const nextUid = user?.uid || null;
+    const previousUid = currentUser?.uid || null;
+    if (accessResolved && nextUid !== previousUid) {
+      clearPortfolioBrowserCache();
+      window.location.reload();
+      return;
+    }
+    currentUser = user;
+    accessResolved = true;
+    buildGlobalNav(user);
+    const access = enforcePageAccess(user);
+    resolveAccessReady({ user, ...access });
     if (user) {
       console.log("User is authenticated:", user.displayName);
       atualizarInterface(user);
@@ -372,6 +482,14 @@ function atualizarInterface(user) {
     if (logoutBtn) logoutBtn.style.display = 'none';
     if (userInfo) userInfo.style.display = 'none';
   }
+}
+
+export function isCurrentUserFilipa() {
+  return isFilipa(currentUser?.uid);
+}
+
+export function areInvestmentsReleased() {
+  return investmentsReleased();
 }
 
 // Utilities

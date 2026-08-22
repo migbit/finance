@@ -1,4 +1,4 @@
-import { db } from './script.js';
+import { db, whenAccessResolved } from './script.js';
 import { showToast } from './toast.js';
 import {
   collection,
@@ -29,6 +29,7 @@ const state = {
   endYM: null,
   values: {},
   invested: {},
+  accessMode: 'write',
   showPastYears: false,
   showFutureYears: false,
   chart: null
@@ -619,14 +620,31 @@ function render() {
   updateChart(months);
   updateProgress(months);
   updateSummary(months);
+  applyRevolutReadOnlyUI();
+}
+
+function applyRevolutReadOnlyUI() {
+  if (state.accessMode !== 'read') return;
+  document.querySelectorAll('.revolut-value-input, .revolut-invested-input, #revolut-end-date')
+    .forEach(element => { element.disabled = true; });
+  const saveButton = document.getElementById('revolut-save-params');
+  if (saveButton) {
+    saveButton.disabled = true;
+    saveButton.hidden = true;
+  }
 }
 
 async function init() {
+  const access = await whenAccessResolved();
+  if (access.moduleKey !== 'dca-revolut' || access.mode === 'none') return;
+  state.accessMode = access.mode;
   const params = await loadParams();
-  try {
-    await migrateInitialHistory(params);
-  } catch (err) {
-    console.error('Erro ao inicializar o histórico Revolut:', err);
+  if (state.accessMode === 'write') {
+    try {
+      await migrateInitialHistory(params);
+    } catch (err) {
+      console.error('Erro ao inicializar o histórico Revolut:', err);
+    }
   }
   state.endYM = parseYMString(params?.endYM) || params?.endYM || getDefaultEndYM();
   if (!state.endYM?.y) state.endYM = getDefaultEndYM();

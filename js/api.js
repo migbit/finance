@@ -1,5 +1,6 @@
 import { CONFIG } from './config.js';
 import { db } from './script.js';
+import { getAuth } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 import {
   collection,
   doc,
@@ -61,6 +62,12 @@ export class EnhancedStorage {
     } catch {
       return null;
     }
+  }
+
+  static remove(key) {
+    const store = getLocalStorageSafe();
+    if (!store) return;
+    try { store.removeItem(key); } catch { /* storage can be unavailable */ }
   }
 
   static clearExpired() {
@@ -155,12 +162,29 @@ export const Storage = {
 
 export class ApiService {
   static async fetchPortfolio() {
+    const user = getAuth().currentUser;
+    if (!user) throw new Error('Autenticação necessária.');
+
+    // Keep a short cache per Firebase account. Besides making reloads instant,
+    // this prevents each page refresh from consuming another exchange API call.
+    const cacheKey = `${EnhancedStorage.PREFIXES.PORTFOLIO}api_${user.uid}`;
+    const cachedPortfolio = EnhancedStorage.getWithTTL(cacheKey);
+    if (cachedPortfolio) return cachedPortfolio;
+
+    const idToken = await user.getIdToken();
     const tries = [CONFIG.API_URL, CONFIG.CF_URL];
     for (const url of tries) {
       if (!url) continue;
       try {
-        const res = await fetch(url, { cache: 'no-cache' });
-        if (res.ok) return await res.json();
+        const res = await fetch(url, {
+          cache: 'no-cache',
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        if (res.ok) {
+          const portfolio = await res.json();
+          EnhancedStorage.setWithTTL(cacheKey, portfolio, 5 * 60 * 1000);
+          return portfolio;
+        }
       } catch {
         // ignore, try fallback
       }

@@ -94,6 +94,29 @@ class CryptoPortfolioApp {
     this._eventsAttached = false;
     this._monthlyAssetsActiveView = 'summary';
     this._monthlyAssetsSelectedAsset = '__TOP__';
+    this.accessMode = 'write';
+  }
+
+  setAccessMode(mode){
+    this.accessMode = mode === 'read' ? 'read' : 'write';
+  }
+
+  applyReadOnlyUI(){
+    if (this.accessMode !== 'read') return;
+    document.body.classList.add('is-readonly');
+
+    const mutationSelectors = [
+      '#btn-add', '#m-save', '#inv-add-btn', '#inv-save-qty',
+      '#inv-save-apy', '#inv-save-deallocate', '#sell-confirm',
+      '.col-deallocate button', '[data-action="edit"]', '[data-action="delete"]'
+    ];
+    document.querySelectorAll(mutationSelectors.join(',')).forEach(element => {
+      element.disabled = true;
+      element.hidden = true;
+    });
+
+    document.querySelectorAll('#modal-backdrop input, #modal-backdrop select, #investment-modal-backdrop input, #investment-modal-backdrop select, #sell-modal-backdrop input, #sell-modal-backdrop select')
+      .forEach(element => { element.disabled = true; });
   }
 
   initDOMCache(){
@@ -419,10 +442,9 @@ class CryptoPortfolioApp {
       busy: true,
       message: 'A carregar dados do portfólio...'
     });
-    const cachedPortfolio = await this.loadPortfolioCache();
-    if (cachedPortfolio) {
-      this.restoreCachedPortfolio(cachedPortfolio);
-    }
+    // Remove only the old shared cache. ApiService replaces it with a cache
+    // scoped to the authenticated Firebase UID.
+    EnhancedStorage.remove(EnhancedStorage.PREFIXES.PORTFOLIO + 'main');
     const sortPrefs = Storage.getJSON('crypto_sort_preferences');
     if (sortPrefs) {
       this.state.sortColumn = sortPrefs.column || null;
@@ -466,11 +488,16 @@ class CryptoPortfolioApp {
 
       await this.renderAll(api.generatedAt);
       this.initIntersectionObservers();
-      await this.ensureMonthlyAssetSnapshot();
+      if (this.accessMode !== 'read') {
+        await this.ensureMonthlyAssetSnapshot();
+      }
       await this.loadMonthlyAssetSnapshots();
       this.renderAssetSnapshotsTable();
       this.setupEvents();
-      this.saveMonthlyTotal();
+      if (this.accessMode !== 'read') {
+        this.saveMonthlyTotal();
+      }
+      this.applyReadOnlyUI();
       this.setLoadingState({ visible: false, busy: false });
       const errorEl = this.getCachedElement('errorMessage', '#error-message');
       if (errorEl) {
@@ -1247,7 +1274,6 @@ class CryptoPortfolioApp {
     this.updateSmallNote();
     this.listActiveInvestments();
     this.renderAssetSnapshotsTable();
-    await this.savePortfolioCache();
   }
 
   renderKPIs(generatedAt){
