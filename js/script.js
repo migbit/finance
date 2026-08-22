@@ -39,6 +39,15 @@ const NAV_GROUPS = [
     ]
   },
   {
+    label: '📊 Investimentos',
+    key: 'investimentos',
+    links: [
+      { label: '📈 DCA TR', key: 'dca', slug: 'modules/dca.html', module: true },
+      { label: '📈 DCA Revolut', key: 'dca-revolut', slug: 'modules/dca-revolut.html', module: true },
+      { label: '🚀 Cripto', key: 'crypto', slug: 'modules/crypto.html', module: true }
+    ]
+  },
+  {
     label: '👩 Isabel',
     key: 'isabel',
     links: [
@@ -51,15 +60,6 @@ const NAV_GROUPS = [
     links: [
       { label: '🏋️ Ginásio', key: 'filipa-ginasio', slug: 'modules/filipa-ginasio.html', module: true },
       { label: '🥗 Alimentação', key: 'filipa-alimentacao', slug: 'modules/filipa-alimentacao.html', module: true }
-    ]
-  },
-  {
-    label: '📊 Investimentos',
-    key: 'investimentos',
-    links: [
-      { label: '📈 DCA TR', key: 'dca', slug: 'modules/dca.html', module: true },
-      { label: '📈 DCA Revolut', key: 'dca-revolut', slug: 'modules/dca-revolut.html', module: true },
-      { label: '🚀 Cripto', key: 'crypto', slug: 'modules/crypto.html', module: true }
     ]
   },
   {
