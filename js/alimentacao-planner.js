@@ -29,7 +29,9 @@ export function applyDailyPlanDate(profile = {}, dateKey = getLocalDateKey()) {
       ...profile,
       planDate: currentDateKey,
       selectedBreakfastId: '',
+      breakfastSkipped: false,
       selectedLunchId: '',
+      lunchExternal: false,
       selectedDinnerId: '',
       snacks: []
     },
@@ -92,7 +94,10 @@ export function adjustMealToCalories(meal, calorieTarget) {
 export function calculateDailyPlan({
   targetCalories,
   breakfast = null,
+  breakfastTarget = 600,
+  breakfastSkipped = false,
   lunch = null,
+  lunchExternal = false,
   dinner = null,
   snacks = [],
   lunchTarget = 840,
@@ -100,17 +105,20 @@ export function calculateDailyPlan({
 } = {}) {
   const target = Math.max(0, Math.round(finite(targetCalories)));
   const breakfastCalories = finite(breakfast?.calories);
+  const plannedBreakfastCalories = breakfast
+    ? breakfastCalories
+    : (breakfastSkipped ? 0 : Math.max(0, Math.round(finite(breakfastTarget))));
   const snackTotals = sumNutrition(snacks);
   const defaultSnackReserve = Math.max(
     0,
-    target - breakfastCalories - finite(lunchTarget) - finite(dinnerTarget)
+    target - plannedBreakfastCalories - finite(lunchTarget) - finite(dinnerTarget)
   );
   const hasEnteredSnacks = Array.isArray(snacks) && snacks.length > 0;
   const snackBudget = hasEnteredSnacks ? snackTotals.calories : defaultSnackReserve;
   const plannedLunchCalories = Math.max(0, Math.round(finite(lunchTarget)));
   const plannedDinnerCalories = Math.max(
     0,
-    target - breakfastCalories - plannedLunchCalories - Math.round(snackBudget)
+    target - plannedBreakfastCalories - plannedLunchCalories - Math.round(snackBudget)
   );
   const adjustedLunch = adjustMealToCalories(lunch, plannedLunchCalories);
   const adjustedDinner = adjustMealToCalories(dinner, plannedDinnerCalories);
@@ -121,11 +129,25 @@ export function calculateDailyPlan({
     ...snacks
   ]);
   const allMealsSelected = Boolean(breakfast && lunch && dinner);
-  const reservedSnackCalories = allMealsSelected && !hasEnteredSnacks ? defaultSnackReserve : 0;
-  const plannedCalories = Math.round(selectedNutrition.calories + reservedSnackCalories);
+  const breakfastResolved = Boolean(breakfast || breakfastSkipped);
+  const lunchResolved = Boolean(lunch || lunchExternal);
+  const allMealsResolved = Boolean(breakfastResolved && lunchResolved && dinner);
+  const reservedBreakfastCalories = !breakfast && !breakfastSkipped ? plannedBreakfastCalories : 0;
+  const reservedLunchCalories = !lunch ? plannedLunchCalories : 0;
+  const reservedDinnerCalories = !dinner ? plannedDinnerCalories : 0;
+  const reservedSnackCalories = !hasEnteredSnacks ? defaultSnackReserve : 0;
+  const reservedMealCalories = (
+    reservedBreakfastCalories
+    + reservedLunchCalories
+    + reservedDinnerCalories
+  );
+  const plannedCalories = Math.round(
+    selectedNutrition.calories + reservedMealCalories + reservedSnackCalories
+  );
 
   return {
     targetCalories: target,
+    plannedBreakfastCalories,
     lunchCalories: plannedLunchCalories,
     dinnerCalories: plannedDinnerCalories,
     snackBudget: Math.round(snackBudget),
@@ -133,12 +155,19 @@ export function calculateDailyPlan({
     adjustedLunch,
     adjustedDinner,
     selectedNutrition,
+    reservedBreakfastCalories: Math.round(reservedBreakfastCalories),
+    reservedLunchCalories: Math.round(reservedLunchCalories),
+    reservedDinnerCalories: Math.round(reservedDinnerCalories),
+    reservedMealCalories: Math.round(reservedMealCalories),
     reservedSnackCalories: Math.round(reservedSnackCalories),
     confirmedCalories: Math.round(selectedNutrition.calories),
     plannedCalories,
     caloriesRemaining: target - Math.round(selectedNutrition.calories),
     allMealsSelected,
-    closesCalorieTarget: allMealsSelected && plannedCalories === target
+    allMealsResolved,
+    breakfastResolved,
+    lunchResolved,
+    closesCalorieTarget: allMealsResolved && plannedCalories === target
   };
 }
 

@@ -21,7 +21,7 @@
       <div>
         <p class="food-eyebrow">Plano pessoal ovolactovegetariano</p>
         <h1 id="food-title">Alimentação</h1>
-        <p>Escolhe uma das quatro receitas de pequeno-almoço. A partir dessa escolha, o programa calcula o que resta para almoço, jantar e lanche.</p>
+        <p>Entra diretamente na refeição que queres planear. Podes omitir o pequeno-almoço, assinalar um almoço fora e continuar a escolher o jantar.</p>
       </div>
       <div class="food-profile-state" data-state="complete">
         <span aria-hidden="true"></span>
@@ -32,16 +32,37 @@
       </div>
     </section>
 
+    <nav class="food-meal-switcher" aria-label="Escolher refeição a planear">
+      <button type="button" data-food-meal-jump="breakfast" aria-current="true">
+        <span>01</span>
+        <strong>Pequeno-almoço</strong>
+        <small id="food-breakfast-jump-state">Por escolher</small>
+      </button>
+      <button type="button" data-food-meal-jump="lunch">
+        <span>02</span>
+        <strong>Almoço</strong>
+        <small id="food-lunch-jump-state">Por escolher</small>
+      </button>
+      <button type="button" data-food-meal-jump="dinner">
+        <span>03</span>
+        <strong>Jantar</strong>
+        <small id="food-dinner-jump-state">Por escolher</small>
+      </button>
+    </nav>
+
     <section class="food-layout">
       <div class="food-main-column">
-        <section class="food-recipes card" aria-labelledby="food-recipes-title">
+        <section class="food-recipes card" id="food-breakfast-stage" aria-labelledby="food-recipes-title">
           <div class="food-section-heading food-section-heading--actions">
             <div>
               <p class="food-eyebrow">Receitas</p>
               <h2 id="food-recipes-title">Pequenos-almoços</h2>
               <p>Quatro opções dimensionadas para o alvo-base e para diferentes tipos de manhã. Os valores podem ser afinados quando houver rótulos diferentes.</p>
             </div>
-            <button type="button" id="food-add-recipe">+ Criar receita</button>
+            <div class="food-heading-actions">
+              <button type="button" id="food-skip-breakfast">Não tomar hoje</button>
+              <button type="button" id="food-add-recipe">+ Criar receita</button>
+            </div>
           </div>
 
           <div class="food-breakfast-targets" aria-label="Metas usadas nas receitas">
@@ -58,17 +79,9 @@
           <div class="food-section-heading">
             <div>
               <p class="food-eyebrow">Plano diário</p>
-              <h2 id="food-plan-title">Do pequeno-almoço ao jantar</h2>
-              <p>As próximas refeições serão recomendadas em função do que já escolheste.</p>
+              <h2 id="food-plan-title">Escolhe qualquer refeição</h2>
+              <p>Cada refeição pode ser planeada de forma independente. O programa reserva calorias para o que ainda não estiver definido.</p>
             </div>
-          </div>
-
-          <div class="food-sequence" aria-label="Sequência das recomendações">
-            <article data-sequence="active"><span>1</span><div><strong>Escolher pequeno-almoço</strong><small>Uma das quatro receitas.</small></div></article>
-            <i aria-hidden="true">→</i>
-            <article><span>2</span><div><strong>Recomendar almoço</strong><small>Compensa o que falta.</small></div></article>
-            <i aria-hidden="true">→</i>
-            <article><span>3</span><div><strong>Recomendar jantar</strong><small>Fecha o total diário.</small></div></article>
           </div>
 
           <div id="food-energy-result">
@@ -85,7 +98,7 @@
           <div id="food-breakfast-selection" class="food-breakfast-selection" hidden>
             <span aria-hidden="true">✓</span>
             <div>
-              <small>Pequeno-almoço escolhido</small>
+              <small id="food-selected-breakfast-label">Pequeno-almoço escolhido</small>
               <strong id="food-selected-breakfast-name">—</strong>
               <p id="food-selected-breakfast-balance">—</p>
             </div>
@@ -99,7 +112,10 @@
                 <h3 id="food-lunch-title">Escolher almoço</h3>
                 <p id="food-lunch-context">As opções são ordenadas pelo equilíbrio com o pequeno-almoço.</p>
               </div>
-              <strong id="food-lunch-calorie-target">≈ 840 kcal</strong>
+              <div class="food-stage-heading-actions">
+                <strong id="food-lunch-calorie-target">≈ 840 kcal</strong>
+                <button type="button" id="food-external-lunch">Almoço fora</button>
+              </div>
             </div>
             <div id="food-lunch-grid" class="food-main-meal-grid"></div>
           </section>
@@ -107,7 +123,7 @@
           <section id="food-dinner-stage" class="food-meal-stage" aria-labelledby="food-dinner-title" hidden>
             <div class="food-meal-stage-heading">
               <div>
-                <p class="food-eyebrow">Depois do almoço</p>
+                <p class="food-eyebrow">Escolha independente</p>
                 <h3 id="food-dinner-title">Escolher jantar</h3>
                 <p id="food-dinner-context">O jantar compensa o que já foi escolhido e não repete o almoço.</p>
               </div>
@@ -170,7 +186,7 @@
             </div>
             <div class="food-day-balance-grid">
               <div><span>Confirmado</span><strong id="food-day-confirmed">—</strong></div>
-              <div><span>Reserva de lanche</span><strong id="food-day-reserved">—</strong></div>
+              <div><span>Reservas</span><strong id="food-day-reserved">—</strong></div>
               <div><span>Meta</span><strong id="food-day-target">2 400 kcal</strong></div>
             </div>
             <p id="food-day-balance-note"></p>

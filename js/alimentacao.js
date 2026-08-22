@@ -64,7 +64,9 @@ function normalizeProfile(profile = {}) {
   merged = dailyPlan.profile;
   if (dailyPlan.didReset) merged.updatedAt = new Date().toISOString();
   merged.selectedBreakfastId = String(merged.selectedBreakfastId || '');
+  merged.breakfastSkipped = Boolean(merged.breakfastSkipped);
   merged.selectedLunchId = String(merged.selectedLunchId || '');
+  merged.lunchExternal = Boolean(merged.lunchExternal);
   merged.selectedDinnerId = String(merged.selectedDinnerId || '');
   merged.snacks = Array.isArray(merged.snacks)
     ? merged.snacks.filter(snack => snack && Number(snack.calories) > 0).map(snack => ({
@@ -109,9 +111,15 @@ const elements = {
   recipeForm: document.getElementById('food-recipe-form'),
   recipeDialogTitle: document.getElementById('food-recipe-dialog-title'),
   breakfastSelection: document.getElementById('food-breakfast-selection'),
+  selectedBreakfastLabel: document.getElementById('food-selected-breakfast-label'),
   selectedBreakfastName: document.getElementById('food-selected-breakfast-name'),
   selectedBreakfastBalance: document.getElementById('food-selected-breakfast-balance'),
   clearBreakfast: document.getElementById('food-clear-breakfast'),
+  skipBreakfast: document.getElementById('food-skip-breakfast'),
+  externalLunch: document.getElementById('food-external-lunch'),
+  breakfastJumpState: document.getElementById('food-breakfast-jump-state'),
+  lunchJumpState: document.getElementById('food-lunch-jump-state'),
+  dinnerJumpState: document.getElementById('food-dinner-jump-state'),
   lunchStage: document.getElementById('food-lunch-stage'),
   lunchContext: document.getElementById('food-lunch-context'),
   lunchCalorieTarget: document.getElementById('food-lunch-calorie-target'),
@@ -150,15 +158,15 @@ function validateSelections() {
   const breakfast = state.recipes.find(recipe => recipe.id === state.profile.selectedBreakfastId);
   if (!breakfast || breakfast.meal !== 'breakfast') {
     state.profile.selectedBreakfastId = '';
-    state.profile.selectedLunchId = '';
-    state.profile.selectedDinnerId = '';
-    return;
+  } else {
+    state.profile.breakfastSkipped = false;
   }
 
   const lunch = state.recipes.find(recipe => recipe.id === state.profile.selectedLunchId);
   if (!recipeSupportsStage(lunch, 'lunch')) {
     state.profile.selectedLunchId = '';
-    state.profile.selectedDinnerId = '';
+  } else {
+    state.profile.lunchExternal = false;
   }
 
   const dinner = state.recipes.find(recipe => recipe.id === state.profile.selectedDinnerId);
@@ -275,17 +283,33 @@ function getSelectedDinner() {
   return getSelectedRecipe('selectedDinnerId');
 }
 
+function getPlanningAllocation(energy, allocation) {
+  if (!state.profile.breakfastSkipped) return allocation;
+  const lunch = Math.round((energy.target * 0.4) / 10) * 10;
+  const dinner = Math.round((energy.target * 0.4) / 10) * 10;
+  return {
+    breakfast: 0,
+    lunch,
+    dinner,
+    snacks: [Math.max(0, energy.target - lunch - dinner)]
+  };
+}
+
 function getDailyPlan() {
   const { energy, allocation } = getCurrentEnergyContext();
   if (!energy || !allocation) return null;
+  const targets = getPlanningAllocation(energy, allocation);
   return calculateDailyPlan({
     targetCalories: energy.target,
     breakfast: getSelectedBreakfast(),
+    breakfastTarget: targets.breakfast,
+    breakfastSkipped: state.profile.breakfastSkipped,
     lunch: getSelectedLunch(),
+    lunchExternal: state.profile.lunchExternal,
     dinner: getSelectedDinner(),
     snacks: state.profile.snacks,
-    lunchTarget: allocation.lunch,
-    dinnerTarget: allocation.dinner
+    lunchTarget: targets.lunch,
+    dinnerTarget: targets.dinner
   });
 }
 
@@ -312,24 +336,25 @@ function renderEnergyPlan() {
     return;
   }
 
-  const breakfast = getSelectedBreakfast();
-  const plan = breakfast ? getDailyPlan() : null;
+  const plan = getDailyPlan();
   elements.energyResult.hidden = false;
   elements.energyTarget.textContent = formatCalories(energy.target);
   elements.energyRange.textContent = 'base diária atual';
-  elements.breakfastTarget.textContent = formatCalories(breakfast?.calories || allocation.breakfast);
-  elements.lunchTarget.textContent = formatCalories(plan?.lunchCalories || allocation.lunch);
-  elements.dinnerTarget.textContent = formatCalories(plan?.dinnerCalories || allocation.dinner);
-  elements.snacksTarget.textContent = formatCalories(plan?.snackBudget ?? (allocation.snacks[0] || 0));
+  elements.breakfastTarget.textContent = formatCalories(plan.plannedBreakfastCalories);
+  elements.lunchTarget.textContent = formatCalories(plan.lunchCalories);
+  elements.dinnerTarget.textContent = formatCalories(plan.dinnerCalories);
+  elements.snacksTarget.textContent = formatCalories(plan.snackBudget);
 
-  if (!breakfast) {
-    elements.energyNote.textContent = 'Escolhe o pequeno-almoço para ordenar os almoços e calcular o restante dia.';
-  } else if (plan?.allMealsSelected && state.profile.snacks.length) {
+  if (state.profile.breakfastSkipped) {
+    elements.energyNote.textContent = 'Sem pequeno-almoço: as calorias foram redistribuídas pelo almoço, jantar e lanches.';
+  } else if (state.profile.lunchExternal) {
+    elements.energyNote.textContent = `Almoço fora: ficam reservadas ${formatCalories(plan.reservedLunchCalories)}; escolhe o jantar normalmente.`;
+  } else if (plan.allMealsResolved && state.profile.snacks.length) {
     elements.energyNote.textContent = 'O jantar foi ajustado aos lanches registados para fechar a meta diária.';
-  } else if (plan?.allMealsSelected) {
+  } else if (plan.allMealsResolved) {
     elements.energyNote.textContent = `O plano fecha a meta com ${formatCalories(plan.reservedSnackCalories)} reservadas para lanche.`;
   } else {
-    elements.energyNote.textContent = 'Almoço, jantar e lanche serão recalculados à medida que fizeres escolhas.';
+    elements.energyNote.textContent = 'As refeições por escolher ficam com uma reserva calórica e serão recalculadas à medida que decidires.';
   }
 }
 
@@ -581,72 +606,107 @@ function renderRecommendationGrid(stage, calorieTarget, consumedNutrition, exclu
 
 function renderBreakfastSelection() {
   const selected = getSelectedBreakfast();
-  if (!selected) {
+  elements.skipBreakfast.textContent = state.profile.breakfastSkipped
+    ? 'Voltar a escolher'
+    : 'Não tomar hoje';
+  if (!selected && !state.profile.breakfastSkipped) {
     elements.breakfastSelection.hidden = true;
     return;
   }
   const { energy } = getCurrentEnergyContext();
   elements.breakfastSelection.hidden = false;
-  elements.selectedBreakfastName.textContent = selected.name;
-  elements.selectedBreakfastBalance.textContent = energy
-    ? `${formatCalories(selected.calories)} escolhidas · restam ${formatCalories(Math.max(0, energy.target - selected.calories))} para almoço, jantar e lanches.`
-    : 'Escolha guardada.';
+  elements.selectedBreakfastLabel.textContent = state.profile.breakfastSkipped
+    ? 'Pequeno-almoço'
+    : 'Pequeno-almoço escolhido';
+  elements.breakfastSelection.dataset.state = state.profile.breakfastSkipped ? 'skipped' : 'selected';
+  elements.selectedBreakfastName.textContent = state.profile.breakfastSkipped
+    ? 'Não tomado hoje'
+    : selected.name;
+  elements.clearBreakfast.textContent = state.profile.breakfastSkipped
+    ? 'Escolher receita'
+    : 'Alterar escolha';
+  if (state.profile.breakfastSkipped) {
+    elements.selectedBreakfastName.textContent = 'Não tomado hoje';
+    elements.selectedBreakfastBalance.textContent = '0 kcal · a meta diária foi redistribuída pelas restantes refeições.';
+  } else {
+    elements.selectedBreakfastBalance.textContent = energy
+      ? `${formatCalories(selected.calories)} escolhidas · restam ${formatCalories(Math.max(0, energy.target - selected.calories))} para almoço, jantar e lanches.`
+      : 'Escolha guardada.';
+  }
+}
+
+function renderMealJumpStates() {
+  const breakfast = getSelectedBreakfast();
+  const lunch = getSelectedLunch();
+  const dinner = getSelectedDinner();
+  const states = [
+    {
+      element: elements.breakfastJumpState,
+      status: breakfast ? (breakfast.shortName || breakfast.name) : (state.profile.breakfastSkipped ? 'Não tomado' : 'Por escolher'),
+      value: breakfast ? 'selected' : (state.profile.breakfastSkipped ? 'skipped' : 'pending')
+    },
+    {
+      element: elements.lunchJumpState,
+      status: lunch ? (lunch.shortName || lunch.name) : (state.profile.lunchExternal ? 'Almoço fora' : 'Por escolher'),
+      value: lunch ? 'selected' : (state.profile.lunchExternal ? 'external' : 'pending')
+    },
+    {
+      element: elements.dinnerJumpState,
+      status: dinner ? (dinner.shortName || dinner.name) : 'Por escolher',
+      value: dinner ? 'selected' : 'pending'
+    }
+  ];
+  const buttons = Array.from(document.querySelectorAll('[data-food-meal-jump]'));
+  states.forEach((item, index) => {
+    item.element.textContent = item.status;
+    buttons[index]?.setAttribute('data-state', item.value);
+  });
 }
 
 function renderMealStages() {
   const breakfast = getSelectedBreakfast();
   const lunch = getSelectedLunch();
-  const dinner = getSelectedDinner();
-  const sequence = Array.from(document.querySelectorAll('.food-sequence article'));
-  sequence.forEach(item => item.removeAttribute('data-sequence'));
-
-  if (!breakfast) {
-    elements.lunchStage.hidden = true;
-    elements.dinnerStage.hidden = true;
-    elements.snacksStage.hidden = true;
-    elements.dayBalance.hidden = true;
-    if (sequence[0]) sequence[0].dataset.sequence = 'active';
-    return;
-  }
-
   const plan = getDailyPlan();
+  if (!plan) return;
   const snackTotals = sumNutrition(state.profile.snacks);
   elements.lunchStage.hidden = false;
+  elements.dinnerStage.hidden = false;
   elements.snacksStage.hidden = false;
   elements.dayBalance.hidden = false;
+  elements.externalLunch.textContent = state.profile.lunchExternal
+    ? 'Escolher receita'
+    : 'Almoço fora';
   elements.lunchCalorieTarget.textContent = `Meta · ${formatCalories(plan.lunchCalories)}`;
   const lunchRecommendations = renderRecommendationGrid(
     'lunch',
     plan.lunchCalories,
     sumNutrition([breakfast, snackTotals])
   );
-  elements.lunchContext.textContent = lunchRecommendations[0]
-    ? `${lunchRecommendations[0].meal.name}: ${lunchRecommendations[0].reason}`
-    : 'Cria uma receita de almoço ou jantar para continuar.';
-
-  if (sequence[0]) sequence[0].dataset.sequence = 'complete';
-  if (!lunch) {
-    elements.dinnerStage.hidden = true;
-    if (sequence[1]) sequence[1].dataset.sequence = 'active';
-    renderSnacks(plan);
-    renderDayBalance(plan);
-    return;
+  if (state.profile.lunchExternal) {
+    elements.lunchContext.textContent = `Almoço fora assinalado: reservamos ${formatCalories(plan.lunchCalories)}. Podes trocar esta estimativa por uma receita a qualquer momento.`;
+  } else {
+    elements.lunchContext.textContent = lunchRecommendations[0]
+      ? `${lunchRecommendations[0].meal.name}: ${lunchRecommendations[0].reason}`
+      : 'Cria uma receita de almoço ou jantar para teres opções nesta secção.';
   }
 
-  elements.dinnerStage.hidden = false;
   elements.dinnerCalorieTarget.textContent = `Meta · ${formatCalories(plan.dinnerCalories)}`;
   const consumedBeforeDinner = sumNutrition([breakfast, plan.adjustedLunch, snackTotals]);
   const dinnerRecommendations = renderRecommendationGrid(
     'dinner',
     plan.dinnerCalories,
     consumedBeforeDinner,
-    [lunch.id]
+    lunch ? [lunch.id] : []
   );
-  elements.dinnerContext.textContent = dinnerRecommendations[0]
-    ? `${dinnerRecommendations[0].meal.name}: ${dinnerRecommendations[0].reason}`
-    : 'Cria outra receita principal para não repetir o almoço.';
-  if (sequence[1]) sequence[1].dataset.sequence = 'complete';
-  if (sequence[2]) sequence[2].dataset.sequence = dinner ? 'complete' : 'active';
+  if (state.profile.lunchExternal) {
+    elements.dinnerContext.textContent = `O almoço fora mantém uma reserva de ${formatCalories(plan.lunchCalories)}. Como os macros são desconhecidos, o jantar é ordenado pelo restante plano conhecido.`;
+  } else if (!lunch) {
+    elements.dinnerContext.textContent = `Sem almoço escolhido, mantemos uma reserva de ${formatCalories(plan.lunchCalories)} e mostramos já as opções de jantar.`;
+  } else {
+    elements.dinnerContext.textContent = dinnerRecommendations[0]
+      ? `${dinnerRecommendations[0].meal.name}: ${dinnerRecommendations[0].reason}`
+      : 'Cria outra receita principal para não repetir o almoço.';
+  }
   renderSnacks(plan);
   renderDayBalance(plan);
 }
@@ -733,15 +793,14 @@ function renderSnackPresets() {
 }
 
 function renderSnacks(plan) {
-  const breakfast = getSelectedBreakfast();
-  const { energy, allocation } = getCurrentEnergyContext();
-  if (!breakfast || !energy || !allocation) return;
+  const { energy } = getCurrentEnergyContext();
+  if (!plan || !energy) return;
 
   const snackTotals = sumNutrition(state.profile.snacks);
   const maximum = getMaximumSnackCalories({
     targetCalories: energy.target,
-    breakfastCalories: breakfast.calories,
-    lunchCalories: allocation.lunch,
+    breakfastCalories: plan.plannedBreakfastCalories,
+    lunchCalories: plan.lunchCalories,
     minimumDinnerCalories: 400
   });
   elements.snackBudget.textContent = state.profile.snacks.length
@@ -785,20 +844,23 @@ function renderDayBalance(plan) {
   elements.dayProgress.setAttribute('aria-valuemax', String(energy.target));
   elements.dayProgress.setAttribute('aria-valuenow', String(plan.confirmedCalories));
   elements.dayConfirmed.textContent = formatCalories(plan.confirmedCalories);
-  elements.dayReserved.textContent = state.profile.snacks.length
-    ? 'Substituída pelos lanches'
-    : formatCalories(plan.snackBudget);
+  const reservedCalories = plan.reservedMealCalories + plan.reservedSnackCalories;
+  elements.dayReserved.textContent = formatCalories(reservedCalories);
   elements.dayTarget.textContent = formatCalories(energy.target);
-  elements.dayBalanceValue.textContent = plan.closesCalorieTarget
-    ? `${formatCalories(plan.plannedCalories)} planeadas`
-    : `${formatCalories(plan.confirmedCalories)} selecionadas`;
+  elements.dayBalanceValue.textContent = `${formatCalories(plan.plannedCalories)} planeadas`;
 
-  if (!getSelectedLunch()) {
-    elements.dayBalanceNote.textContent = `Escolhe o almoço. O programa propõe ${formatCalories(plan.lunchCalories)} e mantém ${formatCalories(plan.snackBudget)} para lanches.`;
+  if (!plan.breakfastResolved) {
+    elements.dayBalanceNote.textContent = `O pequeno-almoço ainda não está definido; ficam reservadas ${formatCalories(plan.reservedBreakfastCalories)} até escolheres uma receita ou assinalares que não o vais tomar.`;
+  } else if (!plan.lunchResolved) {
+    elements.dayBalanceNote.textContent = `O almoço ainda não está definido; ficam reservadas ${formatCalories(plan.reservedLunchCalories)} sem impedir a escolha do jantar.`;
   } else if (!getSelectedDinner()) {
-    elements.dayBalanceNote.textContent = `Escolhe o jantar. O alvo atual é ${formatCalories(plan.dinnerCalories)} e será recalculado se adicionares lanches.`;
+    elements.dayBalanceNote.textContent = state.profile.lunchExternal
+      ? `O almoço fora fica reservado em ${formatCalories(plan.reservedLunchCalories)} e o jantar em ${formatCalories(plan.reservedDinnerCalories)}. Podes escolher o jantar já.`
+      : `O jantar ainda não está definido; ficam reservadas ${formatCalories(plan.reservedDinnerCalories)} e o alvo muda se adicionares lanches.`;
+  } else if (state.profile.lunchExternal) {
+    elements.dayBalanceNote.textContent = `O almoço fora conta como uma reserva de ${formatCalories(plan.reservedLunchCalories)}. Os seus macros não entram no resumo porque ainda são desconhecidos.`;
   } else if (!state.profile.snacks.length) {
-    elements.dayBalanceNote.textContent = `As três refeições estão ajustadas e ficam reservadas ${formatCalories(plan.reservedSnackCalories)} para adicionares um ou mais lanches.`;
+    elements.dayBalanceNote.textContent = `As refeições escolhidas estão ajustadas e ficam reservadas ${formatCalories(plan.reservedSnackCalories)} para adicionares um ou mais lanches.`;
   } else {
     elements.dayBalanceNote.textContent = `Plano fechado em ${formatCalories(plan.plannedCalories)}. O jantar foi ajustado para ${formatCalories(plan.dinnerCalories)} depois de contar os lanches.`;
   }
@@ -806,15 +868,15 @@ function renderDayBalance(plan) {
   const impractical = [plan.adjustedLunch, plan.adjustedDinner]
     .filter(Boolean)
     .some(meal => !meal.isPracticalPortion);
-  elements.dayBalance.dataset.state = impractical ? 'review' : 'ok';
+  elements.dayBalance.dataset.state = impractical ? 'review' : (plan.allMealsResolved ? 'ok' : 'pending');
   if (impractical) {
     elements.dayBalanceNote.textContent += ' Uma das porções fica fora do intervalo prático; revê os lanches ou escolhe outra receita.';
   }
 }
 
 function renderMacroSummary() {
-  const breakfast = getSelectedBreakfast();
-  if (!breakfast) {
+  const plan = getDailyPlan();
+  if (!plan || plan.selectedNutrition.calories === 0) {
     elements.summaryTitle.textContent = 'Totais selecionados';
     elements.summaryCalories.textContent = '—';
     elements.summaryProtein.textContent = '—';
@@ -822,11 +884,10 @@ function renderMacroSummary() {
     elements.summaryFat.textContent = '—';
     return;
   }
-  const plan = getDailyPlan();
   const totals = plan.selectedNutrition;
   elements.summaryTitle.textContent = plan.allMealsSelected
     ? (state.profile.snacks.length ? 'Totais do dia selecionado' : 'Totais confirmados, sem lanche')
-    : 'Totais selecionados';
+    : 'Totais conhecidos';
   elements.summaryCalories.textContent = formatCalories(totals.calories);
   elements.summaryProtein.textContent = formatGrams(totals.protein);
   elements.summaryCarbs.textContent = formatGrams(totals.carbs);
@@ -838,6 +899,7 @@ function renderAll() {
   renderRecipeTargets();
   renderBreakfastRecipes();
   renderBreakfastSelection();
+  renderMealJumpStates();
   renderMealStages();
   renderEnergyPlan();
   renderMacroSummary();
@@ -955,19 +1017,20 @@ function deleteRecipe(id) {
 
 function chooseBreakfast(id) {
   state.profile.selectedBreakfastId = id;
-  state.profile.selectedLunchId = '';
-  state.profile.selectedDinnerId = '';
+  state.profile.breakfastSkipped = false;
   state.profile.updatedAt = new Date().toISOString();
   persistLocal();
   renderAll();
   syncToCloud({ quiet: true });
-  document.getElementById('food-plan')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setActiveMealJump('lunch');
+  elements.lunchStage?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function chooseMainMeal(stage, id) {
   if (stage === 'lunch') {
     state.profile.selectedLunchId = id;
-    state.profile.selectedDinnerId = '';
+    state.profile.lunchExternal = false;
+    if (state.profile.selectedDinnerId === id) state.profile.selectedDinnerId = '';
   } else {
     state.profile.selectedDinnerId = id;
   }
@@ -976,17 +1039,18 @@ function chooseMainMeal(stage, id) {
   renderAll();
   syncToCloud({ quiet: true });
   const target = stage === 'lunch' ? elements.dinnerStage : elements.dayBalance;
+  setActiveMealJump('dinner');
   target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function storeSnack(snack, successMessage = 'Lanche acrescentado e jantar recalculado.') {
-  const breakfast = getSelectedBreakfast();
-  const { energy, allocation } = getCurrentEnergyContext();
-  if (!breakfast || !energy || !allocation) return false;
+  const { energy } = getCurrentEnergyContext();
+  const plan = getDailyPlan();
+  if (!plan || !energy) return false;
   const maximum = getMaximumSnackCalories({
     targetCalories: energy.target,
-    breakfastCalories: breakfast.calories,
-    lunchCalories: allocation.lunch,
+    breakfastCalories: plan.plannedBreakfastCalories,
+    lunchCalories: plan.lunchCalories,
     minimumDinnerCalories: 400
   });
   const currentCalories = sumNutrition(state.profile.snacks).calories;
@@ -1066,6 +1130,23 @@ function handleRecipeAction(event) {
   return false;
 }
 
+function setActiveMealJump(stage) {
+  document.querySelectorAll('[data-food-meal-jump]').forEach(button => {
+    if (button.dataset.foodMealJump === stage) button.setAttribute('aria-current', 'true');
+    else button.removeAttribute('aria-current');
+  });
+}
+
+function jumpToMeal(stage) {
+  const targets = {
+    breakfast: document.getElementById('food-breakfast-stage'),
+    lunch: elements.lunchStage,
+    dinner: elements.dinnerStage
+  };
+  setActiveMealJump(stage);
+  targets[stage]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function bindEvents() {
   elements.addRecipe.addEventListener('click', () => openRecipeDialog());
   elements.recipeForm.addEventListener('submit', saveRecipe);
@@ -1115,15 +1196,45 @@ function bindEvents() {
     if (removeButton) removeSnack(removeButton.dataset.removeSnack);
   });
 
-  elements.clearBreakfast.addEventListener('click', () => {
-    state.profile.selectedBreakfastId = '';
-    state.profile.selectedLunchId = '';
-    state.profile.selectedDinnerId = '';
+  document.querySelector('.food-meal-switcher')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-food-meal-jump]');
+    if (button) jumpToMeal(button.dataset.foodMealJump);
+  });
+
+  elements.skipBreakfast.addEventListener('click', () => {
+    if (state.profile.breakfastSkipped) {
+      state.profile.breakfastSkipped = false;
+    } else {
+      state.profile.selectedBreakfastId = '';
+      state.profile.breakfastSkipped = true;
+    }
     state.profile.updatedAt = new Date().toISOString();
     persistLocal();
     renderAll();
     syncToCloud({ quiet: true });
-    document.getElementById('food-recipes-title')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  elements.externalLunch.addEventListener('click', () => {
+    if (state.profile.lunchExternal) {
+      state.profile.lunchExternal = false;
+    } else {
+      state.profile.selectedLunchId = '';
+      state.profile.lunchExternal = true;
+    }
+    state.profile.updatedAt = new Date().toISOString();
+    persistLocal();
+    renderAll();
+    syncToCloud({ quiet: true });
+  });
+
+  elements.clearBreakfast.addEventListener('click', () => {
+    state.profile.selectedBreakfastId = '';
+    state.profile.breakfastSkipped = false;
+    state.profile.updatedAt = new Date().toISOString();
+    persistLocal();
+    renderAll();
+    syncToCloud({ quiet: true });
+    jumpToMeal('breakfast');
   });
 }
 

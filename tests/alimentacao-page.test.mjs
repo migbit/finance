@@ -17,7 +17,12 @@ test('o resumo contém apenas os totais nutricionais das refeições escolhidas'
   assert.doesNotMatch(html, /Qualidade nutricional|Método e limites|food-completion-ring|food-nutrient-list/);
 });
 
-test('o plano encadeia almoço, jantar, lanches e balanço diário', () => {
+test('o plano disponibiliza pequeno-almoço, almoço e jantar de forma independente', () => {
+  assert.match(html, /data-food-meal-jump="breakfast"/);
+  assert.match(html, /data-food-meal-jump="lunch"/);
+  assert.match(html, /data-food-meal-jump="dinner"/);
+  assert.match(html, /id="food-skip-breakfast"/);
+  assert.match(html, /id="food-external-lunch"/);
   assert.match(html, /id="food-lunch-stage"/);
   assert.match(html, /id="food-dinner-stage"/);
   assert.match(html, /id="food-snacks-stage"/);
@@ -25,6 +30,7 @@ test('o plano encadeia almoço, jantar, lanches e balanço diário', () => {
   assert.match(html, /id="food-snack-form"/);
   assert.match(html, /id="food-day-balance"/);
   assert.match(html, /value="main">Almoço ou jantar/);
+  assert.doesNotMatch(html, /class="food-sequence"/);
 });
 
 test('a página não recupera a antiga secção separada para dias de endurance', () => {
