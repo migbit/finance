@@ -1,6 +1,6 @@
 /* A APP – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v43`;
+const CACHE = `${CACHE_PREFIX}v44`;
 
 const CORE = [
   './',
@@ -19,6 +19,8 @@ const CORE = [
   './js/meditacao-recommender.js',
   './modules/ginasio.html',
   './modules/alimentacao.html',
+  './modules/filipa-ginasio.html',
+  './modules/filipa-alimentacao.html',
   './modules/meditacao.html',
   './css/alimentacao.css',
   './css/meditacao.css',

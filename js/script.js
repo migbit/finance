@@ -46,6 +46,14 @@ const NAV_GROUPS = [
     ]
   },
   {
+    label: '👩 Filipa',
+    key: 'filipa',
+    links: [
+      { label: '🏋️ Ginásio', key: 'filipa-ginasio', slug: 'modules/filipa-ginasio.html', module: true },
+      { label: '🥗 Alimentação', key: 'filipa-alimentacao', slug: 'modules/filipa-alimentacao.html', module: true }
+    ]
+  },
+  {
     label: '📊 Investimentos',
     key: 'investimentos',
     links: [
@@ -66,6 +74,8 @@ const NAV_GROUPS = [
 ];
 
 const ACTIVE_KEY_MATCHERS = [
+  { key: 'filipa-ginasio', patterns: ['filipa-ginasio'] },
+  { key: 'filipa-alimentacao', patterns: ['filipa-alimentacao'] },
   { key: 'dca-revolut', patterns: ['dca-revolut'] },
   { key: 'analisev4', patterns: ['analisev4'] },
   { key: 'boletins', patterns: ['boletins'] },
