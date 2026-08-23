@@ -66,8 +66,8 @@ test('inclui as quatro refeições principais com os totais definidos', () => {
   );
 });
 
-test('inclui quatro lanches com doses-base e variantes calculáveis', () => {
-  assert.equal(DEFAULT_SNACKS.length, 4);
+test('inclui cinco lanches com doses-base e variantes calculáveis', () => {
+  assert.equal(DEFAULT_SNACKS.length, 5);
   assert.ok(DEFAULT_SNACKS.every(recipe => recipe.meal === 'snack'));
   assert.deepEqual(
     DEFAULT_SNACKS.map(({ calories, protein, carbs, fat, fiber }) => ({ calories, protein, carbs, fat, fiber })),
@@ -75,19 +75,23 @@ test('inclui quatro lanches com doses-base e variantes calculáveis', () => {
       { calories: 104, protein: 23, carbs: 1.5, fat: 0.7, fiber: 0 },
       { calories: 334, protein: 24.8, carbs: 46.1, fat: 6, fiber: 6.5 },
       { calories: 310, protein: 31, carbs: 37.6, fat: 4.2, fiber: 4.5 },
-      { calories: 317, protein: 23.8, carbs: 52.6, fat: 2, fiber: 5.6 }
+      { calories: 317, protein: 23.8, carbs: 52.6, fat: 2, fiber: 5.6 },
+      { calories: 275, protein: 28, carbs: 31.2, fat: 4.2, fiber: 5.5 }
     ]
   );
   assert.deepEqual(
-    DEFAULT_SNACKS.map(recipe => recipe.variants[0].calories),
-    [211, 323, 374, 347]
+    DEFAULT_SNACKS.map(recipe => recipe.variants.map(variant => variant.calories)),
+    [[], [323], [374], [347], [305]]
   );
+  assert.doesNotMatch(DEFAULT_SNACKS[0].ingredients, /banana/i);
+  assert.equal(DEFAULT_SNACKS[0].variants.length, 0);
+  assert.match(DEFAULT_SNACKS[4].name, /Bolo de caneca proteico/i);
 });
 
 test('a migração acrescenta refeições principais e lanches sem perder receitas pessoais', () => {
   const custom = { id: 'custom-main', meal: 'main', name: 'Receita pessoal', source: 'manual' };
   const merged = mergeRecipeCatalog([...DEFAULT_BREAKFASTS, custom]);
-  assert.equal(merged.length, 13);
+  assert.equal(merged.length, 14);
   assert.ok(DEFAULT_MAIN_MEALS.every(recipe => merged.some(item => item.id === recipe.id)));
   assert.ok(DEFAULT_SNACKS.every(recipe => merged.some(item => item.id === recipe.id)));
   assert.equal(merged.at(-1).id, custom.id);

@@ -53,6 +53,7 @@ export const FILIPA_PROFILE_DEFAULTS = Object.freeze({
   selectedSnackId: '',
   selectedBedtimeId: '',
   extras: [],
+  mealCalories: { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 },
   planDate: '',
   updatedAt: '2026-08-22T00:00:00.000Z'
 });

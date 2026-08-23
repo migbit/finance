@@ -33,7 +33,8 @@ export function applyDailyPlanDate(profile = {}, dateKey = getLocalDateKey()) {
       selectedLunchId: '',
       lunchExternal: false,
       selectedDinnerId: '',
-      snacks: []
+      snacks: [],
+      mealCalories: { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 }
     },
     didReset: true
   };
@@ -46,6 +47,37 @@ export function sumNutrition(items = []) {
     });
     return total;
   }, { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+}
+
+export function rebalanceMealCalories(totalCalories, baseTargets = {}, fixedCalories = {}) {
+  const target = Math.max(0, Math.round(finite(totalCalories)));
+  const keys = Object.keys(baseTargets);
+  const baseTotal = keys.reduce((sum, key) => sum + Math.max(0, finite(baseTargets[key])), 0);
+  const scaledBase = Object.fromEntries(keys.map(key => [
+    key,
+    baseTotal > 0 ? (Math.max(0, finite(baseTargets[key])) / baseTotal) * target : 0
+  ]));
+  const fixedKeys = new Set(keys.filter(key => Object.prototype.hasOwnProperty.call(fixedCalories, key)));
+  const fixedTotal = keys.reduce((sum, key) => (
+    fixedKeys.has(key) ? sum + Math.max(0, Math.round(finite(fixedCalories[key]))) : sum
+  ), 0);
+  const flexibleKeys = keys.filter(key => !fixedKeys.has(key));
+  const flexibleBaseTotal = flexibleKeys.reduce((sum, key) => sum + scaledBase[key], 0);
+  let remaining = Math.max(0, target - fixedTotal);
+  const result = {};
+
+  keys.forEach(key => {
+    if (fixedKeys.has(key)) result[key] = Math.max(0, Math.round(finite(fixedCalories[key])));
+  });
+  flexibleKeys.forEach((key, index) => {
+    const isLast = index === flexibleKeys.length - 1;
+    const value = isLast
+      ? remaining
+      : Math.round(flexibleBaseTotal > 0 ? (scaledBase[key] / flexibleBaseTotal) * Math.max(0, target - fixedTotal) : 0);
+    result[key] = Math.max(0, value);
+    remaining = Math.max(0, remaining - result[key]);
+  });
+  return result;
 }
 
 export function adjustMealToCalories(meal, calorieTarget) {
@@ -100,42 +132,69 @@ export function calculateDailyPlan({
   lunchExternal = false,
   dinner = null,
   snacks = [],
+  mealCalories = {},
   lunchTarget = 840,
   dinnerTarget = 720
 } = {}) {
   const target = Math.max(0, Math.round(finite(targetCalories)));
-  const breakfastCalories = finite(breakfast?.calories);
-  const plannedBreakfastCalories = breakfast
-    ? breakfastCalories
-    : (breakfastSkipped ? 0 : Math.max(0, Math.round(finite(breakfastTarget))));
   const snackTotals = sumNutrition(snacks);
-  const defaultSnackReserve = Math.max(
-    0,
-    target - plannedBreakfastCalories - finite(lunchTarget) - finite(dinnerTarget)
-  );
   const hasEnteredSnacks = Array.isArray(snacks) && snacks.length > 0;
-  const snackBudget = hasEnteredSnacks ? snackTotals.calories : defaultSnackReserve;
-  const plannedLunchCalories = Math.max(0, Math.round(finite(lunchTarget)));
-  const plannedDinnerCalories = Math.max(
-    0,
-    target - plannedBreakfastCalories - plannedLunchCalories - Math.round(snackBudget)
-  );
-  const adjustedLunch = adjustMealToCalories(lunch, plannedLunchCalories);
-  const adjustedDinner = adjustMealToCalories(dinner, plannedDinnerCalories);
+  const manual = Object.fromEntries(['breakfast', 'lunch', 'dinner', 'snacks'].map(key => [
+    key,
+    Math.max(0, Math.round(finite(mealCalories?.[key])))
+  ]));
+  const baseBreakfast = Math.max(0, Math.round(finite(breakfastTarget)));
+  const baseLunch = Math.max(0, Math.round(finite(lunchTarget)));
+  const baseDinner = Math.max(0, Math.round(finite(dinnerTarget)));
+  const baseSnacks = Math.max(0, target - baseBreakfast - baseLunch - baseDinner);
+  const fixed = {};
+  if (manual.breakfast > 0) fixed.breakfast = manual.breakfast;
+  else if (breakfast) fixed.breakfast = Math.round(finite(breakfast.calories));
+  else if (breakfastSkipped) fixed.breakfast = 0;
+  if (manual.lunch > 0) fixed.lunch = manual.lunch;
+  if (manual.dinner > 0) fixed.dinner = manual.dinner;
+  if (manual.snacks > 0) fixed.snacks = manual.snacks;
+  else if (hasEnteredSnacks) fixed.snacks = Math.round(snackTotals.calories);
+
+  const targets = rebalanceMealCalories(target, {
+    breakfast: baseBreakfast,
+    lunch: baseLunch,
+    dinner: baseDinner,
+    snacks: baseSnacks
+  }, fixed);
+  const plannedBreakfastCalories = targets.breakfast;
+  const plannedLunchCalories = targets.lunch;
+  const plannedDinnerCalories = targets.dinner;
+  const snackBudget = targets.snacks;
+  const manualItem = (name, calories) => ({ name, calories, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+  const resolvedBreakfast = manual.breakfast > 0
+    ? manualItem('Pequeno-almoço registado', manual.breakfast)
+    : (breakfastSkipped ? null : breakfast);
+  const adjustedLunch = manual.lunch > 0
+    ? manualItem('Almoço registado', manual.lunch)
+    : adjustMealToCalories(lunch, plannedLunchCalories);
+  const adjustedDinner = manual.dinner > 0
+    ? manualItem('Jantar registado', manual.dinner)
+    : adjustMealToCalories(dinner, plannedDinnerCalories);
+  const resolvedSnacks = manual.snacks > 0
+    ? [manualItem('Lanches registados', manual.snacks)]
+    : snacks;
   const selectedNutrition = sumNutrition([
-    breakfast,
+    resolvedBreakfast,
     adjustedLunch,
     adjustedDinner,
-    ...snacks
+    ...resolvedSnacks
   ]);
-  const allMealsSelected = Boolean(breakfast && lunch && dinner);
-  const breakfastResolved = Boolean(breakfast || breakfastSkipped);
-  const lunchResolved = Boolean(lunch || lunchExternal);
-  const allMealsResolved = Boolean(breakfastResolved && lunchResolved && dinner);
-  const reservedBreakfastCalories = !breakfast && !breakfastSkipped ? plannedBreakfastCalories : 0;
-  const reservedLunchCalories = !lunch ? plannedLunchCalories : 0;
-  const reservedDinnerCalories = !dinner ? plannedDinnerCalories : 0;
-  const reservedSnackCalories = !hasEnteredSnacks ? defaultSnackReserve : 0;
+  const allMealsSelected = Boolean(resolvedBreakfast && adjustedLunch && adjustedDinner);
+  const breakfastResolved = Boolean(resolvedBreakfast || breakfastSkipped);
+  const lunchResolved = Boolean(adjustedLunch || lunchExternal);
+  const dinnerResolved = Boolean(adjustedDinner);
+  const snacksResolved = Boolean(manual.snacks > 0 || hasEnteredSnacks);
+  const allMealsResolved = Boolean(breakfastResolved && lunchResolved && dinnerResolved);
+  const reservedBreakfastCalories = !breakfastResolved ? plannedBreakfastCalories : 0;
+  const reservedLunchCalories = !lunchResolved ? plannedLunchCalories : 0;
+  const reservedDinnerCalories = !dinnerResolved ? plannedDinnerCalories : 0;
+  const reservedSnackCalories = !snacksResolved ? snackBudget : 0;
   const reservedMealCalories = (
     reservedBreakfastCalories
     + reservedLunchCalories
@@ -167,6 +226,8 @@ export function calculateDailyPlan({
     allMealsResolved,
     breakfastResolved,
     lunchResolved,
+    dinnerResolved,
+    snacksResolved,
     closesCalorieTarget: allMealsResolved && plannedCalories === target
   };
 }
@@ -222,6 +283,7 @@ export function recommendMainMeals(meals = [], {
     .filter(meal => !excluded.has(meal.id))
     .map(meal => {
       const adjusted = adjustMealToCalories(meal, calorieTarget);
+      if (!adjusted) return null;
       const pairingBonus = meal.pairsAfter?.includes(breakfastId) ? 8 : 0;
       const lowFiberBonus = finite(consumedNutrition.fiber) < 8 && adjusted.fiber >= 18 ? 4 : 0;
       const score = (
@@ -238,5 +300,6 @@ export function recommendMainMeals(meals = [], {
         reason: recommendationReason(meal, { consumedNutrition, breakfastId }, adjusted)
       };
     })
+    .filter(Boolean)
     .sort((a, b) => a.score - b.score || a.meal.rank - b.meal.rank);
 }

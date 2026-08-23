@@ -1590,6 +1590,194 @@ body[data-page="filipa-alimentacao"] {
   font-size: 0.68rem;
 }
 
+/* Interface focada: uma refeição de cada vez e cartões reduzidos ao título. */
+.food-hero {
+  min-height: 190px;
+}
+
+.food-settings-button > span {
+  font-size: 1rem;
+}
+
+.food-plan[hidden],
+.food-recipes[hidden],
+.food-card-body[hidden] {
+  display: none;
+}
+
+.food-breakfast-targets {
+  display: none;
+}
+
+.food-plan--focused > #food-lunch-stage,
+.food-plan--focused > #food-dinner-stage,
+.food-plan--focused > #food-snacks-stage,
+.food-plan--focused > #food-snack-stage {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.food-recipe-card[data-food-collapsible="true"],
+.food-main-meal-card[data-food-collapsible="true"],
+.food-snack-preset-card[data-food-collapsible="true"] {
+  min-height: 0;
+  padding: 0;
+}
+
+.food-card-toggle {
+  display: flex;
+  width: 100%;
+  min-height: 68px;
+  height: auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  color: var(--food-ink);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.food-card-toggle:hover,
+.food-card-toggle:focus-visible {
+  color: var(--food-green-dark);
+  background: var(--food-green-soft);
+  box-shadow: none;
+}
+
+.food-card-toggle > span:first-child {
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.food-card-toggle-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--food-green);
+  border-radius: 50%;
+  background: #fff;
+  font-size: 1.15rem;
+}
+
+.food-card-body {
+  min-width: 0;
+  padding: 0 1rem 1rem;
+}
+
+.food-card-body .food-recipe-topline {
+  margin: 0 0 0.8rem;
+  padding-top: 0.15rem;
+}
+
+.food-meal-calorie-entry {
+  margin: 0 0 1rem;
+  border: 1px solid #dbe7de;
+  border-radius: 13px;
+  background: #f8fbf9;
+}
+
+.food-meal-calorie-entry > summary {
+  padding: 0.8rem 0.9rem;
+  color: var(--food-green-dark);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.food-meal-calorie-entry form {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto auto;
+  align-items: end;
+  gap: 0.6rem;
+  padding: 0 0.9rem 0.9rem;
+}
+
+.food-meal-calorie-entry label {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.food-meal-calorie-entry input {
+  width: 100%;
+  margin-top: 0.25rem;
+}
+
+.food-meal-calorie-entry button {
+  white-space: nowrap;
+}
+
+.food-meal-calorie-entry small {
+  grid-column: 1 / -1;
+  color: var(--food-green);
+  font-weight: 700;
+}
+
+.food-custom-snack-entry {
+  margin-top: 1rem;
+  border: 1px solid var(--food-line);
+  border-radius: 13px;
+  background: #fff;
+}
+
+.food-custom-snack-entry > summary {
+  padding: 0.9rem 1rem;
+  color: var(--food-ink);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.food-custom-snack-entry .food-snack-form {
+  padding: 0 1rem 1rem;
+}
+
+[data-food-snack-substage] > .food-meal-stage-heading {
+  cursor: pointer;
+}
+
+[data-food-snack-substage][data-collapsed="true"] > :not(.food-meal-stage-heading) {
+  display: none;
+}
+
+[data-food-snack-substage] > .food-meal-stage-heading::after {
+  content: "−";
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--food-green);
+  border-radius: 50%;
+  background: var(--food-green-soft);
+}
+
+[data-food-snack-substage][data-collapsed="true"] > .food-meal-stage-heading::after {
+  content: "+";
+}
+
+#food-settings-form > label {
+  display: block;
+  margin-bottom: 1rem;
+  color: var(--food-ink);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+#food-settings-form input {
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
 @media (max-width: 1180px) {
   .food-layout {
     grid-template-columns: 1fr;
@@ -1822,6 +2010,15 @@ body[data-page="filipa-alimentacao"] {
   .food-snack-preset-actions button,
   .food-snack-preset-actions button:last-child {
     width: 100%;
+  }
+
+  .food-meal-calorie-entry form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .food-meal-calorie-entry label,
+  .food-meal-calorie-entry small {
+    grid-column: 1 / -1;
   }
 }
 

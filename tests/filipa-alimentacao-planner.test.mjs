@@ -29,7 +29,7 @@ test('a distribuição base reserva 150 kcal para extras', () => {
   assert.equal(plan.extrasRemaining, 150);
 });
 
-test('as escolhas reais ajustam o jantar mantendo o total e a margem', () => {
+test('as escolhas reais ajustam almoço e jantar mantendo o total e a margem', () => {
   const plan = calculateFilipaDailyPlan({
     breakfast: recipe('breakfast', 340, 28),
     lunch: recipe('lunch', 423, 41),
@@ -38,7 +38,8 @@ test('as escolhas reais ajustam o jantar mantendo o total e a margem', () => {
     bedtime: recipe('bedtime', 142, 17),
     extras: [recipe('chocolate', 100, 1)]
   });
-  assert.equal(plan.dinnerCalories, 402);
+  assert.equal(plan.lunchCalories, 396);
+  assert.equal(plan.dinnerCalories, 406);
   assert.equal(plan.extrasRemaining, 50);
   assert.equal(plan.plannedCalories, 1650);
   assert.equal(plan.closesCalorieTarget, true);
@@ -56,7 +57,8 @@ test('extras acima da margem ficam registados e reduzem o jantar', () => {
   });
   assert.equal(plan.hasExtraOverflow, true);
   assert.equal(plan.extrasRemaining, -50);
-  assert.equal(plan.dinnerCalories, 352);
+  assert.equal(plan.lunchCalories, 371);
+  assert.equal(plan.dinnerCalories, 381);
   assert.equal(plan.plannedCalories, 1650);
 });
 
@@ -75,4 +77,25 @@ test('o início de um novo dia limpa todas as escolhas da Filipa', () => {
   assert.equal(result.profile.selectedSnackId, '');
   assert.equal(result.profile.selectedBedtimeId, '');
   assert.deepEqual(result.profile.extras, []);
+  assert.deepEqual(result.profile.mealCalories, { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 });
+});
+
+test('alterar a meta diária recalcula todas as reservas proporcionalmente', () => {
+  const plan = calculateFilipaDailyPlan({ targetCalories: 1800 });
+  assert.equal(plan.breakfastCalories, 360);
+  assert.equal(plan.lunchCalories, 436);
+  assert.equal(plan.snackCalories, 240);
+  assert.equal(plan.dinnerCalories, 447);
+  assert.equal(plan.bedtimeCalories, 153);
+  assert.equal(plan.extraBudget, 164);
+  assert.equal(plan.plannedCalories, 1800);
+});
+
+test('um total real dos lanches substitui lanche, ceia e extras e recalcula o resto', () => {
+  const plan = calculateFilipaDailyPlan({ mealCalories: { snacks: 400 } });
+  assert.equal(plan.snackCalories, 400);
+  assert.equal(plan.bedtimeCalories, 0);
+  assert.equal(plan.extraBudget, 150);
+  assert.equal(plan.selectedNutrition.calories, 400);
+  assert.equal(plan.plannedCalories, 1650);
 });

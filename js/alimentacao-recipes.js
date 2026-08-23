@@ -17,7 +17,7 @@ function buildRecipe(recipe) {
   const totals = totalNutrition(recipe.components);
   return Object.freeze({
     ...recipe,
-    catalogVersion: 4,
+    catalogVersion: 5,
     ingredients: recipe.components.map(component => component.label).join('\n'),
     calories: Math.round(totals.calories),
     protein: round(totals.protein),
@@ -67,6 +67,7 @@ export const MIGUEL_PROFILE_DEFAULTS = Object.freeze({
   lunchExternal: false,
   selectedDinnerId: '',
   snacks: [],
+  mealCalories: { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 },
   planDate: '',
   updatedAt: '2026-08-20T00:00:00.000Z'
 });
@@ -383,22 +384,10 @@ export const DEFAULT_SNACKS = Object.freeze([
     ],
     instructions: ['Colocar a Evowhey e a água num shaker.', 'Agitar e beber.'],
     highlights: ['23 g de proteína', 'Muito rápido', 'Baixa gordura', 'Pós-treino'],
-    cautions: ['Se fores almoçar dentro de cerca de 60 minutos, usar apenas whey e água.', 'Se faltarem 1h30–2h para a refeição ou o treino tiver sido exigente, escolher a variante com banana.', 'Não precisa de leite, aveia ou manteiga de amendoim para cumprir o objetivo deste lanche.'],
+    cautions: ['Preparar o pó no shaker e juntar a água no final do treino.', 'Não precisa de leite, banana, aveia ou manteiga de amendoim para cumprir o objetivo deste lanche.'],
     evidenceNote: 'A dose-base usa os valores fornecidos para a tua Evowhey: 104 kcal e 23 g de proteína/30 g. Confirmar quando mudares de sabor ou embalagem.',
     addLabel: 'Só whey',
-    variants: [
-      {
-        id: 'with-banana',
-        label: 'Com banana',
-        name: 'Shake pós-treino com banana',
-        description: 'Para quando a refeição seguinte demora mais ou a sessão foi exigente.',
-        calories: 211,
-        protein: 24.3,
-        carbs: 28.9,
-        fat: 1.1,
-        fiber: 3.1
-      }
-    ]
+    variants: []
   }),
   buildRecipe({
     id: 'snack-greek-yogurt-fruit-cereal',
@@ -505,6 +494,55 @@ export const DEFAULT_SNACKS = Object.freeze([
         carbs: 54.9,
         fat: 4.3,
         fiber: 6.2
+      }
+    ]
+  }),
+  buildRecipe({
+    id: 'snack-chocolate-banana-protein-mug-cake',
+    meal: 'snack',
+    name: 'Bolo de caneca proteico de chocolate e banana',
+    shortName: 'Bolo de caneca proteico',
+    description: 'Bolo húmido de chocolate e banana, pronto no micro-ondas em poucos minutos.',
+    quality: 'high',
+    qualityLabel: 'Proteico',
+    rank: 5,
+    prepTime: '4 min',
+    batchFriendly: false,
+    components: [
+      { label: '20 g de whey', calories: 77, protein: 15.6, carbs: 1, fat: 1, fiber: 0 },
+      { label: '25 g de farinha de aveia ou flocos de aveia triturados', calories: 88, protein: 3, carbs: 14.5, fat: 1.7, fiber: 2.5 },
+      { label: '80 g de skyr natural', calories: 45, protein: 7.2, carbs: 3, fat: 0.2, fiber: 0 },
+      { label: '50 g de banana madura esmagada', calories: 43, protein: 0.5, carbs: 11, fat: 0.1, fiber: 1.3 },
+      { label: '5 g de cacau puro em pó', calories: 12, protein: 0.8, carbs: 1.5, fat: 0.7, fiber: 1.7 },
+      { label: '30–40 ml de bebida de soja sem açúcar', calories: 10, protein: 0.9, carbs: 0.2, fat: 0.5, fiber: 0 },
+      { label: '2 g de fermento em pó (cerca de ½ colher de chá)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
+      { label: 'Canela ou umas gotas de aroma de baunilha (opcional)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: [
+      'Esmagar bem a banana numa caneca grande ou taça pequena.',
+      'Juntar o skyr e a bebida de soja e misturar.',
+      'Acrescentar a aveia, a whey, o cacau e o fermento.',
+      'Misturar apenas até ficar homogéneo; a massa deve ficar espessa, mas ainda cremosa.',
+      'Se escolheres a variante, colocar os 5 g de chocolate por cima.',
+      'Levar ao micro-ondas cerca de 60 segundos a 800 W.',
+      'Verificar o centro e, se ainda estiver demasiado líquido, acrescentar 10 segundos de cada vez.',
+      'Deixar repousar 1 minuto antes de comer.'
+    ],
+    highlights: ['≈28 g de proteína', '≈275 kcal', 'Micro-ondas', 'Pronto em 4 min'],
+    cautions: ['Não cozinhar demasiado: 10–15 segundos podem fazer a diferença entre um bolo húmido e uma textura seca.'],
+    evidenceNote: 'Valores aproximados para as quantidades indicadas; confirmar os rótulos da whey, do skyr e da bebida de soja.',
+    addLabel: 'Sem chocolate',
+    variants: [
+      {
+        id: 'with-dark-chocolate',
+        label: 'Com chocolate ✓',
+        name: 'Bolo de caneca proteico com chocolate preto',
+        description: 'Acrescenta 5 g de chocolate preto picado por cima.',
+        calories: 305,
+        protein: 28,
+        carbs: 35,
+        fat: 6.5,
+        fiber: 5.5
       }
     ]
   })

@@ -1,4 +1,4 @@
-import { adjustMealToCalories, sumNutrition } from './alimentacao-planner.js';
+import { adjustMealToCalories, rebalanceMealCalories, sumNutrition } from './alimentacao-planner.js';
 
 export const FILIPA_MEAL_TARGETS = Object.freeze({
   breakfast: 330,
@@ -12,12 +12,6 @@ export const FILIPA_MEAL_TARGETS = Object.freeze({
 function finite(value) {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
-}
-
-function selectedCalories(item, fallback) {
-  return item && finite(item.calories) > 0
-    ? Math.round(finite(item.calories))
-    : Math.max(0, Math.round(finite(fallback)));
 }
 
 export function applyFilipaDailyPlanDate(profile = {}, dateKey = '') {
@@ -36,7 +30,8 @@ export function applyFilipaDailyPlanDate(profile = {}, dateKey = '') {
       selectedDinnerId: '',
       selectedSnackId: '',
       selectedBedtimeId: '',
-      extras: []
+      extras: [],
+      mealCalories: { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 }
     },
     didReset: true
   };
@@ -52,56 +47,78 @@ export function calculateFilipaDailyPlan({
   dinner = null,
   snack = null,
   bedtime = null,
-  extras = []
+  extras = [],
+  mealCalories = {}
 } = {}) {
   const target = Math.max(0, Math.round(finite(targetCalories)));
-  const breakfastCalories = breakfastSkipped
-    ? 0
-    : selectedCalories(breakfast, targets.breakfast);
-  const lunchCalories = Math.max(0, Math.round(finite(targets.lunch)));
-  const snackCalories = selectedCalories(snack, targets.snack);
-  const bedtimeCalories = selectedCalories(bedtime, targets.bedtime);
   const extraTotals = sumNutrition(extras);
-  const extraBudget = Math.max(0, Math.round(finite(targets.extras)));
-  const plannedExtrasCalories = Math.max(extraBudget, Math.round(extraTotals.calories));
-  const dinnerCalories = Math.max(
-    0,
-    target
-      - breakfastCalories
-      - lunchCalories
-      - snackCalories
-      - bedtimeCalories
-      - plannedExtrasCalories
-  );
+  const scaledBase = rebalanceMealCalories(target, targets);
+  const manual = Object.fromEntries(['breakfast', 'lunch', 'dinner', 'snacks'].map(key => [
+    key,
+    Math.max(0, Math.round(finite(mealCalories?.[key])))
+  ]));
+  const fixed = {
+    extras: Math.max(scaledBase.extras, Math.round(extraTotals.calories))
+  };
+  if (manual.breakfast > 0) fixed.breakfast = manual.breakfast;
+  else if (breakfast) fixed.breakfast = Math.round(finite(breakfast.calories));
+  else if (breakfastSkipped) fixed.breakfast = 0;
+  if (manual.lunch > 0) fixed.lunch = manual.lunch;
+  if (manual.dinner > 0) fixed.dinner = manual.dinner;
+  if (manual.snacks > 0) {
+    fixed.snack = manual.snacks;
+    fixed.bedtime = 0;
+    fixed.extras = 0;
+  } else {
+    if (snack) fixed.snack = Math.round(finite(snack.calories));
+    if (bedtime) fixed.bedtime = Math.round(finite(bedtime.calories));
+  }
+  const allocation = rebalanceMealCalories(target, targets, fixed);
+  const breakfastCalories = allocation.breakfast;
+  const lunchCalories = allocation.lunch;
+  const snackCalories = allocation.snack;
+  const dinnerCalories = allocation.dinner;
+  const bedtimeCalories = allocation.bedtime;
+  const extraBudget = scaledBase.extras;
 
-  const adjustedLunch = adjustMealToCalories(lunch, lunchCalories);
-  const adjustedDinner = adjustMealToCalories(dinner, dinnerCalories);
+  const manualItem = (name, calories) => ({ name, calories, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+  const resolvedBreakfast = manual.breakfast > 0
+    ? manualItem('Pequeno-almoço registado', manual.breakfast)
+    : (breakfastSkipped ? null : breakfast);
+  const adjustedLunch = manual.lunch > 0
+    ? manualItem('Almoço registado', manual.lunch)
+    : adjustMealToCalories(lunch, lunchCalories);
+  const adjustedDinner = manual.dinner > 0
+    ? manualItem('Jantar registado', manual.dinner)
+    : adjustMealToCalories(dinner, dinnerCalories);
+  const resolvedSnack = manual.snacks > 0
+    ? manualItem('Lanches registados', manual.snacks)
+    : snack;
   const selectedNutrition = sumNutrition([
-    breakfastSkipped ? null : breakfast,
+    resolvedBreakfast,
     adjustedLunch,
     adjustedDinner,
-    snack,
-    bedtime,
-    ...extras
+    resolvedSnack,
+    manual.snacks > 0 ? null : bedtime,
+    ...(manual.snacks > 0 ? [] : extras)
   ]);
 
   const reserves = {
-    breakfast: !breakfast && !breakfastSkipped ? breakfastCalories : 0,
-    lunch: !lunch ? lunchCalories : 0,
-    dinner: !dinner ? dinnerCalories : 0,
-    snack: !snack ? snackCalories : 0,
-    bedtime: !bedtime ? bedtimeCalories : 0,
-    extras: Math.max(0, extraBudget - Math.round(extraTotals.calories))
+    breakfast: !resolvedBreakfast && !breakfastSkipped ? breakfastCalories : 0,
+    lunch: !adjustedLunch && !lunchExternal ? lunchCalories : 0,
+    dinner: !adjustedDinner ? dinnerCalories : 0,
+    snack: !resolvedSnack ? snackCalories : 0,
+    bedtime: manual.snacks <= 0 && !bedtime ? bedtimeCalories : 0,
+    extras: manual.snacks > 0 ? 0 : Math.max(0, extraBudget - Math.round(extraTotals.calories))
   };
   const reservedCalories = Object.values(reserves).reduce((sum, value) => sum + value, 0);
   const confirmedCalories = Math.round(selectedNutrition.calories);
   const plannedCalories = confirmedCalories + reservedCalories;
   const allMealsResolved = Boolean(
-    (breakfast || breakfastSkipped)
-    && (lunch || lunchExternal)
-    && dinner
-    && snack
-    && bedtime
+    (resolvedBreakfast || breakfastSkipped)
+    && (adjustedLunch || lunchExternal)
+    && adjustedDinner
+    && (manual.snacks > 0 || (snack && bedtime))
   );
 
   return {
@@ -113,7 +130,7 @@ export function calculateFilipaDailyPlan({
     bedtimeCalories,
     extraBudget,
     extraTotals,
-    extrasRemaining: extraBudget - Math.round(extraTotals.calories),
+    extrasRemaining: manual.snacks > 0 ? 0 : extraBudget - Math.round(extraTotals.calories),
     adjustedLunch,
     adjustedDinner,
     selectedNutrition,
@@ -124,6 +141,6 @@ export function calculateFilipaDailyPlan({
     caloriesRemaining: target - confirmedCalories,
     allMealsResolved,
     closesCalorieTarget: plannedCalories === target,
-    hasExtraOverflow: extraTotals.calories > extraBudget
+    hasExtraOverflow: manual.snacks <= 0 && extraTotals.calories > extraBudget
   };
 }

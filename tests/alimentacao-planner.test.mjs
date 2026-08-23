@@ -10,6 +10,7 @@ const {
   calculateDailyPlan,
   getLocalDateKey,
   getMaximumSnackCalories,
+  rebalanceMealCalories,
   recommendMainMeals
 } = module;
 
@@ -40,6 +41,7 @@ test('uma nova data limpa apenas escolhas e lanches', () => {
   assert.equal(result.profile.lunchExternal, false);
   assert.equal(result.profile.selectedDinnerId, '');
   assert.deepEqual(result.profile.snacks, []);
+  assert.deepEqual(result.profile.mealCalories, { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 });
   assert.equal(result.profile.manualCalories, 2400);
   assert.equal(result.profile.favoriteFoods, 'Mantém-se');
 });
@@ -106,19 +108,20 @@ test('numa receita curada ajusta o componente energético sem aumentar toda a pr
   });
 });
 
-test('reserva lanche e fecha exatamente as 2400 kcal com as três refeições', () => {
+test('redistribui a diferença do pequeno-almoço por todas as metas restantes', () => {
   const plan = calculateDailyPlan({ targetCalories: 2400, breakfast, lunch, dinner });
-  assert.equal(plan.lunchCalories, 840);
-  assert.equal(plan.dinnerCalories, 720);
-  assert.equal(plan.reservedSnackCalories, 306);
+  assert.equal(plan.lunchCalories, 871);
+  assert.equal(plan.dinnerCalories, 746);
+  assert.equal(plan.reservedSnackCalories, 249);
   assert.equal(plan.plannedCalories, 2400);
   assert.equal(plan.closesCalorieTarget, true);
 });
 
-test('um lanche introduzido reajusta o jantar e conserva o total diário', () => {
+test('um lanche introduzido reajusta almoço e jantar e conserva o total diário', () => {
   const snack = { calories: 350, protein: 20, carbs: 35, fat: 8, fiber: 4 };
   const plan = calculateDailyPlan({ targetCalories: 2400, breakfast, lunch, dinner, snacks: [snack] });
-  assert.equal(plan.dinnerCalories, 676);
+  assert.equal(plan.lunchCalories, 816);
+  assert.equal(plan.dinnerCalories, 700);
   assert.equal(plan.reservedSnackCalories, 0);
   assert.equal(plan.plannedCalories, 2400);
 });
@@ -158,19 +161,19 @@ test('sem pequeno-almoço redistribui o dia pelas metas indicadas', () => {
   assert.equal(plan.allMealsResolved, true);
 });
 
-test('um almoço fora reserva calorias sem inventar os seus macros', () => {
+test('as kcal reais de um almoço recalculam a refeição seguinte sem inventar macros', () => {
   const plan = calculateDailyPlan({
     targetCalories: 2400,
-    breakfastSkipped: true,
-    breakfastTarget: 0,
-    lunchExternal: true,
-    lunchTarget: 960,
+    breakfast,
+    lunch,
     dinner,
-    dinnerTarget: 960
+    mealCalories: { lunch: 900 }
   });
   assert.equal(plan.lunchResolved, true);
-  assert.equal(plan.reservedLunchCalories, 960);
-  assert.equal(plan.selectedNutrition.calories, 960);
+  assert.equal(plan.adjustedLunch.calories, 900);
+  assert.equal(plan.adjustedLunch.protein, 0);
+  assert.equal(plan.dinnerCalories, 725);
+  assert.equal(plan.reservedSnackCalories, 241);
   assert.equal(plan.plannedCalories, 2400);
   assert.equal(plan.closesCalorieTarget, true);
 });
@@ -186,9 +189,24 @@ test('dois lanches predefinidos reajustam o jantar sem ultrapassar a meta', () =
     snacks: [shake, skyr]
   });
   assert.equal(plan.snackTotals.calories, 421);
-  assert.equal(plan.dinnerCalories, 605);
+  assert.equal(plan.lunchCalories, 778);
+  assert.equal(plan.dinnerCalories, 667);
   assert.equal(plan.plannedCalories, 2400);
   assert.equal(plan.closesCalorieTarget, true);
+});
+
+test('uma nova meta diária recalcula proporcionalmente todas as refeições', () => {
+  assert.deepEqual(rebalanceMealCalories(1800, {
+    breakfast: 330,
+    lunch: 400,
+    dinner: 410,
+    snacks: 510
+  }), {
+    breakfast: 360,
+    lunch: 436,
+    dinner: 447,
+    snacks: 557
+  });
 });
 
 test('limita lanches para preservar um jantar mínimo', () => {
@@ -209,4 +227,17 @@ test('recomenda sem repetir o almoço já escolhido', () => {
   });
   assert.equal(ranked.length, 2);
   assert.ok(ranked.every(item => item.meal.id !== 'lunch'));
+});
+
+test('não cria porções inválidas quando as kcal registadas já excedem a meta', () => {
+  assert.deepEqual(recommendMainMeals([lunch, dinner], { calorieTarget: 0 }), []);
+  const plan = calculateDailyPlan({
+    targetCalories: 800,
+    lunch,
+    dinner,
+    mealCalories: { breakfast: 1000 }
+  });
+  assert.equal(plan.lunchCalories, 0);
+  assert.equal(plan.dinnerCalories, 0);
+  assert.equal(plan.closesCalorieTarget, false);
 });
