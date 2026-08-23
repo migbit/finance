@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const html = await readFile(new URL('../modules/filipa-alimentacao.html', import.meta.url), 'utf8');
+const script = await readFile(new URL('../js/filipa-alimentacao.js', import.meta.url), 'utf8');
+const styles = await readFile(new URL('../css/alimentacao.css', import.meta.url), 'utf8');
 
 test('a página da Filipa usa o módulo e o estilo de alimentação próprios', () => {
   assert.match(html, /data-page="filipa-alimentacao"/);
@@ -35,4 +37,11 @@ test('a meta diária é a única configuração e todas as refeições aceitam k
 test('o editor permite criar receitas para lanche e ceia', () => {
   assert.match(html, /value="snack">Lanche/);
   assert.match(html, /value="bedtime">Ceia/);
+});
+
+test('as receitas podem trocar a mozzarella através de uma caixa de verificação', () => {
+  assert.match(script, /checkbox\.type = 'checkbox'/);
+  assert.match(script, /checkbox\.dataset\.recipeVariant/);
+  assert.match(script, /setRecipeVariant\(/);
+  assert.match(styles, /\.food-recipe-variant:has\(input:checked\)/);
 });

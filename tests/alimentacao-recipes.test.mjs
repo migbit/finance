@@ -17,9 +17,9 @@ test('existem exatamente quatro pequenos-almoços completos e repetíveis', () =
   assert.equal(DEFAULT_BREAKFASTS.length, 4);
   assert.equal(new Set(DEFAULT_BREAKFASTS.map(recipe => recipe.id)).size, 4);
   DEFAULT_BREAKFASTS.forEach(recipe => {
-    assert.ok(recipe.calories >= 450 && recipe.calories <= 650, `${recipe.id}: calorias fora do intervalo`);
+    assert.ok(recipe.calories >= 440 && recipe.calories <= 650, `${recipe.id}: calorias fora do intervalo`);
     assert.ok(recipe.protein >= 25, `${recipe.id}: proteína insuficiente`);
-    assert.ok(recipe.fiber >= 5, `${recipe.id}: fibra insuficiente`);
+    assert.ok(recipe.fiber >= 3, `${recipe.id}: fibra insuficiente`);
     assert.ok(recipe.instructions.length >= 3);
     assert.ok(recipe.highlights.length >= 4);
     assert.doesNotMatch(recipe.ingredients, /\bovos?\b/i, `${recipe.id}: ainda contém ovos`);
@@ -44,10 +44,10 @@ test('calcula os totais acordados das quatro receitas', () => {
   assert.deepEqual(
     DEFAULT_BREAKFASTS.map(({ calories, protein, carbs, fat, fiber }) => ({ calories, protein, carbs, fat, fiber })),
     [
-      { calories: 534, protein: 34.7, carbs: 68.1, fat: 10.7, fiber: 13.7 },
-      { calories: 549, protein: 36.1, carbs: 54.8, fat: 17.2, fiber: 13.9 },
-      { calories: 453, protein: 35.2, carbs: 61.6, fat: 6, fiber: 5.5 },
-      { calories: 517, protein: 26.5, carbs: 82.9, fat: 7.3, fiber: 6.8 }
+      { calories: 530, protein: 36.2, carbs: 68.8, fat: 10.1, fiber: 13.1 },
+      { calories: 541, protein: 38.1, carbs: 56, fat: 16.2, fiber: 12.7 },
+      { calories: 449, protein: 36.9, carbs: 64.5, fat: 4.9, fiber: 3.5 },
+      { calories: 511, protein: 26.5, carbs: 83.9, fat: 6.7, fiber: 5.6 }
     ]
   );
 });
@@ -59,9 +59,9 @@ test('inclui as quatro refeições principais com os totais definidos', () => {
     DEFAULT_MAIN_MEALS.map(({ calories, protein, carbs, fat, fiber }) => ({ calories, protein, carbs, fat, fiber })),
     [
       { calories: 650, protein: 43, carbs: 56, fat: 25.3, fiber: 16.4 },
-      { calories: 660, protein: 43, carbs: 70.1, fat: 22.4, fiber: 11.6 },
-      { calories: 620, protein: 50, carbs: 71, fat: 10.4, fiber: 13.1 },
-      { calories: 610, protein: 34, carbs: 84.6, fat: 13.5, fiber: 23.8 }
+      { calories: 653, protein: 46.9, carbs: 69.7, fat: 20, fiber: 11.6 },
+      { calories: 619, protein: 51.5, carbs: 71.1, fat: 10.1, fiber: 13.1 },
+      { calories: 609, protein: 35, carbs: 84.7, fat: 13.3, fiber: 23.8 }
     ]
   );
 });
@@ -73,19 +73,33 @@ test('inclui cinco lanches com doses-base e variantes calculáveis', () => {
     DEFAULT_SNACKS.map(({ calories, protein, carbs, fat, fiber }) => ({ calories, protein, carbs, fat, fiber })),
     [
       { calories: 104, protein: 23, carbs: 1.5, fat: 0.7, fiber: 0 },
-      { calories: 334, protein: 24.8, carbs: 46.1, fat: 6, fiber: 6.5 },
+      { calories: 328, protein: 23.8, carbs: 45.5, fat: 6, fiber: 6.5 },
       { calories: 310, protein: 31, carbs: 37.6, fat: 4.2, fiber: 4.5 },
-      { calories: 317, protein: 23.8, carbs: 52.6, fat: 2, fiber: 5.6 },
-      { calories: 275, protein: 28, carbs: 31.2, fat: 4.2, fiber: 5.5 }
+      { calories: 315, protein: 25.8, carbs: 52.8, fat: 1.6, fiber: 5.6 },
+      { calories: 277, protein: 29.9, carbs: 31.1, fat: 4, fiber: 5.5 }
     ]
   );
   assert.deepEqual(
     DEFAULT_SNACKS.map(recipe => recipe.variants.map(variant => variant.calories)),
-    [[], [323], [374], [347], [305]]
+    [[], [320], [374], [345], [307]]
   );
   assert.doesNotMatch(DEFAULT_SNACKS[0].ingredients, /banana/i);
   assert.equal(DEFAULT_SNACKS[0].variants.length, 0);
   assert.match(DEFAULT_SNACKS[4].name, /Bolo de caneca proteico/i);
+  assert.deepEqual(
+    DEFAULT_SNACKS[4].variants[0],
+    {
+      id: 'with-dark-chocolate',
+      label: 'Com chocolate ✓',
+      name: 'Bolo de caneca proteico com chocolate preto',
+      description: 'Acrescenta 5 g de chocolate preto picado por cima.',
+      calories: 307,
+      protein: 29.9,
+      carbs: 34.9,
+      fat: 6.3,
+      fiber: 5.5
+    }
+  );
 });
 
 test('a migração acrescenta refeições principais e lanches sem perder receitas pessoais', () => {

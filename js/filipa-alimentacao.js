@@ -20,7 +20,8 @@ import {
   FILIPA_MAIN_MEALS,
   FILIPA_PROFILE_DEFAULTS,
   FILIPA_SNACKS,
-  mergeFilipaRecipeCatalog
+  mergeFilipaRecipeCatalog,
+  resolveFilipaRecipeVariant
 } from './filipa-alimentacao-recipes.js';
 import {
   FILIPA_MEAL_TARGETS,
@@ -79,6 +80,11 @@ function normalizeProfile(profile = {}) {
   merged.selectedDinnerId = String(merged.selectedDinnerId || '');
   merged.selectedSnackId = String(merged.selectedSnackId || '');
   merged.selectedBedtimeId = String(merged.selectedBedtimeId || '');
+  merged.recipeVariants = Object.fromEntries(
+    Object.entries(merged.recipeVariants || {})
+      .filter(([recipeId, variantId]) => recipeId && variantId)
+      .map(([recipeId, variantId]) => [String(recipeId), String(variantId)])
+  );
   merged.mealCalories = Object.fromEntries(['breakfast', 'lunch', 'dinner', 'snacks'].map(key => [
     key,
     Math.max(0, Math.round(Number(merged.mealCalories?.[key]) || 0))
@@ -164,9 +170,16 @@ const elements = {
 };
 
 function getRecipe(id, meal = '') {
-  return state.recipes.find(recipe => (
-    recipe.id === id && (!meal || recipe.meal === meal || (meal === 'main' && recipe.meal === 'main'))
+  const recipe = state.recipes.find(item => (
+    item.id === id && (!meal || item.meal === meal || (meal === 'main' && item.meal === 'main'))
   )) || null;
+  return recipe
+    ? resolveFilipaRecipeVariant(recipe, state.profile.recipeVariants[recipe.id] || 'base')
+    : null;
+}
+
+function resolveRecipeForProfile(recipe) {
+  return resolveFilipaRecipeVariant(recipe, state.profile.recipeVariants[recipe.id] || 'base');
 }
 
 function validateSelections() {
@@ -344,6 +357,26 @@ function createRecipeDetails(recipe) {
   return details;
 }
 
+function createRecipeVariantControl(recipe) {
+  const variant = recipe.variants?.[0];
+  if (!variant) return null;
+  const control = document.createElement('label');
+  control.className = 'food-recipe-variant';
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = recipe.activeVariantId === variant.id;
+  checkbox.dataset.recipeVariant = recipe.id;
+  checkbox.dataset.variantId = variant.id;
+  const copy = document.createElement('span');
+  const title = document.createElement('strong');
+  title.textContent = variant.checkboxLabel || variant.label;
+  const detail = document.createElement('small');
+  detail.textContent = `${variant.description} ${formatCalories(variant.calories)} · P ${formatGrams(variant.protein)} · HC ${formatGrams(variant.carbs)} · G ${formatGrams(variant.fat)}.`;
+  copy.append(title, detail);
+  control.append(checkbox, copy);
+  return control;
+}
+
 function appendDeleteButton(actions, recipe) {
   if (DEFAULT_RECIPE_IDS.has(recipe.id)) return;
   const remove = document.createElement('button');
@@ -412,6 +445,8 @@ function createBreakfastCard(recipe, index) {
   appendDeleteButton(actions, recipe);
   article.append(createCardTopline(recipe, String(index + 1).padStart(2, '0')), title, description, macros, targetNote);
   if (highlights.childElementCount) article.appendChild(highlights);
+  const variantControl = createRecipeVariantControl(recipe);
+  if (variantControl) article.appendChild(variantControl);
   article.append(createRecipeDetails(recipe), actions);
   return article;
 }
@@ -466,10 +501,11 @@ function createMainCard(recommendation, stage, index) {
     description,
     reasonText,
     macros,
-    portion,
-    createRecipeDetails(meal),
-    actions
+    portion
   );
+  const variantControl = createRecipeVariantControl(meal);
+  if (variantControl) article.appendChild(variantControl);
+  article.append(createRecipeDetails(meal), actions);
   return article;
 }
 
@@ -515,22 +551,26 @@ function createSlotCard(recipe, slot, index) {
     title,
     description,
     macros,
-    note,
-    createRecipeDetails(recipe),
-    actions
+    note
   );
+  const variantControl = createRecipeVariantControl(recipe);
+  if (variantControl) article.appendChild(variantControl);
+  article.append(createRecipeDetails(recipe), actions);
   return article;
 }
 
 function renderBreakfasts() {
   elements.recipeGrid.replaceChildren();
   state.recipes.filter(recipe => recipe.meal === 'breakfast' && Number(recipe.calories) > 0)
+    .map(resolveRecipeForProfile)
     .forEach((recipe, index) => elements.recipeGrid.appendChild(createBreakfastCard(recipe, index)));
 }
 
 function getMainRecommendations(stage, target) {
   return recommendMainMeals(
-    state.recipes.filter(recipe => recipe.meal === 'main' && Number(recipe.calories) > 0),
+    state.recipes
+      .filter(recipe => recipe.meal === 'main' && Number(recipe.calories) > 0)
+      .map(resolveRecipeForProfile),
     {
       calorieTarget: target,
       consumedNutrition: getDailyPlan().selectedNutrition,
@@ -555,6 +595,7 @@ function renderSlotGrid(slot) {
   const grid = slot === 'snack' ? elements.snackGrid : elements.bedtimeGrid;
   grid.replaceChildren();
   state.recipes.filter(recipe => recipe.meal === slot && Number(recipe.calories) > 0)
+    .map(resolveRecipeForProfile)
     .forEach((recipe, index) => grid.appendChild(createSlotCard(recipe, slot, index)));
 }
 
@@ -852,6 +893,22 @@ function chooseSlot(slot, id) {
   if (state.profile[field]) jumpToMeal('snacks');
 }
 
+function setRecipeVariant(recipeId, variantId, enabled) {
+  const selections = { ...state.profile.recipeVariants };
+  if (enabled) selections[recipeId] = variantId;
+  else delete selections[recipeId];
+  state.profile.recipeVariants = selections;
+  const recipe = state.recipes.find(item => item.id === recipeId);
+  const variant = recipe?.variants?.find(item => item.id === variantId);
+  touchAndRender();
+  showToast(
+    enabled
+      ? `${variant?.label || 'Alternativa'} selecionada; ingredientes e macros atualizados.`
+      : 'Mozzarella ralada reposta; ingredientes e macros atualizados.',
+    'success'
+  );
+}
+
 function optionalNumber(value) {
   if (String(value).trim() === '') return null;
   const number = Number(value);
@@ -1084,6 +1141,11 @@ function bindEvents() {
       stage.dataset.collapsed = stage.dataset.collapsed === 'true' ? 'false' : 'true';
       heading.setAttribute('aria-expanded', String(stage.dataset.collapsed !== 'true'));
     }
+  });
+  document.addEventListener('change', event => {
+    const checkbox = event.target.closest('[data-recipe-variant]');
+    if (!checkbox) return;
+    setRecipeVariant(checkbox.dataset.recipeVariant, checkbox.dataset.variantId, checkbox.checked);
   });
   elements.clearBreakfast.addEventListener('click', () => {
     state.profile.selectedBreakfastId = '';

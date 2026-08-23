@@ -13,19 +13,81 @@ function totalNutrition(components) {
   }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
 }
 
+// Valores por 100 g dos rótulos dos produtos habitualmente usados.
+const PRODUCT_NUTRITION = Object.freeze({
+  skyr: Object.freeze({ calories: 58, protein: 11, carbs: 3.7, fat: 0, fiber: 0 }),
+  greekYogurt: Object.freeze({ calories: 55, protein: 5.3, carbs: 3.9, fat: 2, fiber: 0 }),
+  eggWhites: Object.freeze({ calories: 47, protein: 11, carbs: 0.7, fat: 0.2, fiber: 0 }),
+  cottage: Object.freeze({ calories: 76, protein: 14, carbs: 2.1, fat: 1.5, fiber: 0 }),
+  gratedMozzarella: Object.freeze({ calories: 237, protein: 26, carbs: 2.9, fat: 13.3, fiber: 0 }),
+  freshMozzarella: Object.freeze({ calories: 180, protein: 22, carbs: 0.5, fat: 10, fiber: 0 }),
+  granola: Object.freeze({ calories: 423, protein: 11.2, carbs: 64.9, fat: 13.4, fiber: 8.1 })
+});
+
+function productPortion(label, quantity, nutrition) {
+  const factor = quantity / 100;
+  return {
+    label,
+    calories: nutrition.calories * factor,
+    protein: nutrition.protein * factor,
+    carbs: nutrition.carbs * factor,
+    fat: nutrition.fat * factor,
+    fiber: nutrition.fiber * factor
+  };
+}
+
+function buildIngredientVariant(components, variant) {
+  const replacementIndex = components.findIndex(component => component.label === variant.replaces);
+  if (replacementIndex < 0 || !variant.replacement) return Object.freeze({ ...variant });
+  const variantComponents = components.map((component, index) => (
+    index === replacementIndex ? variant.replacement : component
+  ));
+  const totals = totalNutrition(variantComponents);
+  return Object.freeze({
+    ...variant,
+    components: Object.freeze(variantComponents),
+    ingredients: variantComponents.map(component => component.label).join('\n'),
+    calories: Math.round(totals.calories),
+    protein: round(totals.protein),
+    carbs: round(totals.carbs),
+    fat: round(totals.fat),
+    fiber: round(totals.fiber)
+  });
+}
+
 function buildRecipe(recipe) {
   const totals = totalNutrition(recipe.components);
+  const variants = (recipe.variants || []).map(variant => buildIngredientVariant(recipe.components, variant));
   return Object.freeze({
     servings: 1,
-    catalogVersion: 1,
+    catalogVersion: 3,
     source: 'curated',
     ...recipe,
+    variants: Object.freeze(variants),
     ingredients: recipe.components.map(component => component.label).join('\n'),
     calories: Math.round(totals.calories),
     protein: round(totals.protein),
     carbs: round(totals.carbs),
     fat: round(totals.fat),
     fiber: round(totals.fiber)
+  });
+}
+
+export function resolveFilipaRecipeVariant(recipe, variantId = 'base') {
+  if (!recipe || variantId === 'base') return recipe;
+  const variant = recipe.variants?.find(item => item.id === variantId);
+  if (!variant) return recipe;
+  return Object.freeze({
+    ...recipe,
+    activeVariantId: variant.id,
+    activeVariantLabel: variant.label,
+    components: variant.components || recipe.components,
+    ingredients: variant.ingredients || recipe.ingredients,
+    calories: variant.calories,
+    protein: variant.protein,
+    carbs: variant.carbs,
+    fat: variant.fat,
+    fiber: variant.fiber
   });
 }
 
@@ -52,6 +114,7 @@ export const FILIPA_PROFILE_DEFAULTS = Object.freeze({
   selectedDinnerId: '',
   selectedSnackId: '',
   selectedBedtimeId: '',
+  recipeVariants: {},
   extras: [],
   mealCalories: { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 },
   planDate: '',
@@ -72,9 +135,9 @@ export const FILIPA_BREAKFASTS = Object.freeze([
     batchFriendly: true,
     components: [
       { label: '30 g de flocos de aveia', calories: 113, protein: 4, carbs: 18.3, fat: 2, fiber: 3 },
-      { label: '70 g de queijo cottage ligeiro', calories: 57, protein: 8.7, carbs: 2.1, fat: 1.5, fiber: 0 },
+      productPortion('70 g de queijo cottage', 70, PRODUCT_NUTRITION.cottage),
       { label: '1 ovo', calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8, fiber: 0 },
-      { label: '50 g de claras', calories: 23, protein: 5.3, carbs: 0.4, fat: 0.1, fiber: 0 },
+      productPortion('50 g de claras', 50, PRODUCT_NUTRITION.eggWhites),
       { label: '80 g de mirtilos', calories: 46, protein: 0.6, carbs: 11.6, fat: 0.2, fiber: 1.9 },
       { label: '7 g de amendoim em pó e canela', calories: 29, protein: 3.4, carbs: 2.2, fat: 0.8, fiber: 0.7 }
     ],
@@ -83,9 +146,9 @@ export const FILIPA_BREAKFASTS = Object.freeze([
       'Cozinhar pequenas panquecas numa frigideira antiaderente, virando quando surgirem bolhas.',
       'Servir com os mirtilos e o amendoim em pó.'
     ],
-    highlights: ['1 dose', '≈28 g proteína', 'Pronta em 10 min', 'Boa para levar'],
-    cautions: ['Para preparar várias doses, multiplicar todos os ingredientes e conservar até 3 dias no frigorífico.', 'Alternativas: trocar mirtilos por maçã, pera ou nectarina e cottage por skyr espesso.', 'Confirmar o rótulo do cottage e do amendoim em pó.'],
-    evidenceNote: 'Valores médios para aveia, ovo, claras, cottage, mirtilos e amendoim em pó; afinar com os rótulos usados.'
+    highlights: ['1 dose', '≈30 g proteína', 'Pronta em 10 min', 'Boa para levar'],
+    cautions: ['Para preparar várias doses, multiplicar todos os ingredientes e conservar até 3 dias no frigorífico.', 'Alternativas: trocar mirtilos por maçã, pera ou nectarina e cottage por skyr espesso.', 'Confirmar o rótulo do amendoim em pó.'],
+    evidenceNote: 'Cottage e claras usam os rótulos registados; aveia, ovo, mirtilos e amendoim em pó usam valores médios.'
   }),
   buildRecipe({
     id: 'filipa-breakfast-oats-egg-whites',
@@ -101,7 +164,7 @@ export const FILIPA_BREAKFASTS = Object.freeze([
     components: [
       { label: '35 g de flocos de aveia', calories: 133, protein: 4.7, carbs: 21.4, fat: 2.4, fiber: 3.5 },
       { label: '150 ml de leite proteico Mimosa', calories: 75, protein: 9, carbs: 7.2, fat: 1.8, fiber: 0 },
-      { label: '150 g de claras', calories: 69, protein: 15.8, carbs: 1.1, fat: 0.3, fiber: 0 },
+      productPortion('150 g de claras', 150, PRODUCT_NUTRITION.eggWhites),
       { label: '100 g de maçã e canela a gosto', calories: 52, protein: 0.3, carbs: 13.8, fat: 0.2, fiber: 2.4 }
     ],
     instructions: [
@@ -111,7 +174,7 @@ export const FILIPA_BREAKFASTS = Object.freeze([
     ],
     highlights: ['1 dose', '≈30 g proteína', 'Sem whey', 'Maçã e canela'],
     cautions: ['As claras devem ficar completamente cozinhadas.', 'Alternativas: usar pera ou nectarina em vez de maçã.', 'O cálculo do leite proteico é provisório; confirmar o rótulo da embalagem Mimosa utilizada.'],
-    evidenceNote: 'Aveia, claras e maçã usam valores médios; o leite proteico deve ser afinado pelo rótulo.'
+    evidenceNote: 'Claras usam o rótulo registado; aveia e maçã usam valores médios e o leite proteico deve ser afinado pelo rótulo.'
   }),
   buildRecipe({
     id: 'filipa-breakfast-vegetarian-crepioca',
@@ -127,8 +190,8 @@ export const FILIPA_BREAKFASTS = Object.freeze([
     components: [
       { label: '30 g de tapioca hidratada', calories: 72, protein: 0, carbs: 18, fat: 0, fiber: 0 },
       { label: '1 ovo', calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8, fiber: 0 },
-      { label: '120 g de claras', calories: 55, protein: 12.6, carbs: 0.8, fat: 0.2, fiber: 0 },
-      { label: '40 g de mozzarella ligeira', calories: 96, protein: 9.3, carbs: 1.3, fat: 6, fiber: 0 },
+      productPortion('120 g de claras', 120, PRODUCT_NUTRITION.eggWhites),
+      productPortion('40 g de mozzarella ralada', 40, PRODUCT_NUTRITION.gratedMozzarella),
       { label: '80 g de tomate', calories: 14, protein: 0.7, carbs: 3.1, fat: 0.2, fiber: 1 },
       { label: '50 g de espinafres', calories: 12, protein: 1.5, carbs: 1.8, fat: 0.2, fiber: 1.1 },
       { label: '3 g de azeite, pimenta e orégãos', calories: 27, protein: 0, carbs: 0, fat: 3, fiber: 0 }
@@ -138,9 +201,19 @@ export const FILIPA_BREAKFASTS = Object.freeze([
       'Cozinhar numa frigideira antiaderente com o azeite até a base ficar firme.',
       'Juntar o tomate, os espinafres e a mozzarella, dobrar e cozinhar até o queijo derreter.'
     ],
-    highlights: ['1 dose', '≈30 g proteína', 'Sem carne ou peixe', 'Queijo derretido'],
+    highlights: ['1 dose', '≈32 g proteína', 'Sem carne ou peixe', 'Queijo derretido'],
     cautions: ['Alternativas: trocar mozzarella por queijo flamengo ligeiro ou cottage.', 'Para levar, deixar arrefecer antes de fechar o recipiente e reaquecer completamente.'],
-    evidenceNote: 'Valores médios; a tapioca hidratada e a mozzarella variam entre marcas.'
+    evidenceNote: 'Claras e mozzarella usam os rótulos registados; a tapioca hidratada e os restantes ingredientes usam valores médios.',
+    variants: [
+      {
+        id: 'fresh-mozzarella',
+        label: 'Mozzarella fresca',
+        checkboxLabel: 'Trocar por mozzarella fresca',
+        description: 'Equivalência calórica: 40 g ralada correspondem a cerca de 53 g fresca.',
+        replaces: '40 g de mozzarella ralada',
+        replacement: productPortion('≈53 g de mozzarella fresca', 40 * 237 / 180, PRODUCT_NUTRITION.freshMozzarella)
+      }
+    ]
   }),
   buildRecipe({
     id: 'filipa-breakfast-egg-toast',
@@ -156,7 +229,7 @@ export const FILIPA_BREAKFASTS = Object.freeze([
     components: [
       { label: '50 g de pão integral ou de mistura', calories: 125, protein: 5, carbs: 22.5, fat: 1.7, fiber: 3.3 },
       { label: '1 ovo', calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8, fiber: 0 },
-      { label: '80 g de claras', calories: 37, protein: 8.4, carbs: 0.6, fat: 0.2, fiber: 0 },
+      productPortion('80 g de claras', 80, PRODUCT_NUTRITION.eggWhites),
       { label: '15 g de queijo flamengo ligeiro', calories: 39, protein: 4.5, carbs: 0.5, fat: 2.5, fiber: 0 },
       { label: '80 g de pera, maçã ou nectarina', calories: 46, protein: 0.3, carbs: 12, fat: 0.1, fiber: 2.5 },
       { label: '50 g de tomate', calories: 9, protein: 0.5, carbs: 2, fat: 0.1, fiber: 0.6 }
@@ -168,7 +241,7 @@ export const FILIPA_BREAKFASTS = Object.freeze([
     ],
     highlights: ['1 dose', '≈25 g proteína', 'Salgado', 'Fruta incluída'],
     cautions: ['Alternativas: usar cottage ou um triângulo Vaca que Ri em vez de queijo flamengo.', 'Confirmar o peso e o rótulo do pão escolhido.'],
-    evidenceNote: 'Valores médios para pão, ovo, claras, queijo, tomate e fruta.'
+    evidenceNote: 'Claras usam o rótulo registado; pão, ovo, queijo, tomate e fruta usam valores médios.'
   })
 ]);
 
@@ -216,7 +289,7 @@ export const FILIPA_MAIN_MEALS = Object.freeze([
       { label: '100 g de peito de peru cozinhado', calories: 150, protein: 29, carbs: 0, fat: 3, fiber: 0 },
       { label: '100 g de massa cozinhada', calories: 158, protein: 5.8, carbs: 30.9, fat: 0.9, fiber: 1.8 },
       { label: '200 g de tomate, cebola e espinafres cozinhados', calories: 60, protein: 3, carbs: 10, fat: 0.5, fiber: 4 },
-      { label: '30 g de mozzarella ligeira', calories: 72, protein: 7, carbs: 1, fat: 4.5, fiber: 0 },
+      productPortion('30 g de mozzarella ralada', 30, PRODUCT_NUTRITION.gratedMozzarella),
       { label: '3 g de azeite, alho e orégãos', calories: 27, protein: 0, carbs: 0, fat: 3, fiber: 0 }
     ],
     instructions: [
@@ -224,11 +297,21 @@ export const FILIPA_MAIN_MEALS = Object.freeze([
       'Colocar numa travessa individual, cobrir com mozzarella e gratinar.',
       'Para marmita, guardar depois de arrefecer e reaquecer até ficar bem quente.'
     ],
-    highlights: ['1 dose', '≈45 g proteína', 'Pesos cozinhados', 'Queijo gratinado'],
+    highlights: ['1 dose', '≈46 g proteína', 'Pesos cozinhados', 'Queijo gratinado'],
     cautions: ['Alternativas: usar frango ou carne de vaca magra em vez de peru.', 'Pode ser montada em várias doses e gratinada no próprio dia.'],
-    evidenceNote: 'Valores médios para alimentos cozinhados; confirmar a mozzarella e o molho de tomate.',
+    evidenceNote: 'Mozzarella usa o rótulo registado; os alimentos cozinhados e o molho de tomate usam valores médios.',
     calorieAdjustment: { label: 'massa cozinhada', baseQuantity: 100, unit: 'g', calories: 158, protein: 5.8, carbs: 30.9, fat: 0.9, fiber: 1.8 },
-    scaleHint: 'Ajustar sobretudo a massa; manter o peru, os legumes e a mozzarella.'
+    scaleHint: 'Ajustar sobretudo a massa; manter o peru, os legumes e a mozzarella.',
+    variants: [
+      {
+        id: 'fresh-mozzarella',
+        label: 'Mozzarella fresca',
+        checkboxLabel: 'Trocar por mozzarella fresca',
+        description: 'Equivalência calórica: 30 g ralada correspondem a cerca de 40 g fresca.',
+        replaces: '30 g de mozzarella ralada',
+        replacement: productPortion('≈40 g de mozzarella fresca', 30 * 237 / 180, PRODUCT_NUTRITION.freshMozzarella)
+      }
+    ]
   }),
   buildRecipe({
     id: 'filipa-main-salmon-sweet-potato',
@@ -299,14 +382,14 @@ export const FILIPA_SNACKS = Object.freeze([
     description: 'O lanche habitual numa porção fácil de transportar, com os cereais separados.',
     quality: 'very_high', qualityLabel: 'Muito prático', rank: 1, prepTime: '5 min', batchFriendly: true,
     components: [
-      { label: '170 g de iogurte grego ligeiro', calories: 110, protein: 15, carbs: 7, fat: 2.5, fiber: 0 },
+      productPortion('170 g de iogurte grego', 170, PRODUCT_NUTRITION.greekYogurt),
       { label: '100 g de mirtilos, nectarina, maçã ou pera', calories: 50, protein: 0.4, carbs: 12, fat: 0.2, fiber: 2.3 },
-      { label: '15 g de cereais ou granola simples', calories: 56, protein: 1.5, carbs: 10.8, fat: 0.8, fiber: 1.5 }
+      productPortion('15 g da granola habitual', 15, PRODUCT_NUTRITION.granola)
     ],
     instructions: ['Colocar o iogurte e a fruta num recipiente refrigerado.', 'Levar os cereais separados e juntar apenas no momento de comer.'],
-    highlights: ['1 dose', '≈17 g proteína', '5 min', 'Marmita'],
-    cautions: ['Alternativas: usar skyr ou variar a fruta.', 'Confirmar os rótulos do iogurte e dos cereais.'],
-    evidenceNote: 'Valores médios; iogurtes e granolas variam bastante entre marcas.'
+    highlights: ['1 dose', '≈11 g proteína', '5 min', 'Marmita'],
+    cautions: ['Alternativas: usar skyr ou variar a fruta.'],
+    evidenceNote: 'Iogurte grego e granola usam os rótulos registados; a fruta usa valores médios.'
   }),
   buildRecipe({
     id: 'filipa-snack-carrot-cake',
@@ -317,16 +400,16 @@ export const FILIPA_SNACKS = Object.freeze([
     quality: 'high', qualityLabel: 'Sabor a bolo', rank: 2, prepTime: '8 min', batchFriendly: false,
     components: [
       { label: '15 g de farinha de aveia', calories: 57, protein: 2, carbs: 9.2, fat: 1, fiber: 1.5 },
-      { label: '80 g de claras', calories: 37, protein: 8.4, carbs: 0.6, fat: 0.2, fiber: 0 },
+      productPortion('80 g de claras', 80, PRODUCT_NUTRITION.eggWhites),
       { label: '10 g de whey de baunilha', calories: 38, protein: 7.8, carbs: 0.6, fat: 0.5, fiber: 0 },
       { label: '50 g de cenoura ralada, canela e fermento', calories: 20, protein: 0.5, carbs: 4.5, fat: 0.1, fiber: 1.4 },
-      { label: '50 g de skyr para cobertura', calories: 30, protein: 5, carbs: 1.8, fat: 0.1, fiber: 0 },
+      productPortion('50 g de skyr para cobertura', 50, PRODUCT_NUTRITION.skyr),
       { label: '70 g de maçã, pera ou nectarina', calories: 36, protein: 0.2, carbs: 9.5, fat: 0.1, fiber: 1.7 }
     ],
     instructions: ['Misturar aveia, claras, whey, cenoura, canela e fermento numa taça.', 'Cozinhar no micro-ondas em intervalos curtos até o centro ficar cozinhado.', 'Deixar arrefecer ligeiramente, cobrir com skyr e acompanhar com fruta.'],
-    highlights: ['1 dose', '≈24 g proteína', 'Micro-ondas', 'Cenoura e canela'],
+    highlights: ['1 dose', '≈25 g proteína', 'Micro-ondas', 'Cenoura e canela'],
     cautions: ['Alternativa sem whey: usar mais 50 g de claras e 30 g adicionais de skyr, confirmando a textura.', 'O tempo depende da potência do micro-ondas.'],
-    evidenceNote: 'Valores médios; confirmar whey e skyr.'
+    evidenceNote: 'Claras e skyr usam os rótulos registados; confirmar o rótulo da whey.'
   }),
   buildRecipe({
     id: 'filipa-snack-chocolate-cake',
@@ -337,16 +420,16 @@ export const FILIPA_SNACKS = Object.freeze([
     quality: 'high', qualityLabel: 'Chocolate', rank: 3, prepTime: '8 min', batchFriendly: false,
     components: [
       { label: '15 g de farinha de aveia', calories: 57, protein: 2, carbs: 9.2, fat: 1, fiber: 1.5 },
-      { label: '80 g de claras', calories: 37, protein: 8.4, carbs: 0.6, fat: 0.2, fiber: 0 },
+      productPortion('80 g de claras', 80, PRODUCT_NUTRITION.eggWhites),
       { label: '10 g de whey de chocolate ou baunilha', calories: 38, protein: 7.8, carbs: 0.6, fat: 0.5, fiber: 0 },
       { label: '5 g de cacau magro e fermento', calories: 12, protein: 1, carbs: 1, fat: 0.7, fiber: 1.7 },
-      { label: '50 g de iogurte grego ligeiro', calories: 30, protein: 4.4, carbs: 2.1, fat: 0.7, fiber: 0 },
+      productPortion('50 g de iogurte grego', 50, PRODUCT_NUTRITION.greekYogurt),
       { label: '70 g de pera ou maçã', calories: 40, protein: 0.2, carbs: 10.5, fat: 0.1, fiber: 1.8 }
     ],
     instructions: ['Misturar a aveia, as claras, a whey, o cacau e o fermento.', 'Cozinhar no micro-ondas em intervalos curtos até ficar firme.', 'Servir com o iogurte e a fruta.'],
-    highlights: ['1 dose', '≈24 g proteína', 'Chocolate', 'Micro-ondas'],
+    highlights: ['1 dose', '≈23 g proteína', 'Chocolate', 'Micro-ondas'],
     cautions: ['Pode trocar a whey por mais claras e skyr, ajustando a textura.', 'Não cozinhar demasiado para não ficar seco.'],
-    evidenceNote: 'Valores médios; confirmar whey, cacau e iogurte.'
+    evidenceNote: 'Claras e iogurte grego usam os rótulos registados; confirmar whey e cacau.'
   }),
   buildRecipe({
     id: 'filipa-snack-cottage-toast',
@@ -357,14 +440,14 @@ export const FILIPA_SNACKS = Object.freeze([
     quality: 'high', qualityLabel: 'Salgada', rank: 4, prepTime: '5 min', batchFriendly: true,
     components: [
       { label: '40 g de pão integral', calories: 100, protein: 4, carbs: 18, fat: 1.4, fiber: 2.6 },
-      { label: '80 g de queijo cottage ligeiro', calories: 66, protein: 9.9, carbs: 2.4, fat: 1.8, fiber: 0 },
+      productPortion('80 g de queijo cottage', 80, PRODUCT_NUTRITION.cottage),
       { label: '100 g de tomate, orégãos e pimenta', calories: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2 },
       { label: '80 g de maçã, pera ou nectarina', calories: 42, protein: 0.2, carbs: 11, fat: 0.1, fiber: 2 }
     ],
     instructions: ['Levar o pão separado para não amolecer.', 'Barrar com cottage e juntar o tomate no momento de comer.', 'Acompanhar com a fruta.'],
-    highlights: ['1 dose', '≈15 g proteína', 'Salgada', '5 min'],
+    highlights: ['1 dose', '≈16 g proteína', 'Salgada', '5 min'],
     cautions: ['Alternativas: usar mozzarella, queijo flamengo ligeiro ou Vaca que Ri, recalculando pelo rótulo.'],
-    evidenceNote: 'Valores médios; confirmar pão e cottage.'
+    evidenceNote: 'Cottage usa o rótulo registado; pão, tomate e fruta usam valores médios.'
   })
 ]);
 
@@ -398,13 +481,13 @@ export const FILIPA_BEDTIMES = Object.freeze([
     description: 'Ceia sem preparação, pensada para quando não estiveres em casa.',
     quality: 'very_high', qualityLabel: 'Fora de casa', rank: 2, prepTime: '2 min', batchFriendly: true,
     components: [
-      { label: '150 g de skyr natural', calories: 89, protein: 15, carbs: 5.4, fat: 0.3, fiber: 0 },
+      productPortion('150 g de skyr natural', 150, PRODUCT_NUTRITION.skyr),
       { label: '100 g de mirtilos, maçã, pera ou nectarina e canela', calories: 50, protein: 0.4, carbs: 12, fat: 0.2, fiber: 2.3 }
     ],
     instructions: ['Colocar o skyr e a fruta num recipiente refrigerado.', 'Juntar canela e consumir frio.'],
-    highlights: ['1 dose', '≈15 g proteína', '2 min', 'Fora de casa'],
+    highlights: ['1 dose', '≈17 g proteína', '2 min', 'Fora de casa'],
     cautions: ['Alternativa: usar iogurte grego ligeiro e confirmar o rótulo.', 'Transportar refrigerado.'],
-    evidenceNote: 'Valores médios; confirmar o skyr e a fruta escolhida.'
+    evidenceNote: 'Skyr usa o rótulo registado; a fruta usa valores médios.'
   }),
   buildRecipe({
     id: 'filipa-bedtime-warm-apple-yogurt',
@@ -415,13 +498,13 @@ export const FILIPA_BEDTIMES = Object.freeze([
     quality: 'high', qualityLabel: 'Fruta quente', rank: 3, prepTime: '5 min', batchFriendly: false,
     components: [
       { label: '100 g de maçã', calories: 52, protein: 0.3, carbs: 13.8, fat: 0.2, fiber: 2.4 },
-      { label: '100 g de iogurte grego ligeiro', calories: 65, protein: 8.8, carbs: 4.2, fat: 1.5, fiber: 0 },
+      productPortion('100 g de iogurte grego', 100, PRODUCT_NUTRITION.greekYogurt),
       { label: '5 g de amendoim em pó e canela', calories: 20, protein: 2.4, carbs: 1.6, fat: 0.6, fiber: 0.5 }
     ],
     instructions: ['Cortar a maçã e cozinhar no micro-ondas com canela até amolecer.', 'Deixar arrefecer ligeiramente e servir com o iogurte e o amendoim em pó.'],
-    highlights: ['1 dose', '≈12 g proteína', 'Fruta', '5 min'],
+    highlights: ['1 dose', '≈8 g proteína', 'Fruta', '5 min'],
     cautions: ['Alternativas: trocar maçã por pera ou usar skyr em vez de iogurte grego.'],
-    evidenceNote: 'Valores médios; confirmar iogurte e amendoim em pó.'
+    evidenceNote: 'Iogurte grego usa o rótulo registado; maçã e amendoim em pó usam valores médios.'
   })
 ]);
 

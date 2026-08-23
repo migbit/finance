@@ -13,11 +13,33 @@ function totalNutrition(components) {
   }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
 }
 
+// Valores por 100 g (ou 100 ml) dos rótulos dos produtos habitualmente usados.
+const PRODUCT_NUTRITION = Object.freeze({
+  skyr: Object.freeze({ calories: 58, protein: 11, carbs: 3.7, fat: 0, fiber: 0 }),
+  greekYogurt: Object.freeze({ calories: 55, protein: 5.3, carbs: 3.9, fat: 2, fiber: 0 }),
+  eggWhites: Object.freeze({ calories: 47, protein: 11, carbs: 0.7, fat: 0.2, fiber: 0 }),
+  riceCream: Object.freeze({ calories: 369, protein: 7.5, carbs: 83, fat: 0.8, fiber: 0 }),
+  soyDrink: Object.freeze({ calories: 30, protein: 3.3, carbs: 0.5, fat: 1.5, fiber: 0 }),
+  gratedMozzarella: Object.freeze({ calories: 237, protein: 26, carbs: 2.9, fat: 13.3, fiber: 0 })
+});
+
+function productPortion(label, quantity, nutrition) {
+  const factor = quantity / 100;
+  return {
+    label,
+    calories: nutrition.calories * factor,
+    protein: nutrition.protein * factor,
+    carbs: nutrition.carbs * factor,
+    fat: nutrition.fat * factor,
+    fiber: nutrition.fiber * factor
+  };
+}
+
 function buildRecipe(recipe) {
   const totals = totalNutrition(recipe.components);
   return Object.freeze({
     ...recipe,
-    catalogVersion: 5,
+    catalogVersion: 6,
     ingredients: recipe.components.map(component => component.label).join('\n'),
     calories: Math.round(totals.calories),
     protein: round(totals.protein),
@@ -85,8 +107,8 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
     batchFriendly: true,
     components: [
       { label: '50 g de flocos de aveia integrais', calories: 187, protein: 5.3, carbs: 30.5, fat: 3.4, fiber: 5 },
-      { label: '150 g de skyr natural sem açúcar', calories: 88.5, protein: 15, carbs: 5.4, fat: 0.3, fiber: 0 },
-      { label: '100 ml de bebida de soja sem açúcar fortificada', calories: 33, protein: 3.3, carbs: 0, fat: 1.8, fiber: 0.6 },
+      productPortion('150 g de skyr natural sem açúcar', 150, PRODUCT_NUTRITION.skyr),
+      productPortion('100 ml de bebida de soja sem açúcar fortificada', 100, PRODUCT_NUTRITION.soyDrink),
       { label: '10 g de whey', calories: 38.3, protein: 7.8, carbs: 0.6, fat: 0.5, fiber: 0 },
       { label: '10 g de linhaça moída', calories: 53, protein: 1.8, carbs: 0.3, fat: 4.2, fiber: 2.7 },
       { label: '80 a 100 g de banana madura', calories: 80, protein: 1, carbs: 20.5, fat: 0.3, fiber: 2.3 },
@@ -101,9 +123,9 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       'Fazer pequenas panquecas numa frigideira antiaderente, sem necessidade de óleo.',
       'Servir com a fruta fresca.'
     ],
-    highlights: ['≈37 g de proteína', '≈13 g de fibra', 'Cálcio/B12/D se a soja for fortificada', 'Ómega-3 ALA', 'Boa para dias ativos'],
+    highlights: ['≈36 g de proteína', '≈13 g de fibra', 'Cálcio/B12/D se a soja for fortificada', 'Ómega-3 ALA', 'Boa para dias ativos'],
     cautions: ['Pode preparar 3 a 4 doses, conservar cerca de 3 dias no frigorífico ou congelar as panquecas separadas.', 'Aquecer na torradeira, air fryer ou micro-ondas.'],
-    evidenceNote: 'O total apresentado usa 90 g de banana e 125 g de fruta sazonal. Whey ESN e bebida Alpro calculadas pelos rótulos; skyr, aveia, linhaça e fruta usam valores médios.'
+    evidenceNote: 'O total apresentado usa 90 g de banana e 125 g de fruta sazonal. Skyr, bebida de soja e whey usam os rótulos registados; aveia, linhaça e fruta usam valores médios.'
   }),
   buildRecipe({
     id: 'breakfast-overnight-oats',
@@ -117,8 +139,8 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
     batchFriendly: true,
     components: [
       { label: '50 g de flocos de aveia integrais', calories: 187, protein: 5.7, carbs: 30.5, fat: 3.4, fiber: 5 },
-      { label: '200 g de skyr natural sem açúcar', calories: 118, protein: 20, carbs: 7.2, fat: 0.4, fiber: 0 },
-      { label: '200 ml de bebida de soja sem açúcar fortificada', calories: 66, protein: 6.6, carbs: 0, fat: 3.6, fiber: 1.2 },
+      productPortion('200 g de skyr natural sem açúcar', 200, PRODUCT_NUTRITION.skyr),
+      productPortion('200 ml de bebida de soja sem açúcar fortificada', 200, PRODUCT_NUTRITION.soyDrink),
       { label: '10 g de sementes de chia', calories: 49, protein: 1.7, carbs: 0.8, fat: 3.1, fiber: 3.5 },
       { label: '150 g de fruta sazonal', calories: 64, protein: 0.6, carbs: 15.6, fat: 0.2, fiber: 3.5 },
       { label: '10 g de nozes', calories: 65, protein: 1.5, carbs: 0.7, fat: 6.5, fiber: 0.7 },
@@ -130,9 +152,9 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       'De manhã, juntar a fruta e as nozes.',
       'Se estiver demasiado espesso, adicionar um pouco de água ou bebida de soja.'
     ],
-    highlights: ['≈36 g de proteína', '≈14 g de fibra', 'Cálcio elevado', 'Sem whey', 'Melhor opção base'],
-    cautions: ['Confirmar o rótulo do skyr; as marcas variam.', 'Usar chia inteira ou moída e beber líquidos normalmente ao longo do dia.'],
-    evidenceNote: 'Bebida de soja calculada pelo rótulo Alpro; skyr, aveia, chia, nozes e fruta usam valores médios e devem ser afinados pela marca.'
+    highlights: ['≈38 g de proteína', '≈13 g de fibra', 'Cálcio elevado', 'Sem whey', 'Melhor opção base'],
+    cautions: ['Usar chia inteira ou moída e beber líquidos normalmente ao longo do dia.'],
+    evidenceNote: 'Skyr e bebida de soja usam os rótulos registados; aveia, chia, nozes e fruta usam valores médios.'
   }),
   buildRecipe({
     id: 'breakfast-protein-rice-cream',
@@ -145,9 +167,9 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
     prepTime: '10 min',
     batchFriendly: false,
     components: [
-      { label: '50 g de creme ou farinha de arroz', calories: 180, protein: 3.5, carbs: 40, fat: 0.5, fiber: 0.5 },
-      { label: '250 ml de bebida de soja sem açúcar fortificada', calories: 82.5, protein: 8.3, carbs: 0, fat: 4.5, fiber: 1.5 },
-      { label: '150 g de skyr natural', calories: 88.5, protein: 15, carbs: 5.4, fat: 0.3, fiber: 0 },
+      productPortion('50 g de Rice Cream sem sabor', 50, PRODUCT_NUTRITION.riceCream),
+      productPortion('250 ml de bebida de soja sem açúcar fortificada', 250, PRODUCT_NUTRITION.soyDrink),
+      productPortion('150 g de skyr natural', 150, PRODUCT_NUTRITION.skyr),
       { label: '10 g de whey, baunilha ou outro sabor que combine', calories: 38.3, protein: 7.8, carbs: 0.6, fat: 0.5, fiber: 0 },
       { label: '150 g de fruta, por exemplo banana, frutos vermelhos, maçã ou pêssego', calories: 64, protein: 0.6, carbs: 15.6, fat: 0.2, fiber: 3.5 },
       { label: 'Canela a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
@@ -161,9 +183,9 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       'Servir com o skyr, a fruta e a canela.',
       'Para mais textura e saciedade, juntar 5 a 10 g de frutos secos.'
     ],
-    highlights: ['≈35 g de proteína', 'Digestão relativamente fácil', 'Cereal diferente da aveia', 'Doce e quente', 'Boa para dias de treino'],
+    highlights: ['≈37 g de proteína', 'Digestão relativamente fácil', 'Cereal diferente da aveia', 'Doce e quente', 'Boa para dias de treino'],
     cautions: ['O total apresentado não inclui os frutos secos opcionais.', 'Adicionar 5 g acrescenta cerca de 30 kcal; 10 g acrescenta aproximadamente 55–60 kcal.', 'Deixar arrefecer ligeiramente antes de juntar a whey ajuda a misturá-la sem formar grumos.'],
-    evidenceNote: 'Bebida de soja e whey calculadas pelos rótulos já registados; creme de arroz, skyr e fruta usam valores médios. Afinar quando estiverem definidas as marcas.'
+    evidenceNote: 'Rice Cream, bebida de soja, skyr e whey usam os rótulos registados; a fruta usa valores médios.'
   }),
   buildRecipe({
     id: 'breakfast-quick-pre-workout',
@@ -179,7 +201,7 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       { label: '80 g de pão branco ou de mistura', calories: 225, protein: 6.8, carbs: 39.5, fat: 2.6, fiber: 2.4 },
       { label: '25 a 30 g de compota ou mel', calories: 61.6, protein: 0.1, carbs: 15.1, fat: 0, fiber: 0.1 },
       { label: '1 banana média (≈120 g)', calories: 107, protein: 1.3, carbs: 27.4, fat: 0.4, fiber: 3.1 },
-      { label: '200 ml de bebida de soja sem açúcar fortificada', calories: 66, protein: 6.6, carbs: 0, fat: 3.6, fiber: 1.2 },
+      productPortion('200 ml de bebida de soja sem açúcar fortificada', 200, PRODUCT_NUTRITION.soyDrink),
       { label: '10 a 15 g de whey', calories: 57.5, protein: 11.7, carbs: 0.9, fat: 0.7, fiber: 0 },
       { label: 'Café, se fizer parte da rotina', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
       { label: '300 a 500 ml de água', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
@@ -193,7 +215,7 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
     ],
     highlights: ['≈83 g de hidratos', '≈27 g de proteína', 'Menos gordura e fibra', 'Preparação em 5 min', 'Uso pré-exercício'],
     cautions: ['O total apresentado usa 27,5 g de compota e 15 g de whey.', 'Com mel, acrescentar aproximadamente 22 kcal e 7–8 g de hidratos.', 'É uma opção específica para treinar pouco depois; não substitui o pequeno-almoço base nos restantes dias.'],
-    evidenceNote: 'Bebida de soja e whey calculadas pelos rótulos já registados; pão branco/mistura, compota e banana usam valores médios. Confirmar o pão e a compota comprados.'
+    evidenceNote: 'Bebida de soja e whey usam os rótulos registados; pão branco/mistura, compota e banana usam valores médios. Confirmar o pão e a compota comprados.'
   })
 ]);
 
@@ -252,22 +274,22 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
     batchFriendly: true,
     components: [
       { label: '2 ovos', calories: 144, protein: 12.6, carbs: 0.8, fat: 9.6, fiber: 0 },
-      { label: '150 g de claras', calories: 69, protein: 15.8, carbs: 1.1, fat: 0.3, fiber: 0 },
+      productPortion('150 g de claras', 150, PRODUCT_NUTRITION.eggWhites),
       { label: '300 g de batata', calories: 257, protein: 6, carbs: 57, fat: 0.3, fiber: 6.6 },
       { label: '250 g de espinafres, cogumelos, cebola, tomate ou pimento', calories: 65, protein: 4, carbs: 10, fat: 0.8, fiber: 5 },
-      { label: '30 g de queijo suave, por exemplo mozzarella ou flamengo (feta apenas se gostares)', calories: 80, protein: 4.6, carbs: 1.2, fat: 6.4, fiber: 0 },
+      productPortion('30 g de mozzarella ralada', 30, PRODUCT_NUTRITION.gratedMozzarella),
       { label: '5 g de azeite virgem extra', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
       { label: 'Pimenta, paprika, alho e ervas a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
     ],
     instructions: [
       'Cortar a batata em cubos e cozinhar na air fryer.',
       'Saltear ligeiramente os legumes ou usar diretamente os que libertem pouca água.',
-      'Misturar os ovos, as claras, os legumes e o feta.',
+      'Misturar os ovos, as claras, os legumes e a mozzarella ralada.',
       'Cozinhar como frittata numa frigideira, no forno ou na air fryer e servir com a batata.'
     ],
-    highlights: ['≈43 g de proteína', '≈12 g de fibra', 'Aproveita os ovos', 'Cálcio do feta', 'Excelente de véspera'],
-    cautions: ['Preparar completamente na véspera e aquecer durante poucos minutos.', 'Como não aprecias queijo de sabor forte, usar preferencialmente mozzarella, flamengo suave ou queijo fresco firme; confirmar o rótulo escolhido.'],
-    evidenceNote: 'Ovos, claras, batata e hortícolas usam valores médios; confirmar o rótulo das claras e do queijo escolhidos.',
+    highlights: ['≈47 g de proteína', '≈12 g de fibra', 'Aproveita os ovos', 'Mozzarella ralada', 'Excelente de véspera'],
+    cautions: ['Preparar completamente na véspera e aquecer durante poucos minutos.'],
+    evidenceNote: 'Claras e mozzarella ralada usam os rótulos registados; ovos, batata e hortícolas usam valores médios.',
     calorieAdjustment: {
       label: 'batata',
       baseQuantity: 300,
@@ -296,7 +318,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       { label: '90 g de massa de lentilhas vermelhas, peso em seco', calories: 308.7, protein: 23.9, carbs: 47.1, fat: 1.3, fiber: 5.8 },
       { label: '200 g de passata ou polpa de tomate sem açúcar adicionado', calories: 70, protein: 3, carbs: 11, fat: 0.4, fiber: 3 },
       { label: '200 g de cogumelos com espinafres ou courgette', calories: 60, protein: 4, carbs: 6, fat: 0.6, fiber: 4 },
-      { label: '150 g de skyr natural', calories: 88.5, protein: 15, carbs: 5.4, fat: 0.3, fiber: 0 },
+      productPortion('150 g de skyr natural', 150, PRODUCT_NUTRITION.skyr),
       { label: '10 g de parmesão', calories: 42, protein: 3.7, carbs: 0.3, fat: 2.8, fiber: 0 },
       { label: '5 g de azeite virgem extra', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
       { label: 'Alho, manjericão, orégãos e pimenta', calories: 5.8, protein: 0.4, carbs: 1.2, fat: 0, fiber: 0.3 }
@@ -308,9 +330,9 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       'Aquecer a massa com o molho e misturar o skyr apenas no final, fora do lume ou com lume muito baixo.',
       'Finalizar com o parmesão.'
     ],
-    highlights: ['≈50 g de proteína', '≈13 g de fibra', 'Pouca gordura', 'Inclui leguminosas', 'Boa pós-força'],
+    highlights: ['≈52 g de proteína', '≈13 g de fibra', 'Pouca gordura', 'Inclui leguminosas', 'Boa pós-força'],
     cautions: ['Não ferver o skyr para evitar separar o creme.', 'A massa Dalla Costa é pesada em seco; 90 g cozinhados terão um peso bastante superior.'],
-    evidenceNote: 'Massa Dalla Costa calculada pelo rótulo de 343 kcal e 26,5 g de proteína/100 g; restantes ingredientes usam valores médios.',
+    evidenceNote: 'Massa Dalla Costa e skyr usam os rótulos registados; restantes ingredientes usam valores médios.',
     calorieAdjustment: {
       label: 'massa de lentilhas seca',
       baseQuantity: 90,
@@ -339,7 +361,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       { label: '125 g de quinoa Sabroz Real pronta', calories: 183.8, protein: 5.9, carbs: 30, fat: 3.9, fiber: 3.8 },
       { label: '150 g de feijão-preto ou vermelho cozido e escorrido', calories: 180, protein: 12.8, carbs: 27, fat: 1, fiber: 10.5 },
       { label: '250 g de pimento, tomate, cebola e/ou folhas verdes, incluindo no máximo 30 g de milho', calories: 100, protein: 4.2, carbs: 18, fat: 1, fiber: 6 },
-      { label: '100 g de skyr natural', calories: 59, protein: 10, carbs: 3.6, fat: 0.2, fiber: 0 },
+      productPortion('100 g de skyr natural', 100, PRODUCT_NUTRITION.skyr),
       { label: '50 g de abacate', calories: 80, protein: 1, carbs: 4.3, fat: 7.4, fiber: 3.4 },
       { label: 'Sumo de lima ou limão, cominhos, paprika, alho, coentros e sal iodado moderado', calories: 7.2, protein: 0.1, carbs: 1.7, fat: 0, fiber: 0.1 }
     ],
@@ -349,9 +371,9 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       'Guardar o molho de skyr separadamente.',
       'Aquecer a base, se desejado, e juntar o abacate e o molho apenas no final.'
     ],
-    highlights: ['≈34 g de proteína', '≈24 g de fibra', 'Quinoa + feijão', 'Ótima após pequeno-almoço leve', 'Preparável de véspera'],
+    highlights: ['≈35 g de proteína', '≈24 g de fibra', 'Quinoa + feijão', 'Ótima após pequeno-almoço leve', 'Preparável de véspera'],
     cautions: ['Escorrer e passar o feijão por água para reduzir o sal.', 'Medir o milho, porque uma quantidade livre altera facilmente os hidratos e as calorias.', 'Confirmar o rótulo concreto da quinoa Sabroz.'],
-    evidenceNote: 'Quinoa Sabroz calculada a 147 kcal e 4,7 g de proteína/100 g; feijão, hortícolas, skyr e abacate usam valores médios.',
+    evidenceNote: 'Quinoa Sabroz e skyr usam os rótulos registados; feijão, hortícolas e abacate usam valores médios.',
     calorieAdjustment: {
       label: 'quinoa pronta',
       baseQuantity: 125,
@@ -401,16 +423,16 @@ export const DEFAULT_SNACKS = Object.freeze([
     prepTime: '5 min',
     batchFriendly: true,
     components: [
-      { label: '200 g de iogurte grego magro natural', calories: 116, protein: 11.6, carbs: 8.4, fat: 4, fiber: 0 },
+      productPortion('200 g de iogurte grego natural', 200, PRODUCT_NUTRITION.greekYogurt),
       { label: '12,5 g de Evowhey', calories: 43.3, protein: 9.6, carbs: 0.6, fat: 0.3, fiber: 0 },
       { label: '30 g de cereais integrais sem açúcar adicionado', calories: 111, protein: 3, carbs: 21.5, fat: 1.5, fiber: 3 },
       { label: '150 g de fruta sazonal', calories: 64, protein: 0.6, carbs: 15.6, fat: 0.2, fiber: 3.5 },
       { label: 'Canela (opcional)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
     ],
     instructions: ['Misturar o iogurte com a whey.', 'Guardar no frigorífico e cortar a fruta na véspera, se for conveniente.', 'Juntar os cereais apenas no momento de comer para continuarem crocantes.'],
-    highlights: ['≈25 g de proteína', 'Fruta + cereal integral', 'Preparável de véspera', 'Whey moderada'],
-    cautions: ['Preferir cereais integrais simples e sem açúcar adicionado na maioria dos dias.', 'Se já tiveres bebido o shake pós-treino, o programa destaca a variante com 250 g de skyr e sem whey.', 'Os valores do iogurte variam bastante entre marcas; confirmar o rótulo.'],
-    evidenceNote: 'Dose-base calculada com 12,5 g de Evowhey e iogurte grego light de referência; cereais e fruta usam valores médios.',
+    highlights: ['≈24 g de proteína', 'Fruta + cereal integral', 'Preparável de véspera', 'Whey moderada'],
+    cautions: ['Preferir cereais integrais simples e sem açúcar adicionado na maioria dos dias.', 'Se já tiveres bebido o shake pós-treino, o programa destaca a variante com 250 g de skyr e sem whey.'],
+    evidenceNote: 'Iogurte grego e Evowhey usam os rótulos registados; cereais e fruta usam valores médios.',
     addLabel: 'Com 12,5 g whey',
     variants: [
       {
@@ -418,10 +440,10 @@ export const DEFAULT_SNACKS = Object.freeze([
         label: 'Sem whey',
         name: 'Taça de skyr, fruta e cereais sem whey',
         description: 'Usa 250 g de skyr, sendo especialmente útil quando o shake já foi consumido.',
-        calories: 323,
-        protein: 28.6,
-        carbs: 46.1,
-        fat: 2.2,
+        calories: 320,
+        protein: 31.1,
+        carbs: 46.4,
+        fat: 1.7,
         fiber: 6.5
       }
     ]
@@ -473,15 +495,15 @@ export const DEFAULT_SNACKS = Object.freeze([
     prepTime: '5 min',
     batchFriendly: true,
     components: [
-      { label: '200 g de skyr natural', calories: 118, protein: 20, carbs: 7.2, fat: 0.4, fiber: 0 },
+      productPortion('200 g de skyr natural', 200, PRODUCT_NUTRITION.skyr),
       { label: '1 banana média (≈120 g)', calories: 107, protein: 1.3, carbs: 27.4, fat: 0.4, fiber: 3.1 },
       { label: '25 g de cereais integrais sem açúcar adicionado', calories: 92, protein: 2.5, carbs: 18, fat: 1.2, fiber: 2.5 },
       { label: 'Canela', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
     ],
     instructions: ['Colocar o skyr e a banana num recipiente na véspera ou de manhã.', 'Levar os cereais separadamente e juntar apenas na hora.'],
-    highlights: ['≈24 g de proteína', 'Sem whey', '≈53 g de hidratos', 'Preparável de véspera'],
+    highlights: ['≈26 g de proteína', 'Sem whey', '≈53 g de hidratos', 'Preparável de véspera'],
     cautions: ['O total base usa 200 g de skyr e 25 g de cereais.', 'A variante com chocolate usa 5 g de chocolate preto; 10 g acrescentariam aproximadamente mais 30 kcal.'],
-    evidenceNote: 'Skyr, banana, cereais integrais e chocolate usam valores médios; confirmar as marcas compradas.',
+    evidenceNote: 'Skyr usa o rótulo registado; banana, cereais integrais e chocolate usam valores médios.',
     addLabel: 'Adicionar',
     variants: [
       {
@@ -489,10 +511,10 @@ export const DEFAULT_SNACKS = Object.freeze([
         label: 'Com chocolate',
         name: 'Skyr, banana, cereais e chocolate preto',
         description: 'Inclui 5 g de chocolate preto partido em pedaços.',
-        calories: 347,
-        protein: 24.2,
-        carbs: 54.9,
-        fat: 4.3,
+        calories: 345,
+        protein: 26.2,
+        carbs: 55.1,
+        fat: 3.9,
         fiber: 6.2
       }
     ]
@@ -511,10 +533,10 @@ export const DEFAULT_SNACKS = Object.freeze([
     components: [
       { label: '20 g de whey', calories: 77, protein: 15.6, carbs: 1, fat: 1, fiber: 0 },
       { label: '25 g de farinha de aveia ou flocos de aveia triturados', calories: 88, protein: 3, carbs: 14.5, fat: 1.7, fiber: 2.5 },
-      { label: '80 g de skyr natural', calories: 45, protein: 7.2, carbs: 3, fat: 0.2, fiber: 0 },
+      productPortion('80 g de skyr natural', 80, PRODUCT_NUTRITION.skyr),
       { label: '50 g de banana madura esmagada', calories: 43, protein: 0.5, carbs: 11, fat: 0.1, fiber: 1.3 },
       { label: '5 g de cacau puro em pó', calories: 12, protein: 0.8, carbs: 1.5, fat: 0.7, fiber: 1.7 },
-      { label: '30–40 ml de bebida de soja sem açúcar', calories: 10, protein: 0.9, carbs: 0.2, fat: 0.5, fiber: 0 },
+      productPortion('35 ml de bebida de soja sem açúcar (ajustar entre 30–40 ml)', 35, PRODUCT_NUTRITION.soyDrink),
       { label: '2 g de fermento em pó (cerca de ½ colher de chá)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
       { label: 'Canela ou umas gotas de aroma de baunilha (opcional)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
     ],
@@ -528,9 +550,9 @@ export const DEFAULT_SNACKS = Object.freeze([
       'Verificar o centro e, se ainda estiver demasiado líquido, acrescentar 10 segundos de cada vez.',
       'Deixar repousar 1 minuto antes de comer.'
     ],
-    highlights: ['≈28 g de proteína', '≈275 kcal', 'Micro-ondas', 'Pronto em 4 min'],
+    highlights: ['≈30 g de proteína', '≈277 kcal', 'Micro-ondas', 'Pronto em 4 min'],
     cautions: ['Não cozinhar demasiado: 10–15 segundos podem fazer a diferença entre um bolo húmido e uma textura seca.'],
-    evidenceNote: 'Valores aproximados para as quantidades indicadas; confirmar os rótulos da whey, do skyr e da bebida de soja.',
+    evidenceNote: 'Skyr e bebida de soja usam os rótulos registados; a bebida é calculada com uma porção de referência de 35 ml.',
     addLabel: 'Sem chocolate',
     variants: [
       {
@@ -538,10 +560,10 @@ export const DEFAULT_SNACKS = Object.freeze([
         label: 'Com chocolate ✓',
         name: 'Bolo de caneca proteico com chocolate preto',
         description: 'Acrescenta 5 g de chocolate preto picado por cima.',
-        calories: 305,
-        protein: 28,
-        carbs: 35,
-        fat: 6.5,
+        calories: 307,
+        protein: 29.9,
+        carbs: 34.9,
+        fat: 6.3,
         fiber: 5.5
       }
     ]
