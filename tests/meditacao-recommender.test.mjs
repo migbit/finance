@@ -93,6 +93,13 @@ test('a interface não retoma uma sessão já terminada ao fechar a classificaç
   assert.match(meditationHtml, /O contador já terminou\. Podes fechar esta janela e classificar mais tarde\./);
 });
 
+test('a página abre após autenticação sem pedir PIN', () => {
+  assert.doesNotMatch(meditationHtml, /meditation-(?:pin|lock)/);
+  assert.doesNotMatch(meditationHtml, /Introduz o PIN|Desbloquear|Bloquear/);
+  assert.doesNotMatch(meditationPageSource, /ACCESS_PIN|PIN_STORAGE_PREFIX|pinStorageKey|sessionStorage|unlocked|lockPage/);
+  assert.match(meditationPageSource, /elements\.authGate\.hidden = true;\s+await loadPrivateApp\(\);/);
+});
+
 test('técnicas novas aparecem sempre antes das experimentadas', () => {
   const ranked = recommendCatalog(catalog, [completed('breath', 20)]);
   assert.deepEqual(ranked.slice(0, 2).map(item => item.meditation.id).sort(), ['visual', 'walk']);

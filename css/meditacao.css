@@ -54,12 +54,6 @@ body[data-page="meditacao"] {
   text-transform: uppercase;
 }
 
-.meditation-lock {
-  border-color: rgba(49, 94, 80, 0.26);
-  background: rgba(255, 255, 255, 0.62);
-  color: var(--med-forest-deep);
-}
-
 .meditation-access {
   max-width: 560px;
   margin: clamp(2rem, 8vh, 7rem) auto;
@@ -89,36 +83,6 @@ body[data-page="meditacao"] {
   background: var(--med-mist);
   color: var(--med-forest);
   font-size: 1.9rem;
-}
-
-.meditation-pin-form {
-  max-width: 330px;
-  margin: 0 auto;
-}
-
-.meditation-pin-form label {
-  text-align: left;
-}
-
-.meditation-pin-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 0.55rem;
-}
-
-.meditation-pin-row input {
-  width: 100%;
-  text-align: center;
-  font-size: 1.35rem;
-  font-weight: 800;
-  letter-spacing: 0.3em;
-}
-
-.meditation-field-error {
-  margin-top: 0.7rem !important;
-  color: var(--med-coral) !important;
-  font-size: 0.88rem;
-  font-weight: 700;
 }
 
 .meditation-active {
@@ -235,8 +199,7 @@ body[data-page="meditacao"] {
   width: 100%;
 }
 
-.meditation-primary-filters input[type="search"],
-.meditation-pin-form input[type="password"] {
+.meditation-primary-filters input[type="search"] {
   height: var(--ctrl-h);
   padding: 0 0.7rem;
   border: 1px solid var(--border);
@@ -246,8 +209,7 @@ body[data-page="meditacao"] {
   color: var(--text);
 }
 
-.meditation-primary-filters input[type="search"]:focus,
-.meditation-pin-form input[type="password"]:focus {
+.meditation-primary-filters input[type="search"]:focus {
   border-color: var(--med-forest);
   box-shadow: 0 0 0 3px rgba(49, 94, 80, 0.16);
 }
@@ -824,7 +786,6 @@ body[data-page="meditacao"] {
   .meditation-dialog { width: calc(100vw - 0.7rem); max-height: calc(100vh - 0.7rem); border-radius: 18px; }
   .meditation-dialog-shell { max-height: calc(100vh - 0.7rem); padding: 1rem; }
   .meditation-session-clock { font-size: 4.2rem; }
-  .meditation-pin-row { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

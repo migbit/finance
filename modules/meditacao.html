@@ -23,7 +23,6 @@
         <h1 id="meditation-title">Meditação</h1>
         <p class="meditation-intro">Explora práticas documentadas de diferentes épocas e tradições, experimenta-as e deixa que as tuas próprias sessões melhorem as recomendações.</p>
       </div>
-      <button type="button" id="meditation-lock" class="meditation-lock" hidden>Bloquear</button>
     </section>
 
     <section id="meditation-access" class="meditation-access card" aria-labelledby="access-title">
@@ -33,17 +32,6 @@
         <p>Inicia sessão com a tua conta Google para carregar o histórico guardado no Firebase.</p>
         <button type="button" class="primary" id="meditation-login">Abrir início de sessão</button>
       </div>
-      <form id="meditation-pin-form" class="meditation-pin-form" hidden>
-        <span class="meditation-gate-icon" aria-hidden="true">⌁</span>
-        <h2>Introduz o PIN</h2>
-        <p>Este bloqueio protege apenas a interface neste dispositivo.</p>
-        <label for="meditation-pin">PIN de 4 dígitos</label>
-        <div class="meditation-pin-row">
-          <input id="meditation-pin" type="password" inputmode="numeric" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required>
-          <button type="submit" class="primary">Desbloquear</button>
-        </div>
-        <p id="meditation-pin-error" class="meditation-field-error" role="alert" hidden>PIN incorreto.</p>
-      </form>
     </section>
 
     <div id="meditation-app" hidden>

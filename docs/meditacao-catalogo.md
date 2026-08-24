@@ -64,4 +64,4 @@ Cada sessão começa como `in_progress`. Ao terminar o contador passa imediatame
 
 Quando uma técnica é retirada do catálogo, as sessões associadas deixam de aparecer e de influenciar estatísticas ou recomendações, mas o histórico remoto não é apagado automaticamente.
 
-O PIN da interface é uma barreira visual, não criptografia nem controlo de acesso. O UID separa os caminhos usados pela interface, mas as regras gerais atuais do projeto permitem acesso a utilizadores autenticados; isso deve ser revisto se a aplicação deixar de ser estritamente pessoal.
+O login Google identifica o utilizador e o UID separa os caminhos usados pela interface, mas as regras gerais atuais do projeto permitem acesso a utilizadores autenticados; isso deve ser revisto se a aplicação deixar de ser estritamente pessoal.

@@ -21,7 +21,6 @@ import {
   selectSessionLifecycle
 } from './meditacao-recommender.js';
 
-const ACCESS_PIN = '6969';
 const CATALOG_URLS = [
   '../data/meditations/buddhist.json',
   '../data/meditations/asian-non-buddhist.json',
@@ -29,7 +28,6 @@ const CATALOG_URLS = [
 ];
 const PAGE_SIZE = 24;
 const CATALOG_VERSION = '2026-08-20';
-const PIN_STORAGE_PREFIX = 'meditacao-pin-unlocked-v1';
 
 const LABELS = Object.freeze({
   chair: 'cadeira',
@@ -88,10 +86,6 @@ const elements = {
   access: document.getElementById('meditation-access'),
   authGate: document.getElementById('meditation-auth-gate'),
   login: document.getElementById('meditation-login'),
-  pinForm: document.getElementById('meditation-pin-form'),
-  pin: document.getElementById('meditation-pin'),
-  pinError: document.getElementById('meditation-pin-error'),
-  lock: document.getElementById('meditation-lock'),
   app: document.getElementById('meditation-app'),
   active: document.getElementById('meditation-active'),
   activeLabel: document.getElementById('meditation-active-label'),
@@ -155,7 +149,6 @@ const FILTER_IDS = Object.freeze({
 
 const state = {
   user: null,
-  unlocked: false,
   loading: false,
   catalog: [],
   sessions: [],
@@ -252,10 +245,6 @@ function safeExternalUrl(value) {
   }
 }
 
-function pinStorageKey(uid) {
-  return `${PIN_STORAGE_PREFIX}:${uid}`;
-}
-
 function sessionsCollection() {
   if (!state.user) throw new Error('É necessário iniciar sessão.');
   return collection(db, 'users', state.user.uid, 'meditation_sessions');
@@ -350,26 +339,25 @@ function applySessions(sessions) {
 }
 
 async function loadPrivateApp() {
-  if (!state.user || !state.unlocked || state.loading) return;
+  if (!state.user || state.loading) return;
   state.loading = true;
   const generation = state.loadGeneration;
   const uid = state.user.uid;
   elements.access.hidden = true;
   elements.app.hidden = false;
-  elements.lock.hidden = false;
   elements.list.setAttribute('aria-busy', 'true');
   elements.list.replaceChildren(createElement('div', 'meditation-empty', 'A carregar catálogo e sessões…'));
 
   try {
     const [catalogResult, sessions] = await Promise.all([loadCatalog(), fetchSessions()]);
-    if (generation !== state.loadGeneration || state.user?.uid !== uid || !state.unlocked) return;
+    if (generation !== state.loadGeneration || state.user?.uid !== uid) return;
     state.catalog = catalogResult;
     applySessions(sessions);
     populateDynamicFilters();
     renderAll();
     startTimerTicker();
   } catch (error) {
-    if (generation !== state.loadGeneration || state.user?.uid !== uid || !state.unlocked) return;
+    if (generation !== state.loadGeneration || state.user?.uid !== uid) return;
     console.error('[meditacao] Falha ao carregar:', error);
     elements.list.replaceChildren(createElement('div', 'meditation-empty', 'Não foi possível carregar a página. Confirma a ligação e tenta novamente.'));
     showToast('Não foi possível carregar o catálogo ou o histórico.', 'error', 5000);
@@ -384,7 +372,6 @@ async function loadPrivateApp() {
 function resetPrivateState() {
   state.loadGeneration += 1;
   state.loading = false;
-  state.unlocked = false;
   state.catalog = [];
   state.sessions = [];
   state.activeSession = null;
@@ -401,47 +388,24 @@ function resetPrivateState() {
   state.timerInterval = null;
   closeAllDialogs();
   elements.app.hidden = true;
-  elements.lock.hidden = true;
   elements.access.hidden = false;
-}
-
-function showAccessForUser(user) {
-  elements.access.hidden = false;
-  elements.authGate.hidden = Boolean(user);
-  elements.pinForm.hidden = !user;
-  elements.pinError.hidden = true;
-  elements.pin.value = '';
-  if (user) setTimeout(() => elements.pin.focus(), 0);
 }
 
 async function handleAuthChange(user) {
   const previousUid = state.user?.uid || '';
-  if (previousUid && previousUid !== user?.uid) resetPrivateState();
+  const nextUid = user?.uid || '';
+  if (previousUid !== nextUid) resetPrivateState();
   state.user = user;
 
   if (!user) {
-    resetPrivateState();
-    showAccessForUser(null);
+    elements.access.hidden = false;
+    elements.authGate.hidden = false;
+    elements.app.hidden = true;
     return;
   }
 
-  const remembered = sessionStorage.getItem(pinStorageKey(user.uid)) === 'true';
-  if (remembered) {
-    state.unlocked = true;
-    await loadPrivateApp();
-  } else {
-    resetPrivateState();
-    state.user = user;
-    showAccessForUser(user);
-  }
-}
-
-function lockPage() {
-  if (state.user) sessionStorage.removeItem(pinStorageKey(state.user.uid));
-  const user = state.user;
-  resetPrivateState();
-  state.user = user;
-  showAccessForUser(user);
+  elements.authGate.hidden = true;
+  await loadPrivateApp();
 }
 
 function populateDynamicFilters() {
@@ -755,7 +719,7 @@ function openMeditationDetail(meditationId) {
 }
 
 async function startSession(meditation, requestedMinutes, button = null) {
-  if (!state.user || !state.unlocked) return;
+  if (!state.user) return;
   if (state.activeSession) {
     elements.detailDialog.close();
     openActiveSession();
@@ -797,7 +761,7 @@ async function startSession(meditation, requestedMinutes, button = null) {
 
   try {
     await setDoc(ref, payload);
-    if (generation !== state.loadGeneration || state.user?.uid !== uid || !state.unlocked) return;
+    if (generation !== state.loadGeneration || state.user?.uid !== uid) return;
     state.activeSession = { id: ref.id, ...payload };
     state.sessions.push(state.activeSession);
     elements.detailDialog.close();
@@ -908,14 +872,12 @@ function setSessionMutationPending(pending) {
 function isCurrentActiveSession(session, generation, uid) {
   return generation === state.loadGeneration
     && state.user?.uid === uid
-    && state.unlocked
     && state.activeSession?.id === session.id;
 }
 
 function isCurrentPendingRatingSession(session, generation, uid) {
   return generation === state.loadGeneration
     && state.user?.uid === uid
-    && state.unlocked
     && state.pendingRatingSession?.id === session.id;
 }
 
@@ -1176,21 +1138,6 @@ function bindEvents() {
     else showToast('Abre o menu e escolhe Login.', 'info');
   });
 
-  elements.pinForm.addEventListener('submit', async event => {
-    event.preventDefault();
-    if (!state.user) return;
-    if (elements.pin.value !== ACCESS_PIN) {
-      elements.pinError.hidden = false;
-      elements.pin.select();
-      return;
-    }
-    elements.pinError.hidden = true;
-    sessionStorage.setItem(pinStorageKey(state.user.uid), 'true');
-    state.unlocked = true;
-    await loadPrivateApp();
-  });
-
-  elements.lock.addEventListener('click', lockPage);
   elements.activeOpen.addEventListener('click', openSessionBanner);
   elements.sessionHide.addEventListener('click', () => elements.sessionDialog.close());
   elements.sessionPause.addEventListener('click', togglePause);
