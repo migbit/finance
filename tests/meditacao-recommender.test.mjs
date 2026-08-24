@@ -3,13 +3,17 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const recommenderSource = await readFile(new URL('../js/meditacao-recommender.js', import.meta.url), 'utf8');
+const meditationPageSource = await readFile(new URL('../js/meditacao.js', import.meta.url), 'utf8');
+const meditationHtml = await readFile(new URL('../modules/meditacao.html', import.meta.url), 'utf8');
 const recommenderModule = await import(`data:text/javascript;base64,${Buffer.from(recommenderSource).toString('base64')}`);
 const {
   aggregateProgress,
   buildTasteProfile,
   matchesFilters,
+  parseMeditationRating,
   recommendCatalog,
-  scoreMeditation
+  scoreMeditation,
+  selectSessionLifecycle
 } = recommenderModule;
 
 const base = {
@@ -36,9 +40,20 @@ function completed(meditationId, rating, completedAt = '2026-08-01T10:00:00Z') {
   return { meditationId, rating, status: 'completed', completedAt };
 }
 
+test('a classificação distingue zero de um valor ainda não preenchido', () => {
+  assert.equal(parseMeditationRating(null), null);
+  assert.equal(parseMeditationRating(undefined), null);
+  assert.equal(parseMeditationRating(''), null);
+  assert.equal(parseMeditationRating(0), 0);
+  assert.equal(parseMeditationRating('20'), 20);
+  assert.equal(parseMeditationRating(10.5), null);
+  assert.equal(parseMeditationRating(21), null);
+});
+
 test('sessão em curso não conta como experimentada e 0/20 são classificações válidas', () => {
   const sessions = [
     { meditationId: 'visual', rating: null, status: 'in_progress' },
+    { meditationId: 'visual', rating: 20, status: 'rating_pending' },
     { meditationId: 'visual', rating: null, status: 'completed' },
     completed('visual', -1),
     completed('visual', 10.5),
@@ -52,6 +67,30 @@ test('sessão em curso não conta como experimentada e 0/20 são classificaçõe
   assert.equal(progress.get('breath').tried, true);
   assert.equal(progress.get('breath').averageRating, 10);
   assert.equal(progress.get('breath').sessionCount, 2);
+});
+
+test('terminar o contador separa a sessão ativa da classificação pendente', () => {
+  const lifecycle = selectSessionLifecycle([
+    { id: 'old-active', status: 'in_progress', startedAtMs: 10 },
+    { id: 'new-active', status: 'in_progress', startedAtMs: 20 },
+    { id: 'old-rating', status: 'rating_pending', stoppedAtMs: 30 },
+    { id: 'new-rating', status: 'rating_pending', stoppedAtMs: 40 },
+    { id: 'done', status: 'completed', completedAtMs: 50 }
+  ]);
+
+  assert.equal(lifecycle.activeSession.id, 'new-active');
+  assert.equal(lifecycle.pendingRatingSession.id, 'new-rating');
+  assert.equal(lifecycle.activeCount, 2);
+  assert.equal(lifecycle.pendingRatingCount, 2);
+});
+
+test('a interface não retoma uma sessão já terminada ao fechar a classificação', () => {
+  assert.match(meditationPageSource, /status: 'rating_pending'/);
+  assert.match(meditationPageSource, /state\.pendingRatingSession = session/);
+  assert.doesNotMatch(meditationPageSource, /resumeAfterDismissedRating/);
+  assert.match(meditationPageSource, /Sessão em pausa/);
+  assert.match(meditationHtml, /id="meditation-active-label"/);
+  assert.match(meditationHtml, /O contador já terminou\. Podes fechar esta janela e classificar mais tarde\./);
 });
 
 test('técnicas novas aparecem sempre antes das experimentadas', () => {

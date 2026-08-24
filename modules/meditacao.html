@@ -49,7 +49,7 @@
     <div id="meditation-app" hidden>
       <section id="meditation-active" class="meditation-active" hidden>
         <div>
-          <span class="meditation-active-label">Sessão em curso</span>
+          <span class="meditation-active-label" id="meditation-active-label">Sessão em curso</span>
           <strong id="meditation-active-name">—</strong>
           <span id="meditation-active-time">00:00</span>
         </div>
@@ -166,7 +166,7 @@
 
   <dialog id="meditation-rating-dialog" class="meditation-dialog meditation-form-dialog" aria-labelledby="meditation-rating-title">
     <form id="meditation-rating-form" class="meditation-dialog-shell">
-      <button type="button" class="meditation-dialog-close" data-close-dialog aria-label="Fechar">×</button>
+      <button type="button" class="meditation-dialog-close" data-close-dialog aria-label="Classificar mais tarde">×</button>
       <p class="meditation-eyebrow">Sessão concluída</p>
       <h2 id="meditation-rating-title">Como correu?</h2>
       <label for="meditation-rating">Classificação de 0 a 20</label>
@@ -177,6 +177,7 @@
       <label for="meditation-session-note">Nota opcional</label>
       <textarea id="meditation-session-note" rows="4" maxlength="2000" placeholder="O que sentiste, o que funcionou, o que mudarias…"></textarea>
       <button type="submit" class="primary">Guardar sessão</button>
+      <p class="meditation-session-hint">O contador já terminou. Podes fechar esta janela e classificar mais tarde.</p>
     </form>
   </dialog>
 

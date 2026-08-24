@@ -60,7 +60,7 @@ O catálogo é estático e versionado no repositório. Apenas sessões pessoais 
 
 `users/{uid}/meditation_sessions/{sessionId}`
 
-Cada sessão começa como `in_progress` e só conta como experimentada depois de passar a `completed`. O documento conserva o ID e o título da técnica, datas, objetivo temporal, pausas, duração real, classificação e nota. Sessões canceladas não contam para ordenação nem aprendizagem.
+Cada sessão começa como `in_progress`. Ao terminar o contador passa imediatamente a `rating_pending`, deixa de ser apresentada como sessão em curso e conserva a duração real. Só passa a `completed` e conta como experimentada depois de receber uma classificação. O documento conserva o ID e o título da técnica, datas, objetivo temporal, pausas, duração real, classificação e nota. Sessões canceladas não contam para ordenação nem aprendizagem.
 
 Quando uma técnica é retirada do catálogo, as sessões associadas deixam de aparecer e de influenciar estatísticas ou recomendações, mas o histórico remoto não é apagado automaticamente.
 

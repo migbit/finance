@@ -1,6 +1,6 @@
 /* A APP – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v51`;
+const CACHE = `${CACHE_PREFIX}v52`;
 
 const CORE = [
   './',

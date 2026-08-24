@@ -16,7 +16,9 @@ import {
   buildTasteProfile,
   listFilterValues,
   matchesFilters,
-  recommendCatalog
+  parseMeditationRating,
+  recommendCatalog,
+  selectSessionLifecycle
 } from './meditacao-recommender.js';
 
 const ACCESS_PIN = '6969';
@@ -92,6 +94,7 @@ const elements = {
   lock: document.getElementById('meditation-lock'),
   app: document.getElementById('meditation-app'),
   active: document.getElementById('meditation-active'),
+  activeLabel: document.getElementById('meditation-active-label'),
   activeName: document.getElementById('meditation-active-name'),
   activeTime: document.getElementById('meditation-active-time'),
   activeOpen: document.getElementById('meditation-active-open'),
@@ -157,6 +160,7 @@ const state = {
   catalog: [],
   sessions: [],
   activeSession: null,
+  pendingRatingSession: null,
   selectedMeditationId: '',
   editingSessionId: '',
   visibleCount: PAGE_SIZE,
@@ -164,7 +168,8 @@ const state = {
   searchTimer: null,
   loadGeneration: 0,
   startPending: false,
-  finishingSnapshot: null
+  sessionMutationPending: false,
+  ratingFormSessionId: ''
 };
 
 function createElement(tag, className = '', text = '') {
@@ -333,12 +338,14 @@ function applySessions(sessions) {
   const catalogIds = new Set(state.catalog.map(item => item.id));
   const catalogSessions = sessions.filter(session => catalogIds.has(session.meditationId));
   state.sessions = catalogSessions;
-  const activeSessions = catalogSessions
-    .filter(session => session.status === 'in_progress')
-    .sort((a, b) => Number(b.startedAtMs || 0) - Number(a.startedAtMs || 0));
-  state.activeSession = activeSessions[0] || null;
-  if (activeSessions.length > 1) {
+  const lifecycle = selectSessionLifecycle(catalogSessions);
+  state.activeSession = lifecycle.activeSession;
+  state.pendingRatingSession = lifecycle.pendingRatingSession;
+  if (lifecycle.activeCount > 1) {
     showToast('Há mais de uma sessão em curso no Firebase. Abri a mais recente; termina ou cancela-a antes de continuar.', 'warning', 6000);
+  }
+  if (lifecycle.pendingRatingCount > 1) {
+    showToast('Há mais de uma sessão por classificar. Será apresentada primeiro a mais recente.', 'warning', 6000);
   }
 }
 
@@ -381,10 +388,15 @@ function resetPrivateState() {
   state.catalog = [];
   state.sessions = [];
   state.activeSession = null;
+  state.pendingRatingSession = null;
   state.selectedMeditationId = '';
   state.editingSessionId = '';
   state.startPending = false;
-  state.finishingSnapshot = null;
+  setSessionMutationPending(false);
+  elements.sessionFinish.textContent = 'Terminar';
+  const ratingSubmit = elements.ratingForm.querySelector('button[type="submit"]');
+  if (ratingSubmit) ratingSubmit.disabled = false;
+  state.ratingFormSessionId = '';
   if (state.timerInterval) clearInterval(state.timerInterval);
   state.timerInterval = null;
   closeAllDialogs();
@@ -648,6 +660,19 @@ function createStartPanel(item) {
     panel.append(copy, button);
     return panel;
   }
+  if (state.pendingRatingSession) {
+    const copy = createElement('div');
+    copy.appendChild(createElement('strong', '', 'Tens uma sessão terminada por classificar'));
+    copy.appendChild(createElement('p', '', state.pendingRatingSession.meditationTitleSnapshot || 'Meditação'));
+    const button = createElement('button', '', 'Classificar sessão');
+    button.type = 'button';
+    button.addEventListener('click', () => {
+      elements.detailDialog.close();
+      openPendingRating();
+    });
+    panel.append(copy, button);
+    return panel;
+  }
 
   const documentedMinutes = Math.min(240, Math.max(1, Number(item.meditation.duration?.defaultMinutes || 20)));
   const field = createElement('label', '', `Objetivo da sessão (sugestão da ficha: ${documentedMinutes} min)`);
@@ -736,6 +761,11 @@ async function startSession(meditation, requestedMinutes, button = null) {
     openActiveSession();
     return;
   }
+  if (state.pendingRatingSession) {
+    elements.detailDialog.close();
+    openPendingRating();
+    return;
+  }
   if (state.startPending) return;
   state.startPending = true;
   if (button) button.disabled = true;
@@ -790,11 +820,21 @@ function renderSessionSteps(meditation) {
 }
 
 function renderActiveSession() {
-  const session = state.activeSession;
+  const session = state.activeSession || state.pendingRatingSession;
   elements.active.hidden = !session;
   if (!session) return;
   const meditation = findMeditation(session.meditationId);
   elements.activeName.textContent = meditation?.name || session.meditationTitleSnapshot || 'Meditação';
+
+  if (!state.activeSession) {
+    elements.activeLabel.textContent = 'Classificação pendente';
+    elements.activeTime.textContent = `${formatDuration(session.durationSeconds)} registados`;
+    elements.activeOpen.textContent = 'Classificar';
+    return;
+  }
+
+  elements.activeLabel.textContent = session.isPaused ? 'Sessão em pausa' : 'Sessão em curso';
+  elements.activeOpen.textContent = 'Continuar';
   elements.sessionName.textContent = elements.activeName.textContent;
   elements.sessionMinutes.value = String(session.targetMinutes || 20);
   elements.sessionMinutes.disabled = Boolean(session.isPaused);
@@ -835,9 +875,55 @@ function openActiveSession() {
   showDialog(elements.sessionDialog);
 }
 
+function prepareRatingForm(session, force = false) {
+  if (!session || (!force && state.ratingFormSessionId === session.id)) return;
+  const rating = parseMeditationRating(session.rating) ?? 10;
+  state.ratingFormSessionId = session.id;
+  elements.rating.value = String(rating);
+  elements.ratingOutput.value = String(rating);
+  elements.ratingOutput.textContent = String(rating);
+  elements.sessionNote.value = session.note || '';
+}
+
+function openPendingRating() {
+  if (!state.pendingRatingSession) return;
+  prepareRatingForm(state.pendingRatingSession);
+  showDialog(elements.ratingDialog);
+}
+
+function openSessionBanner() {
+  if (state.activeSession) openActiveSession();
+  else openPendingRating();
+}
+
+function setSessionMutationPending(pending) {
+  state.sessionMutationPending = Boolean(pending);
+  elements.sessionPause.disabled = state.sessionMutationPending;
+  elements.sessionCancel.disabled = state.sessionMutationPending;
+  elements.sessionFinish.disabled = state.sessionMutationPending;
+  elements.activeOpen.disabled = state.sessionMutationPending;
+  elements.sessionMinutes.disabled = state.sessionMutationPending || Boolean(state.activeSession?.isPaused);
+}
+
+function isCurrentActiveSession(session, generation, uid) {
+  return generation === state.loadGeneration
+    && state.user?.uid === uid
+    && state.unlocked
+    && state.activeSession?.id === session.id;
+}
+
+function isCurrentPendingRatingSession(session, generation, uid) {
+  return generation === state.loadGeneration
+    && state.user?.uid === uid
+    && state.unlocked
+    && state.pendingRatingSession?.id === session.id;
+}
+
 async function togglePause() {
   const session = state.activeSession;
-  if (!session) return;
+  if (!session || state.sessionMutationPending) return;
+  const generation = state.loadGeneration;
+  const uid = state.user?.uid;
   const now = Date.now();
   let updates;
   if (session.isPaused) {
@@ -854,65 +940,104 @@ async function togglePause() {
       updatedAt: serverTimestamp()
     };
   }
-  elements.sessionPause.disabled = true;
+  setSessionMutationPending(true);
   try {
     await updateDoc(sessionReference(session.id), updates);
+    if (!isCurrentActiveSession(session, generation, uid)) return;
     Object.assign(session, updates);
     renderActiveSession();
   } catch (error) {
     console.error('[meditacao] Falha ao pausar/retomar:', error);
     showToast('Não foi possível atualizar a pausa.', 'error');
   } finally {
-    elements.sessionPause.disabled = false;
+    if (generation === state.loadGeneration && state.user?.uid === uid) setSessionMutationPending(false);
   }
 }
 
 async function updateTargetMinutes() {
   const session = state.activeSession;
-  if (!session || session.isPaused) return;
+  if (!session || session.isPaused || state.sessionMutationPending) return;
   const targetMinutes = Math.min(240, Math.max(1, Math.round(Number(elements.sessionMinutes.value) || 20)));
   elements.sessionMinutes.value = String(targetMinutes);
   if (targetMinutes === Number(session.targetMinutes)) return;
+  const generation = state.loadGeneration;
+  const uid = state.user?.uid;
+  setSessionMutationPending(true);
   try {
     await updateDoc(sessionReference(session.id), { targetMinutes, updatedAt: serverTimestamp() });
+    if (!isCurrentActiveSession(session, generation, uid)) return;
     session.targetMinutes = targetMinutes;
     updateTimerDisplay();
   } catch (error) {
     console.error('[meditacao] Falha ao atualizar duração:', error);
     elements.sessionMinutes.value = String(session.targetMinutes || 20);
     showToast('Não foi possível alterar a duração.', 'error');
+  } finally {
+    if (generation === state.loadGeneration && state.user?.uid === uid) setSessionMutationPending(false);
   }
 }
 
-function requestFinishSession() {
-  if (!state.activeSession) return;
+async function requestFinishSession() {
+  const session = state.activeSession;
+  if (!session || state.sessionMutationPending) return;
+  const generation = state.loadGeneration;
+  const uid = state.user?.uid;
   const now = Date.now();
-  const elapsedSeconds = getActiveElapsedSeconds(state.activeSession, now);
-  state.finishingSnapshot = {
-    at: now,
-    elapsedSeconds,
-    wasPaused: Boolean(state.activeSession.isPaused)
+  const durationSeconds = getActiveElapsedSeconds(session, now);
+  const updates = {
+    status: 'rating_pending',
+    stoppedAt: serverTimestamp(),
+    stoppedAtMs: now,
+    durationSeconds,
+    isPaused: false,
+    pausedDurationMs: Number(session.pausedDurationMs || 0)
+      + (session.isPaused ? Math.max(0, now - Number(session.pausedAtMs || now)) : 0),
+    pausedAtMs: null,
+    updatedAt: serverTimestamp()
   };
-  elements.rating.value = '10';
-  elements.ratingOutput.value = '10';
-  elements.ratingOutput.textContent = '10';
-  elements.sessionNote.value = '';
-  elements.sessionDialog.close();
-  showDialog(elements.ratingDialog);
+  const originalText = elements.sessionFinish.textContent;
+  setSessionMutationPending(true);
+  elements.activeLabel.textContent = 'A terminar sessão…';
+  elements.activeTime.textContent = `${formatDuration(durationSeconds)} registados`;
+  elements.activeOpen.textContent = 'Aguarda…';
+  elements.sessionFinish.textContent = 'A terminar…';
+  try {
+    await updateDoc(sessionReference(session.id), updates);
+    if (!isCurrentActiveSession(session, generation, uid)) return;
+    Object.assign(session, updates);
+    const lifecycle = selectSessionLifecycle(state.sessions);
+    state.activeSession = lifecycle.activeSession;
+    state.pendingRatingSession = session;
+    prepareRatingForm(session, true);
+    elements.sessionDialog.close();
+    renderAll();
+    showDialog(elements.ratingDialog);
+  } catch (error) {
+    console.error('[meditacao] Falha ao terminar contador:', error);
+    renderActiveSession();
+    showToast('Não foi possível terminar a sessão. Tenta novamente.', 'error');
+  } finally {
+    if (generation === state.loadGeneration && state.user?.uid === uid) {
+      setSessionMutationPending(false);
+      elements.sessionFinish.textContent = originalText;
+    }
+  }
 }
 
 async function completeSession(event) {
   event.preventDefault();
-  const session = state.activeSession;
+  const session = state.pendingRatingSession;
   if (!session) return;
+  const generation = state.loadGeneration;
+  const uid = state.user?.uid;
   const rating = Number(elements.rating.value);
   if (!Number.isInteger(rating) || rating < 0 || rating > 20) {
     showToast('A classificação tem de ser um número inteiro entre 0 e 20.', 'warning');
     return;
   }
   const now = Date.now();
-  const finishedAtMs = state.finishingSnapshot?.at ?? now;
-  const durationSeconds = state.finishingSnapshot?.elapsedSeconds ?? getActiveElapsedSeconds(session, now);
+  const finishedAtMs = Number(session.stoppedAtMs) || now;
+  const durationSeconds = Math.max(0, Math.round(Number(session.durationSeconds) || 0));
   const note = elements.sessionNote.value.trim();
   const updates = {
     status: 'completed',
@@ -929,9 +1054,12 @@ async function completeSession(event) {
   submit.disabled = true;
   try {
     await updateDoc(sessionReference(session.id), updates);
+    if (!isCurrentPendingRatingSession(session, generation, uid)) return;
     Object.assign(session, updates);
-    state.activeSession = null;
-    state.finishingSnapshot = null;
+    const lifecycle = selectSessionLifecycle(state.sessions);
+    state.activeSession = lifecycle.activeSession;
+    state.pendingRatingSession = lifecycle.pendingRatingSession;
+    state.ratingFormSessionId = '';
     elements.ratingDialog.close();
     renderAll();
     const next = recommendCatalog(state.catalog, state.sessions, { sort: 'recommended', explorationRate: 0.15 })
@@ -948,50 +1076,41 @@ async function completeSession(event) {
   }
 }
 
-async function resumeAfterDismissedRating() {
-  const session = state.activeSession;
-  const snapshot = state.finishingSnapshot;
-  state.finishingSnapshot = null;
-  if (!session || !snapshot) return;
-
-  if (!snapshot.wasPaused) {
-    const promptDurationMs = Math.max(0, Date.now() - snapshot.at);
-    session.pausedDurationMs = Number(session.pausedDurationMs || 0) + promptDurationMs;
-    try {
-      await updateDoc(sessionReference(session.id), {
-        pausedDurationMs: session.pausedDurationMs,
-        updatedAt: serverTimestamp()
-      });
-    } catch (error) {
-      console.error('[meditacao] Falha ao descontar a pausa de classificação:', error);
-      showToast('A sessão continuou, mas não foi possível sincronizar esta pausa.', 'warning');
-    }
-  }
-  renderActiveSession();
-}
-
 function cancelSession() {
   const session = state.activeSession;
-  if (!session) return;
+  if (!session || state.sessionMutationPending) return;
   showConfirm('Cancelar esta sessão? Não contará como experimentada.', async () => {
+    if (state.sessionMutationPending || state.activeSession?.id !== session.id) return;
+    const generation = state.loadGeneration;
+    const uid = state.user?.uid;
     const now = Date.now();
     const updates = {
       status: 'cancelled',
       cancelledAt: serverTimestamp(),
       cancelledAtMs: now,
       durationSeconds: getActiveElapsedSeconds(session, now),
+      isPaused: false,
+      pausedDurationMs: Number(session.pausedDurationMs || 0)
+        + (session.isPaused ? Math.max(0, now - Number(session.pausedAtMs || now)) : 0),
+      pausedAtMs: null,
       updatedAt: serverTimestamp()
     };
+    setSessionMutationPending(true);
     try {
       await updateDoc(sessionReference(session.id), updates);
+      if (!isCurrentActiveSession(session, generation, uid)) return;
       Object.assign(session, updates);
-      state.activeSession = null;
+      const lifecycle = selectSessionLifecycle(state.sessions);
+      state.activeSession = lifecycle.activeSession;
+      state.pendingRatingSession = lifecycle.pendingRatingSession;
       elements.sessionDialog.close();
       renderAll();
       showToast('Sessão cancelada.', 'info');
     } catch (error) {
       console.error('[meditacao] Falha ao cancelar sessão:', error);
       showToast('Não foi possível cancelar a sessão.', 'error');
+    } finally {
+      if (generation === state.loadGeneration && state.user?.uid === uid) setSessionMutationPending(false);
     }
   });
 }
@@ -1072,7 +1191,7 @@ function bindEvents() {
   });
 
   elements.lock.addEventListener('click', lockPage);
-  elements.activeOpen.addEventListener('click', openActiveSession);
+  elements.activeOpen.addEventListener('click', openSessionBanner);
   elements.sessionHide.addEventListener('click', () => elements.sessionDialog.close());
   elements.sessionPause.addEventListener('click', togglePause);
   elements.sessionCancel.addEventListener('click', cancelSession);
@@ -1109,7 +1228,6 @@ function bindEvents() {
     button.addEventListener('click', () => button.closest('dialog')?.close());
   });
 
-  elements.ratingDialog.addEventListener('close', resumeAfterDismissedRating);
 }
 
 bindEvents();

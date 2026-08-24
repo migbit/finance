@@ -48,16 +48,46 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+export function parseMeditationRating(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const rating = Number(value);
+  return Number.isInteger(rating) && rating >= 0 && rating <= 20 ? rating : null;
+}
+
 function getCompletedSessions(sessions) {
   return (Array.isArray(sessions) ? sessions : []).filter(session =>
     session?.status === 'completed'
-    && session.rating !== null
-    && session.rating !== ''
-    && session.rating !== undefined
-    && Number.isInteger(Number(session.rating))
-    && Number(session.rating) >= 0
-    && Number(session.rating) <= 20
+    && parseMeditationRating(session.rating) !== null
   );
+}
+
+function sessionTimestamp(session, fields) {
+  for (const field of fields) {
+    const raw = session?.[field];
+    const value = raw?.toMillis?.() ?? raw;
+    const parsed = typeof value === 'number' ? value : Date.parse(value || '');
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+}
+
+export function selectSessionLifecycle(sessions) {
+  const list = Array.isArray(sessions) ? sessions : [];
+  const activeSessions = list
+    .filter(session => session?.status === 'in_progress')
+    .sort((a, b) => sessionTimestamp(b, ['startedAtMs', 'startedAt', 'createdAt'])
+      - sessionTimestamp(a, ['startedAtMs', 'startedAt', 'createdAt']));
+  const pendingRatingSessions = list
+    .filter(session => session?.status === 'rating_pending')
+    .sort((a, b) => sessionTimestamp(b, ['stoppedAtMs', 'stoppedAt', 'updatedAt'])
+      - sessionTimestamp(a, ['stoppedAtMs', 'stoppedAt', 'updatedAt']));
+
+  return {
+    activeSession: activeSessions[0] || null,
+    pendingRatingSession: pendingRatingSessions[0] || null,
+    activeCount: activeSessions.length,
+    pendingRatingCount: pendingRatingSessions.length
+  };
 }
 
 export function aggregateProgress(catalog, sessions) {
