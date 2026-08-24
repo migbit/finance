@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const html = await readFile(new URL('../modules/alimentacao.html', import.meta.url), 'utf8');
+const script = await readFile(new URL('../js/alimentacao.js', import.meta.url), 'utf8');
 
 test('a página abre diretamente nas receitas sem o questionário antigo', () => {
   assert.doesNotMatch(html, /Antes das receitas|Completa a etapa [“"]Necessidades[”"]|food-profile-form/);
@@ -43,4 +44,11 @@ test('cada refeição permite registar apenas as kcal totais', () => {
 
 test('a página não recupera a antiga secção separada para dias de endurance', () => {
   assert.doesNotMatch(html, /food-endurance-note/);
+});
+
+test('o ajuste de uma refeição distingue claramente a receita base da meta atual', () => {
+  assert.match(script, /Receita base:/);
+  assert.match(script, /Para a meta atual desta refeição/);
+  assert.match(script, /a app ajusta apenas a massa/);
+  assert.match(script, /os restantes ingredientes mantêm a dose base/);
 });

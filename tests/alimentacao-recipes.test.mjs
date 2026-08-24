@@ -60,7 +60,7 @@ test('inclui as quatro refeições principais com os totais definidos', () => {
     [
       { calories: 650, protein: 43, carbs: 56, fat: 25.3, fiber: 16.4 },
       { calories: 653, protein: 46.9, carbs: 69.7, fat: 20, fiber: 11.6 },
-      { calories: 619, protein: 51.5, carbs: 71.1, fat: 10.1, fiber: 13.1 },
+      { calories: 619, protein: 52.5, carbs: 71.4, fat: 9.7, fiber: 13.1 },
       { calories: 609, protein: 35, carbs: 84.7, fat: 13.3, fiber: 23.8 }
     ]
   );
@@ -100,6 +100,14 @@ test('inclui cinco lanches com doses-base e variantes calculáveis', () => {
       fiber: 5.5
     }
   );
+});
+
+test('a massa de lentilhas usa mozzarella suave e identifica claramente o peso seco ajustável', () => {
+  const recipe = DEFAULT_MAIN_MEALS.find(item => item.id === 'main-red-lentil-pasta');
+  assert.match(recipe.ingredients, /18 g de mozzarella ralada/i);
+  assert.doesNotMatch(recipe.ingredients, /parmesão/i);
+  assert.equal(recipe.calorieAdjustment.baseQuantity, 90);
+  assert.match(recipe.calorieAdjustment.label, /massa de lentilhas vermelhas \(peso em seco\)/i);
 });
 
 test('a migração acrescenta refeições principais e lanches sem perder receitas pessoais', () => {

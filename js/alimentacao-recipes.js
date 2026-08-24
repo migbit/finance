@@ -39,7 +39,7 @@ function buildRecipe(recipe) {
   const totals = totalNutrition(recipe.components);
   return Object.freeze({
     ...recipe,
-    catalogVersion: 6,
+    catalogVersion: 7,
     ingredients: recipe.components.map(component => component.label).join('\n'),
     calories: Math.round(totals.calories),
     protein: round(totals.protein),
@@ -319,7 +319,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       { label: '200 g de passata ou polpa de tomate sem açúcar adicionado', calories: 70, protein: 3, carbs: 11, fat: 0.4, fiber: 3 },
       { label: '200 g de cogumelos com espinafres ou courgette', calories: 60, protein: 4, carbs: 6, fat: 0.6, fiber: 4 },
       productPortion('150 g de skyr natural', 150, PRODUCT_NUTRITION.skyr),
-      { label: '10 g de parmesão', calories: 42, protein: 3.7, carbs: 0.3, fat: 2.8, fiber: 0 },
+      productPortion('18 g de mozzarella ralada', 18, PRODUCT_NUTRITION.gratedMozzarella),
       { label: '5 g de azeite virgem extra', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
       { label: 'Alho, manjericão, orégãos e pimenta', calories: 5.8, protein: 0.4, carbs: 1.2, fat: 0, fiber: 0.3 }
     ],
@@ -328,13 +328,13 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       'Saltear os legumes no azeite e adicionar o tomate.',
       'Guardar a massa e o molho preparados no frigorífico, se necessário.',
       'Aquecer a massa com o molho e misturar o skyr apenas no final, fora do lume ou com lume muito baixo.',
-      'Finalizar com o parmesão.'
+      'Finalizar com a mozzarella ralada e deixar derreter.'
     ],
     highlights: ['≈52 g de proteína', '≈13 g de fibra', 'Pouca gordura', 'Inclui leguminosas', 'Boa pós-força'],
     cautions: ['Não ferver o skyr para evitar separar o creme.', 'A massa Dalla Costa é pesada em seco; 90 g cozinhados terão um peso bastante superior.'],
-    evidenceNote: 'Massa Dalla Costa e skyr usam os rótulos registados; restantes ingredientes usam valores médios.',
+    evidenceNote: 'Massa Dalla Costa, skyr e mozzarella ralada usam os rótulos registados; restantes ingredientes usam valores médios.',
     calorieAdjustment: {
-      label: 'massa de lentilhas seca',
+      label: 'massa de lentilhas vermelhas (peso em seco)',
       baseQuantity: 90,
       unit: 'g',
       calories: 308.7,
@@ -343,7 +343,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       fat: 1.3,
       fiber: 5.8
     },
-    scaleHint: 'Ajustar a massa seca em pequenas quantidades; para aumentos maiores, combinar com pão integral ou fruta.'
+    scaleHint: 'Se o aumento face aos 90 g for grande, não precisas de o concentrar todo na massa: podes completar com pão integral ou fruta.'
   }),
   buildRecipe({
     id: 'main-mexican-quinoa-beans',

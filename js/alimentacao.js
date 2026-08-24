@@ -547,8 +547,8 @@ function createMainMealCard(recommendation, stage, index) {
   portion.className = 'food-main-meal-portion';
   if (adjusted.adjustmentLabel && adjusted.adjustedQuantity >= 0) {
     portion.textContent = Math.abs(adjusted.adjustedQuantity - adjusted.baseQuantity) < 1
-      ? `${formatCalories(meal.calories)} na receita · manter ${formatGrams(adjusted.baseQuantity)} de ${adjusted.adjustmentLabel}.`
-      : `${formatCalories(meal.calories)} na receita · para esta meta, usar ≈ ${formatGrams(adjusted.adjustedQuantity)} de ${adjusted.adjustmentLabel} em vez de ${formatGrams(adjusted.baseQuantity)}. Manter os restantes ingredientes na dose base.`;
+      ? `Receita base: ${formatCalories(meal.calories)} com ${formatGrams(adjusted.baseQuantity)} de ${adjusted.adjustmentLabel}. A meta atual é semelhante, por isso mantém essa quantidade.`
+      : `Receita base: ${formatCalories(meal.calories)} com ${formatGrams(adjusted.baseQuantity)} de ${adjusted.adjustmentLabel}. Para a meta atual desta refeição (${formatCalories(adjusted.calories)}), a app ajusta apenas a massa para ≈${formatGrams(adjusted.adjustedQuantity)}; os restantes ingredientes mantêm a dose base.`;
   } else {
     const factorText = Math.abs(adjusted.servingFactor - 1) <= 0.05
       ? 'porção base'
