@@ -798,6 +798,7 @@ const MIGUEL_WORKOUT_TEMPLATES = {
       {
         id: 'lat-pulldown-neutro',
         name: 'Lat Pulldown neutro',
+        allowsStraps: true,
         initialResistance: null,
         series: [
           { baseWeight: 42.5, targetReps: 12, rir: '2' },
@@ -823,6 +824,7 @@ const MIGUEL_WORKOUT_TEMPLATES = {
       {
         id: 'seated-row-peito',
         name: 'Seated Row com apoio de peito',
+        allowsStraps: true,
         initialResistance: null,
         series: [
           { baseWeight: 45, targetReps: 12, rir: '2' },
@@ -849,6 +851,7 @@ const MIGUEL_WORKOUT_TEMPLATES = {
       {
         id: 'remada-cabo-lat',
         name: 'Remada em cabo / Lat nos cabos',
+        allowsStraps: true,
         initialResistance: null,
         series: [
           { baseWeight: 40, targetReps: 13, rir: '2' },
@@ -2204,6 +2207,7 @@ async function persistRecordedWarmupDefaults() {
 function createSeriesTable(machine, variant, savedMachine) {
   const initialResistance = variant?.initialResistance ?? machine.initialResistance ?? null;
   const rules = variant?.rules || machine.rules || null;
+  const allowsStraps = Boolean(variant?.allowsStraps ?? machine.allowsStraps);
   if (!variant.series || variant.series.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'gym-empty';
@@ -2220,6 +2224,7 @@ function createSeriesTable(machine, variant, savedMachine) {
         <th scope="col">Peso (kg)</th>
         <th scope="col">Reps feitas</th>
         <th scope="col">RIR</th>
+        ${allowsStraps ? '<th scope="col">Straps</th>' : ''}
       </tr>
     </thead>
     <tbody></tbody>
@@ -2285,6 +2290,19 @@ function createSeriesTable(machine, variant, savedMachine) {
           <option value="4+" ${rirValue === '4+' ? 'selected' : ''}>4+</option>
         </select>
       </td>
+      ${allowsStraps ? `
+        <td data-label="Straps">
+          <label class="gym-straps-control">
+            <input
+              type="checkbox"
+              class="gym-straps-input"
+              data-straps
+              ${savedSeries.straps === true ? 'checked' : ''}
+            >
+            <span>Usei</span>
+          </label>
+        </td>
+      ` : ''}
     `;
 
     const baseInput = row.querySelector('[data-base-weight]');
@@ -2305,6 +2323,10 @@ function createSeriesTable(machine, variant, savedMachine) {
     row.querySelector('[data-rir]')?.setAttribute(
       'aria-label',
       `${machine.name}, série ${index + 1}, repetições em reserva`
+    );
+    row.querySelector('[data-straps]')?.setAttribute(
+      'aria-label',
+      `${machine.name}, série ${index + 1}, usei straps`
     );
     updateTotalDisplay(row, initialResistance);
     tbody.appendChild(row);
@@ -3257,7 +3279,17 @@ function buildSessionFromDom() {
         : rirInput;
       const registeredAt = Number(row.dataset.registeredAt || 0) || null;
       const restBeforeSec = Number(row.dataset.restBeforeSec || 0) || 0;
-      return { seriesIndex: rowIndex, baseWeight, reps, targetReps, rir, registeredAt, restBeforeSec };
+      const strapsInput = row.querySelector('[data-straps]');
+      return {
+        seriesIndex: rowIndex,
+        baseWeight,
+        reps,
+        targetReps,
+        rir,
+        ...(strapsInput ? { straps: strapsInput.checked } : {}),
+        registeredAt,
+        restBeforeSec
+      };
     }).filter(item => item.reps > 0);
 
     if (!series.length && !warmups.length) return;
@@ -3334,7 +3366,8 @@ function buildSummaryText(session) {
           const restLabel = Number(series.restBeforeSec || 0) > 0
             ? ` | descanso ${formatDuration(series.restBeforeSec)}`
             : '';
-          lines.push(`${label} ${seriesNumber}ª série ${formatWeight(total)}kg x${repsLabel} RIR ${rirLabel}${restLabel}`);
+          const strapsLabel = series.straps === true ? ' | straps' : '';
+          lines.push(`${label} ${seriesNumber}ª série ${formatWeight(total)}kg x${repsLabel} RIR ${rirLabel}${strapsLabel}${restLabel}`);
         });
     });
   return lines.join('\n');
