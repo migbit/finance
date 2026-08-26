@@ -1772,7 +1772,9 @@ function updateWorkoutProgress() {
   if (!workoutProgressEl) return;
   const rows = Array.from(workoutWrap.querySelectorAll('[data-series-row]'));
   const completed = rows.filter(row => Number(row.querySelector('[data-reps]')?.value || 0) > 0).length;
-  workoutProgressEl.textContent = `${completed} / ${rows.length} séries`;
+  const completionRows = rows.filter(row => row.dataset.completionOnly === 'true').length;
+  const unit = completionRows === 0 ? 'séries' : (completionRows === rows.length ? 'etapas' : 'registos');
+  workoutProgressEl.textContent = `${completed} / ${rows.length} ${unit}`;
 }
 
 function recordSeriesTiming(target) {
@@ -2042,10 +2044,41 @@ function createRepsSelect(value = 0) {
   return select;
 }
 
+function createCompletionSelect(value = 0) {
+  const select = document.createElement('select');
+  select.setAttribute('data-reps', 'true');
+  select.setAttribute('data-completion', 'true');
+  [
+    { value: '0', label: '—' },
+    { value: '1', label: 'Feito' }
+  ].forEach(item => {
+    const option = document.createElement('option');
+    option.value = item.value;
+    option.textContent = item.label;
+    if (Number(value) === Number(item.value)) option.selected = true;
+    select.appendChild(option);
+  });
+  return select;
+}
+
+function createRpeSelect(value = '?') {
+  const select = document.createElement('select');
+  select.setAttribute('data-rir', 'true');
+  const options = ['?', ...Array.from({ length: 10 }, (_, index) => `RPE ${index + 1}`)];
+  options.forEach(optionValue => {
+    const option = document.createElement('option');
+    option.value = optionValue;
+    option.textContent = optionValue === '?' ? '—' : optionValue;
+    if (String(value) === optionValue) option.selected = true;
+    select.appendChild(option);
+  });
+  return select;
+}
+
 function createRirSelect(value) {
   const select = document.createElement('select');
   select.setAttribute('data-rir', 'true');
-  const options = ['falha', '0-1', '?', '1', '2', '3', '4', '5', '2+', '3+', '4+', '1-2', '2-3', '2-4', '3-5', '4-5'];
+  const options = ['falha', '0-1', '?', '1', '2', '3', '4', '5', '2+', '3+', '4+', '1-2', '2-3', '3-4', '2-4', '3-5', '4-5'];
   options.forEach(optionValue => {
     const option = document.createElement('option');
     option.value = optionValue;
@@ -2208,6 +2241,8 @@ function createSeriesTable(machine, variant, savedMachine) {
   const initialResistance = variant?.initialResistance ?? machine.initialResistance ?? null;
   const rules = variant?.rules || machine.rules || null;
   const allowsStraps = Boolean(variant?.allowsStraps ?? machine.allowsStraps);
+  const completionOnly = Boolean(variant?.completionOnly ?? machine.completionOnly);
+  const tracksIntensity = Boolean(variant?.trackIntensity ?? machine.trackIntensity);
   if (!variant.series || variant.series.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'gym-empty';
@@ -2220,10 +2255,10 @@ function createSeriesTable(machine, variant, savedMachine) {
   table.innerHTML = `
     <thead>
       <tr>
-        <th scope="col">Série</th>
-        <th scope="col">Peso (kg)</th>
-        <th scope="col">Reps feitas</th>
-        <th scope="col">RIR</th>
+        <th scope="col">${completionOnly ? 'Etapa' : 'Série'}</th>
+        <th scope="col">${completionOnly ? 'Tempo / volume' : 'Peso (kg)'}</th>
+        <th scope="col">${completionOnly ? 'Conclusão' : 'Reps feitas'}</th>
+        <th scope="col">${completionOnly ? 'Intensidade' : 'RIR'}</th>
         ${allowsStraps ? '<th scope="col">Straps</th>' : ''}
       </tr>
     </thead>
@@ -2242,6 +2277,9 @@ function createSeriesTable(machine, variant, savedMachine) {
     row.setAttribute('data-initial-resistance', initialResistance ?? '');
     row.setAttribute('data-series-machine-id', machine.id);
     row.setAttribute('data-series-variant-id', variant?.id || '');
+    row.setAttribute('data-completion-only', String(completionOnly));
+    row.setAttribute('data-completion-label', series.completionLabel || machine.completionLabel || 'bloco');
+    row.setAttribute('data-volume-label', series.volumeLabel || rules?.series?.[index]?.volume || '');
     if (savedSeries.registeredAt) {
       row.setAttribute('data-registered-at', String(savedSeries.registeredAt));
     }
@@ -2260,21 +2298,27 @@ function createSeriesTable(machine, variant, savedMachine) {
       ?? series.rir
       ?? '?';
 
-    const ruleText = rules?.series?.[index]
-      ? `${rules.series[index].reps} reps | RIR ${rules.series[index].rir}`
-      : '';
+    const seriesRule = rules?.series?.[index] || null;
+    const ruleText = completionOnly
+      ? (seriesRule?.rir && seriesRule.rir !== '—' ? `Alvo: ${seriesRule.rir}` : '')
+      : (seriesRule ? `${seriesRule.reps} reps | RIR ${seriesRule.rir}` : '');
+    const completionLabel = series.completionLabel || machine.completionLabel || 'bloco';
     row.innerHTML = `
-      <td data-label="Série">
-        ${index + 1}ª série
+      <td data-label="${completionOnly ? 'Etapa' : 'Série'}">
+        ${completionOnly ? `${index + 1}º ${completionLabel}` : `${index + 1}ª série`}
         ${ruleText ? `<span class="gym-series-rule">${ruleText}</span>` : ''}
       </td>
-      <td data-label="Peso" data-total-cell="true">
-        <input type="number" min="0" step="0.1" value="${baseWeight}" data-base-weight>
-        <span class="gym-total" data-total-weight></span>
-      </td>
-      <td data-label="Reps"></td>
-      <td data-label="RIR">
-        <select data-rir>
+      ${completionOnly ? `
+        <td data-label="Tempo / volume">${series.volumeLabel || seriesRule?.volume || '—'}</td>
+      ` : `
+        <td data-label="Peso" data-total-cell="true">
+          <input type="number" min="0" step="0.1" value="${baseWeight}" data-base-weight>
+          <span class="gym-total" data-total-weight></span>
+        </td>
+      `}
+      <td data-label="${completionOnly ? 'Conclusão' : 'Reps'}"></td>
+      <td data-label="${completionOnly ? 'Intensidade' : 'RIR'}">
+        ${completionOnly ? '' : `<select data-rir>
           <option value="falha" ${rirValue === 'falha' ? 'selected' : ''}>falha</option>
           <option value="0-1" ${rirValue === '0-1' ? 'selected' : ''}>0-1</option>
           <option value="?" ${rirValue === '?' ? 'selected' : ''}>?</option>
@@ -2286,9 +2330,10 @@ function createSeriesTable(machine, variant, savedMachine) {
           <option value="2-4" ${rirValue === '2-4' ? 'selected' : ''}>2-4</option>
           <option value="1-2" ${rirValue === '1-2' ? 'selected' : ''}>1-2</option>
           <option value="2-3" ${rirValue === '2-3' ? 'selected' : ''}>2-3</option>
+          <option value="3-4" ${rirValue === '3-4' ? 'selected' : ''}>3-4</option>
           <option value="3-5" ${rirValue === '3-5' ? 'selected' : ''}>3-5</option>
           <option value="4+" ${rirValue === '4+' ? 'selected' : ''}>4+</option>
-        </select>
+        </select>`}
       </td>
       ${allowsStraps ? `
         <td data-label="Straps">
@@ -2316,13 +2361,32 @@ function createSeriesTable(machine, variant, savedMachine) {
     }
     const repsCell = row.querySelector('td:nth-child(3)');
     if (repsCell) {
-      const repsSelect = createRepsSelect(repsValue);
-      repsSelect.setAttribute('aria-label', `${machine.name}, série ${index + 1}, repetições feitas`);
+      const repsSelect = completionOnly
+        ? createCompletionSelect(repsValue)
+        : createRepsSelect(repsValue);
+      repsSelect.setAttribute(
+        'aria-label',
+        completionOnly
+          ? `${machine.name}, ${series.completionLabel || machine.completionLabel || 'bloco'} ${index + 1}, conclusão`
+          : `${machine.name}, série ${index + 1}, repetições feitas`
+      );
       repsCell.appendChild(repsSelect);
+    }
+    if (completionOnly) {
+      const intensityCell = row.querySelector('td:nth-child(4)');
+      if (intensityCell && tracksIntensity) {
+        const intensitySelect = createRpeSelect(rirValue);
+        intensitySelect.setAttribute('aria-label', `${machine.name}, registo ${index + 1}, intensidade`);
+        intensityCell.appendChild(intensitySelect);
+      } else if (intensityCell) {
+        intensityCell.textContent = '—';
+      }
     }
     row.querySelector('[data-rir]')?.setAttribute(
       'aria-label',
-      `${machine.name}, série ${index + 1}, repetições em reserva`
+      completionOnly
+        ? `${machine.name}, registo ${index + 1}, intensidade`
+        : `${machine.name}, série ${index + 1}, repetições em reserva`
     );
     row.querySelector('[data-straps]')?.setAttribute(
       'aria-label',
@@ -2796,9 +2860,11 @@ function renderMachine(machine) {
     const displayResistance = machine.variants
       ? (variant?.initialResistance ?? null)
       : machine.initialResistance;
-    const resistanceLabel = displayResistance === null || displayResistance === undefined
-      ? 'Sem resistência inicial'
-      : `Resistência inicial: ${formatWeight(displayResistance)} kg`;
+    const resistanceLabel = machine.completionOnly
+      ? 'Registo por conclusão'
+      : (displayResistance === null || displayResistance === undefined
+        ? 'Sem resistência inicial'
+        : `Resistência inicial: ${formatWeight(displayResistance)} kg`);
     const order = Number(card.dataset.exerciseOrder || 0);
     meta.textContent = order > 0 ? `Feito em ${order}º` : resistanceLabel;
   };
@@ -2902,7 +2968,18 @@ function renderWorkout() {
     renderEmpty('Treino ainda não configurado para esta combinação.');
     return;
   }
-  template.forEach(machine => workoutWrap.appendChild(renderMachine(machine)));
+  let currentBlock = '';
+  template.forEach(machine => {
+    const block = machine.block || (currentBlock ? 'Exercícios adicionados' : '');
+    if (block && block !== currentBlock) {
+      const heading = document.createElement('h4');
+      heading.className = 'gym-workout-block';
+      heading.textContent = block;
+      workoutWrap.appendChild(heading);
+      currentBlock = block;
+    }
+    workoutWrap.appendChild(renderMachine(machine));
+  });
   updateWorkoutProgress();
   syncTimingFromDom();
   const savedDuration = Number(state.session?.timing?.durationSec || 0);
@@ -3279,6 +3356,7 @@ function buildSessionFromDom() {
         : rirInput;
       const registeredAt = Number(row.dataset.registeredAt || 0) || null;
       const restBeforeSec = Number(row.dataset.restBeforeSec || 0) || 0;
+      const completionOnly = row.dataset.completionOnly === 'true';
       const strapsInput = row.querySelector('[data-straps]');
       return {
         seriesIndex: rowIndex,
@@ -3286,6 +3364,11 @@ function buildSessionFromDom() {
         reps,
         targetReps,
         rir,
+        ...(completionOnly ? {
+          completionOnly: true,
+          completionLabel: row.dataset.completionLabel || 'bloco',
+          volumeLabel: row.dataset.volumeLabel || ''
+        } : {}),
         ...(strapsInput ? { straps: strapsInput.checked } : {}),
         registeredAt,
         restBeforeSec
@@ -3357,12 +3440,21 @@ function buildSummaryText(session) {
         .filter(series => Number(series?.reps || 0) > 0)
         .sort((a, b) => Number(a.seriesIndex ?? 0) - Number(b.seriesIndex ?? 0))
         .forEach((series, index) => {
+          const seriesNumber = Number(series.seriesIndex ?? index) + 1;
+          if (series.completionOnly) {
+            const completionLabel = series.completionLabel || 'bloco';
+            const volumeLabel = series.volumeLabel ? ` | ${series.volumeLabel}` : '';
+            const intensityLabel = series.rir && series.rir !== '?'
+              ? ` | ${series.rir}`
+              : '';
+            lines.push(`${label} · ${completionLabel} ${seriesNumber} concluído${volumeLabel}${intensityLabel}`);
+            return;
+          }
           const baseWeight = Number(series.baseWeight) || 0;
           const initial = machine.initialResistance ? Number(machine.initialResistance) : 0;
           const total = baseWeight + initial;
           const repsLabel = series.reps ? series.reps : '-';
           const rirLabel = series.rir ? series.rir : '-';
-          const seriesNumber = Number(series.seriesIndex ?? index) + 1;
           const restLabel = Number(series.restBeforeSec || 0) > 0
             ? ` | descanso ${formatDuration(series.restBeforeSec)}`
             : '';
@@ -3500,7 +3592,7 @@ function buildEvolutionSeries(workouts) {
     .forEach(workout => {
       Object.entries(workout.machines || {}).forEach(([machineId, machine]) => {
         const completed = (Array.isArray(machine?.series) ? machine.series : Object.values(machine?.series || {}))
-          .filter(item => Number(item?.reps || 0) > 0);
+          .filter(item => Number(item?.reps || 0) > 0 && !item?.completionOnly);
         if (!completed.length) return;
         const initialResistance = Number.isFinite(Number(machine.initialResistance))
           ? Number(machine.initialResistance)

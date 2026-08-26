@@ -6,6 +6,7 @@ function createExercise(id, name, {
   rirBySeries = null,
   rest,
   restMinSec,
+  block = '',
   note = ''
 }) {
   const prescribedRir = rirBySeries || Array.from({ length: seriesCount }, () => rir);
@@ -13,6 +14,7 @@ function createExercise(id, name, {
   return {
     id,
     name,
+    block,
     initialResistance: null,
     series: Array.from({ length: seriesCount }, (_, index) => ({
       baseWeight: 0,
@@ -26,6 +28,43 @@ function createExercise(id, name, {
         rest: index === seriesCount - 1 ? 'fim' : rest
       })),
       restMinSec
+    },
+    note
+  };
+}
+
+function createCompletionBlock(id, name, {
+  block,
+  seriesCount = 1,
+  volume,
+  intensity = '—',
+  defaultIntensity = '?',
+  trackIntensity = true,
+  completionLabel = 'bloco',
+  note = ''
+}) {
+  return {
+    id,
+    name,
+    block,
+    completionOnly: true,
+    trackIntensity,
+    completionLabel,
+    initialResistance: null,
+    series: Array.from({ length: seriesCount }, () => ({
+      baseWeight: 0,
+      targetReps: 1,
+      rir: defaultIntensity,
+      completionOnly: true,
+      completionLabel,
+      volumeLabel: volume
+    })),
+    rules: {
+      series: Array.from({ length: seriesCount }, () => ({
+        volume,
+        rir: intensity,
+        rest: 'fim'
+      }))
     },
     note
   };
@@ -221,6 +260,57 @@ export const FILIPA_WORKOUT_TEMPLATES = {
         rest: '1:00–1:15',
         restMinSec: 60,
         note: 'Na última série pode ocasionalmente chegar a RIR 0–1.'
+      })
+    ],
+    'Treino híbrido': [
+      createCompletionBlock('hibrido-aquecimento-cardio', 'Bicicleta ou remo', {
+        block: '1. Aquecimento',
+        volume: '3 min progressivo',
+        intensity: 'RPE 3 → 5',
+        defaultIntensity: 'RPE 5',
+        note: 'Duração total prevista: 31–35 min, podendo chegar a 40 min com transições. Objetivo: melhorar a capacidade cardiovascular e o condicionamento sem criar fadiga excessiva nas pernas para a musculação. Aumentar progressivamente a intensidade ao longo dos 3 minutos.'
+      }),
+      createCompletionBlock('hibrido-mobilidade-aceleracoes', 'Mobilidade + acelerações', {
+        block: '1. Aquecimento',
+        volume: '2 min',
+        trackIntensity: false,
+        note: 'Mobilidade dinâmica seguida de acelerações curtas.'
+      }),
+      createExercise('hibrido-kettlebell-swing', 'Kettlebell Swing', {
+        block: '2. Força/potência — EMOM',
+        seriesCount: 4,
+        reps: '8',
+        targetReps: 8,
+        rir: '3-4',
+        rest: '1:00 EMOM',
+        restMinSec: 60,
+        note: 'Alternar com Push-ups no início de cada minuto: 4 rondas de cada exercício.'
+      }),
+      createExercise('hibrido-push-ups', 'Push-ups', {
+        block: '2. Força/potência — EMOM',
+        seriesCount: 4,
+        reps: '6–8',
+        targetReps: 6,
+        rir: '3-4',
+        rest: '1:00 EMOM',
+        restMinSec: 60,
+        note: 'Alternar com Kettlebell Swing no início de cada minuto: 4 rondas de cada exercício.'
+      }),
+      createCompletionBlock('hibrido-cardio-intervalado', 'Bicicleta — intervalos', {
+        block: '3. Cardio intervalado',
+        seriesCount: 8,
+        volume: '45 s forte + 75 s fácil',
+        intensity: 'Forte: RPE ~8/10',
+        defaultIntensity: 'RPE 8',
+        completionLabel: 'intervalo',
+        note: 'Preferir a bicicleta. Completar 8 intervalos, num total de 16 minutos.'
+      }),
+      createCompletionBlock('hibrido-cardio-facil', 'Bicicleta / remo / caminhada inclinada', {
+        block: '4. Cardio fácil',
+        volume: '5–8 min',
+        intensity: 'RPE 3–4/10',
+        defaultIntensity: 'RPE 4',
+        note: 'Ritmo fácil para terminar. Objetivo do treino: melhorar a capacidade cardiovascular e o condicionamento sem criar fadiga excessiva nas pernas para a musculação. Duração total prevista: 31–35 min, podendo chegar a 40 min com transições.'
       })
     ]
   }
