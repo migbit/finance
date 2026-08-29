@@ -1,6 +1,6 @@
 /* A APP – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v54`;
+const CACHE = `${CACHE_PREFIX}v57`;
 
 const CORE = [
   './',
@@ -21,14 +21,22 @@ const CORE = [
   './js/filipa-alimentacao.js',
   './js/filipa-alimentacao-planner.js',
   './js/filipa-alimentacao-recipes.js',
+  './js/financas-core.js',
+  './js/financas-filha.js',
+  './js/gestao-financas.js',
   './js/meditacao.js',
   './js/meditacao-recommender.js',
   './modules/ginasio.html',
   './modules/alimentacao.html',
   './modules/filipa-ginasio.html',
   './modules/filipa-alimentacao.html',
+  './modules/francisca-financas.html',
+  './modules/leonor-financas.html',
+  './modules/gestao-financas.html',
   './modules/meditacao.html',
   './css/alimentacao.css',
+  './css/financas.css',
+  './css/gestao-financas.css',
   './css/meditacao.css',
   './data/meditations/buddhist.json',
   './data/meditations/asian-non-buddhist.json',
@@ -61,6 +69,16 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   const sameOrigin = url.origin === self.location.origin;
   if (!sameOrigin) return; // ignore CDNs
+
+  // Respostas financeiras autenticadas nunca ficam na Cache Storage. Assim,
+  // o modo offline não consegue revelar dados da sessão anterior.
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(req, { cache: 'no-store' }).catch(() => new Response(
+      JSON.stringify({ error: 'Os dados privados precisam de ligação e autenticação.' }),
+      { status: 503, headers: { 'Content-Type': 'application/json; charset=UTF-8' } }
+    )));
+    return;
+  }
 
   const networkFirstAsset = req.destination === 'script' || req.destination === 'style';
   if (networkFirstAsset) {
@@ -122,6 +140,19 @@ self.addEventListener('fetch', (event) => {
     if (fresh && fresh.ok) await cache.put(req, fresh.clone());
     return fresh;
   })());
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'CLEAR_PRIVATE_FINANCE_DATA') return;
+  event.waitUntil(caches.keys().then(async keys => {
+    for (const key of keys) {
+      const cache = await caches.open(key);
+      const requests = await cache.keys();
+      await Promise.all(requests
+        .filter(request => new URL(request.url).pathname.startsWith('/api/'))
+        .map(request => cache.delete(request)));
+    }
+  }));
 });
 
 self.addEventListener('push', (event) => {

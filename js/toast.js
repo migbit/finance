@@ -61,7 +61,7 @@ function getIcon(type) {
 /**
  * Confirmation dialog (replaces confirm())
  */
-export function showConfirm(message, onConfirm, onCancel = null) {
+export function showConfirm(message, onConfirm, onCancel = null, options = {}) {
   const previouslyFocused = document.activeElement;
   const modal = document.createElement('div');
   modal.className = 'confirm-modal';
@@ -81,11 +81,11 @@ export function showConfirm(message, onConfirm, onCancel = null) {
   const cancelBtn = document.createElement('button');
   cancelBtn.type = 'button';
   cancelBtn.className = 'btn-cancel';
-  cancelBtn.textContent = 'Cancelar';
+  cancelBtn.textContent = options.cancelLabel || 'Cancelar';
   const confirmBtn = document.createElement('button');
   confirmBtn.type = 'button';
   confirmBtn.className = 'btn-confirm';
-  confirmBtn.textContent = 'Confirmar';
+  confirmBtn.textContent = options.confirmLabel || 'Confirmar';
   actions.append(cancelBtn, confirmBtn);
   dialog.append(text, actions);
   modal.append(backdrop, dialog);

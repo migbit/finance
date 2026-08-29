@@ -8,6 +8,7 @@ const { loadCleaningCalendar } = require("./cleaning-calendar");
 const { findPotentialCleaningConflicts } = require("./cleaning-alerts");
 const { closePreviousMonthAndOpenCurrent } = require("./dca-monthly");
 const { authorizeInvestmentRequest } = require("./investment-access");
+const familyFinance = require("./family-finance");
 
 if (!admin.apps.length) {
   admin.initializeApp();
@@ -1199,6 +1200,84 @@ exports.dcaMonthlyClose = onSchedule(
       runDate: new Date(),
     });
     console.log("DCA monthly close", result);
+  }
+);
+
+exports.familyFinance = onRequest(
+  {
+    region: familyFinance.REGION,
+    timeoutSeconds: 120,
+    maxInstances: 4,
+    cors: true,
+    secrets: [ALPHA_VANTAGE_API_KEY],
+  },
+  async (req, res) => familyFinance.handleFamilyFinanceHttp({
+    req,
+    res,
+    firestore,
+    firebaseAuth: admin.auth(),
+    apiKey: ALPHA_VANTAGE_API_KEY.value(),
+  })
+);
+
+// Alias leve para clientes que carregam apenas as cotações educativas.
+exports.familyFinanceQuotes = onRequest(
+  {
+    region: familyFinance.REGION,
+    timeoutSeconds: 120,
+    maxInstances: 4,
+    cors: true,
+    secrets: [ALPHA_VANTAGE_API_KEY],
+  },
+  async (req, res) => familyFinance.handleFamilyFinanceQuotesHttp({
+    req,
+    res,
+    firestore,
+    firebaseAuth: admin.auth(),
+    apiKey: ALPHA_VANTAGE_API_KEY.value(),
+  })
+);
+
+// Alpha Vantage gratuito disponibiliza 25 pedidos/dia. São cinco ativos por
+// atualização: um fecho automático diário e, no máximo, um refresh parental.
+exports.familyFinanceQuoteRefresh = onSchedule(
+  {
+    schedule: "30 22 * * 1-5",
+    timeZone: familyFinance.TIME_ZONE,
+    region: familyFinance.REGION,
+    timeoutSeconds: 120,
+    maxInstances: 1,
+    secrets: [ALPHA_VANTAGE_API_KEY],
+  },
+  async () => {
+    const result = await familyFinance.refreshMarketQuotes({
+      firestore,
+      apiKey: ALPHA_VANTAGE_API_KEY.value(),
+      actor: { uid: "system", role: "system" },
+      manual: false,
+    });
+    console.log("Family finance last-close refresh", {
+      refreshed: result.refreshed,
+      updated: result.updated || [],
+      errors: result.errors || [],
+    });
+  }
+);
+
+exports.familyFinanceMaturities = onSchedule(
+  {
+    schedule: "5 * * * *",
+    timeZone: familyFinance.TIME_ZONE,
+    region: familyFinance.REGION,
+    timeoutSeconds: 60,
+    maxInstances: 1,
+  },
+  async () => {
+    const result = await familyFinance.matureDueVaults({ firestore });
+    console.log("Family finance vault maturities", {
+      candidates: result.candidates,
+      completed: result.results.filter((item) => !item.skipped).length,
+    });
   }
 );
 

@@ -26,6 +26,20 @@
     ],
     "rewrites": [
       {
+        "source": "/api/family-finance/quotes",
+        "function": {
+          "functionId": "familyFinanceQuotes",
+          "region": "europe-west1"
+        }
+      },
+      {
+        "source": "/api/family-finance",
+        "function": {
+          "functionId": "familyFinance",
+          "region": "europe-west1"
+        }
+      },
+      {
         "source": "/api/portfolio",
         "function": {
           "functionId": "krakenPortfolio",

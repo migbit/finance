@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f8f9fb">
+  <title>Gestão Finanças · Família</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/gestao-financas.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="manifest" href="../manifest.json">
+</head>
+<body data-page="gestao-financas">
+  <button id="menu-icon" aria-label="Abrir menu">☰</button>
+  <header><nav id="nav-menu"></nav></header>
+
+  <main class="family-finance-admin">
+    <section class="finance-admin-hero" aria-labelledby="finance-admin-title">
+      <div>
+        <p class="finance-admin-eyebrow">Área dos pais</p>
+        <h1 id="finance-admin-title">Gestão Finanças</h1>
+        <p>Acompanha as duas contas, valida movimentos e conversa sobre cada escolha.</p>
+      </div>
+      <div class="finance-admin-hero-actions">
+        <button type="button" id="finance-admin-add" class="primary">＋ Adicionar movimento</button>
+        <button type="button" id="finance-admin-refresh-quotes">↻ Atualizar cotações</button>
+        <button type="button" id="finance-admin-reload" aria-label="Atualizar todos os dados">Atualizar</button>
+      </div>
+    </section>
+
+    <div class="finance-admin-sync" role="status" aria-live="polite">
+      <span id="finance-admin-sync-pill" class="finance-status-pill is-neutral">A preparar…</span>
+      <span id="finance-admin-sync-meta">A aguardar autenticação.</span>
+    </div>
+
+    <section id="finance-admin-summary" class="finance-family-summary" aria-label="Resumo das contas">
+      <article class="finance-summary-card is-loading"><span class="finance-skeleton"></span></article>
+      <article class="finance-summary-card is-loading"><span class="finance-skeleton"></span></article>
+    </section>
+
+    <section class="finance-admin-workspace" aria-label="Movimentos e investimentos">
+      <div class="finance-admin-tabs" role="tablist" aria-label="Áreas de gestão">
+        <button type="button" class="finance-admin-tab is-active" role="tab" aria-selected="true" aria-controls="finance-panel-pending" data-finance-tab="pending">
+          Para validar <span id="finance-pending-count" class="finance-count-badge">0</span>
+        </button>
+        <button type="button" class="finance-admin-tab" role="tab" aria-selected="false" aria-controls="finance-panel-movements" data-finance-tab="movements">Movimentos</button>
+        <button type="button" class="finance-admin-tab" role="tab" aria-selected="false" aria-controls="finance-panel-investments" data-finance-tab="investments">Investimentos</button>
+        <button type="button" class="finance-admin-tab" role="tab" aria-selected="false" aria-controls="finance-panel-monthly" data-finance-tab="monthly">Resumo mensal</button>
+        <button type="button" class="finance-admin-tab" role="tab" aria-selected="false" aria-controls="finance-panel-audit" data-finance-tab="audit">Auditoria</button>
+      </div>
+
+      <form id="finance-admin-filters" class="finance-admin-filters" aria-label="Filtrar dados">
+        <label>
+          <span>Conta</span>
+          <select id="finance-filter-child">
+            <option value="all">Francisca e Leonor</option>
+            <option value="francisca">Francisca</option>
+            <option value="leonor">Leonor</option>
+          </select>
+        </label>
+        <label>
+          <span>Estado</span>
+          <select id="finance-filter-status">
+            <option value="all">Todos</option>
+            <option value="pending">A aguardar validação</option>
+            <option value="correction_required">Precisa de correção</option>
+            <option value="approved">Validado</option>
+            <option value="rejected">Reprovado</option>
+            <option value="cancelled">Cancelado</option>
+          </select>
+        </label>
+        <label>
+          <span>Tipo</span>
+          <select id="finance-filter-kind">
+            <option value="all">Todos</option>
+            <option value="income">Entrada</option>
+            <option value="expense">Saída</option>
+            <option value="vault_open">Investimento a prazo</option>
+            <option value="market_buy">Compra</option>
+            <option value="market_sell">Venda</option>
+          </select>
+        </label>
+        <label class="finance-filter-search">
+          <span>Pesquisar</span>
+          <input id="finance-filter-search" type="search" placeholder="Categoria, nota ou ativo">
+        </label>
+        <button type="reset">Limpar</button>
+      </form>
+
+      <section id="finance-panel-pending" class="finance-admin-panel" role="tabpanel" data-finance-panel="pending">
+        <div class="finance-panel-heading">
+          <div>
+            <h2>Movimentos para validar</h2>
+            <p>Estes registos ainda não alteram o saldo. Validar confirma que o movimento aconteceu; não é uma autorização moral da escolha.</p>
+          </div>
+        </div>
+        <div id="finance-pending-list" class="finance-pending-list"></div>
+      </section>
+
+      <section id="finance-panel-movements" class="finance-admin-panel" role="tabpanel" data-finance-panel="movements" hidden>
+        <div class="finance-panel-heading">
+          <div>
+            <h2>Extrato completo</h2>
+            <p>Movimentos efetivos das duas contas.</p>
+          </div>
+        </div>
+        <div class="finance-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Conta</th>
+                <th>Movimento</th>
+                <th>Categoria</th>
+                <th>Nota</th>
+                <th class="is-number">Valor</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="finance-movements-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="finance-panel-monthly" class="finance-admin-panel" role="tabpanel" data-finance-panel="monthly" hidden>
+        <div class="finance-panel-heading">
+          <div>
+            <h2>Resumo mensal</h2>
+            <p>Entradas, despesas, poupança, investimento e observações neutras para conversar em família.</p>
+          </div>
+        </div>
+        <div id="finance-monthly-content" class="finance-monthly-admin-grid"></div>
+      </section>
+
+      <section id="finance-panel-investments" class="finance-admin-panel" role="tabpanel" data-finance-panel="investments" hidden>
+        <div class="finance-panel-heading">
+          <div>
+            <h2>Investimentos e exposição</h2>
+            <p>Dinheiro disponível, a prazo e sujeito à variação do mercado.</p>
+          </div>
+        </div>
+        <div id="finance-investments-content" class="finance-investments-grid"></div>
+      </section>
+
+      <section id="finance-panel-audit" class="finance-admin-panel" role="tabpanel" data-finance-panel="audit" hidden>
+        <div class="finance-panel-heading">
+          <div>
+            <h2>Histórico de decisões</h2>
+            <p>Os pedidos reprovados ficam guardados aqui, mesmo quando deixam de aparecer às filhas.</p>
+          </div>
+        </div>
+        <div class="finance-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Evento</th>
+                <th>Conta</th>
+                <th>Ator</th>
+                <th>Data</th>
+                <th>Pedido / movimento</th>
+                <th>Detalhes</th>
+                <th class="is-number">Valor</th>
+              </tr>
+            </thead>
+            <tbody id="finance-audit-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="finance-adjustment-dialog" class="finance-admin-dialog" aria-labelledby="finance-adjustment-title">
+    <form id="finance-adjustment-form">
+      <div class="finance-dialog-heading">
+        <div>
+          <p class="finance-admin-eyebrow">Registo dos pais</p>
+          <h2 id="finance-adjustment-title">Adicionar movimento</h2>
+        </div>
+        <button type="button" class="finance-dialog-close" data-close-dialog="finance-adjustment-dialog" aria-label="Fechar">×</button>
+      </div>
+      <p class="finance-dialog-note">Este registo é validado imediatamente e entra logo no saldo.</p>
+      <div class="finance-form-grid">
+        <label>
+          <span>Conta</span>
+          <select name="childId" required>
+            <option value="francisca">Francisca</option>
+            <option value="leonor">Leonor</option>
+          </select>
+        </label>
+        <label>
+          <span>Tipo</span>
+          <select name="kind" id="finance-adjustment-kind" required>
+            <option value="income">Recebeu dinheiro</option>
+            <option value="expense">Gastou dinheiro</option>
+          </select>
+        </label>
+        <label>
+          <span>Valor</span>
+          <div class="finance-money-input"><span>€</span><input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>
+        </label>
+        <label>
+          <span>Categoria</span>
+          <select name="category" id="finance-adjustment-category" required></select>
+        </label>
+        <label>
+          <span>Data</span>
+          <input name="occurredOn" type="date" required>
+        </label>
+        <label class="finance-form-wide">
+          <span>Nota para aprender com o movimento</span>
+          <textarea name="note" maxlength="240" placeholder="Ex.: Prenda dos avós ou material para a escola"></textarea>
+        </label>
+      </div>
+      <div class="finance-dialog-actions">
+        <button type="button" data-close-dialog="finance-adjustment-dialog">Cancelar</button>
+        <button type="submit" class="primary">Guardar e validar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="finance-correction-dialog" class="finance-admin-dialog finance-reject-dialog" aria-labelledby="finance-correction-title">
+    <form id="finance-correction-form">
+      <div class="finance-dialog-heading">
+        <div>
+          <p class="finance-admin-eyebrow">Corrigir sem apagar</p>
+          <h2 id="finance-correction-title">Pedir correção</h2>
+        </div>
+        <button type="button" class="finance-dialog-close" data-close-dialog="finance-correction-dialog" aria-label="Fechar">×</button>
+      </div>
+      <p id="finance-correction-summary" class="finance-dialog-note"></p>
+      <input type="hidden" name="childId">
+      <input type="hidden" name="requestId">
+      <label>
+        <span>O que deve ser corrigido?</span>
+        <textarea name="reason" required minlength="3" maxlength="240" placeholder="Ex.: Confirma o valor; parece ter um zero a mais."></textarea>
+      </label>
+      <div class="finance-dialog-actions">
+        <button type="button" data-close-dialog="finance-correction-dialog">Cancelar</button>
+        <button type="submit" class="finance-correction-button">Pedir correção</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="finance-reversal-dialog" class="finance-admin-dialog finance-reject-dialog" aria-labelledby="finance-reversal-title">
+    <form id="finance-reversal-form">
+      <div class="finance-dialog-heading">
+        <div>
+          <p class="finance-admin-eyebrow">Correção contabilística</p>
+          <h2 id="finance-reversal-title">Estornar movimento</h2>
+        </div>
+        <button type="button" class="finance-dialog-close" data-close-dialog="finance-reversal-dialog" aria-label="Fechar">×</button>
+      </div>
+      <p id="finance-reversal-summary" class="finance-dialog-note"></p>
+      <input type="hidden" name="childId">
+      <input type="hidden" name="ledgerId">
+      <label>
+        <span>Motivo do estorno</span>
+        <textarea name="reason" required minlength="3" maxlength="240" placeholder="Ex.: Movimento registado em duplicado."></textarea>
+      </label>
+      <div class="finance-dialog-actions">
+        <button type="button" data-close-dialog="finance-reversal-dialog">Cancelar</button>
+        <button type="submit" class="finance-danger-button">Criar estorno</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="finance-reject-dialog" class="finance-admin-dialog finance-reject-dialog" aria-labelledby="finance-reject-title">
+    <form id="finance-reject-form">
+      <div class="finance-dialog-heading">
+        <div>
+          <p class="finance-admin-eyebrow">Decisão com contexto</p>
+          <h2 id="finance-reject-title">Reprovar pedido</h2>
+        </div>
+        <button type="button" class="finance-dialog-close" data-close-dialog="finance-reject-dialog" aria-label="Fechar">×</button>
+      </div>
+      <p id="finance-reject-summary" class="finance-dialog-note"></p>
+      <input type="hidden" name="childId">
+      <input type="hidden" name="requestId">
+      <label>
+        <span>Explica brevemente o motivo</span>
+        <textarea name="reason" required minlength="3" maxlength="240" placeholder="Ex.: Vamos primeiro comparar preços e voltar a decidir."></textarea>
+      </label>
+      <div class="finance-dialog-actions">
+        <button type="button" data-close-dialog="finance-reject-dialog">Cancelar</button>
+        <button type="submit" class="finance-danger-button">Reprovar pedido</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/gestao-financas.js"></script>
+</body>
+</html>

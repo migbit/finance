@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#5b5bd6">
+  <title>Finanças da Francisca</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/financas.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="manifest" href="../manifest.json">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body data-page="francisca-financas" data-child="francisca" data-age="11">
+  <a class="financas-skip-link" href="#financas-conteudo">Saltar para as finanças</a>
+
+  <main id="financas-conteudo" class="financas-page" aria-busy="true">
+    <header class="financas-welcome">
+      <p class="financas-kicker" data-profile-kicker>Aprender hoje para escolher melhor amanhã</p>
+      <h1 data-profile-title>As minhas finanças</h1>
+      <p class="financas-lead" data-profile-lead>
+        Planeia, distingue necessidades de desejos e descobre como o dinheiro pode crescer.
+      </p>
+    </header>
+
+    <div id="financas-status" class="financas-status" role="status" aria-live="polite" hidden>
+      <span id="financas-status-text"></span>
+      <button id="financas-retry" type="button" hidden>Tentar novamente</button>
+    </div>
+
+    <section class="financas-balance-card" aria-labelledby="financas-balance-title">
+      <div class="financas-balance-main">
+        <p id="financas-balance-title" data-available-label>Disponível para usar</p>
+        <strong id="balance-available" aria-live="polite">0,00&nbsp;€</strong>
+      </div>
+      <dl class="financas-balance-grid">
+        <div>
+          <dt>Movimentos a validar</dt>
+          <dd id="balance-pending">0,00&nbsp;€</dd>
+        </div>
+        <div>
+          <dt>Reservado para objetivos</dt>
+          <dd id="balance-goals">0,00&nbsp;€</dd>
+        </div>
+        <div>
+          <dt>No cofre</dt>
+          <dd id="balance-vault">0,00&nbsp;€</dd>
+        </div>
+        <div>
+          <dt>No mercado</dt>
+          <dd id="balance-market">0,00&nbsp;€</dd>
+        </div>
+        <div id="balance-debt-card" class="financas-debt" hidden>
+          <dt>Dívida aos pais</dt>
+          <dd id="balance-debt">0,00&nbsp;€</dd>
+        </div>
+        <div class="financas-total">
+          <dt>Património total</dt>
+          <dd id="balance-total">0,00&nbsp;€</dd>
+        </div>
+      </dl>
+      <p class="financas-balance-note">O saldo principal inclui apenas movimentos já validados.</p>
+      <p id="balance-projected" class="financas-balance-projected" hidden></p>
+      <p id="balance-debt-help" class="financas-debt-help" hidden></p>
+    </section>
+
+    <p class="financas-area-label">Dinheiro</p>
+    <section class="financas-actions" aria-labelledby="financas-actions-title">
+      <h2 id="financas-actions-title" class="sr-only">O que queres fazer?</h2>
+      <button type="button" class="financas-action financas-action--income" data-open-finance-dialog="income">
+        <span class="financas-action-icon" aria-hidden="true">＋</span>
+        <span><strong>Receber</strong><small>Registar dinheiro que entrou</small></span>
+      </button>
+      <button type="button" class="financas-action financas-action--expense" data-open-finance-dialog="expense">
+        <span class="financas-action-icon" aria-hidden="true">−</span>
+        <span><strong>Gastar</strong><small>Registar algo que já compraste</small></span>
+      </button>
+      <button type="button" class="financas-action financas-action--invest" data-open-finance-dialog="invest">
+        <span class="financas-action-icon" aria-hidden="true">↗</span>
+        <span><strong data-invest-label>Investir</strong><small>Conhecer o cofre e o mercado</small></span>
+      </button>
+    </section>
+
+    <section class="financas-dashboard-grid">
+      <article class="financas-card financas-goal" aria-labelledby="goal-title">
+        <div class="financas-section-heading">
+          <div>
+            <p class="financas-eyebrow">Poupar · O meu plano</p>
+            <h2 id="goal-title">Objetivo de poupança</h2>
+          </div>
+          <button id="goal-edit" type="button" class="financas-small-button" data-open-finance-dialog="goal">
+            Criar objetivo
+          </button>
+        </div>
+        <div id="goal-content" class="financas-goal-content">
+          <p data-goal-empty>Cria um objetivo e acompanha quanto falta para o alcançar.</p>
+        </div>
+      </article>
+
+      <aside class="financas-card financas-learning" aria-labelledby="learning-title">
+        <div class="financas-learning-icon" aria-hidden="true">💡</div>
+        <div>
+          <p class="financas-eyebrow">Ideia do dia</p>
+          <h2 id="learning-title">Escolher também é aprender</h2>
+          <p id="learning-tip">Antes de gastar, compara o preço com o valor que esse dinheiro tem para o teu objetivo.</p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="financas-card" aria-labelledby="movements-title">
+      <div class="financas-section-heading">
+        <div>
+          <p class="financas-eyebrow">Extrato</p>
+          <h2 id="movements-title">Últimos movimentos</h2>
+          <p id="movements-intro">Aqui vês o que aconteceu e o que ainda aguarda validação.</p>
+        </div>
+      </div>
+      <ol id="movements-list" class="financas-movements" aria-live="polite">
+        <li class="financas-empty">Ainda não há movimentos.</li>
+      </ol>
+      <button id="movements-more" type="button" class="financas-more-button" hidden aria-expanded="false">
+        Mostrar mais
+      </button>
+    </section>
+
+    <section class="financas-card" aria-labelledby="investments-title">
+      <div class="financas-section-heading">
+        <div>
+          <p class="financas-eyebrow">Investir · Aprender com o mercado</p>
+          <h2 id="investments-title">Onde está o dinheiro a crescer?</h2>
+          <p>O cofre tem uma recompensa garantida pelos pais. No mercado, o valor pode subir ou descer.</p>
+        </div>
+        <time id="quotes-updated" class="financas-cache-time">Cotações ainda não carregadas</time>
+      </div>
+      <div class="financas-investment-grid">
+        <article class="financas-subcard" aria-labelledby="vaults-title">
+          <h3 id="vaults-title">Cofres a prazo</h3>
+          <div id="vaults-list"><p class="financas-empty">Ainda não tens dinheiro num cofre.</p></div>
+        </article>
+        <article class="financas-subcard" aria-labelledby="positions-title">
+          <h3 id="positions-title">Mercado simulado</h3>
+          <div id="positions-list"><p class="financas-empty">Ainda não tens ETF nem ações.</p></div>
+        </article>
+      </div>
+      <article class="financas-subcard financas-investment-history" aria-labelledby="investment-chart-title">
+        <h3 id="investment-chart-title">Evolução dos preços</h3>
+        <p>Variação percentual dos ativos que tens, desde o primeiro preço guardado.</p>
+        <div class="financas-chart-wrap"><canvas id="investment-chart" aria-hidden="true"></canvas></div>
+        <div id="investment-chart-summary" class="financas-chart-summary">Ainda não existe histórico suficiente.</div>
+        <p class="financas-field-hint">Acompanhamos apenas o preço. Dividendos não estão incluídos.</p>
+      </article>
+    </section>
+
+    <section class="financas-card financas-monthly" aria-labelledby="monthly-title">
+      <div class="financas-section-heading">
+        <div>
+          <p class="financas-eyebrow">Perceber · Resumo do mês</p>
+          <h2 id="monthly-title">O que aconteceu este mês?</h2>
+        </div>
+      </div>
+      <div id="monthly-summary" class="financas-monthly-content"></div>
+    </section>
+
+    <section class="financas-charts" aria-labelledby="charts-title">
+      <div class="financas-section-heading financas-section-heading--charts">
+        <div>
+          <p class="financas-eyebrow">Movimentos validados</p>
+          <h2 id="charts-title">De onde veio e para onde foi?</h2>
+        </div>
+      </div>
+      <article class="financas-card financas-chart-card" aria-labelledby="income-chart-title">
+        <h3 id="income-chart-title">De onde veio o dinheiro?</h3>
+        <div class="financas-chart-wrap"><canvas id="income-chart" aria-hidden="true"></canvas></div>
+        <div id="income-chart-summary" class="financas-chart-summary">Ainda não há entradas validadas.</div>
+      </article>
+      <article class="financas-card financas-chart-card" aria-labelledby="expense-chart-title">
+        <h3 id="expense-chart-title">Em que usei o dinheiro?</h3>
+        <div class="financas-chart-wrap"><canvas id="expense-chart" aria-hidden="true"></canvas></div>
+        <div id="expense-chart-summary" class="financas-chart-summary">Ainda não há gastos validados.</div>
+      </article>
+    </section>
+
+    <p class="financas-simulation-note">
+      Os investimentos são simulados e nunca enviam ordens para uma corretora. O resultado, positivo ou negativo, conta no teu património real guardado pelos pais.
+    </p>
+  </main>
+
+  <dialog id="finance-dialog" class="financas-dialog" aria-labelledby="finance-dialog-title">
+    <form id="finance-form" method="dialog" novalidate>
+      <header class="financas-dialog-header">
+        <div>
+          <p id="finance-dialog-kicker" class="financas-eyebrow"></p>
+          <h2 id="finance-dialog-title">Novo movimento</h2>
+        </div>
+        <button type="button" class="financas-dialog-close" data-close-finance-dialog aria-label="Fechar">×</button>
+      </header>
+      <p id="finance-dialog-intro" class="financas-dialog-intro"></p>
+      <div id="finance-dialog-fields" class="financas-dialog-fields"></div>
+      <p id="finance-form-preview" class="financas-form-preview" aria-live="polite"></p>
+      <p id="finance-form-error" class="financas-form-error" role="alert" hidden></p>
+      <footer class="financas-dialog-actions">
+        <button type="button" class="financas-secondary-button" data-close-finance-dialog>Cancelar</button>
+        <button id="finance-submit" type="submit" class="financas-primary-button">Enviar para validação</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <noscript>Ativa o JavaScript para utilizar esta página.</noscript>
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/financas-filha.js"></script>
+</body>
+</html>

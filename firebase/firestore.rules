@@ -9,26 +9,53 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == 'SsNolBpIOxQK1upboCXIUwWlsuV2';
     }
 
+    function isFrancisca() {
+      return signedIn() && request.auth.uid == 'Fg8GKPt6fNb1vXIZf3Eg0xsHQID3';
+    }
+
+    function isLeonor() {
+      return signedIn() && request.auth.uid == '9d2FHATsREVrX2t5gJDBviNWibv1';
+    }
+
+    function isFamilyChild() {
+      return isFrancisca() || isLeonor();
+    }
+
+    // Para compatibilidade com a aplicação pessoal existente, qualquer conta
+    // autenticada que não seja uma das duas crianças mantém o papel parental.
+    function isFamilyParent() {
+      return signedIn() && !isFamilyChild();
+    }
+
+    function ownsFamilyAccount(childId) {
+      return (childId == 'francisca' && isFrancisca())
+        || (childId == 'leonor' && isLeonor());
+    }
+
+    function canReadFamilyAccount(childId) {
+      return isFamilyParent() || ownsFamilyAccount(childId);
+    }
+
     function investmentsReleased() {
       return request.time >= timestamp.date(2027, 12, 21);
     }
 
     function canReadInvestments() {
-      return signedIn() && (!isFilipa() || investmentsReleased());
+      return signedIn() && !isFamilyChild() && (!isFilipa() || investmentsReleased());
     }
 
     function canWriteInvestments() {
-      return signedIn() && !isFilipa();
+      return signedIn() && !isFamilyChild() && !isFilipa();
     }
 
     match /alojamento_boletins/{token} {
       allow get: if true;
-      allow list, create, update, delete: if signedIn() && !isFilipa();
+      allow list, create, update, delete: if signedIn() && !isFilipa() && !isFamilyChild();
 
       match /guests/{guestId} {
-        allow read: if (signedIn() && !isFilipa())
+        allow read: if (signedIn() && !isFilipa() && !isFamilyChild())
           || exists(/databases/$(database)/documents/alojamento_boletins/$(token));
-        allow update, delete: if signedIn() && !isFilipa();
+        allow update, delete: if signedIn() && !isFilipa() && !isFamilyChild();
         allow create: if exists(/databases/$(database)/documents/alojamento_boletins/$(token))
           && request.resource.data.keys().hasOnly([
             'firstName',
@@ -100,7 +127,7 @@ service cloud.firestore {
 
       match /guest_summaries/{summaryId} {
         allow read: if true;
-        allow update, delete: if signedIn() && !isFilipa();
+        allow update, delete: if signedIn() && !isFilipa() && !isFamilyChild();
         allow create: if exists(/databases/$(database)/documents/alojamento_boletins/$(token))
           && request.resource.data.keys().hasOnly([
             'firstName',
@@ -130,28 +157,91 @@ service cloud.firestore {
 
     // Áreas explicitamente autorizadas à Filipa.
     match /obras_checklists/{document=**} {
-      allow read, write: if signedIn();
+      allow read, write: if signedIn() && !isFamilyChild();
     }
 
     match /listas_compras/{document=**} {
-      allow read, write: if signedIn();
+      allow read, write: if signedIn() && !isFamilyChild();
     }
 
     match /comments/{document=**} {
-      allow read, write: if signedIn();
+      allow read, write: if signedIn() && !isFamilyChild();
     }
 
     match /reparacoes/{document=**} {
-      allow read, write: if signedIn();
+      allow read, write: if signedIn() && !isFamilyChild();
     }
 
     match /alimentacao_perfis/{userId} {
-      allow read, write: if signedIn() && (!isFilipa() || request.auth.uid == userId);
+      allow read, write: if signedIn()
+        && ((!isFilipa() && !isFamilyChild()) || request.auth.uid == userId);
     }
 
     // Dados pessoais dos módulos colocados nas áreas individuais.
     match /users/{userId}/{document=**} {
-      allow read, write: if signedIn() && (!isFilipa() || request.auth.uid == userId);
+      allow read, write: if signedIn()
+        && ((!isFilipa() && !isFamilyChild()) || request.auth.uid == userId);
+    }
+
+    // Finanças familiares: os clientes só leem dados autorizados. Todos os
+    // pedidos, saldos, movimentos, investimentos e decisões passam pelas
+    // Functions, que validam identidade, regras de negócio e auditoria.
+    match /family_finance_accounts/{childId} {
+      allow read: if canReadFamilyAccount(childId);
+      allow create, update, delete: if false;
+
+      match /requests/{requestId} {
+        allow read: if isFamilyParent()
+          || (ownsFamilyAccount(childId)
+            && (resource.data.status != 'rejected'
+              || (resource.data.visibleToChildUntil is timestamp
+                && resource.data.visibleToChildUntil > request.time)));
+        allow create, update, delete: if false;
+      }
+
+      match /ledger/{entryId} {
+        allow read: if canReadFamilyAccount(childId);
+        allow write: if false;
+      }
+
+      match /vaults/{vaultId} {
+        allow read: if canReadFamilyAccount(childId);
+        allow write: if false;
+      }
+
+      match /positions/{positionId} {
+        allow read: if canReadFamilyAccount(childId);
+        allow write: if false;
+      }
+
+      match /goals/{goalId} {
+        allow read: if canReadFamilyAccount(childId);
+        allow write: if false;
+      }
+
+      match /{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    match /family_finance_quotes/{instrumentId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /family_finance_quote_history/{historyId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /family_finance_meta/{documentId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /family_finance_audit/{eventId} {
+      allow read: if isFamilyParent();
+      allow write: if false;
     }
 
     // Investimentos: a Filipa só pode ler a partir de 21/12/2027.
@@ -232,8 +322,17 @@ service cloud.firestore {
 
     // Tudo o que não foi autorizado acima fica negado à Filipa. Isto faz com
     // que módulos e coleções futuros exijam uma autorização explícita.
-    match /{document=**} {
-      allow read, write: if signedIn() && !isFilipa();
+    match /{collection}/{document=**} {
+      allow read, write: if signedIn()
+        && !isFilipa()
+        && !isFamilyChild()
+        && !(collection in [
+          'family_finance_accounts',
+          'family_finance_quotes',
+          'family_finance_quote_history',
+          'family_finance_meta',
+          'family_finance_audit'
+        ]);
     }
   }
 }

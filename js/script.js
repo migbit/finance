@@ -13,6 +13,7 @@
 // -------------------------------------------
 
 import {
+  FILIPA_UID,
   filterNavigation,
   findModuleGroup,
   getModuleAccess,
@@ -77,11 +78,32 @@ const NAV_GROUPS = [
     ]
   },
   {
+    label: '🌱 Francisca',
+    key: 'francisca',
+    links: [
+      { label: '💶 Finanças', key: 'francisca-financas', slug: 'modules/francisca-financas.html', module: true }
+    ]
+  },
+  {
+    label: '🌟 Leonor',
+    key: 'leonor',
+    links: [
+      { label: '💶 Finanças', key: 'leonor-financas', slug: 'modules/leonor-financas.html', module: true }
+    ]
+  },
+  {
     label: '👩 Filipa',
     key: 'filipa',
     links: [
       { label: '🏋️ Ginásio', key: 'filipa-ginasio', slug: 'modules/filipa-ginasio.html', module: true },
-      { label: '🥗 Alimentação', key: 'filipa-alimentacao', slug: 'modules/filipa-alimentacao.html', module: true }
+      { label: '🥗 Alimentação', key: 'filipa-alimentacao', slug: 'modules/filipa-alimentacao.html', module: true },
+      {
+        label: '🧾 Gestão Finanças',
+        key: 'gestao-financas',
+        slug: 'modules/gestao-financas.html',
+        module: true,
+        onlyUids: [FILIPA_UID]
+      }
     ]
   },
   {
@@ -90,12 +112,22 @@ const NAV_GROUPS = [
     links: [
       { label: '🏋️ Ginásio', key: 'ginasio', slug: 'modules/ginasio.html', module: true },
       { label: '🥗 Alimentação', key: 'alimentacao', slug: 'modules/alimentacao.html', module: true },
-      { label: '🧘 Meditação', key: 'meditacao', slug: 'modules/meditacao.html', module: true }
+      { label: '🧘 Meditação', key: 'meditacao', slug: 'modules/meditacao.html', module: true },
+      {
+        label: '🧾 Gestão Finanças',
+        key: 'gestao-financas',
+        slug: 'modules/gestao-financas.html',
+        module: true,
+        excludeUids: [FILIPA_UID]
+      }
     ]
   }
 ];
 
 const ACTIVE_KEY_MATCHERS = [
+  { key: 'gestao-financas', patterns: ['gestao-financas'] },
+  { key: 'francisca-financas', patterns: ['francisca-financas'] },
+  { key: 'leonor-financas', patterns: ['leonor-financas'] },
   { key: 'filipa-ginasio', patterns: ['filipa-ginasio'] },
   { key: 'filipa-alimentacao', patterns: ['filipa-alimentacao'] },
   { key: 'dca-revolut', patterns: ['dca-revolut'] },
@@ -227,7 +259,7 @@ function bindAuthControls(root = document) {
 
 function currentPageAccess(user = currentUser) {
   const moduleKey = detectActiveKey();
-  const groupKey = findModuleGroup(NAV_GROUPS, moduleKey);
+  const groupKey = findModuleGroup(NAV_GROUPS, moduleKey, user?.uid);
   return {
     moduleKey,
     groupKey,
@@ -251,6 +283,22 @@ function clearPortfolioBrowserCache() {
     }
     keys.forEach(key => localStorage.removeItem(key));
   } catch { /* storage can be unavailable */ }
+}
+
+function clearPrivateFinanceBrowserState() {
+  const prefixes = ['family_finance_', 'finance_snapshot_', 'finance_quotes_private_'];
+  for (const storage of [localStorage, sessionStorage]) {
+    try {
+      const keys = [];
+      for (let index = 0; index < storage.length; index += 1) {
+        const key = storage.key(index);
+        if (prefixes.some(prefix => key?.startsWith(prefix))) keys.push(key);
+      }
+      keys.forEach(key => storage.removeItem(key));
+    } catch { /* storage can be unavailable */ }
+  }
+  navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_PRIVATE_FINANCE_DATA' });
+  window.dispatchEvent(new CustomEvent('finance:clear-private-data'));
 }
 
 function enforcePageAccess(user = currentUser) {
@@ -412,6 +460,7 @@ function loginComGoogle() {
 
 function logout() {
   console.log("Logout...");
+  clearPrivateFinanceBrowserState();
   signOut(auth)
     .then(() => {
       console.log("Saiu com sucesso.");
@@ -446,6 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const previousUid = currentUser?.uid || null;
     if (accessResolved && nextUid !== previousUid) {
       clearPortfolioBrowserCache();
+      clearPrivateFinanceBrowserState();
       window.location.reload();
       return;
     }
