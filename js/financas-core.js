@@ -1,4 +1,13 @@
-const FAMILY_FINANCE_ENDPOINT = '/api/family-finance';
+const FAMILY_FINANCE_FUNCTION_ENDPOINT =
+  'https://europe-west1-apartments-a4b17.cloudfunctions.net/familyFinance';
+
+export function resolveFamilyFinanceEndpoint(hostname = globalThis.location?.hostname || '') {
+  const host = String(hostname || '').trim().toLowerCase();
+  const onFirebaseHosting = host.endsWith('.web.app') || host.endsWith('.firebaseapp.com');
+  return onFirebaseHosting ? '/api/family-finance' : FAMILY_FINANCE_FUNCTION_ENDPOINT;
+}
+
+export const FAMILY_FINANCE_ENDPOINT = resolveFamilyFinanceEndpoint();
 const REJECTED_VISIBLE_FOR_MS = 24 * 60 * 60 * 1000;
 
 const euroFormatter = new Intl.NumberFormat('pt-PT', {
@@ -627,10 +636,18 @@ function apiErrorMessage(response, data) {
 
 async function parseResponse(response) {
   const contentType = response.headers.get('content-type') || '';
-  const data = contentType.includes('application/json')
-    ? await response.json()
-    : { message: await response.text() };
+  let data = {};
+  if (contentType.includes('application/json')) {
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
+  }
   if (!response.ok) throw new Error(apiErrorMessage(response, data));
+  if (!contentType.includes('application/json')) {
+    throw new Error('O servidor devolveu uma resposta inesperada. Atualiza a página e tenta novamente.');
+  }
   return data;
 }
 

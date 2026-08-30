@@ -2,10 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  FAMILY_FINANCE_ENDPOINT,
   aggregateCategories,
   getVisibleMovements,
-  normalizeSnapshot
+  normalizeSnapshot,
+  resolveFamilyFinanceEndpoint
 } from '../js/financas-core.js';
+
+test('usa a Function direta no GitHub Pages e o rewrite apenas no Firebase Hosting', () => {
+  assert.equal(
+    resolveFamilyFinanceEndpoint('apartments.github.io'),
+    'https://europe-west1-apartments-a4b17.cloudfunctions.net/familyFinance'
+  );
+  assert.equal(resolveFamilyFinanceEndpoint('apartments-a4b17.web.app'), '/api/family-finance');
+  assert.equal(resolveFamilyFinanceEndpoint('apartments-a4b17.firebaseapp.com'), '/api/family-finance');
+  assert.equal(FAMILY_FINANCE_ENDPOINT.includes('cloudfunctions.net/familyFinance'), true);
+});
 
 test('normaliza saldo negativo como dívida sem criar dinheiro disponível', () => {
   const snapshot = normalizeSnapshot({

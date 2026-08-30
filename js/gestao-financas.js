@@ -1,8 +1,8 @@
 import { whenAccessResolved } from './script.js';
 import { showConfirm, showToast } from './toast.js';
+import { FAMILY_FINANCE_ENDPOINT } from './financas-core.js';
 import { getAuth } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 
-const API_PATH = '/api/family-finance';
 const CHILDREN = Object.freeze([
   { id: 'francisca', name: 'Francisca' },
   { id: 'leonor', name: 'Leonor' }
@@ -110,7 +110,7 @@ async function familyFinanceApi({ childId, action = '', payload = {} } = {}) {
   if (!user) throw new Error('Inicia sessão para consultar as finanças.');
 
   const token = await user.getIdToken();
-  const url = new URL(API_PATH, window.location.origin);
+  const url = new URL(FAMILY_FINANCE_ENDPOINT, window.location.origin);
   if (childId) url.searchParams.set('childId', childId);
 
   const options = {
