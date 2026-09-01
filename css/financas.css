@@ -178,7 +178,7 @@ main.financas-page {
 
 .financas-balance-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.65rem;
   margin: 0;
 }
@@ -262,7 +262,7 @@ main.financas-page {
 
 .financas-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.85rem;
   margin: 1rem 0 1.4rem;
 }
@@ -310,6 +310,11 @@ main.financas-page {
 .financas-action--expense .financas-action-icon {
   background: var(--fin-expense-soft);
   color: var(--fin-expense);
+}
+
+.financas-action--cash .financas-action-icon {
+  background: #e8f3ff;
+  color: #23679e;
 }
 
 .financas-action strong,

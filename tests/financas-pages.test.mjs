@@ -13,12 +13,15 @@ test('as duas páginas infantis têm saldo, dívida, ações, extrato, investime
     const html = await source(`modules/${child}-financas.html`);
     for (const marker of [
       'balance-available',
+      'balance-parents',
+      'balance-child-cash',
       'balance-debt',
       'balance-goals',
       'balance-projected',
       'data-open-finance-dialog="income"',
       'data-open-finance-dialog="expense"',
       'data-open-finance-dialog="invest"',
+      'data-open-finance-dialog="cash"',
       'movements-list',
       'vaults-list',
       'positions-list',
@@ -50,6 +53,10 @@ test('a gestão parental inclui validação, correção, reprovação, estorno, 
     'finance-adjustment-dialog'
   ]) assert.match(html, new RegExp(marker));
   assert.match(js, /summaryMetric\('Dívida aos pais'/);
+  assert.match(js, /summaryMetric\('Com os pais'/);
+  assert.match(js, /summaryMetric\('Com ela'/);
+  assert.match(html, /cash_withdrawal/);
+  assert.match(html, /cash_return/);
   assert.match(js, /data-approve-request/);
   assert.match(js, /data-correct-request/);
   assert.match(js, /data-reverse-movement/);

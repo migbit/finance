@@ -32,6 +32,8 @@ const AUDIT_COLLECTION = "family_finance_audit";
 const REQUEST_KINDS = new Set([
   "income",
   "expense",
+  "cash_withdrawal",
+  "cash_return",
   "vault_open",
   "vault_early_withdraw",
   "market_buy",
@@ -249,6 +251,9 @@ function normalizeRequestKind(value) {
     receber: "income",
     spend: "expense",
     gastar: "expense",
+    take_cash: "cash_withdrawal",
+    withdraw_cash: "cash_withdrawal",
+    return_cash: "cash_return",
     term_open: "vault_open",
     investment_term: "vault_open",
     buy: "market_buy",
@@ -262,6 +267,41 @@ function normalizeRequestKind(value) {
   return kind;
 }
 
+function normalizeCashLocation(value, fallback = "parents") {
+  const aliases = {
+    parent: "parents",
+    parents: "parents",
+    cofre: "parents",
+    child: "child",
+    comigo: "child",
+    wallet: "child",
+  };
+  const raw = String(value || fallback).trim().toLowerCase();
+  const location = aliases[raw] || raw;
+  if (!["parents", "child"].includes(location)) {
+    throw new FamilyFinanceError("invalid-cash-location", "A origem do dinheiro é inválida.");
+  }
+  return location;
+}
+
+function accountCashBreakdown(account = {}) {
+  const balanceCents = Number.isSafeInteger(account.balanceCents) ? account.balanceCents : 0;
+  const childCashCents = Number.isSafeInteger(account.childCashCents)
+    ? Math.max(0, account.childCashCents)
+    : 0;
+  const parentCustodyNetCents = balanceCents - childCashCents;
+  const parentHeldCents = Math.max(0, parentCustodyNetCents);
+  const debtCents = Math.max(0, -parentCustodyNetCents);
+  return {
+    balanceCents,
+    childCashCents,
+    parentCustodyNetCents,
+    parentHeldCents,
+    debtCents,
+    availableCents: parentHeldCents + childCashCents,
+  };
+}
+
 function normalizeCategory(kind, value) {
   const rawCategory = String(value || "other").trim().toLowerCase();
   const category = rawCategory === "school_supplies" ? "school" : rawCategory;
@@ -273,6 +313,7 @@ function normalizeCategory(kind, value) {
   }
   if (["vault_open", "vault_early_withdraw"].includes(kind)) return "vault";
   if (["market_buy", "market_sell"].includes(kind)) return "market";
+  if (["cash_withdrawal", "cash_return"].includes(kind)) return "cash_transfer";
   return category;
 }
 
@@ -355,6 +396,9 @@ function normalizeRequestPayload(payload, now = new Date()) {
   if (kind === "expense" && ["need", "want"].includes(String(input.reflection || ""))) {
     normalized.reflection = String(input.reflection);
   }
+  if (["income", "expense"].includes(kind)) {
+    normalized.cashLocation = normalizeCashLocation(input.cashLocation || input.paymentSource);
+  }
 
   if (kind === "vault_open") {
     normalized.termDays = normalizeTermDays(input.termDays || input.days);
@@ -398,6 +442,7 @@ function defaultAccount(childId, now = new Date()) {
     ownerUid: child.uid,
     currency: CURRENCY,
     balanceCents: 0,
+    childCashCents: 0,
     ledgerSequence: 0,
     createdAt: nowDate(now),
     updatedAt: nowDate(now),
@@ -415,6 +460,7 @@ function normalizeAccountData(childId, data, now = new Date()) {
     ownerUid: CHILDREN[childId].uid,
     currency: CURRENCY,
     balanceCents: Number.isSafeInteger(source.balanceCents) ? source.balanceCents : 0,
+    childCashCents: Number.isSafeInteger(source.childCashCents) ? Math.max(0, source.childCashCents) : 0,
     ledgerSequence: Number.isSafeInteger(source.ledgerSequence) ? source.ledgerSequence : 0,
   };
 }
@@ -487,7 +533,9 @@ function auditEvent({ childId, requestId = null, event, actor, now, details = nu
 
 function buildApprovedMutation({ request, account, quote = null, position = null, vault = null, now, actor }) {
   const sequence = account.ledgerSequence + 1;
+  const cashBefore = accountCashBreakdown(account);
   let deltaCents = 0;
+  let childCashDeltaCents = 0;
   let executedAmountCents = request.amountCents;
   let ledgerType = request.kind;
   let positionPatch = null;
@@ -499,8 +547,42 @@ function buildApprovedMutation({ request, account, quote = null, position = null
 
   if (request.kind === "income") {
     deltaCents = request.amountCents;
+    if (request.cashLocation === "child") {
+      childCashDeltaCents = Math.max(0, request.amountCents - Math.min(cashBefore.debtCents, request.amountCents));
+    }
   } else if (request.kind === "expense") {
     deltaCents = -request.amountCents;
+    if (request.cashLocation === "child") {
+      if (cashBefore.childCashCents < request.amountCents) {
+        throw new FamilyFinanceError(
+          "insufficient-child-cash",
+          "O dinheiro que está com ela não chega para esta compra.",
+          409,
+          { childCashCents: cashBefore.childCashCents, requiredCents: request.amountCents },
+        );
+      }
+      childCashDeltaCents = -request.amountCents;
+    }
+  } else if (request.kind === "cash_withdrawal") {
+    if (cashBefore.parentHeldCents < request.amountCents) {
+      throw new FamilyFinanceError(
+        "insufficient-parent-cash",
+        "O dinheiro guardado com os pais não chega para este levantamento.",
+        409,
+        { parentHeldCents: cashBefore.parentHeldCents, requiredCents: request.amountCents },
+      );
+    }
+    childCashDeltaCents = request.amountCents;
+  } else if (request.kind === "cash_return") {
+    if (cashBefore.childCashCents < request.amountCents) {
+      throw new FamilyFinanceError(
+        "insufficient-child-cash",
+        "Ela não tem esse valor consigo para devolver aos pais.",
+        409,
+        { childCashCents: cashBefore.childCashCents, requiredCents: request.amountCents },
+      );
+    }
+    childCashDeltaCents = -request.amountCents;
   } else if (request.kind === "vault_open") {
     deltaCents = -request.amountCents;
     const product = VAULT_PRODUCT_BY_DAYS.get(request.termDays);
@@ -599,17 +681,25 @@ function buildApprovedMutation({ request, account, quote = null, position = null
     throw new FamilyFinanceError("invalid-kind", "Tipo de pedido inválido.");
   }
 
-  const nextBalanceCents = account.balanceCents + deltaCents;
-  if (["vault_open", "market_buy"].includes(request.kind) && nextBalanceCents < 0) {
+  if (["vault_open", "market_buy"].includes(request.kind) && cashBefore.parentHeldCents < Math.abs(deltaCents)) {
     throw new FamilyFinanceError(
       "insufficient-balance",
-      "O saldo disponível não chega para fazer este investimento.",
+      "O dinheiro guardado com os pais não chega para fazer este investimento.",
       409,
-      { balanceCents: account.balanceCents, requiredCents: Math.abs(deltaCents) },
+      { parentHeldCents: cashBefore.parentHeldCents, requiredCents: Math.abs(deltaCents) },
     );
   }
 
-  const debtBeforeCents = Math.max(0, -account.balanceCents);
+  const nextBalanceCents = account.balanceCents + deltaCents;
+  const nextChildCashCents = cashBefore.childCashCents + childCashDeltaCents;
+  if (nextChildCashCents < 0) {
+    throw new FamilyFinanceError("invalid-child-cash", "O dinheiro físico não pode ficar negativo.", 409);
+  }
+  const cashAfter = accountCashBreakdown({
+    balanceCents: nextBalanceCents,
+    childCashCents: nextChildCashCents,
+  });
+  const debtBeforeCents = cashBefore.debtCents;
   const debtPaidCents = deltaCents > 0 ? Math.min(debtBeforeCents, deltaCents) : 0;
   const availableAddedCents = deltaCents > 0 ? Math.max(0, deltaCents - debtPaidCents) : 0;
 
@@ -623,8 +713,13 @@ function buildApprovedMutation({ request, account, quote = null, position = null
     note: request.note || "",
     reflection: request.reflection || null,
     occurredOn: request.occurredOn,
-    amountCents: Math.abs(deltaCents),
+    amountCents: executedAmountCents,
     deltaCents,
+    cashLocation: request.cashLocation || null,
+    childCashDeltaCents,
+    childCashAfterCents: cashAfter.childCashCents,
+    parentHeldAfterCents: cashAfter.parentHeldCents,
+    debtAfterCents: cashAfter.debtCents,
     balanceAfterCents: nextBalanceCents,
     debtPaidCents,
     availableAddedCents,
@@ -650,7 +745,11 @@ function buildApprovedMutation({ request, account, quote = null, position = null
   }
 
   return {
-    accountPatch: { balanceCents: nextBalanceCents, ledgerSequence: sequence },
+    accountPatch: {
+      balanceCents: nextBalanceCents,
+      childCashCents: nextChildCashCents,
+      ledgerSequence: sequence,
+    },
     requestPatch: {
       status: "approved",
       decidedByUid: actor.uid,
@@ -662,6 +761,10 @@ function buildApprovedMutation({ request, account, quote = null, position = null
       executedAmountCents,
       executionQuote,
       quantityMicros,
+      cashLocation: request.cashLocation || null,
+      childCashDeltaCents,
+      childCashAfterCents: cashAfter.childCashCents,
+      parentHeldAfterCents: cashAfter.parentHeldCents,
     },
     ledger,
     positionPatch,
@@ -712,6 +815,8 @@ function applyApprovedMutation({
         kind: request.kind,
         deltaCents: mutation.ledger.deltaCents,
         balanceAfterCents: mutation.ledger.balanceAfterCents,
+        childCashAfterCents: mutation.ledger.childCashAfterCents,
+        parentHeldAfterCents: mutation.ledger.parentHeldAfterCents,
       },
     }),
   );
@@ -836,6 +941,7 @@ async function createFinanceRequest({ firestore, actor, childId, payload, idempo
     if (!docExists(state.account)) {
       transactionSetAccount(transaction, refs.account, account, {
         balanceCents: account.balanceCents,
+        childCashCents: account.childCashCents,
         ledgerSequence: account.ledgerSequence,
       }, createdAt);
     }
@@ -1085,6 +1191,7 @@ async function resubmitCorrectedRequest({
       note: stored.note || "",
       occurredOn: stored.occurredOn,
       reflection: stored.reflection || null,
+      cashLocation: stored.cashLocation || null,
       termDays: stored.termDays || null,
       instrumentId: stored.instrumentId || null,
     };
@@ -1265,6 +1372,7 @@ async function createEarlyWithdrawalRequest({
       const account = normalizeAccountData(targetChildId, null, createdAt);
       transactionSetAccount(transaction, accountDocument, account, {
         balanceCents: 0,
+        childCashCents: 0,
         ledgerSequence: 0,
       }, createdAt);
     }
@@ -1343,9 +1451,10 @@ async function transferGoalFunds({
       docExists(accountSnapshot) ? accountSnapshot.data() : null,
       transferredAt,
     );
+    const cashBefore = accountCashBreakdown(account);
     const goal = goalSnapshot.data() || {};
     const reservedBeforeCents = Math.max(0, Number(goal.reservedCents) || 0);
-    if (transferDirection === 'reserve' && account.balanceCents < amount) {
+    if (transferDirection === 'reserve' && cashBefore.parentHeldCents < amount) {
       throw new FamilyFinanceError(
         "insufficient-balance",
         "Não existe dinheiro disponível suficiente para guardar no objetivo.",
@@ -1362,8 +1471,12 @@ async function transferGoalFunds({
     const deltaCents = transferDirection === 'reserve' ? -amount : amount;
     const reservedAfterCents = reservedBeforeCents - deltaCents;
     const balanceAfterCents = account.balanceCents + deltaCents;
+    const cashAfter = accountCashBreakdown({
+      balanceCents: balanceAfterCents,
+      childCashCents: cashBefore.childCashCents,
+    });
     const debtPaidCents = deltaCents > 0
-      ? Math.min(Math.max(0, -account.balanceCents), deltaCents)
+      ? Math.min(cashBefore.debtCents, deltaCents)
       : 0;
     const sequence = account.ledgerSequence + 1;
     const kind = transferDirection === 'reserve' ? 'goal_reserve' : 'goal_release';
@@ -1378,6 +1491,10 @@ async function transferGoalFunds({
       amountCents: amount,
       deltaCents,
       balanceAfterCents,
+      childCashDeltaCents: 0,
+      childCashAfterCents: cashAfter.childCashCents,
+      parentHeldAfterCents: cashAfter.parentHeldCents,
+      debtAfterCents: cashAfter.debtCents,
       debtPaidCents,
       availableAddedCents: deltaCents > 0 ? Math.max(0, deltaCents - debtPaidCents) : 0,
       reservedBeforeCents,
@@ -1397,6 +1514,7 @@ async function transferGoalFunds({
     };
     transactionSetAccount(transaction, accountDocument, account, {
       balanceCents: balanceAfterCents,
+      childCashCents: cashBefore.childCashCents,
       ledgerSequence: sequence,
     }, transferredAt);
     transaction.set(goalDocument, {
@@ -1520,8 +1638,18 @@ async function reverseLedgerMovement({
       docExists(accountSnapshot) ? accountSnapshot.data() : null,
       reversedAt,
     );
+    const cashBefore = accountCashBreakdown(account);
     const deltaCents = -originalDeltaCents;
     const balanceAfterCents = account.balanceCents + deltaCents;
+    const originalChildCashDeltaCents = Number.isSafeInteger(original.childCashDeltaCents)
+      ? original.childCashDeltaCents
+      : 0;
+    const requestedChildCashDeltaCents = -originalChildCashDeltaCents;
+    const childCashDeltaCents = requestedChildCashDeltaCents < 0
+      ? -Math.min(cashBefore.childCashCents, Math.abs(requestedChildCashDeltaCents))
+      : requestedChildCashDeltaCents;
+    const childCashAfterCents = cashBefore.childCashCents + childCashDeltaCents;
+    const cashAfter = accountCashBreakdown({ balanceCents: balanceAfterCents, childCashCents: childCashAfterCents });
     const sequence = account.ledgerSequence + 1;
     const reversal = {
       id: reversalReference.id,
@@ -1533,6 +1661,10 @@ async function reverseLedgerMovement({
       amountCents: Math.abs(deltaCents),
       deltaCents,
       balanceAfterCents,
+      childCashDeltaCents,
+      childCashAfterCents,
+      parentHeldAfterCents: cashAfter.parentHeldCents,
+      debtAfterCents: cashAfter.debtCents,
       reversalOfLedgerId: originalId,
       reversalOfRequestId: original.requestId || null,
       occurredOn: dateKeyInLisbon(reversedAt),
@@ -1547,6 +1679,7 @@ async function reverseLedgerMovement({
     };
     transactionSetAccount(transaction, accountDocument, account, {
       balanceCents: balanceAfterCents,
+      childCashCents: childCashAfterCents,
       ledgerSequence: sequence,
     }, reversedAt);
     transaction.set(reversalReference, reversal);
@@ -1664,6 +1797,7 @@ async function matureVault({ firestore, childId, vaultId, now = new Date() }) {
       docExists(accountSnapshot) ? accountSnapshot.data() : null,
       maturedAt,
     );
+    const cashBefore = accountCashBreakdown(account);
     const principalCents = normalizeAmountCents(vault.principalCents, "principalCents");
     const interestCents = Number.isSafeInteger(vault.expectedInterestCents)
       ? Math.max(0, vault.expectedInterestCents)
@@ -1671,7 +1805,11 @@ async function matureVault({ firestore, childId, vaultId, now = new Date() }) {
     const deltaCents = principalCents + interestCents;
     const sequence = account.ledgerSequence + 1;
     const balanceAfterCents = account.balanceCents + deltaCents;
-    const debtPaidCents = Math.min(Math.max(0, -account.balanceCents), deltaCents);
+    const cashAfter = accountCashBreakdown({
+      balanceCents: balanceAfterCents,
+      childCashCents: cashBefore.childCashCents,
+    });
+    const debtPaidCents = Math.min(cashBefore.debtCents, deltaCents);
     const ledger = {
       id: ledgerReference.id,
       childId: targetChildId,
@@ -1685,6 +1823,10 @@ async function matureVault({ firestore, childId, vaultId, now = new Date() }) {
       principalCents,
       interestCents,
       balanceAfterCents,
+      childCashDeltaCents: 0,
+      childCashAfterCents: cashAfter.childCashCents,
+      parentHeldAfterCents: cashAfter.parentHeldCents,
+      debtAfterCents: cashAfter.debtCents,
       debtPaidCents,
       availableAddedCents: Math.max(0, deltaCents - debtPaidCents),
       occurredOn: dateKeyInLisbon(maturedAt),
@@ -1696,6 +1838,7 @@ async function matureVault({ firestore, childId, vaultId, now = new Date() }) {
     };
     transactionSetAccount(transaction, accountDocument, account, {
       balanceCents: balanceAfterCents,
+      childCashCents: cashBefore.childCashCents,
       ledgerSequence: sequence,
     }, maturedAt);
     transaction.set(ledgerReference, ledger);
@@ -2106,6 +2249,8 @@ function buildMonthlySummary(ledgerRows, now = new Date()) {
     wealthChangeCents: 0,
     needSpentCents: 0,
     wantSpentCents: 0,
+    cashTakenCents: 0,
+    cashReturnedCents: 0,
     expenseByCategory: {},
     insights: [],
   };
@@ -2119,6 +2264,8 @@ function buildMonthlySummary(ledgerRows, now = new Date()) {
       const category = movement.category || 'other';
       summary.expenseByCategory[category] = (summary.expenseByCategory[category] || 0) + amount;
     }
+    if (movement.kind === 'cash_withdrawal') summary.cashTakenCents += amount;
+    if (movement.kind === 'cash_return') summary.cashReturnedCents += amount;
     if (movement.kind === 'goal_reserve') summary.goalReservedCents += amount;
     if (movement.kind === 'goal_release') summary.goalReservedCents -= amount;
     if (movement.kind === 'vault_open') summary.vaultPlacedCents += amount;
@@ -2160,6 +2307,8 @@ function buildMonthlySummary(ledgerRows, now = new Date()) {
 function pendingSummary(requests) {
   let pendingIncomingCents = 0;
   let pendingOutgoingCents = 0;
+  let pendingCashWithdrawalCents = 0;
+  let pendingCashReturnCents = 0;
   requests.filter((request) => request.status === "pending").forEach((request) => {
     const amount = Number(request.amountCents) || 0;
     if (["income", "market_sell", "vault_early_withdraw"].includes(request.kind)) {
@@ -2167,12 +2316,45 @@ function pendingSummary(requests) {
     } else if (["expense", "vault_open", "market_buy"].includes(request.kind)) {
       pendingOutgoingCents += amount;
     }
+    if (request.kind === "cash_withdrawal") pendingCashWithdrawalCents += amount;
+    if (request.kind === "cash_return") pendingCashReturnCents += amount;
   });
   return {
     pendingIncomingCents,
     pendingOutgoingCents,
     pendingNetCents: pendingIncomingCents - pendingOutgoingCents,
+    pendingCashWithdrawalCents,
+    pendingCashReturnCents,
   };
+}
+
+function projectPendingAccount(account, requests = []) {
+  let projected = accountCashBreakdown(account);
+  const ordered = requests
+    .filter((request) => request.status === "pending")
+    .sort((left, right) => asDate(left.createdAt, new Date(0)) - asDate(right.createdAt, new Date(0)));
+  ordered.forEach((request) => {
+    const amount = Math.max(0, Number(request.amountCents) || 0);
+    let balanceCents = projected.balanceCents;
+    let childCashCents = projected.childCashCents;
+    if (request.kind === "income") {
+      balanceCents += amount;
+      if (request.cashLocation === "child") childCashCents += Math.max(0, amount - Math.min(projected.debtCents, amount));
+    } else if (request.kind === "expense") {
+      balanceCents -= amount;
+      if (request.cashLocation === "child") childCashCents = Math.max(0, childCashCents - amount);
+    } else if (["vault_open", "market_buy"].includes(request.kind)) {
+      balanceCents -= amount;
+    } else if (["market_sell", "vault_early_withdraw"].includes(request.kind)) {
+      balanceCents += amount;
+    } else if (request.kind === "cash_withdrawal") {
+      childCashCents += Math.min(projected.parentHeldCents, amount);
+    } else if (request.kind === "cash_return") {
+      childCashCents -= Math.min(childCashCents, amount);
+    }
+    projected = accountCashBreakdown({ balanceCents, childCashCents });
+  });
+  return projected;
 }
 
 function reconstructAccountFromLedger(movements = []) {
@@ -2193,9 +2375,10 @@ function reconstructAccountFromLedger(movements = []) {
     }
     return {
       balanceCents: account.balanceCents + deltaCents,
+      childCashCents: account.childCashCents + (Number(movement?.childCashDeltaCents) || 0),
       ledgerSequence: Math.max(account.ledgerSequence, Number(movement?.sequence) || 0),
     };
-  }, { balanceCents: 0, ledgerSequence: 0 });
+  }, { balanceCents: 0, childCashCents: 0, ledgerSequence: 0 });
 }
 
 function enrichPositions(positionRows, quotes) {
@@ -2257,15 +2440,17 @@ async function getFamilyFinanceSnapshot({ firestore, actor, childId, now = new D
     .reduce((sum, vault) => sum + (Number(vault.principalCents) || 0), 0);
   const marketCents = positions.reduce((sum, position) => sum + position.marketValueCents, 0);
   const pending = pendingSummary(requests);
+  const cash = accountCashBreakdown(accountData);
+  const projectedCash = projectPendingAccount(accountData, requests);
   const goal = goalSnapshot.exists ? { id: goalSnapshot.id, ...goalSnapshot.data() } : null;
   const goalReservedCents = Math.max(0, Number(goal?.reservedCents) || 0);
   const auditEvents = auditSnapshot.docs
     .map((doc) => ({ id: doc.id, ...doc.data() }))
     .sort((a, b) => asDate(b.occurredAt, new Date(0)) - asDate(a.occurredAt, new Date(0)));
-  const balanceCents = accountData.balanceCents;
-  const debtCents = Math.max(0, -balanceCents);
-  const availableCents = Math.max(0, balanceCents);
-  const projectedBalanceCents = balanceCents + pending.pendingNetCents;
+  const balanceCents = cash.balanceCents;
+  const debtCents = cash.debtCents;
+  const availableCents = cash.availableCents;
+  const projectedBalanceCents = projectedCash.balanceCents;
   const account = {
     childId: targetChildId,
     displayName: CHILDREN[targetChildId].name,
@@ -2274,10 +2459,18 @@ async function getFamilyFinanceSnapshot({ firestore, actor, childId, now = new D
     rawBalanceCents: balanceCents,
     debtCents,
     availableCents,
+    parentHeldCents: cash.parentHeldCents,
+    childCashCents: cash.childCashCents,
+    parentCustodyNetCents: cash.parentCustodyNetCents,
     projectedBalanceCents,
-    projectedAvailableCents: Math.max(0, projectedBalanceCents),
-    projectedDebtCents: Math.max(0, -projectedBalanceCents),
-    pendingCents: pending.pendingIncomingCents + pending.pendingOutgoingCents,
+    projectedAvailableCents: projectedCash.availableCents,
+    projectedDebtCents: projectedCash.debtCents,
+    projectedParentHeldCents: projectedCash.parentHeldCents,
+    projectedChildCashCents: projectedCash.childCashCents,
+    pendingCents: pending.pendingIncomingCents
+      + pending.pendingOutgoingCents
+      + pending.pendingCashWithdrawalCents
+      + pending.pendingCashReturnCents,
     ...pending,
     vaultCents: activeVaultCents,
     marketCents,

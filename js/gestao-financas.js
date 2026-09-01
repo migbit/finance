@@ -12,6 +12,8 @@ const CHILD_NAME = Object.freeze(Object.fromEntries(CHILDREN.map(child => [child
 const KIND_META = Object.freeze({
   income: { label: 'Entrada', icon: '💶', direction: 1 },
   expense: { label: 'Saída', icon: '🛍️', direction: -1 },
+  cash_withdrawal: { label: 'Dinheiro entregue', icon: '💵', direction: 0 },
+  cash_return: { label: 'Dinheiro devolvido', icon: '↩️', direction: 0 },
   vault_open: { label: 'Investimento a prazo', icon: '🔒', direction: -1 },
   vault_maturity: { label: 'Prazo terminado', icon: '🔓', direction: 1 },
   vault_withdrawal: { label: 'Levantamento antecipado', icon: '↩️', direction: 1 },
@@ -55,6 +57,7 @@ const CATEGORY_LABELS = Object.freeze({
   vault: 'Cofre a prazo',
   market: 'Mercado simulado',
   savings_goal: 'Objetivo de poupança',
+  cash_transfer: 'Dinheiro físico',
   reversal: 'Estorno'
 });
 
@@ -243,8 +246,10 @@ function renderSummary() {
 
     const account = snapshot?.account || {};
     const balance = centsFrom(account, ['rawBalanceCents', 'balanceCents', 'confirmedBalanceCents']);
-    const available = Math.max(0, centsFrom(account, ['availableCents', 'cashCents']));
-    const debt = Math.max(0, firstFinite(account.debtCents, -balance));
+    const childCash = Math.max(0, firstFinite(account.childCashCents, 0));
+    const parentHeld = Math.max(0, firstFiniteOrNull(account.parentHeldCents) ?? (balance - childCash));
+    const available = Math.max(0, firstFiniteOrNull(account.availableCents, account.cashCents) ?? (parentHeld + childCash));
+    const debt = Math.max(0, firstFiniteOrNull(account.debtCents) ?? (childCash - balance));
     const pending = centsFrom(account, ['pendingCents']);
     const goalReserved = centsFrom(account, ['goalReservedCents']);
     const vault = centsFrom(account, ['vaultCents', 'termCents', 'lockedCents']);
@@ -261,13 +266,15 @@ function renderSummary() {
         <strong class="finance-summary-total">${formatEuro(total)}</strong>
         <div class="finance-summary-metrics">
           ${summaryMetric('Disponível', available)}
+          ${summaryMetric('Com os pais', parentHeld)}
+          ${summaryMetric('Com ela', childCash)}
           ${debt > 0 ? summaryMetric('Dívida aos pais', debt, 'is-debt') : ''}
           ${summaryMetric('A aguardar', pending)}
           ${summaryMetric('Em objetivos', goalReserved)}
           ${summaryMetric('A prazo', vault)}
           ${summaryMetric('Mercado', market)}
         </div>
-        ${pending > 0 ? `<p class="finance-summary-projected">Se tudo for validado: ${formatEuro(firstFinite(account.projectedAvailableCents, 0))} disponíveis${firstFinite(account.projectedDebtCents, 0) > 0 ? ` · dívida de ${formatEuro(account.projectedDebtCents)}` : ''}.</p>` : ''}
+        ${pending > 0 ? `<p class="finance-summary-projected">Se tudo for validado: ${formatEuro(firstFinite(account.projectedAvailableCents, 0))} disponíveis · ${formatEuro(firstFinite(account.projectedParentHeldCents, parentHeld))} com os pais · ${formatEuro(firstFinite(account.projectedChildCashCents, childCash))} com ela${firstFinite(account.projectedDebtCents, 0) > 0 ? ` · dívida de ${formatEuro(account.projectedDebtCents)}` : ''}.</p>` : ''}
       </article>`;
   }).join('');
 }
@@ -317,6 +324,11 @@ function renderPending() {
     const requestSymbol = request.symbol || request.instrumentId || '';
     const symbol = requestSymbol ? ` · ${escapeHtml(requestSymbol)}` : '';
     const term = request.termDays ? ` · ${escapeHtml(formatTermDays(request.termDays))}` : '';
+    const cashDetail = request.kind === 'expense'
+      ? request.cashLocation === 'child' ? ' · pago por ela' : ' · pago pelos pais'
+      : request.kind === 'income'
+        ? request.cashLocation === 'child' ? ' · fica com ela' : ' · fica com os pais'
+        : '';
     return `
       <article class="finance-request-card">
         <div class="finance-request-icon" aria-hidden="true">${kind.icon}</div>
@@ -325,7 +337,7 @@ function renderPending() {
             <strong>${escapeHtml(CHILD_NAME[request.childId] || request.childId)}</strong>
             <span class="finance-request-status is-pending">A aguardar validação</span>
           </div>
-          <p class="finance-request-meta">${escapeHtml(kind.label)} · ${escapeHtml(category)}${symbol}${term} · ${formatDateTime(itemDate(request))}</p>
+          <p class="finance-request-meta">${escapeHtml(kind.label)} · ${escapeHtml(category)}${symbol}${term}${cashDetail} · ${formatDateTime(itemDate(request))}</p>
           ${request.note ? `<p class="finance-request-note">“${escapeHtml(request.note)}”</p>` : ''}
           ${request.reflection ? `<p class="finance-request-note">Classificação: ${escapeHtml(reflectionLabel(request.reflection))}</p>` : ''}
         </div>
@@ -357,6 +369,7 @@ function renderMovements() {
   elements.movementsBody.innerHTML = rows.map(movement => {
     const kind = kindMeta(movement.kind || movement.type);
     const delta = movementDeltaCents(movement);
+    const isCashTransfer = ['cash_withdrawal', 'cash_return'].includes(movement.kind || movement.type);
     const movementId = itemId(movement);
     const alreadyReversed = combinedMovements().some(item => item.reversalOfLedgerId === movementId);
     const canReverse = ['income', 'expense'].includes(movement.kind || movement.type) && !alreadyReversed;
@@ -368,9 +381,11 @@ function renderMovements() {
         <td>${escapeHtml(categoryLabel(movement.category))}${movement.symbol || movement.instrumentId ? ` · ${escapeHtml(movement.symbol || movement.instrumentId)}` : ''}</td>
         <td>${escapeHtml([
           movement.note || movement.description,
+          movement.kind === 'expense' ? movement.cashLocation === 'child' ? 'Pago por ela' : 'Pago pelos pais' : '',
+          movement.kind === 'income' ? movement.cashLocation === 'child' ? 'Ficou com ela' : 'Ficou com os pais' : '',
           movement.reflection ? `Classificação: ${reflectionLabel(movement.reflection)}` : ''
         ].filter(Boolean).join(' · ') || '—')}</td>
-        <td class="is-number ${delta >= 0 ? 'finance-money-positive' : 'finance-money-negative'}">${formatSignedEuro(delta)}</td>
+        <td class="is-number ${isCashTransfer ? '' : delta >= 0 ? 'finance-money-positive' : 'finance-money-negative'}">${isCashTransfer ? `${movement.kind === 'cash_withdrawal' ? '→' : '←'} ${formatEuro(requestAmountCents(movement))}` : formatSignedEuro(delta)}</td>
         <td>${canReverse ? `<button type="button" class="finance-table-action" data-reverse-movement="${escapeAttr(movementId)}" data-child-id="${escapeAttr(movement.childId)}">Estornar</button>` : '—'}</td>
       </tr>`;
   }).join('');
@@ -481,6 +496,8 @@ function renderMonthly() {
     const metrics = [
       ['Recebeu', summary.receivedCents],
       ['Gastou', summary.spentCents],
+      ['Levou consigo', summary.cashTakenCents],
+      ['Devolveu aos pais', summary.cashReturnedCents],
       ['Reservou para objetivos', summary.goalReservedCents],
       ['Colocou em cofres', summary.vaultPlacedCents],
       ['Investiu', summary.investedCents],

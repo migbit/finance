@@ -31,10 +31,11 @@ const now = new Date("2026-08-29T12:00:00.000Z");
 const childActor = resolveFamilyActor(CHILDREN.francisca.uid);
 const parentActor = resolveFamilyActor("parent-test-uid");
 
-function account(balanceCents = 0) {
+function account(balanceCents = 0, childCashCents = 0) {
   return {
     childId: "francisca",
     balanceCents,
+    childCashCents,
     ledgerSequence: 4,
   };
 }
@@ -242,6 +243,8 @@ test("resume pendentes sem misturar entradas e saídas", () => {
     pendingIncomingCents: 1000,
     pendingOutgoingCents: 750,
     pendingNetCents: 250,
+    pendingCashWithdrawalCents: 0,
+    pendingCashReturnCents: 0,
   });
 });
 
@@ -253,8 +256,72 @@ test("reconstrói o saldo cacheado a partir do ledger, incluindo estornos", () =
     { id: "goal", sequence: 4, deltaCents: -400 },
   ]), {
     balanceCents: 1600,
+    childCashCents: 0,
     ledgerSequence: 4,
   });
+});
+
+test("levantar e devolver dinheiro físico muda apenas o local onde está guardado", () => {
+  const withdrawal = buildApprovedMutation({
+    request: request("cash_withdrawal", 1000, { category: "cash_transfer" }),
+    account: account(5000),
+    now,
+    actor: parentActor,
+  });
+  assert.equal(withdrawal.accountPatch.balanceCents, 5000);
+  assert.equal(withdrawal.accountPatch.childCashCents, 1000);
+  assert.equal(withdrawal.ledger.deltaCents, 0);
+  assert.equal(withdrawal.ledger.parentHeldAfterCents, 4000);
+
+  const returned = buildApprovedMutation({
+    request: request("cash_return", 400, { category: "cash_transfer" }),
+    account: account(5000, 1000),
+    now,
+    actor: parentActor,
+  });
+  assert.equal(returned.accountPatch.balanceCents, 5000);
+  assert.equal(returned.accountPatch.childCashCents, 600);
+  assert.equal(returned.ledger.parentHeldAfterCents, 4400);
+});
+
+test("uma compra paga pela filha reduz o dinheiro físico e não pode excedê-lo", () => {
+  const spent = buildApprovedMutation({
+    request: request("expense", 600, { cashLocation: "child" }),
+    account: account(5000, 1000),
+    now,
+    actor: parentActor,
+  });
+  assert.equal(spent.accountPatch.balanceCents, 4400);
+  assert.equal(spent.accountPatch.childCashCents, 400);
+  assert.equal(spent.ledger.childCashDeltaCents, -600);
+
+  assert.throws(() => buildApprovedMutation({
+    request: request("expense", 1001, { cashLocation: "child" }),
+    account: account(5000, 1000),
+    now,
+    actor: parentActor,
+  }), error => error instanceof FamilyFinanceError && error.code === "insufficient-child-cash");
+});
+
+test("dinheiro com a filha não pode ser investido antes de voltar aos pais", () => {
+  assert.throws(() => buildApprovedMutation({
+    request: request("vault_open", 4500, { termDays: 30, category: "vault" }),
+    account: account(5000, 1000),
+    now,
+    actor: parentActor,
+  }), error => error instanceof FamilyFinanceError && error.code === "insufficient-balance");
+});
+
+test("dívida aos pais pode coexistir com dinheiro físico nas mãos da filha", () => {
+  const spent = buildApprovedMutation({
+    request: request("expense", 2000, { cashLocation: "parents" }),
+    account: account(1000, 500),
+    now,
+    actor: parentActor,
+  });
+  assert.equal(spent.accountPatch.balanceCents, -1000);
+  assert.equal(spent.accountPatch.childCashCents, 500);
+  assert.equal(spent.ledger.debtAfterCents, 1500);
 });
 
 test("os gráficos contam consumo e juros, mas não transferências de investimento", () => {
@@ -589,6 +656,8 @@ test("o resumo mensal separa consumo, transferências, juros e resultado realiza
     { kind: "market_buy", deltaCents: -800, occurredOn: "2026-08-07" },
     { kind: "vault_maturity", interestCents: 10, deltaCents: 1010, occurredOn: "2026-08-20" },
     { kind: "market_sell", realizedPnlCents: 150, deltaCents: 950, occurredOn: "2026-08-21" },
+    { kind: "cash_withdrawal", amountCents: 1000, deltaCents: 0, occurredOn: "2026-08-22" },
+    { kind: "cash_return", amountCents: 300, deltaCents: 0, occurredOn: "2026-08-23" },
   ], now);
   assert.equal(summary.receivedCents, 5000);
   assert.equal(summary.spentCents, 1500);
@@ -599,4 +668,6 @@ test("o resumo mensal separa consumo, transferências, juros e resultado realiza
   assert.equal(summary.realizedNetCents, 150);
   assert.equal(summary.needSpentCents, 1000);
   assert.equal(summary.wantSpentCents, 500);
+  assert.equal(summary.cashTakenCents, 1000);
+  assert.equal(summary.cashReturnedCents, 300);
 });

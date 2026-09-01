@@ -40,17 +40,46 @@ test('normaliza saldo negativo como dívida sem criar dinheiro disponível', () 
     rawBalanceCents: -1750,
     debtCents: 1750,
     availableCents: 0,
+    parentHeldCents: 0,
+    childCashCents: 0,
     pendingCents: 700,
     pendingIncomingCents: 500,
     pendingOutgoingCents: 200,
     projectedBalanceCents: -1450,
     projectedAvailableCents: 0,
     projectedDebtCents: 1450,
+    projectedParentHeldCents: 0,
+    projectedChildCashCents: 0,
+    pendingCashWithdrawalCents: 0,
+    pendingCashReturnCents: 0,
     goalReservedCents: 0,
     vaultCents: 0,
     marketCents: 0,
     totalCents: -1750
   });
+});
+
+test('separa dinheiro com os pais e com a filha sem duplicar o património', () => {
+  const snapshot = normalizeSnapshot({
+    account: {
+      balanceCents: 5000,
+      parentHeldCents: 3500,
+      childCashCents: 1500,
+      availableCents: 5000,
+      totalCents: 5000,
+      projectedBalanceCents: 5000,
+      projectedParentHeldCents: 2500,
+      projectedChildCashCents: 2500,
+      projectedAvailableCents: 5000,
+      pendingCashWithdrawalCents: 1000,
+      pendingCents: 1000
+    }
+  });
+  assert.equal(snapshot.account.parentHeldCents, 3500);
+  assert.equal(snapshot.account.childCashCents, 1500);
+  assert.equal(snapshot.account.availableCents, 5000);
+  assert.equal(snapshot.account.totalCents, 5000);
+  assert.equal(snapshot.account.projectedChildCashCents, 2500);
 });
 
 test('movimentos pendentes projetam o saldo sem esconder dinheiro disponível', () => {

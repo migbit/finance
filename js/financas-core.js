@@ -107,6 +107,7 @@ const CATEGORY_LABELS = new Map([
   ['vault', 'Cofre a prazo'],
   ['market', 'Mercado simulado'],
   ['savings_goal', 'Objetivo de poupança'],
+  ['cash_transfer', 'Dinheiro comigo'],
   ['reversal', 'Estorno']
 ]);
 
@@ -139,7 +140,9 @@ const KIND_ALIASES = Object.freeze({
   sell: 'market_sell',
   investment_sell: 'market_sell',
   goal_save: 'goal_reserve',
-  goal_withdraw: 'goal_release'
+  goal_withdraw: 'goal_release',
+  take_cash: 'cash_withdrawal',
+  return_cash: 'cash_return'
 });
 
 function finiteNumber(value) {
@@ -240,6 +243,9 @@ function normalizeMovement(raw = {}, index = 0) {
     symbol: String(raw.symbol || raw.instrumentSymbol || raw.instrumentId || '').trim().toUpperCase(),
     instrumentType: String(raw.instrumentType || raw.assetType || '').trim().toLowerCase(),
     termDays: firstFinite(raw.termDays, raw.durationDays),
+    cashLocation: String(raw.cashLocation || raw.paymentSource || '').trim().toLowerCase(),
+    childCashDeltaCents: Math.round(firstFinite(raw.childCashDeltaCents, 0)),
+    childCashAfterCents: Math.max(0, Math.round(firstFinite(raw.childCashAfterCents, 0))),
     createdAtMs,
     occurredAtMs,
     decidedAtMs,
@@ -457,11 +463,21 @@ export function normalizeSnapshot(rawSnapshot = {}, childId = '') {
     ['availableCents', 'availableBalanceCents', 'cashCents'],
     ['available', 'availableBalance', 'cash']
   ) ?? 0;
+  const childCashCents = Math.max(0, readMoneyCents(
+    objects,
+    ['childCashCents', 'cashWithChildCents'],
+    ['childCash', 'cashWithChild']
+  ) ?? 0);
+  const parentHeldCents = Math.max(0, readMoneyCents(
+    objects,
+    ['parentHeldCents', 'cashWithParentsCents'],
+    ['parentHeld', 'cashWithParents']
+  ) ?? (balanceCents - childCashCents));
   const debtCents = Math.max(0, readMoneyCents(
     objects,
     ['debtCents', 'amountOwedCents'],
     ['debt', 'amountOwed']
-  ) ?? -balanceCents);
+  ) ?? (childCashCents - balanceCents));
   const pendingIncomingCents = Math.max(0, readMoneyCents(
     objects,
     ['pendingIncomingCents'],
@@ -476,7 +492,7 @@ export function normalizeSnapshot(rawSnapshot = {}, childId = '') {
     objects,
     ['availableCents', 'availableBalanceCents', 'cashCents'],
     ['available', 'availableBalance', 'cash']
-  ) ?? balanceCents);
+  ) ?? (parentHeldCents + childCashCents));
   const pendingCents = Math.max(0, readMoneyCents(
     objects,
     ['pendingCents', 'awaitingApprovalCents', 'reservedCents'],
@@ -522,6 +538,16 @@ export function normalizeSnapshot(rawSnapshot = {}, childId = '') {
     ['projectedBalanceCents'],
     ['projectedBalance']
   ) ?? (balanceCents + pendingIncomingCents - pendingOutgoingCents);
+  const projectedChildCashCents = Math.max(0, readMoneyCents(
+    objects,
+    ['projectedChildCashCents'],
+    ['projectedChildCash']
+  ) ?? childCashCents);
+  const projectedParentHeldCents = Math.max(0, readMoneyCents(
+    objects,
+    ['projectedParentHeldCents'],
+    ['projectedParentHeld']
+  ) ?? (projectedBalanceCents - projectedChildCashCents));
 
   return {
     childId: String(snapshot.childId || account.childId || childId),
@@ -530,6 +556,8 @@ export function normalizeSnapshot(rawSnapshot = {}, childId = '') {
       rawBalanceCents: balanceCents,
       debtCents,
       availableCents,
+      parentHeldCents,
+      childCashCents,
       pendingCents,
       pendingIncomingCents,
       pendingOutgoingCents,
@@ -538,12 +566,16 @@ export function normalizeSnapshot(rawSnapshot = {}, childId = '') {
         objects,
         ['projectedAvailableCents'],
         ['projectedAvailable']
-      ) ?? projectedBalanceCents),
+      ) ?? (projectedParentHeldCents + projectedChildCashCents)),
       projectedDebtCents: Math.max(0, readMoneyCents(
         objects,
         ['projectedDebtCents'],
         ['projectedDebt']
-      ) ?? -projectedBalanceCents),
+      ) ?? (projectedChildCashCents - projectedBalanceCents)),
+      projectedParentHeldCents,
+      projectedChildCashCents,
+      pendingCashWithdrawalCents: Math.max(0, readMoneyCents(objects, ['pendingCashWithdrawalCents']) ?? 0),
+      pendingCashReturnCents: Math.max(0, readMoneyCents(objects, ['pendingCashReturnCents']) ?? 0),
       goalReservedCents,
       vaultCents,
       marketCents,

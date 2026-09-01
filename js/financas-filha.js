@@ -27,6 +27,8 @@ const elements = {
   statusText: document.getElementById('financas-status-text'),
   retry: document.getElementById('financas-retry'),
   available: document.getElementById('balance-available'),
+  parents: document.getElementById('balance-parents'),
+  childCash: document.getElementById('balance-child-cash'),
   pending: document.getElementById('balance-pending'),
   goals: document.getElementById('balance-goals'),
   projected: document.getElementById('balance-projected'),
@@ -142,6 +144,8 @@ async function getToken(forceRefresh = false) {
 function renderBalances() {
   const account = state.snapshot.account;
   elements.available.textContent = formatEuro(account.availableCents);
+  if (elements.parents) elements.parents.textContent = formatEuro(account.parentHeldCents);
+  if (elements.childCash) elements.childCash.textContent = formatEuro(account.childCashCents);
   elements.pending.textContent = formatEuro(account.pendingCents);
   if (elements.goals) elements.goals.textContent = formatEuro(account.goalReservedCents);
   elements.vault.textContent = formatEuro(account.vaultCents);
@@ -154,6 +158,9 @@ function renderBalances() {
         ? `Se os pais validarem todos estes movimentos, terás uma dívida de ${formatEuro(account.projectedDebtCents)} aos pais.`
         : `Se todos os movimentos forem validados, ficarás com uma dívida de ${formatEuro(account.projectedDebtCents)} aos pais.`
       : `Se todos os movimentos forem validados: ${formatEuro(account.projectedAvailableCents)} disponíveis.`;
+    if (!elements.projected.hidden && (account.pendingCashWithdrawalCents > 0 || account.pendingCashReturnCents > 0)) {
+      elements.projected.textContent += ` Desse valor, ${formatEuro(account.projectedChildCashCents)} ficarão contigo e ${formatEuro(account.projectedParentHeldCents)} com os pais.`;
+    }
   }
   const hasDebt = account.debtCents > 0;
   if (elements.debt) elements.debt.textContent = formatEuro(account.debtCents);
@@ -206,7 +213,7 @@ function renderGoal() {
   const reserve = createElement('button', 'financas-small-button', profile.age <= 8 ? 'Guardar dinheiro' : 'Guardar dinheiro para este objetivo');
   reserve.type = 'button';
   reserve.dataset.openFinanceDialog = 'goal-reserve';
-  reserve.disabled = state.snapshot.account.availableCents <= 0;
+  reserve.disabled = state.snapshot.account.parentHeldCents <= 0;
   actions.append(reserve);
   if (goal.reservedCents > 0) {
     const release = createElement('button', 'financas-secondary-button', 'Retirar dinheiro do objetivo');
@@ -222,6 +229,8 @@ function movementPresentation(movement) {
   const presentations = {
     income: { icon: '+', direction: 'income', title: movement.categoryLabel },
     expense: { icon: '−', direction: 'expense', title: movement.categoryLabel },
+    cash_withdrawal: { icon: '→', direction: 'transfer', title: 'Dinheiro entregue pelos pais' },
+    cash_return: { icon: '←', direction: 'transfer', title: 'Dinheiro devolvido aos pais' },
     vault_open: {
       icon: '▣',
       direction: 'transfer',
@@ -265,6 +274,8 @@ function amountPrefix(movement, direction) {
   if (movement.kind === 'market_sell' || movement.kind === 'vault_early_withdraw') return '↙ ';
   if (movement.kind === 'goal_reserve') return '→ ';
   if (movement.kind === 'goal_release') return '← ';
+  if (movement.kind === 'cash_withdrawal') return '→ ';
+  if (movement.kind === 'cash_return') return '← ';
   return '';
 }
 
@@ -297,6 +308,8 @@ function renderMovements() {
       }
       if (movement.reflection === 'need') details.push('Classifiquei como necessidade');
       if (movement.reflection === 'want') details.push('Classifiquei como desejo');
+      if (movement.kind === 'expense' && movement.cashLocation === 'child') details.push('Paguei com o dinheiro que tinha comigo');
+      if (movement.kind === 'expense' && movement.cashLocation === 'parents') details.push('Os pais pagaram');
       if (movement.status === 'rejected') {
         const reason = movement.rejectionReason || movement.decisionNote || movement.reviewNote;
         if (reason) details.push(`Explicação: ${reason}`);
@@ -635,6 +648,8 @@ function renderMonthlySummary() {
   const rows = [
     ['Recebeste', summary.receivedCents],
     ['Gastaste', summary.spentCents],
+    ['Levaste contigo', summary.cashTakenCents],
+    ['Devolveste aos pais', summary.cashReturnedCents],
     [profile.age <= 8 ? 'Guardaste para objetivos' : 'Reservaste para objetivos', summary.goalReservedCents],
     ['Colocaste em cofres', summary.vaultPlacedCents],
     ['Investiste', summary.investedCents],
@@ -708,6 +723,13 @@ function renderIncomeFields() {
       <label for="finance-date">Em que dia?</label>
       <input id="finance-date" name="occurredOn" type="date" value="${localDateValue()}" required>
     </div>
+    <div class="financas-field">
+      <label for="finance-cash-location">Onde ficou o dinheiro?</label>
+      <select id="finance-cash-location" name="cashLocation" required>
+        <option value="parents">Guardado com os pais</option>
+        <option value="child">Ficou comigo</option>
+      </select>
+    </div>
     ${noteField(profile.age <= 8 ? 'Queres contar alguma coisa? (opcional)' : 'Nota (opcional)')}`;
 }
 
@@ -731,8 +753,38 @@ function renderExpenseFields() {
       <label for="finance-date">Em que dia compraste?</label>
       <input id="finance-date" name="occurredOn" type="date" value="${localDateValue()}" required>
     </div>
+    <div class="financas-field">
+      <label for="finance-cash-location">Quem pagou?</label>
+      <select id="finance-cash-location" name="cashLocation" required>
+        <option value="parents">Os pais pagaram</option>
+        <option value="child">Paguei com dinheiro que tinha comigo</option>
+      </select>
+    </div>
     ${reflection}
     ${noteField(profile.age <= 8 ? 'O que compraste? (opcional)' : 'O que compraste? (opcional)')}`;
+}
+
+function renderCashFields() {
+  elements.dialogFields.innerHTML = `
+    <fieldset class="financas-field financas-field--full financas-choice-group">
+      <legend>O que queres fazer?</legend>
+      <div class="financas-choice-grid">
+        <label class="financas-choice">
+          <input type="radio" name="cashDirection" value="withdrawal" checked>
+          <span>Pedir aos pais<small>O dinheiro passa para as tuas mãos</small></span>
+        </label>
+        <label class="financas-choice">
+          <input type="radio" name="cashDirection" value="return"${state.snapshot.account.childCashCents <= 0 ? ' disabled' : ''}>
+          <span>Devolver aos pais<small>Volta a ficar guardado</small></span>
+        </label>
+      </div>
+    </fieldset>
+    ${amountField(profile.age <= 8 ? 'Quanto dinheiro queres ter contigo? (€)' : 'Quanto queres movimentar? (€)')}
+    <div class="financas-field">
+      <label for="finance-date">Em que dia?</label>
+      <input id="finance-date" name="occurredOn" type="date" value="${localDateValue()}" required>
+    </div>
+    ${noteField(profile.age <= 8 ? 'Para quê? (opcional)' : 'Motivo, por exemplo saída com amigas (opcional)')}`;
 }
 
 function vaultOfferForDays(days) {
@@ -912,6 +964,14 @@ function dialogCopy(mode) {
         : 'Este é o registo de algo já comprado, não um pedido de autorização para comprar. Os pais validam o movimento.',
       submit: simple ? 'Enviar para validar' : 'Enviar para validação'
     },
+    cash: {
+      kicker: simple ? 'Dinheiro nas tuas mãos' : 'Mover dinheiro físico',
+      title: simple ? 'Dinheiro comigo' : 'Pedir ou devolver dinheiro',
+      intro: simple
+        ? 'Podes pedir dinheiro aos pais para levares contigo ou devolver o que sobrou. Isto não é um gasto.'
+        : 'Move dinheiro entre o que está guardado com os pais e o que tens contigo. O património não muda e os pais confirmam a entrega.',
+      submit: simple ? 'Enviar para os pais' : 'Enviar para validação'
+    },
     invest: {
       kicker: simple ? 'Aprender a esperar' : 'Simulação educativa',
       title: simple ? 'Pôr dinheiro a crescer' : 'Investir dinheiro',
@@ -972,17 +1032,26 @@ function prefillCorrectionForm(request) {
     occurredOn: request.occurredOn || localDateValue(),
     note: request.note || '',
     reflection: request.reflection || '',
+    cashLocation: request.cashLocation || 'parents',
+    cashDirection: request.kind === 'cash_return' ? 'return' : 'withdrawal',
     termDays: request.termDays || ''
   };
   Object.entries(values).forEach(([name, value]) => {
     const field = elements.form.elements.namedItem(name);
     if (field && value !== '') field.value = value;
   });
+  if (['cash_withdrawal', 'cash_return'].includes(request.kind)) {
+    const requiredDirection = request.kind === 'cash_return' ? 'return' : 'withdrawal';
+    elements.form.querySelectorAll('[name="cashDirection"]').forEach(option => {
+      option.checked = option.value === requiredDirection;
+      option.disabled = option.value !== requiredDirection;
+    });
+  }
   updateQuoteHelp();
 }
 
 function openDialog(mode, { request = null, movement = null } = {}) {
-  if (!['income', 'expense', 'invest', 'goal', 'goal-reserve', 'goal-release', 'reflection'].includes(mode) || !elements.dialog) return;
+  if (!['income', 'expense', 'cash', 'invest', 'goal', 'goal-reserve', 'goal-release', 'reflection'].includes(mode) || !elements.dialog) return;
   state.dialogMode = mode;
   state.editingRequest = request;
   state.editingReflection = movement;
@@ -997,6 +1066,7 @@ function openDialog(mode, { request = null, movement = null } = {}) {
   elements.submit.textContent = copy.submit;
   if (mode === 'income') renderIncomeFields();
   if (mode === 'expense') renderExpenseFields();
+  if (mode === 'cash') renderCashFields();
   if (mode === 'invest') renderInvestmentFields();
   if (mode === 'goal') renderGoalFields();
   if (mode === 'goal-reserve') renderGoalTransferFields('reserve');
@@ -1060,30 +1130,62 @@ function updateFormPreview() {
     elements.formPreview.textContent = '';
     return;
   }
-  const { availableCents: available, balanceCents: balance, debtCents: debt } = state.snapshot.account;
+  const {
+    availableCents: available,
+    parentHeldCents,
+    childCashCents,
+    balanceCents: balance,
+    debtCents: debt
+  } = state.snapshot.account;
   if (mode === 'income') {
-    const afterBalance = balance + amountCents;
-    if (debt > 0 && afterBalance < 0) {
-      elements.formPreview.textContent = `Depois de validado, este dinheiro reduz a dívida aos pais. Ficam ainda ${formatEuro(Math.abs(afterBalance))} por pagar.`;
+    const location = elements.form.elements.namedItem('cashLocation')?.value || 'parents';
+    const childAmount = location === 'child' ? Math.max(0, amountCents - Math.min(debt, amountCents)) : 0;
+    if (debt > amountCents) {
+      elements.formPreview.textContent = `Depois de validado, este dinheiro reduz a dívida aos pais. Ficam ainda ${formatEuro(debt - amountCents)} por pagar.`;
     } else if (debt > 0) {
-      elements.formPreview.textContent = `Depois de validado, a dívida fica paga e sobram ${formatEuro(afterBalance)} disponíveis.`;
+      elements.formPreview.textContent = location === 'child'
+        ? `Depois de validado, a dívida fica paga e ${formatEuro(childAmount)} ficam contigo.`
+        : `Depois de validado, a dívida fica paga e sobram ${formatEuro(amountCents - debt)} guardados com os pais.`;
     } else {
-      elements.formPreview.textContent = `Depois de validado, o saldo passa de ${formatEuro(balance)} para ${formatEuro(afterBalance)}.`;
+      elements.formPreview.textContent = location === 'child'
+        ? `Depois de validado, ficas com ${formatEuro(childCashCents + amountCents)} contigo. O total disponível passa para ${formatEuro(available + amountCents)}.`
+        : `Depois de validado, ficam ${formatEuro(parentHeldCents + amountCents)} guardados com os pais.`;
     }
     return;
   }
   if (mode === 'expense') {
-    const after = balance - amountCents;
+    const location = elements.form.elements.namedItem('cashLocation')?.value || 'parents';
+    if (location === 'child') {
+      elements.formPreview.textContent = amountCents > childCashCents
+        ? `Tens ${formatEuro(childCashCents)} contigo. Não podes registar ${formatEuro(amountCents)} como pago por ti.`
+        : `Pagas com o dinheiro que tens contigo: ficam ${formatEuro(childCashCents - amountCents)} nas tuas mãos e o património diminui ${formatEuro(amountCents)}.`;
+      return;
+    }
+    const parentCustodyAfter = balance - childCashCents - amountCents;
+    const availableAfter = Math.max(0, parentCustodyAfter) + childCashCents;
     const goal = state.snapshot.goal;
     const missingGoalCents = goal ? Math.max(0, goal.targetCents - goal.reservedCents) : 0;
     const goalImpact = missingGoalCents > 0
       ? ` Esta compra vale ${Math.min(999, Math.round((amountCents / missingGoalCents) * 100))}% do que ainda falta para “${goal.title}”.`
       : '';
-    elements.formPreview.textContent = after >= 0
-      ? `Tens ${formatEuro(available)} disponíveis. Esta compra custa ${formatEuro(amountCents)} e, depois de validada, ficam ${formatEuro(after)}.${goalImpact}`
+    elements.formPreview.textContent = parentCustodyAfter >= 0
+      ? `Tens ${formatEuro(available)} disponíveis. Esta compra custa ${formatEuro(amountCents)} e, depois de validada, ficam ${formatEuro(availableAfter)}.${goalImpact}`
       : profile.age <= 8
-        ? `Tens ${formatEuro(available)} disponíveis. Esta compra custa ${formatEuro(amountCents)} e, depois de validada, ficas com uma dívida de ${formatEuro(Math.abs(after))} aos pais. O próximo dinheiro recebido paga primeiro essa parte.${goalImpact}`
-        : `Tens ${formatEuro(available)} disponíveis. Esta compra custa ${formatEuro(amountCents)} e, depois de validada, cria uma dívida de ${formatEuro(Math.abs(after))} aos pais. As próximas entradas amortizam primeiro esse valor.${goalImpact}`;
+        ? `Tens ${formatEuro(available)} disponíveis. Esta compra custa ${formatEuro(amountCents)} e, depois de validada, ficas com uma dívida de ${formatEuro(Math.abs(parentCustodyAfter))} aos pais. O próximo dinheiro recebido paga primeiro essa parte.${goalImpact}`
+        : `Tens ${formatEuro(available)} disponíveis. Esta compra custa ${formatEuro(amountCents)} e, depois de validada, cria uma dívida de ${formatEuro(Math.abs(parentCustodyAfter))} aos pais. As próximas entradas amortizam primeiro esse valor.${goalImpact}`;
+    return;
+  }
+  if (mode === 'cash') {
+    const direction = selectedValue('cashDirection') || 'withdrawal';
+    if (direction === 'return') {
+      elements.formPreview.textContent = amountCents > childCashCents
+        ? `Só tens ${formatEuro(childCashCents)} contigo para devolver.`
+        : `Depois de os pais validarem, ficam ${formatEuro(childCashCents - amountCents)} contigo e ${formatEuro(parentHeldCents + amountCents)} guardados com eles. O património não muda.`;
+    } else {
+      elements.formPreview.textContent = amountCents > parentHeldCents
+        ? `Só estão ${formatEuro(parentHeldCents)} guardados com os pais.`
+        : `Depois de os pais entregarem e validarem, ficas com ${formatEuro(childCashCents + amountCents)} contigo e ${formatEuro(parentHeldCents - amountCents)} guardados com eles. O património não muda.`;
+    }
     return;
   }
   if (mode === 'goal') {
@@ -1097,16 +1199,16 @@ function updateFormPreview() {
     const reserved = goal?.reservedCents || 0;
     const afterReserved = mode === 'goal-reserve' ? reserved + amountCents : reserved - amountCents;
     if (mode === 'goal-reserve') {
-      elements.formPreview.textContent = amountCents > available
-        ? `Só tens ${formatEuro(available)} disponíveis para reservar.`
-        : `Ficam ${formatEuro(available - amountCents)} disponíveis e ${formatEuro(afterReserved)} reservados. O património não muda.`;
+      elements.formPreview.textContent = amountCents > parentHeldCents
+        ? `Só tens ${formatEuro(parentHeldCents)} guardados com os pais para reservar.`
+        : `Ficam ${formatEuro(parentHeldCents - amountCents)} guardados com os pais e ${formatEuro(afterReserved)} reservados. O património não muda.`;
     } else {
-      const afterBalance = balance + amountCents;
+      const parentCustodyAfter = balance - childCashCents + amountCents;
       elements.formPreview.textContent = amountCents > reserved
         ? `Só tens ${formatEuro(reserved)} reservados neste objetivo.`
-        : afterBalance < 0
-          ? `Ficam ${formatEuro(afterReserved)} reservados. Este valor reduz a dívida aos pais para ${formatEuro(Math.abs(afterBalance))}; o património não muda.`
-          : `Ficam ${formatEuro(afterReserved)} reservados e ${formatEuro(afterBalance)} disponíveis. O património não muda.`;
+        : parentCustodyAfter < 0
+          ? `Ficam ${formatEuro(afterReserved)} reservados. Este valor reduz a dívida aos pais para ${formatEuro(Math.abs(parentCustodyAfter))}; o património não muda.`
+          : `Ficam ${formatEuro(afterReserved)} reservados e ${formatEuro(parentCustodyAfter + childCashCents)} disponíveis. O património não muda.`;
     }
     return;
   }
@@ -1156,7 +1258,7 @@ function updateFormPreview() {
     const patrimonyText = patrimonyShare === null
       ? `Estás a investir ${formatEuro(amountCents)}; o património atual é ${formatEuro(patrimony)}.`
       : `Estás a investir ${formatEuro(amountCents)} de um património total de ${formatEuro(patrimony)}. Isto representa ${patrimonyShare}% do património.`;
-    elements.formPreview.textContent = `${patrimonyText} Compras aproximadamente ${fraction.toLocaleString('pt-PT', { maximumFractionDigits: 4 })} unidades de ${symbol} e ficam ${formatEuro(Math.max(0, available - amountCents))} disponíveis. ${diversification}${warning}`;
+    elements.formPreview.textContent = `${patrimonyText} Compras aproximadamente ${fraction.toLocaleString('pt-PT', { maximumFractionDigits: 4 })} unidades de ${symbol} e ficam ${formatEuro(Math.max(0, parentHeldCents - amountCents))} guardados com os pais. ${diversification}${warning}`;
   } else {
     elements.formPreview.textContent = 'É preciso existir um preço educativo guardado antes de comprar.';
   }
@@ -1198,7 +1300,15 @@ function createRequestPayload() {
       ...base,
       kind: mode,
       category: elements.form.elements.namedItem('category')?.value || 'other',
-      reflection: elements.form.elements.namedItem('reflection')?.value || null
+      reflection: elements.form.elements.namedItem('reflection')?.value || null,
+      cashLocation: elements.form.elements.namedItem('cashLocation')?.value || 'parents'
+    };
+  }
+  if (mode === 'cash') {
+    return {
+      ...base,
+      kind: selectedValue('cashDirection') === 'return' ? 'cash_return' : 'cash_withdrawal',
+      category: 'cash_transfer'
     };
   }
 
@@ -1275,7 +1385,7 @@ async function submitDialog(event) {
       const amountCents = formAmountCents();
       const direction = state.dialogMode === 'goal-reserve' ? 'reserve' : 'release';
       const maximum = direction === 'reserve'
-        ? state.snapshot.account.availableCents
+        ? state.snapshot.account.parentHeldCents
         : state.snapshot.goal?.reservedCents || 0;
       if (amountCents > maximum) throw new Error(`Só podes movimentar até ${formatEuro(maximum)}.`);
       await postFamilyFinanceAction({
@@ -1291,8 +1401,17 @@ async function submitDialog(event) {
       const submittedMode = state.dialogMode;
       const wasCorrection = Boolean(state.editingRequest);
       const spendsAvailable = ['vault_open', 'market_buy'].includes(request.kind);
-      if (spendsAvailable && request.amountCents > state.snapshot.account.availableCents) {
-        throw new Error(`Só tens ${formatEuro(state.snapshot.account.availableCents)} disponíveis para este investimento.`);
+      if (spendsAvailable && request.amountCents > state.snapshot.account.parentHeldCents) {
+        throw new Error(`Só tens ${formatEuro(state.snapshot.account.parentHeldCents)} guardados com os pais para este investimento.`);
+      }
+      if (request.kind === 'expense' && request.cashLocation === 'child' && request.amountCents > state.snapshot.account.childCashCents) {
+        throw new Error(`Só tens ${formatEuro(state.snapshot.account.childCashCents)} contigo.`);
+      }
+      if (request.kind === 'cash_withdrawal' && request.amountCents > state.snapshot.account.parentHeldCents) {
+        throw new Error(`Só estão ${formatEuro(state.snapshot.account.parentHeldCents)} guardados com os pais.`);
+      }
+      if (request.kind === 'cash_return' && request.amountCents > state.snapshot.account.childCashCents) {
+        throw new Error(`Só tens ${formatEuro(state.snapshot.account.childCashCents)} contigo para devolver.`);
       }
       if (request.kind.startsWith('market_') && !request.symbol) {
         throw new Error('Escolhe um investimento com preço disponível.');
@@ -1417,7 +1536,11 @@ function bindEvents() {
         && item.status === 'correction_required'
       ));
       if (!request) return;
-      const mode = request.kind === 'income' || request.kind === 'expense' ? request.kind : 'invest';
+      const mode = request.kind === 'income' || request.kind === 'expense'
+        ? request.kind
+        : ['cash_withdrawal', 'cash_return'].includes(request.kind)
+          ? 'cash'
+          : 'invest';
       openDialog(mode, { request });
       return;
     }
