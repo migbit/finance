@@ -1,6 +1,6 @@
 /* A APP – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v58`;
+const CACHE = `${CACHE_PREFIX}v59`;
 
 const CORE = [
   './',
@@ -24,6 +24,8 @@ const CORE = [
   './js/financas-core.js',
   './js/financas-filha.js',
   './js/gestao-financas.js',
+  './js/francisca-calendar-core.js',
+  './js/francisca-calendar.js',
   './js/meditacao.js',
   './js/meditacao-recommender.js',
   './modules/ginasio.html',
@@ -33,10 +35,12 @@ const CORE = [
   './modules/francisca-financas.html',
   './modules/leonor-financas.html',
   './modules/gestao-financas.html',
+  './modules/francisca-calendario.html',
   './modules/meditacao.html',
   './css/alimentacao.css',
   './css/financas.css',
   './css/gestao-financas.css',
+  './css/francisca-calendar.css',
   './css/meditacao.css',
   './data/meditations/buddhist.json',
   './data/meditations/asian-non-buddhist.json',

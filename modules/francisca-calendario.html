@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f3eee8">
+  <title>Calendário da Francisca</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/francisca-calendar.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="manifest" href="../manifest.json">
+</head>
+<body data-page="francisca-calendario" data-child="francisca">
+  <a class="school-skip-link" href="#school-content">Saltar para o calendário</a>
+
+  <main id="school-content" class="school-page" aria-busy="true">
+    <header class="school-hero">
+      <div class="school-hero-copy">
+        <p class="school-eyebrow">Organizar com calma</p>
+        <h1>Calendário da Francisca</h1>
+        <p>Vê o que vem a seguir e organiza o estudo com calma.</p>
+      </div>
+      <svg class="school-cat" viewBox="0 0 200 145" role="img" aria-label="Gatinho ao lado de um pequeno calendário">
+        <path d="M34 57 26 24l31 16a49 49 0 0 1 35 0l31-16-8 34c7 8 11 18 11 29 0 27-22 43-50 43S25 114 25 87c0-12 3-22 9-30Z" fill="#fffaf4" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M55 77c0-4 3-7 7-7m29 7c0-4-3-7-7-7M68 88c5 4 10 4 15 0m-8-2v10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+        <path d="m73 82 4 3 4-3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M46 88 14 83m32 15-31 7m96-17 23-5m-23 15 22 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <rect x="119" y="66" width="72" height="62" rx="11" fill="#708266" stroke="currentColor" stroke-width="5"/>
+        <path d="M120 84h70M137 60v13m36-13v13" fill="none" stroke="#fffaf4" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="138" cy="100" r="4" fill="#fffaf4"/><circle cx="155" cy="100" r="4" fill="#fffaf4"/><circle cx="172" cy="100" r="4" fill="#fffaf4"/>
+        <path d="M115 105c-9 0-15-5-15-12" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <button id="school-add" class="school-primary" type="button">＋ Adicionar teste</button>
+    </header>
+
+    <div id="school-status" class="school-status" role="status" aria-live="polite" hidden>
+      <span id="school-status-text"></span>
+      <button id="school-retry" type="button" hidden>Tentar novamente</button>
+    </div>
+
+    <section class="school-upcoming-section" aria-labelledby="school-upcoming-title">
+      <div class="school-section-heading">
+        <div>
+          <p class="school-eyebrow">Primeiro, o mais importante</p>
+          <h2 id="school-upcoming-title">Próximos testes</h2>
+        </div>
+        <label class="school-filter">
+          <span>Disciplina</span>
+          <select id="school-subject-filter">
+            <option value="all">Todas as disciplinas</option>
+          </select>
+        </label>
+      </div>
+      <div id="school-upcoming" class="school-upcoming-grid" aria-live="polite"></div>
+    </section>
+
+    <section class="school-calendar-section" aria-labelledby="school-calendar-title">
+      <div class="school-calendar-top">
+        <div class="school-summary" aria-labelledby="school-summary-title">
+          <div>
+            <p class="school-eyebrow">Visão rápida</p>
+            <h2 id="school-summary-title">Próximos 30 dias</h2>
+          </div>
+          <dl>
+            <div><dd id="summary-total">0</dd><dt>testes</dt></div>
+            <div><dd id="summary-fortnight">0</dd><dt>nas próximas duas semanas</dt></div>
+            <div><dd id="summary-next">—</dd><dt>até ao próximo</dt></div>
+          </dl>
+        </div>
+        <div class="school-month-nav">
+          <button id="school-month-prev" type="button" aria-label="Ver mês anterior">‹</button>
+          <div class="school-month-title">
+            <h2 id="school-calendar-title" aria-live="polite"></h2>
+            <button id="school-month-today" type="button">Hoje</button>
+          </div>
+          <button id="school-month-next" type="button" aria-label="Ver mês seguinte">›</button>
+        </div>
+      </div>
+
+      <div class="school-calendar-wrap">
+        <div class="school-weekdays" aria-hidden="true">
+          <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span>
+        </div>
+        <div id="school-calendar" class="school-calendar" role="grid" aria-labelledby="school-calendar-title"></div>
+      </div>
+      <div id="school-legend" class="school-legend" aria-label="Legenda das disciplinas"></div>
+    </section>
+
+    <details class="school-past-section">
+      <summary><span>Testes anteriores</span><span id="school-past-count" class="school-count">0</span></summary>
+      <div id="school-past" class="school-past-list"></div>
+    </details>
+  </main>
+
+  <dialog id="school-form-dialog" class="school-dialog" aria-labelledby="school-form-title">
+    <form id="school-form">
+      <div class="school-dialog-heading">
+        <div>
+          <p class="school-eyebrow">Agenda escolar</p>
+          <h2 id="school-form-title">Adicionar teste</h2>
+        </div>
+        <button class="school-icon-button" type="button" data-close-dialog="school-form-dialog" aria-label="Fechar">×</button>
+      </div>
+      <input id="school-test-id" name="id" type="hidden">
+      <label>
+        <span>Disciplina *</span>
+        <select id="school-subject" name="subject" required></select>
+      </label>
+      <label>
+        <span>Data *</span>
+        <input id="school-test-date" name="testDate" type="date" required>
+      </label>
+      <p id="school-past-warning" class="school-past-warning" role="note" hidden>Esta data já passou. O teste ficará disponível no histórico.</p>
+      <label>
+        <span>Descrição</span>
+        <input id="school-description" name="description" type="text" maxlength="120" placeholder="Ex.: Teste sobre frações">
+      </label>
+      <label>
+        <span>Notas</span>
+        <textarea id="school-notes" name="notes" maxlength="1000" rows="4" placeholder="Matéria, páginas ou algo a recordar"></textarea>
+      </label>
+      <p id="school-form-error" class="school-form-error" role="alert" hidden></p>
+      <div class="school-dialog-actions">
+        <button type="button" data-close-dialog="school-form-dialog">Cancelar</button>
+        <button id="school-save" class="school-primary" type="submit">Guardar teste</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="school-detail-dialog" class="school-dialog school-detail-dialog" aria-labelledby="school-detail-title">
+    <article>
+      <div class="school-dialog-heading">
+        <div>
+          <p id="school-detail-subject" class="school-eyebrow"></p>
+          <h2 id="school-detail-title"></h2>
+        </div>
+        <button class="school-icon-button" type="button" data-close-dialog="school-detail-dialog" aria-label="Fechar">×</button>
+      </div>
+      <p id="school-detail-date" class="school-detail-date"></p>
+      <p id="school-detail-countdown" class="school-detail-countdown"></p>
+      <div id="school-detail-notes" class="school-detail-notes"></div>
+      <p id="school-detail-meta" class="school-detail-meta"></p>
+      <div class="school-dialog-actions">
+        <button id="school-delete" class="school-danger" type="button">Apagar</button>
+        <button id="school-edit" class="school-primary" type="button">Editar</button>
+      </div>
+    </article>
+  </dialog>
+
+  <dialog id="school-day-dialog" class="school-dialog school-day-dialog" aria-labelledby="school-day-title">
+    <article>
+      <div class="school-dialog-heading">
+        <h2 id="school-day-title"></h2>
+        <button class="school-icon-button" type="button" data-close-dialog="school-day-dialog" aria-label="Fechar">×</button>
+      </div>
+      <div id="school-day-tests" class="school-day-tests"></div>
+    </article>
+  </dialog>
+
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/francisca-calendar.js"></script>
+</body>
+</html>

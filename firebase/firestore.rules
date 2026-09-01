@@ -36,6 +36,58 @@ service cloud.firestore {
       return isFamilyParent() || ownsFamilyAccount(childId);
     }
 
+    function canManageSchoolCalendar(childId) {
+      return signedIn() && childId == 'francisca';
+    }
+
+    function validSchoolTest(childId) {
+      return request.resource.data.keys().hasAll([
+          'childId',
+          'subject',
+          'testDate',
+          'description',
+          'notes',
+          'createdAt',
+          'createdBy'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'childId',
+          'subject',
+          'testDate',
+          'description',
+          'notes',
+          'createdAt',
+          'createdBy',
+          'updatedAt',
+          'updatedBy'
+        ])
+        && request.resource.data.childId == childId
+        && request.resource.data.subject in [
+          'Matemática',
+          'Português',
+          'História e Geografia de Portugal',
+          'Educação Visual',
+          'Ciências Naturais',
+          'Inglês',
+          'Cidadania e Desenvolvimento',
+          'Técnicas de Dança',
+          'Expressão Criativa',
+          'Música'
+        ]
+        && request.resource.data.testDate is string
+        && request.resource.data.testDate.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 120
+        && request.resource.data.notes is string
+        && request.resource.data.notes.size() <= 1000
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.createdBy is string
+        && (!request.resource.data.keys().hasAny(['updatedAt'])
+          || request.resource.data.updatedAt is timestamp)
+        && (!request.resource.data.keys().hasAny(['updatedBy'])
+          || request.resource.data.updatedBy is string);
+    }
+
     function investmentsReleased() {
       return request.time >= timestamp.date(2027, 12, 21);
     }
@@ -244,6 +296,29 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Agenda escolar da Francisca. Datas de testes são strings date-only para
+    // que nunca mudem de dia por conversões de fuso horário.
+    match /family_school_calendars/{childId} {
+      allow read, write: if false;
+
+      match /tests/{testId} {
+        allow read: if canManageSchoolCalendar(childId);
+        allow create: if canManageSchoolCalendar(childId)
+          && validSchoolTest(childId)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && !request.resource.data.keys().hasAny(['updatedAt', 'updatedBy']);
+        allow update: if canManageSchoolCalendar(childId)
+          && validSchoolTest(childId)
+          && request.resource.data.childId == resource.data.childId
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.updatedBy == request.auth.uid
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if canManageSchoolCalendar(childId);
+      }
+    }
+
     // Investimentos: a Filipa só pode ler a partir de 21/12/2027.
     match /dca/{document=**} {
       allow read: if canReadInvestments();
@@ -331,7 +406,8 @@ service cloud.firestore {
           'family_finance_quotes',
           'family_finance_quote_history',
           'family_finance_meta',
-          'family_finance_audit'
+          'family_finance_audit',
+          'family_school_calendars'
         ]);
     }
   }

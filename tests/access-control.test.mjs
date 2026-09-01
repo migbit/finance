@@ -32,6 +32,7 @@ test('a Filipa gere finanças e consulta os dois espaços das filhas', () => {
   assert.equal(getModuleAccess(FILIPA_UID, 'gestao-financas', 'filipa', 0), 'write');
   assert.equal(getModuleAccess(FILIPA_UID, 'francisca-financas', 'francisca', 0), 'write');
   assert.equal(getModuleAccess(FILIPA_UID, 'leonor-financas', 'leonor', 0), 'write');
+  assert.equal(getModuleAccess(FILIPA_UID, 'francisca-calendario', 'francisca', 0), 'write');
 });
 
 test('liberta investimentos apenas para leitura em 21/12/2027', () => {
@@ -42,6 +43,7 @@ test('liberta investimentos apenas para leitura em 21/12/2027', () => {
 
 test('mantém acesso completo para os restantes utilizadores autenticados', () => {
   assert.equal(getModuleAccess('outro-uid', 'qualquer-modulo', 'qualquer-grupo', 0), 'write');
+  assert.equal(getModuleAccess('outro-uid', 'francisca-calendario', 'francisca', 0), 'write');
   assert.equal(getModuleAccess('', 'diversos', 'apartamentos', 0), 'none');
 });
 
@@ -54,11 +56,13 @@ test('cada filha acede apenas à sua própria página de finanças', () => {
   assert.equal(isChild(FRANCISCA_UID), true);
   assert.equal(isChild(LEONOR_UID), true);
   assert.equal(getModuleAccess(FRANCISCA_UID, 'francisca-financas', 'francisca'), 'write');
+  assert.equal(getModuleAccess(FRANCISCA_UID, 'francisca-calendario', 'francisca'), 'write');
   assert.equal(getModuleAccess(FRANCISCA_UID, 'leonor-financas', 'leonor'), 'none');
   assert.equal(getModuleAccess(FRANCISCA_UID, 'gestao-financas', 'miguel'), 'none');
   assert.equal(getModuleAccess(FRANCISCA_UID, 'faturas', 'apartamentos'), 'none');
   assert.equal(getModuleAccess(LEONOR_UID, 'leonor-financas', 'leonor'), 'write');
   assert.equal(getModuleAccess(LEONOR_UID, 'francisca-financas', 'francisca'), 'none');
+  assert.equal(getModuleAccess(LEONOR_UID, 'francisca-calendario', 'francisca'), 'write');
 });
 
 test('filtra grupos vazios e preserva apenas links autorizados', () => {

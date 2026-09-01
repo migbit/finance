@@ -81,7 +81,8 @@ const NAV_GROUPS = [
     label: '🌱 Francisca',
     key: 'francisca',
     links: [
-      { label: '💶 Finanças', key: 'francisca-financas', slug: 'modules/francisca-financas.html', module: true }
+      { label: '💶 Finanças', key: 'francisca-financas', slug: 'modules/francisca-financas.html', module: true },
+      { label: '🐾 Calendário', key: 'francisca-calendario', slug: 'modules/francisca-calendario.html', module: true }
     ]
   },
   {
@@ -126,6 +127,7 @@ const NAV_GROUPS = [
 
 const ACTIVE_KEY_MATCHERS = [
   { key: 'gestao-financas', patterns: ['gestao-financas'] },
+  { key: 'francisca-calendario', patterns: ['francisca-calendario'] },
   { key: 'francisca-financas', patterns: ['francisca-financas'] },
   { key: 'leonor-financas', patterns: ['leonor-financas'] },
   { key: 'filipa-ginasio', patterns: ['filipa-ginasio'] },

@@ -24,6 +24,10 @@ const FAMILY_FINANCE_MODULES = new Set([
   'gestao-financas'
 ]);
 
+const FAMILY_SHARED_MODULES = new Set([
+  'francisca-calendario'
+]);
+
 const CHILD_PROFILE_BY_UID = new Map([
   [FRANCISCA_UID, { id: 'francisca', groupKey: 'francisca', moduleKey: 'francisca-financas' }],
   [LEONOR_UID, { id: 'leonor', groupKey: 'leonor', moduleKey: 'leonor-financas' }]
@@ -64,7 +68,9 @@ export function getModuleAccess(uid, moduleKey, groupKey = '', now = Date.now())
 
   const childProfile = getChildProfile(uid);
   if (childProfile) {
-    return moduleKey === childProfile.moduleKey && groupKey === childProfile.groupKey
+    if (moduleKey === 'francisca-calendario' && groupKey === 'francisca') return 'write';
+    const ownsModule = moduleKey === childProfile.moduleKey;
+    return ownsModule && groupKey === childProfile.groupKey
       ? 'write'
       : 'none';
   }
@@ -75,6 +81,7 @@ export function getModuleAccess(uid, moduleKey, groupKey = '', now = Date.now())
   // should live below /users/{uid} or receive an explicit Firestore rule.
   if (groupKey === 'filipa' || FILIPA_BASE_MODULES.has(moduleKey)) return 'write';
   if (FAMILY_FINANCE_MODULES.has(moduleKey)) return 'write';
+  if (FAMILY_SHARED_MODULES.has(moduleKey)) return 'write';
   if (INVESTMENT_MODULES.has(moduleKey) && investmentsReleased(now)) return 'read';
   return 'none';
 }
