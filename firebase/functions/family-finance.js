@@ -64,9 +64,9 @@ const EXPENSE_CATEGORIES = new Set([
 
 const VAULT_PRODUCTS = Object.freeze([
   Object.freeze({ id: "vault_1", days: 1, annualRateBps: 100, label: "1 dia", educational: true }),
-  Object.freeze({ id: "vault_7", days: 7, annualRateBps: 200, label: "7 dias", educational: true }),
-  Object.freeze({ id: "vault_30", days: 30, annualRateBps: 300, label: "30 dias", educational: true }),
-  Object.freeze({ id: "vault_90", days: 90, annualRateBps: 400, label: "90 dias", educational: true }),
+  Object.freeze({ id: "vault_7", days: 7, annualRateBps: 150, label: "7 dias", educational: true }),
+  Object.freeze({ id: "vault_30", days: 30, annualRateBps: 250, label: "30 dias", educational: true }),
+  Object.freeze({ id: "vault_90", days: 90, annualRateBps: 350, label: "90 dias", educational: true }),
   Object.freeze({ id: "vault_365", days: 365, annualRateBps: 500, label: "1 ano", educational: true }),
 ]);
 const VAULT_PRODUCT_BY_DAYS = new Map(VAULT_PRODUCTS.map((product) => [product.days, product]));

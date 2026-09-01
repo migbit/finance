@@ -174,6 +174,13 @@ test("disponibiliza o cofre educativo de um dia", () => {
   assert.equal(normalized.termDays, 1);
 });
 
+test("aplica as taxas educativas definidas para cada prazo", () => {
+  assert.deepEqual(
+    VAULT_PRODUCTS.map(product => [product.days, product.annualRateBps]),
+    [[1, 100], [7, 150], [30, 250], [90, 350], [365, 500]],
+  );
+});
+
 test("preserva a reflexão necessidade/desejo apenas em despesas", () => {
   const expense = normalizeRequestPayload({
     kind: "expense",
