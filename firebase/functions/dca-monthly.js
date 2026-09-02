@@ -1,8 +1,11 @@
 const admin = require("firebase-admin");
 
 const ANNUAL_INTEREST_RATE = 0.02;
-const MONTHLY_VWCE = 120;
-const MONTHLY_AGGH = 30;
+const CONTRIBUTION_CHANGE_MONTH = "2026-10";
+const MONTHLY_CONTRIBUTIONS = {
+  previous: { vwce: 120, aggh: 30 },
+  current: { vwce: 150, aggh: 50 },
+};
 const ETF_SYMBOLS = { vwce: "VWCE.DE", aggh: "EUNA.DE" };
 
 function round(value, decimals = 2) {
@@ -19,6 +22,13 @@ function previousMonthRange(runDate) {
   const start = new Date(Date.UTC(currentStart.getUTCFullYear(), currentStart.getUTCMonth() - 1, 1));
   const end = new Date(currentStart.getTime() - 1);
   return { id: monthId(start), start, end, currentId: monthId(currentStart), currentStart };
+}
+
+function getMonthlyContributions(month) {
+  const plan = month >= CONTRIBUTION_CHANGE_MONTH
+    ? MONTHLY_CONTRIBUTIONS.current
+    : MONTHLY_CONTRIBUTIONS.previous;
+  return { ...plan };
 }
 
 function daysInRange(start, end) {
@@ -110,12 +120,13 @@ async function closePreviousMonthAndOpenCurrent({ firestore, apiKey, runDate = n
   const movements = await loadMovements(firestore, range.start, range.end);
   const openingBalance = Number(interestState.periodOpeningBalance ?? interestState.saldo) || 0;
   const interest = calculateDailyInterest(openingBalance, movements, range.start, range.end);
+  const monthlyContributions = getMonthlyContributions(range.currentId);
   const balanceAfterInterest = round(interest.closingBalanceBeforeInterest + interest.interest);
-  const balanceAfterPurchase = round(balanceAfterInterest - MONTHLY_VWCE - MONTHLY_AGGH);
+  const balanceAfterPurchase = round(balanceAfterInterest - monthlyContributions.vwce - monthlyContributions.aggh);
   const vwceSharesAtClose = Number(shares.vwce) || 0;
   const agghSharesAtClose = Number(shares.aggh) || 0;
-  const newVwceShares = round(vwceSharesAtClose + MONTHLY_VWCE / vwceQuote.price, 8);
-  const newAgghShares = round(agghSharesAtClose + MONTHLY_AGGH / agghQuote.price, 8);
+  const newVwceShares = round(vwceSharesAtClose + monthlyContributions.vwce / vwceQuote.price, 8);
+  const newAgghShares = round(agghSharesAtClose + monthlyContributions.aggh / agghQuote.price, 8);
   const closedAt = admin.firestore.FieldValue.serverTimestamp();
 
   await firestore.runTransaction(async (transaction) => {
@@ -172,7 +183,7 @@ async function closePreviousMonthAndOpenCurrent({ firestore, apiKey, runDate = n
       balanceAfterPurchase,
       sharesAtClose: { vwce: vwceSharesAtClose, aggh: agghSharesAtClose },
       prices: { vwce: vwceQuote, aggh: agghQuote },
-      purchase: { vwce: MONTHLY_VWCE, aggh: MONTHLY_AGGH },
+      purchase: monthlyContributions,
       sharesAfterPurchase: { vwce: newVwceShares, aggh: newAgghShares },
     }, { merge: true });
   });
@@ -184,6 +195,7 @@ module.exports = {
   ANNUAL_INTEREST_RATE,
   calculateDailyInterest,
   closePreviousMonthAndOpenCurrent,
+  getMonthlyContributions,
   previousMonthRange,
   selectLastClose,
 };

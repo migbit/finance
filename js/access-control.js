@@ -14,7 +14,6 @@ const FILIPA_BASE_MODULES = new Set([
 
 const INVESTMENT_MODULES = new Set([
   'dca',
-  'dca-revolut',
   'crypto'
 ]);
 

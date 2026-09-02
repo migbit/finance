@@ -66,7 +66,6 @@ const NAV_GROUPS = [
     key: 'investimentos',
     links: [
       { label: '📈 DCA TR', key: 'dca', slug: 'modules/dca.html', module: true },
-      { label: '📈 DCA Revolut', key: 'dca-revolut', slug: 'modules/dca-revolut.html', module: true },
       { label: '🚀 Cripto', key: 'crypto', slug: 'modules/crypto.html', module: true }
     ]
   },
@@ -132,7 +131,6 @@ const ACTIVE_KEY_MATCHERS = [
   { key: 'leonor-financas', patterns: ['leonor-financas'] },
   { key: 'filipa-ginasio', patterns: ['filipa-ginasio'] },
   { key: 'filipa-alimentacao', patterns: ['filipa-alimentacao'] },
-  { key: 'dca-revolut', patterns: ['dca-revolut'] },
   { key: 'analisev4', patterns: ['analisev4'] },
   { key: 'boletins', patterns: ['boletins'] },
   { key: 'faturas-em-falta', patterns: ['faturas-em-falta'] },

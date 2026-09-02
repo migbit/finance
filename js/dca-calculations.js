@@ -1,6 +1,8 @@
 // js/dca-calculations.js - Calculation logic for DCA
 
-import { START_YM, TAXA_ANUAL_FIXA, monthsBetween, ymMin } from './dca-core.js';
+import {
+  START_YM, TAXA_ANUAL_FIXA, getPlannedContributions, monthsBetween, ymMin
+} from './dca-core.js';
 
 // ---------- Helpers ----------
 const pad = (n) => String(n).padStart(2,'0');
@@ -44,7 +46,6 @@ export function diasNoMes(refYYYYMM) {
 
 // ---------- Model Building ----------
 export function buildModel(docs, params, liveData = null) {
-  const { pctSWDA, pctAGGH, monthlyContribution } = params;
   const rows = [];
 
   const now = new Date();
@@ -61,11 +62,14 @@ export function buildModel(docs, params, liveData = null) {
     const isCurrent = (rowYM.y === currentYM.y && rowYM.m === currentYM.m);
     const isClosed = d.snapshot_status === 'closed';
 
+    const planned = getPlannedContributions(rowYM, params);
     const manualMonthly = asNum(d.manual_monthly_contribution);
-    const baseMonthly = manualMonthly != null ? manualMonthly : monthlyContribution;
+    const baseMonthly = manualMonthly != null ? manualMonthly : planned.total;
+    const plannedSWPct = planned.total > 0 ? planned.swda / planned.total : 0;
+    const plannedAGPct = planned.total > 0 ? planned.aggh / planned.total : 0;
 
-    const baseSW = roundMoney(baseMonthly * (pctSWDA/100));
-    const baseAG = roundMoney(baseMonthly * (pctAGGH/100));
+    const baseSW = roundMoney(baseMonthly * plannedSWPct);
+    const baseAG = roundMoney(baseMonthly * plannedAGPct);
 
     const manualSWOverride = asNum(d.manual_inv_swda);
     const manualAGOverride = asNum(d.manual_inv_aggh);
@@ -213,12 +217,10 @@ export function calculateProgress(params) {
   const nowYM = { y: now.getFullYear(), m: now.getMonth() + 1 };
   const clampedEnd = ymMin(params.endYM, nowYM);
   
-  const totalMonths = monthsBetween(START_YM, params.endYM).length;
-  const totalTarget = totalMonths * params.monthlyContribution;
-
-  let invested = 0;
-  const investedMonths = monthsBetween(START_YM, clampedEnd).length;
-  invested = investedMonths * params.monthlyContribution;
+  const plannedTotal = (endYM) => monthsBetween(START_YM, endYM)
+    .reduce((sum, ym) => sum + getPlannedContributions(ym, params).total, 0);
+  const totalTarget = plannedTotal(params.endYM);
+  const invested = plannedTotal(clampedEnd);
 
   // Calculate months remaining
   const monthsRemaining = monthsBetween(nowYM, params.endYM).length;
@@ -644,13 +646,16 @@ function calculateAnnualizedTWR(rows, twrPercent, liveData) {
 
 
 // ---------- Rebalancing Calculations ----------
-export function calculateRebalancingSuggestions(rows) {
+export function calculateRebalancingSuggestions(rows, params = {}) {
   if (!rows || rows.length === 0) {
     return null;
   }
   
   const tolerance = 5;
-  const targets = { VWCE: 80, AGGH: 20 };
+  const targets = {
+    VWCE: Number(params.pctSWDA ?? 75),
+    AGGH: Number(params.pctAGGH ?? 25)
+  };
   
   const lastFilled = [...rows].reverse().find(row => row.hasCurrent && (row.totalNow || 0) > 0);
   if (!lastFilled || !lastFilled.totalNow) {

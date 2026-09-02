@@ -179,8 +179,8 @@ function updateJuroDisplay() {
     const lastClosed = state.liveData.lastClosedMonth;
     const lastInterest = state.liveData.lastMonthlyInterest;
     automationStatus.textContent = lastClosed
-      ? `Último fecho automático: ${lastClosed}${Number.isFinite(lastInterest) ? ` · juro capitalizado: ${lastInterest.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : ''}. Próximo fecho no dia 1 às 01:10, antes da compra mensal.`
-      : 'Fecho automático no dia 1 às 01:10: fecha o mês, capitaliza o juro e só depois aplica 120 € em VWCE e 30 € em AGGH.';
+      ? `Último fecho automático: ${lastClosed}${Number.isFinite(lastInterest) ? ` · juro capitalizado: ${lastInterest.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : ''}. Próximo fecho no dia 1 às 01:10, antes da compra mensal. Desde outubro de 2026: 150 € em VWCE e 50 € em AGGH.`
+      : 'Fecho automático no dia 1 às 01:10: fecha o mês, capitaliza o juro e faz a compra mensal. Desde outubro de 2026: 150 € em VWCE e 50 € em AGGH.';
   }
 
   // Calculate total accumulated juro from table
@@ -713,7 +713,7 @@ async function boot(skipParamUI = false) {
     updateAdvancedMetrics(advancedMetrics);
 
     // Calculate rebalancing suggestions
-    const rebalancingData = calculateRebalancingSuggestions(rows);
+    const rebalancingData = calculateRebalancingSuggestions(rows, state.params);
     updateRebalancingSuggestions(rebalancingData);
     maybeSendRebalancingAlert(rebalancingData);
 

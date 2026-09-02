@@ -9,11 +9,16 @@ import {
 
 // ---------- Constants ----------
 export const START_YM = { y: 2025, m: 9 };
+export const CONTRIBUTION_CHANGE_YM = { y: 2026, m: 10 };
+export const HISTORICAL_MONTHLY_CONTRIBUTIONS = {
+  swda: 120,
+  aggh: 30
+};
 export const DEFAULTS = {
   endYM: { y: 2040, m: 9 },
-  pctSWDA: 80,
-  pctAGGH: 20,
-  monthlyContribution: 150,
+  pctSWDA: 75,
+  pctAGGH: 25,
+  monthlyContribution: 200,
   scenarioRates: {
     conservative: 3,
     moderate: 5,
@@ -102,11 +107,12 @@ export async function loadParams({ readOnly = false } = {}) {
       // Check for legacy percentages and upgrade
       const near = (a,b) => Math.abs(a - b) < 0.01;
       const legacy55_45 = near(normalized.pctSWDA, 55) && near(normalized.pctAGGH, 45);
-      const legacy75_25 = near(normalized.pctSWDA, 75) && near(normalized.pctAGGH, 25);
+      const legacy75_25 = near(normalized.pctSWDA, 75) && near(normalized.pctAGGH, 25) && Math.abs(normalized.monthlyContribution - 150) < 0.01;
+      const previousPlan = near(normalized.pctSWDA, 80) && near(normalized.pctAGGH, 20) && Math.abs(normalized.monthlyContribution - 150) < 0.01;
       const outdatedPlan = near(normalized.pctSWDA, 79.61) && near(normalized.pctAGGH, 20.39) && Math.abs(normalized.monthlyContribution - 152) < 0.01;
       const old152WithNewPct = near(normalized.pctSWDA, 80) && near(normalized.pctAGGH, 20) && Math.abs(normalized.monthlyContribution - 152) < 0.01;
       
-      if (legacy55_45 || legacy75_25 || outdatedPlan || old152WithNewPct) {
+      if (legacy55_45 || legacy75_25 || previousPlan || outdatedPlan || old152WithNewPct) {
         const upgraded = { ...normalized, pctSWDA: DEFAULTS.pctSWDA, pctAGGH: DEFAULTS.pctAGGH, monthlyContribution: DEFAULTS.monthlyContribution };
         if (!readOnly) await saveParams(upgraded);
         return upgraded;
@@ -200,6 +206,21 @@ export function monthsBetween(a, b) {
 export function ymCompare(a, b) {
   if (a.y !== b.y) return a.y - b.y;
   return a.m - b.m;
+}
+
+export function getPlannedContributions(ym, params = DEFAULTS) {
+  if (ymCompare(ym, CONTRIBUTION_CHANGE_YM) < 0) {
+    return {
+      swda: HISTORICAL_MONTHLY_CONTRIBUTIONS.swda,
+      aggh: HISTORICAL_MONTHLY_CONTRIBUTIONS.aggh,
+      total: HISTORICAL_MONTHLY_CONTRIBUTIONS.swda + HISTORICAL_MONTHLY_CONTRIBUTIONS.aggh
+    };
+  }
+
+  const total = Number(params.monthlyContribution) || 0;
+  const swda = Math.round(total * (Number(params.pctSWDA) || 0)) / 100;
+  const aggh = Math.round(total * (Number(params.pctAGGH) || 0)) / 100;
+  return { swda, aggh, total: Math.round((swda + aggh) * 100) / 100 };
 }
 
 export function ymMin(a, b) {

@@ -1,12 +1,23 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { calculateDailyInterest, previousMonthRange, selectLastClose } = require("./dca-monthly");
+const {
+  calculateDailyInterest,
+  getMonthlyContributions,
+  previousMonthRange,
+  selectLastClose,
+} = require("./dca-monthly");
 
 test("identifica o mês anterior antes de abrir o novo mês", () => {
   const range = previousMonthRange(new Date("2026-08-01T00:10:00Z"));
   assert.equal(range.id, "2026-07");
   assert.equal(range.currentId, "2026-08");
   assert.equal(range.end.toISOString(), "2026-07-31T23:59:59.999Z");
+});
+
+test("altera as contribuições mensais em outubro de 2026", () => {
+  assert.deepEqual(getMonthlyContributions("2026-09"), { vwce: 120, aggh: 30 });
+  assert.deepEqual(getMonthlyContributions("2026-10"), { vwce: 150, aggh: 50 });
+  assert.deepEqual(getMonthlyContributions("2040-09"), { vwce: 150, aggh: 50 });
 });
 
 test("calcula juro diário e respeita uma alteração de saldo a meio do mês", () => {
