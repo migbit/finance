@@ -3163,7 +3163,7 @@ class CryptoPortfolioApp {
       return; 
     }
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+    const doc = new jsPDF({ orientation:'landscape', unit:'pt', format:'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
 
     const now = new Date();
@@ -3180,17 +3180,50 @@ class CryptoPortfolioApp {
     }
 
     const mode = this.state.currency;
-    const head = (mode === 'EUR')
-      ? [['Ativo','Quantidade','Valor (EUR)']]
-      : [['Ativo','Quantidade','Valor ($)']];
+    const currencyLabel = mode === 'EUR' ? 'EUR' : '$';
+    const formatMoney = value => mode === 'EUR'
+      ? FORMATTERS.eur.format(value)
+      : `$${FORMATTERS.usd.format(value)}`;
+    const formatSignedMoney = value => {
+      const sign = value >= 0 ? '+' : '-';
+      return `${sign}${formatMoney(Math.abs(value))}`;
+    };
+    const head = [[
+      'Ativo',
+      'Quantidade',
+      `Valor (${currencyLabel})`,
+      `Investido (${currencyLabel})`,
+      `Realizado (${currencyLabel})`,
+      'ROI',
+      'APY',
+      'Desalocar em dias',
+      'Localiza\u00e7\u00e3o'
+    ]];
 
-    const body = rows.map(r => (
-      mode === 'EUR'
-        ? [ r.asset, FORMATTERS.quantity.format(r.quantity), FORMATTERS.eur.format(r.valueEUR||0) ]
-        : [ r.asset, FORMATTERS.quantity.format(r.quantity), `$${FORMATTERS.usd.format(r.valueUSDT||0)}` ]
-    ));
+    const body = rows.map(r => {
+      const invested = this.getAssetInvestedAmounts(r.asset, r.location);
+      const value = mode === 'EUR' ? (r.valueEUR || 0) : (r.valueUSDT || 0);
+      const investedValue = mode === 'EUR' ? invested.eur : invested.usd;
+      const realized = value - investedValue;
+      const roi = invested.eur > 0
+        ? (((r.valueEUR || 0) - invested.eur) / invested.eur * 100)
+        : 0;
+      const deallocate = String(this.getDeallocateValue(r.asset, r.location) || '').trim();
 
-    const widths = [110, 95, 120];
+      return [
+        r.asset,
+        FORMATTERS.quantity.format(r.quantity),
+        formatMoney(value),
+        formatMoney(investedValue),
+        formatSignedMoney(realized),
+        `${roi >= 0 ? '+' : ''}${FORMATTERS.percent.format(roi)}%`,
+        this.formatApy(this.getApyValue(r.asset, r.location)),
+        deallocate || '--',
+        this.canonicalizeLocation(r.location || 'Other')
+      ];
+    });
+
+    const widths = [60, 85, 90, 90, 90, 55, 55, 95, 140];
     const totalTableWidth = widths.reduce((a,b)=>a+b,0);
     const marginLeft = Math.max(20, Math.floor((pageWidth - totalTableWidth) / 2));
     const margin = { left: marginLeft, right: marginLeft };
@@ -3207,11 +3240,13 @@ class CryptoPortfolioApp {
       theme: 'grid',
       styles: {
         font: 'helvetica',
-        fontSize: 9,
-        cellPadding: 3,
+        fontSize: 8,
+        cellPadding: 2.5,
         lineColor: [200, 200, 200],
         lineWidth: 0.2,
-        halign: 'center'
+        halign: 'center',
+        valign: 'middle',
+        overflow: 'linebreak'
       },
       headStyles: {
         fillColor: [245, 245, 245],
@@ -3224,7 +3259,13 @@ class CryptoPortfolioApp {
       columnStyles: {
         0: { cellWidth: widths[0] },
         1: { cellWidth: widths[1], halign: 'center' },
-        2: { cellWidth: widths[2], halign: 'center' }
+        2: { cellWidth: widths[2], halign: 'center' },
+        3: { cellWidth: widths[3], halign: 'center' },
+        4: { cellWidth: widths[4], halign: 'center' },
+        5: { cellWidth: widths[5], halign: 'center' },
+        6: { cellWidth: widths[6], halign: 'center' },
+        7: { cellWidth: widths[7], halign: 'center' },
+        8: { cellWidth: widths[8], halign: 'left' }
       }
     });
 
@@ -3236,6 +3277,11 @@ class CryptoPortfolioApp {
     const realUSD = (t.usdt || 0) - invUSD;
 
     let y = (doc.lastAutoTable?.finalY || 70) + 25;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (y > pageHeight - 30) {
+      doc.addPage();
+      y = 40;
+    }
     const leftX = marginLeft;
 
     doc.setFont('helvetica', 'bold');
@@ -3244,8 +3290,7 @@ class CryptoPortfolioApp {
     if (mode === 'EUR') {
       const part1 = `Total: ${FORMATTERS.eur.format(t.eur || 0)}   `;
       const part2 = `Investido: ${FORMATTERS.eur.format(invEUR)}   `;
-      const sign = realEUR >= 0 ? '+' : 'âˆ’';
-      const part3 = `Realizado: ${sign}${FORMATTERS.eur.format(Math.abs(realEUR))}`;
+      const part3 = `Realizado: ${formatSignedMoney(realEUR)}`;
 
       doc.setTextColor(0, 0, 0);
       doc.text(part1, leftX, y);
@@ -3259,8 +3304,7 @@ class CryptoPortfolioApp {
     } else {
       const part1 = `Total: $${FORMATTERS.usd.format(t.usdt || 0)}   `;
       const part2 = `Investido: $${FORMATTERS.usd.format(invUSD)}   `;
-      const sign = realUSD >= 0 ? '+' : 'âˆ’';
-      const part3 = `Realizado: ${sign}$${FORMATTERS.usd.format(Math.abs(realUSD))}`;
+      const part3 = `Realizado: ${formatSignedMoney(realUSD)}`;
 
       doc.setTextColor(0, 0, 0);
       doc.text(part1, leftX, y);
