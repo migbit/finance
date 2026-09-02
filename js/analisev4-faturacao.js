@@ -897,7 +897,6 @@ function buildOccupancyYearTable(years, apartments) {
   const occupancy = aggregateOccupancyByYear(apartments);
   const currentYear = getCurrentDataYear();
   const previousYear = currentYear - 1;
-  const currentMonth = new Date().getMonth() + 1;
   const visibleYears = years.filter((year) => year >= OCCUPANCY_BASE_YEAR);
   const showYearDiff = visibleYears.includes(currentYear) && visibleYears.includes(previousYear);
   const diffHeading = showYearDiff ? `<th>Δ ${currentYear} vs ${previousYear}</th>` : '';
@@ -906,29 +905,37 @@ function buildOccupancyYearTable(years, apartments) {
     const monthValues = visibleYears.map((year) => occupancy[year]?.[monthIdx] || 0);
     const bestValue = Math.max(0, ...monthValues);
     const cells = visibleYears.map((year) => {
-      const empty = monthIdx + 1 > currentMonth;
+      const empty = isFutureMonthInCurrentYear(year, monthIdx + 1);
       const value = occupancy[year]?.[monthIdx] || 0;
       return `<td class="${bestValueClass(value, bestValue, empty)}">${empty ? '—' : formatPercent(value)}</td>`;
     }).join('');
     const diff = showYearDiff
-      ? occupancyDiffCell((occupancy[currentYear]?.[monthIdx] || 0) - (occupancy[previousYear]?.[monthIdx] || 0), monthIdx + 1 > currentMonth)
+      ? occupancyDiffCell(
+        (occupancy[currentYear]?.[monthIdx] || 0) - (occupancy[previousYear]?.[monthIdx] || 0),
+        isFutureMonthInCurrentYear(currentYear, monthIdx + 1)
+      )
       : '';
     return `<tr><td>${label}</td>${cells}${diff}</tr>`;
   }).join('');
-  const totalValues = visibleYears.map((year) => occupancyYtdForYear(apartments, year));
+  const totalValues = visibleYears.map((year) => occupancyTableTotalForYear(apartments, year));
   const bestTotal = Math.max(0, ...totalValues);
   const totals = visibleYears.map((year, index) => {
     const value = totalValues[index];
     return `<td class="${bestValueClass(value, bestTotal)}"><strong>${formatPercent(value)}</strong></td>`;
   }).join('');
   const totalDiff = showYearDiff
-    ? occupancyDiffCell(occupancyYtdForYear(apartments, currentYear) - occupancyYtdForYear(apartments, previousYear), false, true)
+    ? occupancyDiffCell(
+      occupancyTableTotalForYear(apartments, currentYear) - occupancyTableTotalForYear(apartments, previousYear),
+      false,
+      true
+    )
     : '';
+  const totalLabel = tableTotalLabel(visibleYears);
 
   return `
     <table class="media-faturacao faturacao-v4-table">
       <thead><tr><th>Mês</th>${heading}</tr></thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}${totalDiff}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>${totalLabel}</strong></td>${totals}${totalDiff}</tr></tbody>
     </table>
   `;
 }
@@ -942,23 +949,22 @@ function occupancyDiffCell(diff, empty = false, strong = false) {
 function buildOccupancyCompareTable(years) {
   const occ123 = aggregateOccupancyByYear(['123']);
   const occ1248 = aggregateOccupancyByYear(['1248']);
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
   const visibleYears = years.filter((year) => year >= OCCUPANCY_BASE_YEAR);
   const heading = visibleYears.map((year) => `<th colspan="3">${year}</th>`).join('');
   const subHeading = visibleYears.map(() => '<th>123</th><th>1248</th><th>Δ</th>').join('');
   const rows = MONTH_LABELS.map((label, monthIdx) => {
     const cells = visibleYears.map((year) => {
-      const empty = monthIdx + 1 > currentMonth;
+      const empty = isFutureMonthInCurrentYear(year, monthIdx + 1);
       return occupancyCompareCells(occ123[year]?.[monthIdx] || 0, occ1248[year]?.[monthIdx] || 0, false, empty);
     }).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
   }).join('');
   const totals = visibleYears.map((year) => {
-    const value123 = occupancyYtdForYear(['123'], year);
-    const value1248 = occupancyYtdForYear(['1248'], year);
+    const value123 = occupancyTableTotalForYear(['123'], year);
+    const value1248 = occupancyTableTotalForYear(['1248'], year);
     return occupancyCompareCells(value123, value1248, true);
   }).join('');
+  const totalLabel = tableTotalLabel(visibleYears);
 
   return `
     <table class="media-faturacao faturacao-v4-table faturacao-v4-compare-table">
@@ -966,7 +972,7 @@ function buildOccupancyCompareTable(years) {
         <tr><th rowspan="2">Mês</th>${heading}</tr>
         <tr>${subHeading}</tr>
       </thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>${totalLabel}</strong></td>${totals}</tr></tbody>
     </table>
   `;
 }
@@ -987,7 +993,6 @@ function occupancyCompareCells(value123, value1248, strong = false, empty = fals
 
 function buildCleaningTable(years, apartments) {
   const stats = aggregateCleaningStats(apartments);
-  const currentMonth = new Date().getMonth() + 1;
   const visibleYears = years.filter((year) =>
     (stats[year] || []).some((month) => month.count > 0)
   );
@@ -1002,7 +1007,7 @@ function buildCleaningTable(years, apartments) {
     const maxCount = Math.max(0, ...monthStats.map((month) => month.count));
     const maxTotal = Math.max(0, ...monthStats.map((month) => month.total));
     const cells = visibleYears.map((year) => {
-      if (monthIdx + 1 > currentMonth) return '<td>—</td><td>—</td>';
+      if (isFutureMonthInCurrentYear(year, monthIdx + 1)) return '<td>—</td><td>—</td>';
       const month = stats[year][monthIdx];
       return `
         <td class="${bestValueClass(month.count, maxCount)}">${formatNumber(month.count)}</td>
@@ -1012,7 +1017,7 @@ function buildCleaningTable(years, apartments) {
     return `<tr><td>${label}</td>${cells}</tr>`;
   }).join('');
   const yearTotals = visibleYears.map((year) =>
-    stats[year].slice(0, currentMonth).reduce((summary, month) => ({
+    stats[year].slice(0, tableMonthLimit(year)).reduce((summary, month) => ({
       count: summary.count + month.count,
       value: summary.value + month.total
     }), { count: 0, value: 0 })
@@ -1025,6 +1030,7 @@ function buildCleaningTable(years, apartments) {
       <td class="${bestValueClass(total.value, maxTotalValue)}"><strong>${formatEuro(total.value)}</strong></td>
     `;
   }).join('');
+  const totalLabel = tableTotalLabel(visibleYears);
 
   return `
     <table class="media-faturacao faturacao-v4-table">
@@ -1032,7 +1038,7 @@ function buildCleaningTable(years, apartments) {
         <tr><th rowspan="2">Mês</th>${heading}</tr>
         <tr>${subHeading}</tr>
       </thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>${totalLabel}</strong></td>${totals}</tr></tbody>
     </table>
   `;
 }
@@ -1040,7 +1046,6 @@ function buildCleaningTable(years, apartments) {
 function buildCleaningCompareTable(years) {
   const stats123 = aggregateCleaningStats(['123']);
   const stats1248 = aggregateCleaningStats(['1248']);
-  const currentMonth = new Date().getMonth() + 1;
   const visibleYears = years.filter((year) =>
     (stats123[year] || []).some((month) => month.count > 0)
     || (stats1248[year] || []).some((month) => month.count > 0)
@@ -1055,7 +1060,7 @@ function buildCleaningCompareTable(years) {
     .join('');
   const rows = MONTH_LABELS.map((label, monthIdx) => {
     const cells = visibleYears.map((year) => {
-      if (monthIdx + 1 > currentMonth) {
+      if (isFutureMonthInCurrentYear(year, monthIdx + 1)) {
         return '<td>—</td><td>—</td><td>—</td><td>—</td>';
       }
       const apt123 = stats123[year][monthIdx];
@@ -1072,8 +1077,9 @@ function buildCleaningCompareTable(years) {
     return `<tr><td>${label}</td>${cells}</tr>`;
   }).join('');
   const totals = visibleYears.map((year) => {
-    const apt123 = cleaningYearTotal(stats123[year].slice(0, currentMonth));
-    const apt1248 = cleaningYearTotal(stats1248[year].slice(0, currentMonth));
+    const monthLimit = tableMonthLimit(year);
+    const apt123 = cleaningYearTotal(stats123[year].slice(0, monthLimit));
+    const apt1248 = cleaningYearTotal(stats1248[year].slice(0, monthLimit));
     const countDiff = apt123.count - apt1248.count;
     const totalDiff = apt123.total - apt1248.total;
     return `
@@ -1083,6 +1089,7 @@ function buildCleaningCompareTable(years) {
       <td class="faturacao-v4-cell-1248 ${totalDiff < 0 ? 'faturacao-v4-best' : ''}"><strong>${formatEuro(apt1248.total)}</strong></td>
     `;
   }).join('');
+  const totalLabel = tableTotalLabel(visibleYears);
 
   return `
     <table class="media-faturacao faturacao-v4-table faturacao-v4-compare-table">
@@ -1090,7 +1097,7 @@ function buildCleaningCompareTable(years) {
         <tr><th rowspan="2">Mês</th>${heading}</tr>
         <tr>${subHeading}</tr>
       </thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>${totalLabel}</strong></td>${totals}</tr></tbody>
     </table>
   `;
 }
@@ -1106,37 +1113,41 @@ function buildYearTable(years, apartments) {
   const monthly = aggregateMonthlyForChart(apartments);
   const currentYear = getCurrentDataYear();
   const previousYear = currentYear - 1;
-  const currentMonth = new Date().getMonth() + 1;
   const showYearDiff = years.includes(currentYear) && years.includes(previousYear);
   const diffHeading = showYearDiff ? `<th>Δ ${currentYear} vs ${previousYear}</th>` : '';
   const heading = years.map((year) => `<th>${year}</th>`).join('') + diffHeading;
   const rows = MONTH_LABELS.map((label, monthIdx) => {
-    const empty = monthIdx + 1 > currentMonth;
     const monthValues = years.map((year) => monthly[year]?.[monthIdx] || 0);
     const bestValue = Math.max(0, ...monthValues);
     const cells = years.map((year) => {
+      const empty = isFutureMonthInCurrentYear(year, monthIdx + 1);
       const value = monthly[year]?.[monthIdx] || 0;
       return `<td class="${bestValueClass(value, bestValue, empty)}">${empty ? '—' : formatEuro(value)}</td>`;
     }).join('');
     const diff = showYearDiff
-      ? yearDiffCell((monthly[currentYear]?.[monthIdx] || 0) - (monthly[previousYear]?.[monthIdx] || 0), false, monthIdx + 1 > currentMonth)
+      ? yearDiffCell(
+        (monthly[currentYear]?.[monthIdx] || 0) - (monthly[previousYear]?.[monthIdx] || 0),
+        false,
+        isFutureMonthInCurrentYear(currentYear, monthIdx + 1)
+      )
       : '';
     return `<tr><td>${label}</td>${cells}${diff}</tr>`;
   }).join('');
-  const totalValues = years.map((year) => sumUntilMonth(monthly[year], currentMonth));
+  const totalValues = years.map((year) => sumUntilMonth(monthly[year], tableMonthLimit(year)));
   const bestTotal = Math.max(0, ...totalValues);
   const totals = years.map((year, index) => {
     const total = totalValues[index];
     return `<td class="${bestValueClass(total, bestTotal)}"><strong>${formatEuro(total)}</strong></td>`;
   }).join('');
-  const currentYtd = sumUntilMonth(monthly[currentYear], currentMonth);
-  const previousYtd = sumUntilMonth(monthly[previousYear], currentMonth);
-  const totalDiff = showYearDiff ? yearDiffCell(currentYtd - previousYtd, true) : '';
+  const currentTotal = sumUntilMonth(monthly[currentYear], tableMonthLimit(currentYear));
+  const previousTotal = sumUntilMonth(monthly[previousYear], tableMonthLimit(previousYear));
+  const totalDiff = showYearDiff ? yearDiffCell(currentTotal - previousTotal, true) : '';
+  const totalLabel = tableTotalLabel(years);
 
   return `
     <table class="media-faturacao faturacao-v4-table">
       <thead><tr><th>Mês</th>${heading}</tr></thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}${totalDiff}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>${totalLabel}</strong></td>${totals}${totalDiff}</tr></tbody>
     </table>
   `;
 }
@@ -1167,24 +1178,24 @@ function yearDiffCell(diff, strong = false, empty = false) {
 function buildCompareTable(years) {
   const monthly123 = aggregateMonthlyForChart(['123']);
   const monthly1248 = aggregateMonthlyForChart(['1248']);
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
   const heading = years.map((year) => `<th colspan="3">${year}</th>`).join('');
   const subHeading = years.map(() => '<th>123</th><th>1248</th><th>Δ</th>').join('');
   const rows = MONTH_LABELS.map((label, monthIdx) => {
     const cells = years.map((year) => {
       const value123 = monthly123[year]?.[monthIdx] || 0;
       const value1248 = monthly1248[year]?.[monthIdx] || 0;
-      const isFuture = monthIdx + 1 > currentMonth;
+      const isFuture = isFutureMonthInCurrentYear(year, monthIdx + 1);
       return compareCells(value123, value1248, false, isFuture);
     }).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
   }).join('');
   const totals = years.map((year) => {
-    const total123 = sumUntilMonth(monthly123[year], currentMonth);
-    const total1248 = sumUntilMonth(monthly1248[year], currentMonth);
+    const monthLimit = tableMonthLimit(year);
+    const total123 = sumUntilMonth(monthly123[year], monthLimit);
+    const total1248 = sumUntilMonth(monthly1248[year], monthLimit);
     return compareCells(total123, total1248, true);
   }).join('');
+  const totalLabel = tableTotalLabel(years);
 
   return `
     <table class="media-faturacao faturacao-v4-table faturacao-v4-compare-table">
@@ -1192,7 +1203,7 @@ function buildCompareTable(years) {
         <tr><th rowspan="2">Mês</th>${heading}</tr>
         <tr>${subHeading}</tr>
       </thead>
-      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>YTD</strong></td>${totals}</tr></tbody>
+      <tbody>${rows}<tr class="faturacao-v4-total-row"><td><strong>${totalLabel}</strong></td>${totals}</tr></tbody>
     </table>
   `;
 }
@@ -1271,8 +1282,8 @@ function aggregateMonthlyForChart(apartments) {
     if (!allow.has(entry.apartamento)) return;
     if (entry.year === currentYear) {
       if (entry.month > currentMonth) return;
+      if (entry.month === currentMonth && entry.day > currentDay) return;
     }
-    if (entry.month === currentMonth && entry.day > currentDay) return;
     if (!result[entry.year]) result[entry.year] = Array(12).fill(0);
     result[entry.year][entry.month - 1] += entry.amount;
   });
@@ -1315,7 +1326,7 @@ function aggregateCleaningByYear(apartments) {
     const value = Number(row.taxaLimpeza || 0);
     if (!result[year] || !isValidMonth(month) || value <= 0) return;
     if (year === currentYear && month > currentMonth) return;
-    if (month === currentMonth && day != null && day > currentDay) return;
+    if (year === currentYear && month === currentMonth && day != null && day > currentDay) return;
     result[year][month - 1] += value;
   });
   return result;
@@ -1338,7 +1349,7 @@ function aggregateCleaningStats(apartments) {
     const value = Number(row.taxaLimpeza || 0);
     if (!result[year] || !isValidMonth(month) || value <= 0) return;
     if (year === currentYear && month > currentMonth) return;
-    if (month === currentMonth && day != null && day > currentDay) return;
+    if (year === currentYear && month === currentMonth && day != null && day > currentDay) return;
     result[year][month - 1].count += 1;
     result[year][month - 1].total += value;
   });
@@ -1398,8 +1409,8 @@ function aggregateOccupiedByYear(apartments) {
     if (!allow.has(entry.apartamento)) return;
     if (entry.year === currentYear) {
       if (entry.month > currentMonth) return;
+      if (entry.month === currentMonth && entry.day > currentDay) return;
     }
-    if (entry.month === currentMonth && entry.day > currentDay) return;
     if (entry.year < OCCUPANCY_BASE_YEAR) return;
     occupiedDays.add(`${entry.apartamento}-${entry.year}-${entry.month}-${entry.day}`);
   });
@@ -1416,15 +1427,14 @@ function aggregateOccupiedByYear(apartments) {
 function availableNights(year, month, apartmentCount) {
   const now = new Date();
   let days = daysInMonth(year, month);
-  if (month === now.getMonth() + 1) {
+  if (Number(year) === now.getFullYear() && month === now.getMonth() + 1) {
     days = Math.min(days, now.getDate());
   }
   return days * apartmentCount;
 }
 
-function occupancyYtdForYear(apartments, year) {
-  const now = new Date();
-  const monthLimit = now.getMonth() + 1;
+function occupancyTableTotalForYear(apartments, year) {
+  const monthLimit = tableMonthLimit(year);
   const occupied = aggregateOccupiedByYear(apartments)[year] || [];
   let occupiedTotal = 0;
   let availableTotal = 0;
@@ -1433,6 +1443,21 @@ function occupancyYtdForYear(apartments, year) {
     availableTotal += availableNights(Number(year), month, apartments.length);
   }
   return computeOccupancyPercent(occupiedTotal, availableTotal);
+}
+
+function isFutureMonthInCurrentYear(year, month) {
+  const now = new Date();
+  return Number(year) === now.getFullYear() && Number(month) > now.getMonth() + 1;
+}
+
+function tableMonthLimit(year) {
+  const now = new Date();
+  return Number(year) === now.getFullYear() ? now.getMonth() + 1 : 12;
+}
+
+function tableTotalLabel(years) {
+  const currentYear = new Date().getFullYear();
+  return years.some((year) => Number(year) === currentYear) ? 'Total (ano atual YTD)' : 'Total';
 }
 
 function formatPercent(value) {
