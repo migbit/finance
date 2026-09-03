@@ -45,7 +45,7 @@ export function diasNoMes(refYYYYMM) {
 }
 
 // ---------- Model Building ----------
-export function buildModel(docs, params, liveData = null) {
+export function buildModel(docs, params, liveData = null, reinforcements = [], closures = []) {
   const rows = [];
 
   const now = new Date();
@@ -56,13 +56,46 @@ export function buildModel(docs, params, liveData = null) {
   let investedCumAGGH = 0;
 
   const months = docs.sort((a,b) => a.id.localeCompare(b.id));
+  const reinforcementsByMonth = new Map();
+  (reinforcements || []).filter(item => (item.status || 'active') === 'active').forEach(item => {
+    const month = item.month || String(item.date || '').slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(month)) return;
+    const current = reinforcementsByMonth.get(month) || { total: 0, swda: 0, aggh: 0, count: 0 };
+    const swda = Number(item.vwceAmount ?? (Number(item.vwceAmountCents) / 100)) || 0;
+    const aggh = Number(item.agghAmount ?? (Number(item.agghAmountCents) / 100)) || 0;
+    current.swda = roundMoney(current.swda + swda);
+    current.aggh = roundMoney(current.aggh + aggh);
+    current.total = roundMoney(current.total + swda + aggh);
+    current.count += 1;
+    reinforcementsByMonth.set(month, current);
+  });
+  const automaticPurchasesByMonth = new Map();
+  (closures || []).forEach(item => {
+    if (!/^\d{4}-\d{2}$/.test(item.currentMonth || '')) return;
+    if (item.status === 'complete' && item.purchase) {
+      automaticPurchasesByMonth.set(item.currentMonth, {
+        swda: Number(item.purchase.vwce) || 0,
+        aggh: Number(item.purchase.aggh) || 0
+      });
+    } else if (item.status === 'failed') {
+      automaticPurchasesByMonth.set(item.currentMonth, { swda: 0, aggh: 0 });
+    }
+  });
 
   for (const d of months) {
     const rowYM = { y: d.y, m: d.m };
     const isCurrent = (rowYM.y === currentYM.y && rowYM.m === currentYM.m);
     const isClosed = d.snapshot_status === 'closed';
 
-    const planned = getPlannedContributions(rowYM, params);
+    const simulatedPlan = getPlannedContributions(rowYM, params);
+    const recordedAutomaticPurchase = automaticPurchasesByMonth.get(d.id);
+    const planned = recordedAutomaticPurchase
+      ? {
+          swda: recordedAutomaticPurchase.swda,
+          aggh: recordedAutomaticPurchase.aggh,
+          total: roundMoney(recordedAutomaticPurchase.swda + recordedAutomaticPurchase.aggh)
+        }
+      : simulatedPlan;
     const manualMonthly = asNum(d.manual_monthly_contribution);
     const baseMonthly = manualMonthly != null ? manualMonthly : planned.total;
     const plannedSWPct = planned.total > 0 ? planned.swda / planned.total : 0;
@@ -78,11 +111,12 @@ export function buildModel(docs, params, liveData = null) {
 
     let monthlySW = manualSWOverride != null ? manualSWOverride : roundMoney(baseSW + manualSWExtra);
     let monthlyAG = manualAGOverride != null ? manualAGOverride : roundMoney(baseAG + manualAGExtra);
-    let monthlyTotal = roundMoney(monthlySW + monthlyAG);
+    const reinforcement = reinforcementsByMonth.get(d.id) || { total: 0, swda: 0, aggh: 0, count: 0 };
+    let monthlyTotal = roundMoney(monthlySW + monthlyAG + reinforcement.total);
 
     investedCum = roundMoney(investedCum + monthlyTotal);
-    investedCumSWDA = roundMoney(investedCumSWDA + monthlySW);
-    investedCumAGGH = roundMoney(investedCumAGGH + monthlyAG);
+    investedCumSWDA = roundMoney(investedCumSWDA + monthlySW + reinforcement.swda);
+    investedCumAGGH = roundMoney(investedCumAGGH + monthlyAG + reinforcement.aggh);
 
     // Use only saved values; não injetar juro em curso no mês aberto
     const swdaNow = asNum(d.manual_swda_value ?? d.swda_value);
@@ -94,10 +128,12 @@ export function buildModel(docs, params, liveData = null) {
     }
 
     const hasAny = (swdaNow != null) || (agghNow != null) || (cashNow != null);
-    const totalNow = (swdaNow ?? 0) + (agghNow ?? 0) + (cashNow ?? 0);
+    const etfTotalNow = (swdaNow ?? 0) + (agghNow ?? 0);
+    const totalNow = etfTotalNow + (cashNow ?? 0);
 
-    const resTotal = hasAny ? (totalNow - investedCum) : null;
-    const resTotalPct = hasAny ? (resTotal / investedCum * 100) : null;
+    const hasETFValue = (swdaNow != null) || (agghNow != null);
+    const resTotal = hasETFValue ? (etfTotalNow - investedCum) : null;
+    const resTotalPct = hasETFValue && investedCum > 0 ? (resTotal / investedCum * 100) : null;
 
     const resSWDA = swdaNow != null ? (swdaNow - investedCumSWDA) : null;
     const resSWDAPct = swdaNow != null && investedCumSWDA > 0 ? (resSWDA / investedCumSWDA * 100) : null;
@@ -108,7 +144,7 @@ export function buildModel(docs, params, liveData = null) {
     rows.push({
       id: d.id, y: d.y, m: d.m,
       investedCum, investedCumSWDA, investedCumAGGH,
-      totalNow, swdaNow, agghNow,
+      totalNow, etfTotalNow, swdaNow, agghNow,
       resTotal, resTotalPct,
       resSWDA, resSWDAPct,
       resAGGH, resAGGHPct,
@@ -117,6 +153,12 @@ export function buildModel(docs, params, liveData = null) {
       monthlyContributionUsed: baseMonthly,
       monthlySWUsed: monthlySW,
       monthlyAGUsed: monthlyAG,
+      regularContributionUsed: roundMoney(baseSW + baseAG),
+      legacyExtraUsed: roundMoney(manualSWExtra + manualAGExtra),
+      reinforcementTotal: reinforcement.total,
+      reinforcementSW: reinforcement.swda,
+      reinforcementAG: reinforcement.aggh,
+      reinforcementCount: reinforcement.count,
       manualInvSW: manualSWOverride,
       manualInvAG: manualAGOverride,
       manualInvSWExtra: manualSWExtra,
@@ -149,8 +191,8 @@ export function calculateKPIs(rows, liveData = null) {
 
   // Prefer live snapshot (quotes × shares + juro) when available
   let currentValue = currentRow?.hasCurrent
-    ? currentRow.totalNow
-    : (lastFilledRow?.totalNow ?? null);
+    ? currentRow.etfTotalNow
+    : (lastFilledRow?.etfTotalNow ?? null);
   if (liveData?.quotes && liveData?.shares) {
     const vwceShares = liveData.shares.vwce ?? 0;
     const agghShares = liveData.shares.aggh ?? 0;
@@ -164,8 +206,7 @@ export function calculateKPIs(rows, liveData = null) {
     } else {
       const vwceVal = vwceShares * (vwcePrice ?? 0);
       const agghVal = agghShares * (agghPrice ?? 0);
-      const juroVal = liveData.juroLive ?? 0;
-      const liveTotal = vwceVal + agghVal + juroVal;
+      const liveTotal = vwceVal + agghVal;
       if (liveTotal > 0) currentValue = liveTotal;
     }
   }
@@ -179,6 +220,11 @@ export function calculateKPIs(rows, liveData = null) {
   return {
     totalInvested,
     currentValue,
+    etfCurrentValue: currentValue,
+    etfInvested: totalInvested,
+    unrealizedResult: result,
+    balance: Number(liveData?.saldo) || 0,
+    totalWealth: currentValue == null ? null : currentValue + (Number(liveData?.saldo) || 0),
     result,
     resultPct,
     // Os cenários devem usar o investimento acumulado do mês atual, mesmo
@@ -192,7 +238,11 @@ export function calculateScenarios(lastFilledRow, params) {
   if (!lastFilledRow || !lastFilledRow.totalNow || lastFilledRow.totalNow <= 0) return null;
   
   const currentTotal = lastFilledRow.totalNow;
-  const currentInvested = lastFilledRow.investedCum;
+  const now = new Date();
+  const nextYM = now.getMonth() === 11
+    ? { y: now.getFullYear() + 1, m: 1 }
+    : { y: now.getFullYear(), m: now.getMonth() + 2 };
+  const futureMonths = monthsBetween(nextYM, params.endYM);
   const rateDefaults = params?.scenarioRates ?? { conservative: 3, moderate: 5, optimistic: 7 };
   
   const scenarios = {
@@ -202,10 +252,12 @@ export function calculateScenarios(lastFilledRow, params) {
   };
   
   for (const [key, scenario] of Object.entries(scenarios)) {
-    // Calculate expected value: invested × (1 + rate)
-    scenario.value = currentInvested * (1 + scenario.rate);
-    // Difference: actual value - expected value
-    scenario.diff = currentTotal - scenario.value;
+    const monthlyRate = Math.pow(1 + scenario.rate, 1 / 12) - 1;
+    scenario.value = futureMonths.reduce((value, ym) => {
+      return (value + getPlannedContributions(ym, params).total) * (1 + monthlyRate);
+    }, currentTotal);
+    scenario.diff = scenario.value - currentTotal;
+    scenario.months = futureMonths.length;
   }
   
   return scenarios;
@@ -270,9 +322,10 @@ export function calculateGoalStatus(kpis, progress) {
 }
 
 // ---------- Interest (Juro) Calculations ----------
-export function calculateJuroMensal(saldo, refYYYYMM) {
+export function calculateJuroMensal(saldo, refYYYYMM, annualRate = TAXA_ANUAL_FIXA) {
   const dias = diasNoMes(refYYYYMM);
-  return saldo * TAXA_ANUAL_FIXA * (dias / 365);
+  const rate = Number.isFinite(Number(annualRate)) ? Number(annualRate) : TAXA_ANUAL_FIXA;
+  return saldo * rate * (dias / 365);
 }
 
 export function somaJuroTabelaDCA(rootElement, { excludeCurrentMonth = false } = {}) {
@@ -291,10 +344,9 @@ export function somaJuroTabelaDCA(rootElement, { excludeCurrentMonth = false } =
       }
     }
 
-    const cell = tr.querySelector('td:nth-child(11)');
+    const input = tr.querySelector('input.cash');
+    const cell = input?.closest('td');
     if (!cell) return;
-
-    const input = cell.querySelector('input');
     let v = null;
     if (input) {
       v = parseFloat((input.value || '').toString().replace(',', '.'));
@@ -309,7 +361,7 @@ export function somaJuroTabelaDCA(rootElement, { excludeCurrentMonth = false } =
 }
 
 // ---------- Chart Data Preparation ----------
-export function prepareChartData(rows, params) {
+export function prepareChartData(rows, params, liveData = null) {
   if (!rows || rows.length === 0) return null;
   
   const labels = [];
@@ -318,19 +370,16 @@ export function prepareChartData(rows, params) {
   const swdaValues = [];
   const agghValues = [];
   const monthlyReturns = [];
+  const regularMonthlyContributions = [];
+  const reinforcementContributions = [];
   const scenarioConservative = [];
   const scenarioModerate = [];
   const scenarioOptimistic = [];
   
   const scenarioRates = params?.scenarioRates ?? { conservative: 3, moderate: 5, optimistic: 7 };
-  const scenarioStates = {
-    conservative: { value: 0, rate: (scenarioRates.conservative ?? 0) / 100 / 12 },
-    moderate: { value: 0, rate: (scenarioRates.moderate ?? 0) / 100 / 12 },
-    optimistic: { value: 0, rate: (scenarioRates.optimistic ?? 0) / 100 / 12 }
-  };
-  
+  const currentLiveValue = liveTotalValue(liveData);
   const lastActualIndex = rows.reduce((acc, row, idx) => {
-    if (row.hasCurrent && row.totalNow != null && row.totalNow > 0) {
+    if ((row.isCurrent && currentLiveValue != null) || (row.hasCurrent && row.etfTotalNow != null && row.etfTotalNow > 0)) {
       return idx;
     }
     return acc;
@@ -344,17 +393,22 @@ export function prepareChartData(rows, params) {
     // Label: Month/Year
     labels.push(`${pad(row.m)}/${String(row.y).slice(-2)}`);
     
-    const hasActual = row.hasCurrent && row.totalNow != null && row.totalNow > 0;
-    const currentValue = hasActual ? row.totalNow : null;
+    const isLiveRow = row.isCurrent && currentLiveValue != null;
+    const hasActual = isLiveRow || (row.hasCurrent && row.etfTotalNow != null && row.etfTotalNow > 0);
+    const currentValue = isLiveRow ? currentLiveValue : (hasActual ? row.etfTotalNow : null);
     const showActualValue = hasActual && lastActualIndex >= 0 && index <= lastActualIndex;
     portfolioValue.push(showActualValue ? currentValue : null);
     
     // Contributions (cumulative)
     contributions.push(row.investedCum);
+    regularMonthlyContributions.push(roundMoney((row.regularContributionUsed || 0) + (row.legacyExtraUsed || 0)));
+    reinforcementContributions.push(roundMoney(row.reinforcementTotal || 0));
     
     // Individual asset values
-    swdaValues.push(showActualValue ? (row.swdaNow || 0) : null);
-    agghValues.push(showActualValue ? (row.agghNow || 0) : null);
+    const liveVWCE = isLiveRow ? (Number(liveData.shares?.vwce) || 0) * (Number(liveData.quotes?.vwce?.price) || 0) : null;
+    const liveAGGH = isLiveRow ? (Number(liveData.shares?.aggh) || 0) * (Number(liveData.quotes?.aggh?.price) || 0) : null;
+    swdaValues.push(showActualValue ? (isLiveRow ? liveVWCE : (row.swdaNow || 0)) : null);
+    agghValues.push(showActualValue ? (isLiveRow ? liveAGGH : (row.agghNow || 0)) : null);
     
     // Monthly returns calculation
     if (showActualValue && previousActualValue != null && previousActualInvested != null && previousActualValue > 0) {
@@ -373,16 +427,32 @@ export function prepareChartData(rows, params) {
     const monthlyContribution = row.investedCum - previousInvested;
     previousInvested = row.investedCum;
 
-    Object.entries(scenarioStates).forEach(([key, state]) => {
-      const rate = Number.isFinite(state.rate) ? state.rate : 0;
-      const contributionApplied = state.value + monthlyContribution;
-      const nextValue = contributionApplied * (1 + rate);
-      state.value = nextValue;
-      if (key === 'conservative') scenarioConservative.push(nextValue);
-      if (key === 'moderate') scenarioModerate.push(nextValue);
-      if (key === 'optimistic') scenarioOptimistic.push(nextValue);
-    });
+    scenarioConservative.push(null);
+    scenarioModerate.push(null);
+    scenarioOptimistic.push(null);
   });
+
+  const liveValue = currentLiveValue;
+  let anchorIndex = rows.findIndex(row => row.isCurrent);
+  if (anchorIndex < 0) anchorIndex = lastActualIndex;
+  const anchorValue = liveValue ?? (anchorIndex >= 0 ? rows[anchorIndex]?.etfTotalNow : null);
+  if (anchorIndex >= 0 && Number(anchorValue) > 0) {
+    const projections = [
+      [scenarioConservative, Number(scenarioRates.conservative) || 0],
+      [scenarioModerate, Number(scenarioRates.moderate) || 0],
+      [scenarioOptimistic, Number(scenarioRates.optimistic) || 0]
+    ];
+    projections.forEach(([series, annualPct]) => {
+      let value = Number(anchorValue);
+      series[anchorIndex] = value;
+      const monthlyRate = Math.pow(1 + annualPct / 100, 1 / 12) - 1;
+      for (let index = anchorIndex + 1; index < rows.length; index += 1) {
+        const monthlyContribution = rows[index].investedCum - rows[index - 1].investedCum;
+        value = (value + Math.max(0, monthlyContribution)) * (1 + monthlyRate);
+        series[index] = value;
+      }
+    });
+  }
   
   return {
     labels,
@@ -392,6 +462,8 @@ export function prepareChartData(rows, params) {
       swdaValues,
       agghValues,
       monthlyReturns,
+      regularMonthlyContributions,
+      reinforcementContributions,
       scenarioConservative,
       scenarioModerate,
       scenarioOptimistic
@@ -458,7 +530,8 @@ export function calculateAssetAllocation(rows) {
 export function calculateAdvancedMetrics(rows, params, liveData = null) {
   if (!rows || rows.length === 0) return null;
 
-  const adjustedRows = applyLiveTotal(rows, liveData);
+  const etfRows = rows.map(row => ({ ...row, totalNow: row.etfTotalNow }));
+  const adjustedRows = applyLiveTotal(etfRows, liveData);
   
   const filledRows = adjustedRows.filter(row => row.hasCurrent && row.totalNow > 0);
   if (filledRows.length < 2) return null;
@@ -529,8 +602,7 @@ const liveTotalValue = (liveData) => {
   if (!vwceHasPrice || !agghHasPrice) return null;
   const vwceVal = vwceShares * (vwcePrice ?? 0);
   const agghVal = agghShares * (agghPrice ?? 0);
-  const juroVal = liveData.juroLive ?? 0;
-  const total = vwceVal + agghVal + juroVal;
+  const total = vwceVal + agghVal;
   return total > 0 ? total : null;
 };
 
@@ -646,7 +718,7 @@ function calculateAnnualizedTWR(rows, twrPercent, liveData) {
 
 
 // ---------- Rebalancing Calculations ----------
-export function calculateRebalancingSuggestions(rows, params = {}) {
+export function calculateRebalancingSuggestions(rows, params = {}, liveData = null) {
   if (!rows || rows.length === 0) {
     return null;
   }
@@ -657,13 +729,17 @@ export function calculateRebalancingSuggestions(rows, params = {}) {
     AGGH: Number(params.pctAGGH ?? 25)
   };
   
-  const lastFilled = [...rows].reverse().find(row => row.hasCurrent && (row.totalNow || 0) > 0);
-  if (!lastFilled || !lastFilled.totalNow) {
-    return null;
-  }
-  
-  const swdaValue = Number(lastFilled.swdaNow ?? 0);
-  const agghValue = Number(lastFilled.agghNow ?? 0);
+  const livePortfolio = liveData?.quotes && liveData?.shares
+    ? {
+        swda: Number(liveData.shares.vwce || 0) * Number(liveData.quotes.vwce?.price),
+        aggh: Number(liveData.shares.aggh || 0) * Number(liveData.quotes.aggh?.price)
+      }
+    : null;
+  const hasLive = livePortfolio && Number.isFinite(livePortfolio.swda) && Number.isFinite(livePortfolio.aggh);
+  const lastFilled = [...rows].reverse().find(row => row.hasCurrent && (row.etfTotalNow || 0) > 0);
+  if (!hasLive && (!lastFilled || !lastFilled.etfTotalNow)) return null;
+  const swdaValue = hasLive ? livePortfolio.swda : Number(lastFilled.swdaNow ?? 0);
+  const agghValue = hasLive ? livePortfolio.aggh : Number(lastFilled.agghNow ?? 0);
   const assetTotal = swdaValue + agghValue;
   
   if (assetTotal <= 0) {
@@ -691,7 +767,7 @@ export function calculateRebalancingSuggestions(rows, params = {}) {
   const enhancedAllocations = allocations.map(item => {
     const absDiff = Math.abs(item.difference);
     const action = absDiff > tolerance
-      ? (item.difference > 0 ? 'Vender' : 'Comprar')
+      ? (item.difference > 0 ? 'Não reforçar' : 'Priorizar reforço')
       : 'Manter';
     const amount = absDiff > tolerance ? Math.abs((item.difference / 100) * assetTotal) : 0;
     
@@ -709,18 +785,21 @@ export function calculateRebalancingSuggestions(rows, params = {}) {
     needsRebalancing,
     allocations: enhancedAllocations,
     tolerance,
-    totalValue: assetTotal
+    totalValue: assetTotal,
+    source: hasLive ? 'live' : 'last_monthly_record'
   };
 }
 
 // ---------- Export Data Functions ----------
 export function generateCSVData(rows) {
-  const headers = ['Date', 'Invested Total', 'Current Value', 'VWCE Value', 'AGGH Value', 'Cash Interest', 'Result', 'Result %'];
+  const headers = ['Date', 'Regular Contribution', 'Reinforcements', 'Invested Total', 'ETF Current Value', 'VWCE Value', 'AGGH Value', 'Cash Interest', 'Result', 'Result %'];
   
   const csvRows = rows.map(row => [
     `${row.y}-${String(row.m).padStart(2, '0')}`,
+    row.regularContributionUsed || '',
+    row.reinforcementTotal || '',
     row.investedCum,
-    row.totalNow || '',
+    row.etfTotalNow || '',
     row.swdaNow || '',
     row.agghNow || '',
     row.cash_interest || '',

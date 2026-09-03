@@ -100,6 +100,62 @@ service cloud.firestore {
       return signedIn() && !isFamilyChild() && !isFilipa();
     }
 
+    function validDcaAutomation() {
+      return request.resource.data.enabled is bool
+        && request.resource.data.effectiveFrom is string
+        && request.resource.data.effectiveFrom.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+        && request.resource.data.vwceAmountCents is int
+        && request.resource.data.agghAmountCents is int
+        && request.resource.data.vwceAmountCents >= 0
+        && request.resource.data.agghAmountCents >= 0
+        && request.resource.data.vwceAmountCents + request.resource.data.agghAmountCents > 0
+        && request.resource.data.annualInterestRate is number
+        && request.resource.data.annualInterestRate >= 0
+        && request.resource.data.annualInterestRate <= 1
+        && request.resource.data.timezone == 'Europe/Lisbon'
+        && request.resource.data.day == 1
+        && request.resource.data.time == '01:10';
+    }
+
+    function validDcaReinforcement() {
+      return request.resource.data.id is string
+        && request.resource.data.date is string
+        && request.resource.data.date.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')
+        && request.resource.data.month is string
+        && request.resource.data.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+        && request.resource.data.totalAmountCents is int
+        && request.resource.data.vwceAmountCents is int
+        && request.resource.data.agghAmountCents is int
+        && request.resource.data.vwcePriceMicros is int
+        && request.resource.data.agghPriceMicros is int
+        && request.resource.data.totalAmountCents > 0
+        && request.resource.data.vwceAmountCents >= 0
+        && request.resource.data.agghAmountCents >= 0
+        && request.resource.data.vwceAmountCents + request.resource.data.agghAmountCents == request.resource.data.totalAmountCents
+        && request.resource.data.vwceQuantity is number
+        && request.resource.data.agghQuantity is number
+        && request.resource.data.totalAmount is number
+        && request.resource.data.vwceAmount is number
+        && request.resource.data.agghAmount is number
+        && request.resource.data.vwcePrice is number
+        && request.resource.data.agghPrice is number
+        && request.resource.data.totalAmount > 0
+        && request.resource.data.vwceAmount >= 0
+        && request.resource.data.agghAmount >= 0
+        && request.resource.data.vwcePrice > 0
+        && request.resource.data.agghPrice > 0
+        && request.resource.data.vwcePriceMicros > 0
+        && request.resource.data.agghPriceMicros > 0
+        && request.resource.data.vwceQuantity >= 0
+        && request.resource.data.agghQuantity >= 0
+        && request.resource.data.status in ['active', 'void']
+        && request.resource.data.fundingSource in ['trade_republic_balance', 'external_cash']
+        && request.resource.data.allocationMode in ['automatic', 'manual_percentage', 'manual_amounts']
+        && request.resource.data.quoteSource in ['alpha_vantage', 'manual']
+        && request.resource.data.notes is string
+        && request.resource.data.notes.size() <= 500;
+    }
+
     match /alojamento_boletins/{token} {
       allow get: if true;
       allow list, create, update, delete: if signedIn() && !isFilipa() && !isFamilyChild();
@@ -325,9 +381,17 @@ service cloud.firestore {
       allow write: if canWriteInvestments();
     }
 
-    match /dca_settings/{document=**} {
+    match /dca_settings/{document} {
       allow read: if canReadInvestments();
-      allow write: if canWriteInvestments();
+      allow write: if canWriteInvestments() && document != 'automation';
+    }
+
+    match /dca_settings/automation {
+      allow read: if canReadInvestments();
+      allow create, update: if canWriteInvestments()
+        && request.resource.data.updatedAt == request.time
+        && validDcaAutomation();
+      allow delete: if false;
     }
 
     match /dca_juro/{document=**} {
@@ -343,6 +407,30 @@ service cloud.firestore {
     match /dca_monthly_closures/{document=**} {
       allow read: if canReadInvestments();
       allow write: if canWriteInvestments();
+    }
+
+    match /dca_reinforcements/{reinforcementId} {
+      allow read: if canReadInvestments();
+      allow create: if canWriteInvestments()
+        && reinforcementId == request.resource.data.id
+        && request.resource.data.status == 'active'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && validDcaReinforcement();
+      allow update: if canWriteInvestments()
+        && resource.data.id == request.resource.data.id
+        && resource.data.status == 'active'
+        && request.resource.data.status == 'void'
+        && request.resource.data.voidedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'voidReason', 'voidedAt', 'updatedAt'])
+        && validDcaReinforcement();
+      allow delete: if false;
+    }
+
+    match /dca_reconciliations/{document=**} {
+      allow read, create: if canWriteInvestments();
+      allow update, delete: if false;
     }
 
     match /dca_revolut/{document=**} {

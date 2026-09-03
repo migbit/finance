@@ -55,6 +55,28 @@
   <main class="dca-page">
     <!-- === Título === -->
     <h2 class="page-title center">DCA Trade Republic</h2>
+    <section class="report-section dca-overview" aria-labelledby="dca-overview-title">
+      <div class="dca-overview-head">
+        <div>
+          <p class="dca-eyebrow">Visão geral</p>
+          <h3 id="dca-overview-title">Património Trade Republic</h3>
+        </div>
+        <div class="dca-primary-actions">
+          <button id="btn-new-reinforcement" type="button" class="primary">+ Novo reforço</button>
+          <button id="btn-focus-balance" type="button">Movimentar saldo</button>
+          <button id="btn-open-settings" type="button">Definições</button>
+        </div>
+      </div>
+      <div class="dca-summary-grid">
+        <article class="dca-summary-card"><span>Capital investido em ETFs</span><strong id="kpi-total-invested">—</strong></article>
+        <article class="dca-summary-card"><span>Valor atual dos ETFs</span><strong id="kpi-current-value">—</strong></article>
+        <article class="dca-summary-card"><span>Resultado não realizado</span><strong><span id="kpi-result">—</span> <small id="kpi-result-pct"></small></strong></article>
+        <article class="dca-summary-card"><span>Saldo remunerado</span><strong id="kpi-balance">—</strong></article>
+        <article class="dca-summary-card dca-summary-featured"><span>Património total TR</span><strong id="kpi-total-wealth">—</strong></article>
+        <article class="dca-summary-card"><span>Alocação atual</span><strong id="kpi-allocation">—</strong></article>
+        <article class="dca-summary-card"><span>Próximo DCA</span><strong id="kpi-next-dca">—</strong><small id="kpi-next-dca-date">—</small></article>
+      </div>
+    </section>
     <section class="report-section" id="dca-etf-quotes">
       <div class="viz-card etf-card">
         <div class="etf-card-header">
@@ -147,7 +169,7 @@
           </div>
           <div class="juro-item">
             <div class="juro-label" style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.25rem;">Taxa Anual</div>
-            <div class="juro-value" style="font-size: 1.6rem; font-weight: 700; color: var(--text);">2.00%</div>
+            <div class="juro-value" id="juro-taxa-display" style="font-size: 1.6rem; font-weight: 700; color: var(--text);">2.00%</div>
           </div>
           <div class="juro-item">
             <div class="juro-label" style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.25rem;">Estimativa mensal ao saldo atual</div>
@@ -157,7 +179,19 @@
             <div class="juro-label" style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.25rem;">Juro Acumulado Total</div>
             <div class="juro-value pos" id="juro-acumulado-display" style="font-size: 1.6rem; font-weight: 700;">-</div>
           </div>
-        </div>
+          <div class="juro-meta">
+            <span>Última atualização: <strong id="juro-last-updated">—</strong></span>
+            <span>Último fecho: <strong id="juro-last-closed">—</strong></span>
+          </div>
+          <label class="dca-field dca-balance-reason">
+            <span>Motivo da correção manual</span>
+            <input id="juro-correction-reason" type="text" maxlength="500" placeholder="Ex.: depósito, levantamento ou correção" />
+          </label>
+          <details class="dca-details">
+            <summary>Movimentos recentes do saldo</summary>
+            <div id="juro-movements-list" class="dca-compact-list"><p class="muted">A carregar…</p></div>
+          </details>
+      </div>
       </div>
     </section>
 
@@ -220,6 +254,23 @@
             <div id="params-feedback" class="form-feedback" aria-live="polite"></div>
           </div>
         </div>
+        <div class="viz-card params-card dca-automation-settings">
+          <div class="dca-section-head">
+            <div><p class="dca-eyebrow">Execução contabilística</p><h4>Plano automático</h4></div>
+            <span id="automation-enabled-badge" class="dca-status-badge">Ativo</span>
+          </div>
+          <p class="muted">Estas definições controlam a automação real. Os cenários acima são apenas simulações.</p>
+          <div class="dca-form-grid">
+            <label class="dca-field"><span>Estado</span><select id="automation-enabled"><option value="true">Ativo</option><option value="false">Pausado</option></select></label>
+            <label class="dca-field"><span>Em vigor desde</span><input id="automation-effective-from" type="month" /></label>
+            <label class="dca-field"><span>VWCE (€)</span><input id="automation-vwce-amount" type="number" min="0" step="0.01" /></label>
+            <label class="dca-field"><span>AGGH (€)</span><input id="automation-aggh-amount" type="number" min="0" step="0.01" /></label>
+            <label class="dca-field"><span>Taxa anual do saldo (%)</span><input id="automation-interest-rate" type="number" min="0" max="100" step="0.01" /></label>
+            <label class="dca-field"><span>Agendamento</span><input value="Dia 1 · 01:10 · Europe/Lisbon" disabled /></label>
+          </div>
+          <div class="dca-form-actions"><button id="btn-save-automation" type="button" class="primary">Guardar plano automático</button></div>
+          <div id="automation-feedback" class="form-feedback" aria-live="polite"></div>
+        </div>
       </div>
     </section>
 
@@ -228,28 +279,7 @@
       <div class="viz-card" id="kpi-cenarios-card">
         <h4 style="margin-bottom: 1rem;">KPIs & Cenários</h4>
         
-        <!-- Current Performance KPIs -->
-        <div class="kpi-grid enhanced">
-          <div class="kpi-item enhanced">
-            <div class="kpi-label">Total Investido</div>
-            <div class="kpi-value" id="kpi-total-invested">-</div>
-          </div>
-          <div class="kpi-item enhanced">
-            <div class="kpi-label">Valor Atual</div>
-            <div class="kpi-value" id="kpi-current-value">-</div>
-          </div>
-          <div class="kpi-item enhanced">
-            <div class="kpi-label">Resultado</div>
-            <div class="kpi-value">
-              <span id="kpi-result">-</span>
-              <span class="kpi-sub" id="kpi-result-pct" style="font-size: 0.75rem; margin-left: 0.25rem;">-</span>
-            </div>
-          </div>
-          <div class="kpi-item enhanced">
-            <div class="kpi-label">Juros Acum.</div>
-            <div class="kpi-value" id="kpi-total-interest">-</div>
-          </div>
-        </div>
+        <p class="dca-interest-summary">Juros acumulados: <strong id="kpi-total-interest">—</strong></p>
 
         <!-- Investment Progress Bar -->
         <div class="progress-section" style="margin-top: 1.5rem;">
@@ -273,7 +303,8 @@
 
         <!-- Scenario Comparison -->
         <div class="scenario-comparison" style="margin-top: 1.5rem;">
-          <h5 style="text-align: center; margin-bottom: 1rem; color: var(--text-dim);">Cenários de Crescimento</h5>
+          <h5 style="text-align: center; margin-bottom: .25rem; color: var(--text-dim);">Cenários de Crescimento</h5>
+          <p class="muted" style="text-align:center; margin-bottom:1rem;">Projeções hipotéticas até à data final; não constituem previsões.</p>
           <div class="scenario-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
             <div class="scenario-card" data-scenario="conservative">
               <div class="scenario-header" style="background: #e8f5e8; padding: 0.75rem; border-radius: 8px 8px 0 0;">
@@ -337,6 +368,13 @@
       </div>
     </section>
 
+    <section class="report-section">
+      <div class="viz-card">
+        <div class="dca-section-head"><div><p class="dca-eyebrow">Operações extraordinárias</p><h4>Histórico de reforços</h4></div><button id="btn-new-reinforcement-secondary" type="button">+ Novo reforço</button></div>
+        <div id="reinforcements-history" class="dca-history"><p class="muted">Ainda não existem reforços.</p></div>
+      </div>
+    </section>
+
     <!-- === Charts Section === -->
     <section class="report-section">
       <div class="viz-card">
@@ -382,6 +420,11 @@
         <div id="rebalancing-status">
           <p>A analisar a alocação atual...</p>
         </div>
+        <div class="dca-rebalance-action">
+          <label class="dca-field"><span>Simular próximo reforço (€)</span><input id="rebalance-amount" type="number" min="0.01" step="0.01" value="500" /></label>
+          <div id="rebalance-preview" aria-live="polite">—</div>
+          <button id="btn-use-rebalance" type="button">Usar esta distribuição num reforço</button>
+        </div>
         <div id="rebalancing-suggestions" style="display: none;">
           <table class="table-dca">
             <thead>
@@ -399,8 +442,40 @@
         </div>
       </div>
     </section>
+
+    <section class="report-section">
+      <div class="viz-card">
+        <h4>Reconciliação de unidades</h4>
+        <div id="reconciliation-status"><p class="muted">A verificar o histórico…</p></div>
+        <button id="btn-reconcile-shares" type="button" hidden>Corrigir quantidades explicitamente</button>
+      </div>
+    </section>
   </main>
 
+  <dialog id="reinforcement-dialog" class="dca-dialog" aria-labelledby="reinforcement-dialog-title">
+    <form id="reinforcement-form" method="dialog">
+      <div class="dca-dialog-head"><div><p class="dca-eyebrow">Compra contabilística</p><h3 id="reinforcement-dialog-title">Novo reforço</h3></div><button type="button" class="dca-dialog-close" data-close-reinforcement aria-label="Fechar">×</button></div>
+      <div class="dca-form-grid">
+        <label class="dca-field"><span>Data da compra</span><input id="reinforcement-date" type="date" required /></label>
+        <label class="dca-field"><span>Montante total (€)</span><input id="reinforcement-total" type="number" min="0.01" step="0.01" required /></label>
+        <label class="dca-field dca-field-wide"><span>Distribuição</span><select id="reinforcement-mode"><option value="automatic">Automática para aproximar do target</option><option value="manual_percentage">Percentagem manual</option><option value="manual_amounts">Montantes manuais</option></select></label>
+        <label class="dca-field reinforcement-percentage"><span>VWCE (%)</span><input id="reinforcement-vwce-pct" type="number" min="0" max="100" step="0.01" value="75" /></label>
+        <label class="dca-field reinforcement-percentage"><span>AGGH (%)</span><input id="reinforcement-aggh-pct" type="number" min="0" max="100" step="0.01" value="25" /></label>
+        <label class="dca-field"><span>VWCE (€)</span><input id="reinforcement-vwce-amount" type="number" min="0" step="0.01" /></label>
+        <label class="dca-field"><span>Preço VWCE (€)</span><input id="reinforcement-vwce-price" type="number" min="0.000001" step="0.000001" /></label>
+        <label class="dca-field"><span>AGGH (€)</span><input id="reinforcement-aggh-amount" type="number" min="0" step="0.01" /></label>
+        <label class="dca-field"><span>Preço AGGH (€)</span><input id="reinforcement-aggh-price" type="number" min="0.000001" step="0.000001" /></label>
+        <label class="dca-field dca-field-wide"><span>Origem do dinheiro</span><select id="reinforcement-source"><option value="trade_republic_balance">Saldo Trade Republic</option><option value="external_cash">Dinheiro externo / novo depósito</option></select></label>
+        <label class="dca-field dca-field-wide"><span>Notas opcionais</span><textarea id="reinforcement-notes" maxlength="500" rows="2"></textarea></label>
+      </div>
+      <p id="reinforcement-suggestion" class="dca-callout"></p>
+      <div id="reinforcement-preview" class="dca-preview" aria-live="polite"></div>
+      <div id="reinforcement-feedback" class="form-feedback" aria-live="polite"></div>
+      <div class="dca-form-actions"><button type="button" data-close-reinforcement>Cancelar</button><button id="btn-save-reinforcement" type="submit" class="primary">Registar reforço</button></div>
+    </form>
+  </dialog>
+
+  <script src="../js/dca-financial.js"></script>
   <script type="module" src="../js/dca-main.js"></script>
 </body>
 </html>

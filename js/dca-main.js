@@ -3,14 +3,17 @@
 import {
   START_YM, DEFAULTS, TAXA_ANUAL_FIXA,
   ensureMonthsExist, loadParams, saveParams, loadAllDocs, saveRow,
-  loadJuroSaldo, saveJuroSaldo, isAuthenticated, onAuthChange,
-  ymCompare, ymToId, getPreviousMonth, ymMin,
-  loadShareQuantities, saveShareQuantities
+  loadJuroSaldo, saveJuroSaldo,
+  ymCompare, getPreviousMonth, ymMin,
+  loadShareQuantities,
+  loadAutomationSettings, saveAutomationSettings,
+  loadReinforcements, loadRecentJuroMovements, loadMonthlyClosures,
+  createReinforcement, voidReinforcement, reconcileShareQuantities
 } from './dca-core.js';
 
 import { 
   buildModel, calculateKPIs, calculateScenarios, calculateProgress,
-  calculateGoalStatus, calculateJuroMensal, somaJuroTabelaDCA, diasNoMes,
+  calculateGoalStatus, calculateJuroMensal, somaJuroTabelaDCA,
   prepareChartData, calculateAdvancedMetrics, calculateRebalancingSuggestions
 } from './dca-calculations.js';
 
@@ -24,6 +27,7 @@ import {
 } from './dca-ui.js';
 import { initEtfQuotes } from './dca-quotes.js';
 import { whenAccessResolved } from './script.js';
+import { showConfirm, showToast } from './toast.js';
 
 // ---------- Mobile Menu ----------
 document.addEventListener('DOMContentLoaded', () => {
@@ -56,6 +60,12 @@ const state = {
   chartData: null,
   rebalancingAlertSent: false,
   accessMode: 'write',
+  automation: null,
+  reinforcements: [],
+  juroMovements: [],
+  closures: [],
+  reinforcementOperationId: null,
+  reconciliation: null,
 
   // NEW: Live data tracking
   liveData: {
@@ -73,12 +83,16 @@ function applyDcaReadOnlyUI() {
     '#etf-vwce-qty', '#etf-aggh-qty', '#juro-saldo', '#juro-saldo-display',
     '#end-date', '#pct-swda', '#pct-aggh', '#monthly-contribution',
     '#scenario-rate-conservative', '#scenario-rate-moderate', '#scenario-rate-optimistic',
+    '#automation-enabled', '#automation-effective-from', '#automation-vwce-amount', '#automation-aggh-amount',
+    '#automation-interest-rate', '#juro-correction-reason',
     '.swda', '.aggh', '.cash', '.inv-swda-extra', '.inv-aggh-extra'
   ];
   document.querySelectorAll(inputs.join(',')).forEach(element => { element.disabled = true; });
 
   const writeButtons = [
     '#btn-save-saldo', '#btn-juro-gravar', '#btn-save-params',
+    '#btn-save-automation', '#btn-new-reinforcement', '#btn-new-reinforcement-secondary',
+    '#btn-use-rebalance', '#btn-reconcile-shares', '.btn-void-reinforcement',
     '.btn-save-qty', '.btn-save', '.btn-add-inv-swda', '.btn-add-inv-aggh'
   ];
   document.querySelectorAll(writeButtons.join(',')).forEach(element => {
@@ -104,13 +118,15 @@ async function loadLiveData() {
     // Load saldo
     const juroData = await loadJuroSaldo();
     const saldo = juroData.saldo || 0;
+    const annualInterestRate = Number(state.automation?.annualInterestRate ?? juroData.taxa ?? TAXA_ANUAL_FIXA);
 
     // Calculate juro for previous month (mês atual - 1)
     const now = new Date();
     const prevYM = getPreviousMonth({ y: now.getFullYear(), m: now.getMonth() + 1 });
     const juroLive = calculateJuroMensal(
       saldo,
-      `${prevYM.y}-${String(prevYM.m).padStart(2, '0')}`
+      `${prevYM.y}-${String(prevYM.m).padStart(2, '0')}`,
+      annualInterestRate
     );
 
     return {
@@ -119,7 +135,9 @@ async function loadLiveData() {
       saldo,
       juroLive,
       lastClosedMonth: juroData.lastClosedMonth || null,
-      lastMonthlyInterest: Number(juroData.lastMonthlyInterest) || null
+      lastMonthlyInterest: Number(juroData.lastMonthlyInterest) || null,
+      annualInterestRate,
+      balanceUpdatedAt: juroData.updatedAt?.toDate?.() || juroData.updatedAt || null
     };
   } catch (err) {
     console.error('Error loading live data:', err);
@@ -141,7 +159,7 @@ function updateLiveCalculations() {
   const now = new Date();
   const prevYM = getPreviousMonth({ y: now.getFullYear(), m: now.getMonth() + 1 });
   const prevYMStr = `${prevYM.y}-${String(prevYM.m).padStart(2, '0')}`;
-  state.liveData.juroLive = calculateJuroMensal(state.liveData.saldo, prevYMStr);
+  state.liveData.juroLive = calculateJuroMensal(state.liveData.saldo, prevYMStr, state.liveData.annualInterestRate);
 
   // Update UI
   updateJuroDisplay();
@@ -155,6 +173,9 @@ function updateJuroDisplay() {
   const mensalDisplay = document.getElementById('juro-mensal-display');
   const acumDisplay = document.getElementById('juro-acumulado-display');
   const automationStatus = document.getElementById('dca-automation-status');
+  const rateDisplay = document.getElementById('juro-taxa-display');
+  const updatedDisplay = document.getElementById('juro-last-updated');
+  const closedDisplay = document.getElementById('juro-last-closed');
 
   if (saldoDisplay) {
     const saldoValue = Number(state.liveData.saldo || 0);
@@ -175,12 +196,27 @@ function updateJuroDisplay() {
     }) + ' €';
   }
 
+  if (rateDisplay) rateDisplay.textContent = `${((state.liveData.annualInterestRate ?? TAXA_ANUAL_FIXA) * 100).toFixed(2)}%`;
+  if (updatedDisplay) {
+    const value = state.liveData.balanceUpdatedAt ? new Date(state.liveData.balanceUpdatedAt) : null;
+    updatedDisplay.textContent = value && !Number.isNaN(value.getTime()) ? value.toLocaleString('pt-PT') : '—';
+  }
+  if (closedDisplay) closedDisplay.textContent = state.liveData.lastClosedMonth || '—';
+
   if (automationStatus) {
     const lastClosed = state.liveData.lastClosedMonth;
     const lastInterest = state.liveData.lastMonthlyInterest;
+    const plan = state.automation;
+    const planText = plan
+      ? `${plan.enabled ? 'Plano ativo' : 'Plano pausado'}: ${plan.vwceAmount.toFixed(2)} € em VWCE e ${plan.agghAmount.toFixed(2)} € em AGGH.`
+      : 'Plano automático a carregar.';
+    const failedClosure = [...state.closures].reverse().find(item => item.status === 'failed');
+    const failureText = failedClosure
+      ? ` Atenção: fecho ${failedClosure.month || failedClosure.id} falhou (${failedClosure.failureCode || 'erro'}).`
+      : '';
     automationStatus.textContent = lastClosed
-      ? `Último fecho automático: ${lastClosed}${Number.isFinite(lastInterest) ? ` · juro capitalizado: ${lastInterest.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : ''}. Próximo fecho no dia 1 às 01:10, antes da compra mensal. Desde outubro de 2026: 150 € em VWCE e 50 € em AGGH.`
-      : 'Fecho automático no dia 1 às 01:10: fecha o mês, capitaliza o juro e faz a compra mensal. Desde outubro de 2026: 150 € em VWCE e 50 € em AGGH.';
+      ? `Último fecho: ${lastClosed}${Number.isFinite(lastInterest) ? ` · juro: ${lastInterest.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : ''}. ${planText}${failureText}`
+      : `Fecho no dia 1 às 01:10. ${planText}${failureText}`;
   }
 
   // Calculate total accumulated juro from table
@@ -332,6 +368,366 @@ function showFeedback(targetId, message, tone = 'success', timeout = 3200) {
     }, timeout);
     feedbackTimers.set(targetId, timer);
   }
+}
+
+const money = value => (Number(value) || 0).toLocaleString('pt-PT', {
+  style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2
+});
+const units = value => (Number(value) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 8 });
+const escapeHTML = value => String(value ?? '').replace(/[&<>'"]/g, char => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+}[char]));
+const asDate = value => value?.toDate?.() || (value ? new Date(value) : null);
+const formatDateTime = value => {
+  const date = asDate(value);
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleString('pt-PT') : '—';
+};
+
+function nextDcaDate() {
+  const now = new Date();
+  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1, 1, 10);
+  return now < thisMonth ? thisMonth : new Date(now.getFullYear(), now.getMonth() + 1, 1, 1, 10);
+}
+
+function automaticPlanForMonth(month) {
+  if (!state.automation?.enabled) return { enabled: false, vwce: 0, aggh: 0 };
+  if (month < state.automation.effectiveFrom) return { enabled: true, vwce: 120, aggh: 30 };
+  return { enabled: true, vwce: state.automation.vwceAmount, aggh: state.automation.agghAmount };
+}
+
+function writeAutomationToUI() {
+  if (!state.automation) return;
+  const fields = {
+    'automation-enabled': String(state.automation.enabled),
+    'automation-effective-from': state.automation.effectiveFrom,
+    'automation-vwce-amount': state.automation.vwceAmount,
+    'automation-aggh-amount': state.automation.agghAmount,
+    'automation-interest-rate': state.automation.annualInterestRate * 100
+  };
+  Object.entries(fields).forEach(([id, value]) => {
+    const element = document.getElementById(id);
+    if (element) element.value = value;
+  });
+  const badge = document.getElementById('automation-enabled-badge');
+  if (badge) {
+    badge.textContent = state.automation.enabled ? 'Ativo' : 'Pausado';
+    badge.classList.toggle('is-paused', !state.automation.enabled);
+  }
+}
+
+function updateOverview(kpis) {
+  const allocationEl = document.getElementById('kpi-allocation');
+  const planEl = document.getElementById('kpi-next-dca');
+  const planDateEl = document.getElementById('kpi-next-dca-date');
+  const portfolio = window.DcaFinancial?.calculatePortfolioValue({
+    shares: state.liveData.shares,
+    quotes: state.liveData.quotes,
+    balance: state.liveData.saldo
+  });
+  if (allocationEl) {
+    if (portfolio?.etfValue > 0) {
+      allocationEl.textContent = `VWCE ${(portfolio.vwceValue / portfolio.etfValue * 100).toFixed(1)}% · AGGH ${(portfolio.agghValue / portfolio.etfValue * 100).toFixed(1)}%`;
+    } else {
+      const fallback = [...state.rows].reverse().find(row => row.etfTotalNow > 0);
+      allocationEl.textContent = fallback
+        ? `VWCE ${(fallback.swdaNow / fallback.etfTotalNow * 100).toFixed(1)}% · AGGH ${(fallback.agghNow / fallback.etfTotalNow * 100).toFixed(1)}% (último registo)`
+        : '—';
+    }
+  }
+  if (planEl && state.automation) {
+    const date = nextDcaDate();
+    const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const nextPlan = automaticPlanForMonth(month);
+    planEl.textContent = nextPlan.enabled
+      ? `${money(nextPlan.vwce)} VWCE · ${money(nextPlan.aggh)} AGGH · ${money(nextPlan.vwce + nextPlan.aggh)} total`
+      : 'Pausado';
+  }
+  if (planDateEl) planDateEl.textContent = nextDcaDate().toLocaleString('pt-PT', { dateStyle: 'long', timeStyle: 'short' });
+}
+
+function renderJuroMovements() {
+  const root = document.getElementById('juro-movements-list');
+  if (!root) return;
+  if (!state.juroMovements.length) {
+    root.innerHTML = '<p class="muted">Ainda não existem movimentos.</p>';
+    return;
+  }
+  const labels = {
+    deposit: 'Depósito', withdrawal: 'Levantamento', dca: 'DCA', reinforcement: 'Reforço',
+    reinforcement_void: 'Anulação de reforço', interest: 'Juro', manual_correction: 'Correção manual', set_balance: 'Correção antiga'
+  };
+  root.innerHTML = state.juroMovements.map(item => `
+    <div class="dca-list-row">
+      <span><strong>${escapeHTML(labels[item.type] || item.type || 'Movimento')}</strong><small>${escapeHTML(formatDateTime(item.effectiveAt))}</small></span>
+      <span class="num">${item.amount == null ? '—' : money(item.amount)}<small>Saldo: ${money(item.balanceAfter ?? item.balance)}</small></span>
+      ${item.description ? `<span class="dca-list-note">${escapeHTML(item.description)}</span>` : ''}
+    </div>`).join('');
+}
+
+function renderReinforcementsHistory() {
+  const root = document.getElementById('reinforcements-history');
+  if (!root) return;
+  if (!state.reinforcements.length) {
+    root.innerHTML = '<p class="muted">Ainda não existem reforços.</p>';
+    return;
+  }
+  root.innerHTML = `<div class="table-wrap"><table class="table-dca dca-reinforcement-table"><thead><tr>
+    <th>Data</th><th>Total</th><th>VWCE</th><th>AGGH</th><th>Origem</th><th>Execução</th><th>Notas</th><th>Estado</th><th></th>
+  </tr></thead><tbody>${state.reinforcements.map(item => {
+    const active = (item.status || 'active') === 'active';
+    return `<tr class="${active ? '' : 'is-void'}" data-reinforcement-id="${escapeHTML(item.id)}">
+      <td>${escapeHTML(item.date)}</td><td class="num">${money(item.totalAmount ?? Number(item.totalAmountCents) / 100)}</td>
+      <td class="num">${money(item.vwceAmount)}<small>${units(item.vwceQuantity)} un. @ ${money(item.vwcePrice)}</small></td>
+      <td class="num">${money(item.agghAmount)}<small>${units(item.agghQuantity)} un. @ ${money(item.agghPrice)}</small></td>
+      <td>${item.fundingSource === 'trade_republic_balance' ? 'Saldo TR' : 'Capital externo'}</td>
+      <td><small>${escapeHTML(item.quoteSource || 'manual')}<br>${escapeHTML(formatDateTime(item.quoteTimestamp))}</small></td>
+      <td>${escapeHTML(item.notes || '—')}</td><td>${active ? 'Ativo' : 'Anulado'}</td>
+      <td>${active && state.accessMode === 'write' ? '<button type="button" class="btn-void-reinforcement">Anular</button>' : ''}</td>
+    </tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+function reinforcementInput() {
+  const value = id => document.getElementById(id)?.value;
+  const liveVWCE = Number(state.liveData.quotes?.vwce?.price);
+  const liveAGGH = Number(state.liveData.quotes?.aggh?.price);
+  const enteredVWCE = Number(value('reinforcement-vwce-price'));
+  const enteredAGGH = Number(value('reinforcement-aggh-price'));
+  const usesLive = Number.isFinite(liveVWCE) && Number.isFinite(liveAGGH)
+    && Math.abs(enteredVWCE - liveVWCE) < 0.000001 && Math.abs(enteredAGGH - liveAGGH) < 0.000001;
+  return {
+    operationId: state.reinforcementOperationId,
+    date: value('reinforcement-date'),
+    totalAmount: value('reinforcement-total'),
+    allocationMode: value('reinforcement-mode'),
+    vwcePercentage: value('reinforcement-vwce-pct'),
+    agghPercentage: value('reinforcement-aggh-pct'),
+    vwceAmount: value('reinforcement-vwce-amount'),
+    agghAmount: value('reinforcement-aggh-amount'),
+    vwcePrice: value('reinforcement-vwce-price'),
+    agghPrice: value('reinforcement-aggh-price'),
+    fundingSource: value('reinforcement-source'),
+    notes: value('reinforcement-notes'),
+    currentShares: state.liveData.shares,
+    currentBalance: state.liveData.saldo,
+    currentVWCE: (Number(state.liveData.shares?.vwce) || 0) * (enteredVWCE || 0),
+    currentAGGH: (Number(state.liveData.shares?.aggh) || 0) * (enteredAGGH || 0),
+    vwceTarget: state.params.pctSWDA,
+    agghTarget: state.params.pctAGGH,
+    quoteSource: usesLive ? 'alpha_vantage' : 'manual',
+    quoteTimestamp: usesLive ? (window.dcaQuoteUpdatedAt || new Date()) : null
+  };
+}
+
+function updateReinforcementPreview() {
+  const mode = document.getElementById('reinforcement-mode')?.value;
+  document.querySelectorAll('.reinforcement-percentage').forEach(element => { element.hidden = mode !== 'manual_percentage'; });
+  const amountFields = ['reinforcement-vwce-amount', 'reinforcement-aggh-amount'].map(id => document.getElementById(id));
+  amountFields.forEach(element => { if (element) element.readOnly = mode !== 'manual_amounts'; });
+  const previewRoot = document.getElementById('reinforcement-preview');
+  const feedback = document.getElementById('reinforcement-feedback');
+  if (feedback) feedback.textContent = '';
+  try {
+    const input = reinforcementInput();
+    if (!input.totalAmount) {
+      if (previewRoot) previewRoot.innerHTML = '<p class="muted">Introduza um montante para ver a pré-visualização.</p>';
+      return null;
+    }
+    const preview = window.DcaFinancial.buildReinforcementPreview(input);
+    if (mode !== 'manual_amounts') {
+      document.getElementById('reinforcement-vwce-amount').value = preview.vwceAmount.toFixed(2);
+      document.getElementById('reinforcement-aggh-amount').value = preview.agghAmount.toFixed(2);
+    }
+    const beforeAllocation = window.DcaFinancial.calculateAllocation({
+      currentVWCE: preview.beforeValues.vwceValue, currentAGGH: preview.beforeValues.agghValue,
+      vwceTarget: state.params.pctSWDA, agghTarget: state.params.pctAGGH
+    });
+    const afterAllocation = window.DcaFinancial.calculateAllocation({
+      currentVWCE: preview.afterValues.vwceValue, currentAGGH: preview.afterValues.agghValue,
+      vwceTarget: state.params.pctSWDA, agghTarget: state.params.pctAGGH
+    });
+    const suggestion = document.getElementById('reinforcement-suggestion');
+    if (suggestion) suggestion.textContent = mode === 'automatic'
+      ? `Distribuição sugerida para rebalancear com novo capital: ${money(preview.vwceAmount)} em VWCE e ${money(preview.agghAmount)} em AGGH.`
+      : '';
+    if (previewRoot) previewRoot.innerHTML = `
+      <div><span>Montante</span><strong>${money(preview.totalAmount)}</strong></div>
+      <div><span>VWCE</span><strong>${money(preview.vwceAmount)} · ${units(preview.vwceQuantity)} un.</strong><small>Preço ${money(preview.vwcePrice)}</small></div>
+      <div><span>AGGH</span><strong>${money(preview.agghAmount)} · ${units(preview.agghQuantity)} un.</strong><small>Preço ${money(preview.agghPrice)}</small></div>
+      <div><span>Posição antes</span><strong>${money(preview.beforeValues.etfValue)}</strong><small>${units(preview.currentShares.vwce)} VWCE · ${units(preview.currentShares.aggh)} AGGH</small></div>
+      <div><span>Posição depois</span><strong>${money(preview.afterValues.etfValue)}</strong><small>${units(preview.afterShares.vwce)} VWCE · ${units(preview.afterShares.aggh)} AGGH</small></div>
+      <div><span>Distribuição</span><strong>${beforeAllocation.vwcePct.toFixed(1)}% / ${beforeAllocation.agghPct.toFixed(1)}% → ${afterAllocation.vwcePct.toFixed(1)}% / ${afterAllocation.agghPct.toFixed(1)}%</strong></div>
+      <div><span>Impacto no saldo</span><strong>${money(preview.balanceImpact)}</strong><small>Saldo depois: ${money(preview.afterValues.balance)}</small></div>
+      <div><span>Origem da cotação</span><strong>${input.quoteSource === 'alpha_vantage' ? 'Alpha Vantage' : 'Preço manual'}</strong><small>${input.quoteTimestamp ? formatDateTime(input.quoteTimestamp) : 'Introduzido pelo utilizador'}</small></div>`;
+    return preview;
+  } catch (error) {
+    if (previewRoot) previewRoot.innerHTML = '';
+    if (feedback) {
+      feedback.textContent = error.message;
+      feedback.className = 'form-feedback error';
+    }
+    return null;
+  }
+}
+
+function openReinforcement(prefill = {}) {
+  if (state.accessMode !== 'write') return;
+  const dialog = document.getElementById('reinforcement-dialog');
+  const form = document.getElementById('reinforcement-form');
+  if (!dialog || !form) return;
+  form.reset();
+  state.reinforcementOperationId = globalThis.crypto?.randomUUID?.().replace(/-/g, '_')
+    || `reinforcement_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const today = new Date();
+  document.getElementById('reinforcement-date').value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  document.getElementById('reinforcement-mode').value = prefill.mode || 'automatic';
+  document.getElementById('reinforcement-total').value = prefill.total || '';
+  document.getElementById('reinforcement-vwce-pct').value = state.params.pctSWDA;
+  document.getElementById('reinforcement-aggh-pct').value = state.params.pctAGGH;
+  document.getElementById('reinforcement-vwce-price').value = state.liveData.quotes?.vwce?.price || '';
+  document.getElementById('reinforcement-aggh-price').value = state.liveData.quotes?.aggh?.price || '';
+  updateReinforcementPreview();
+  dialog.showModal();
+}
+
+function updateRebalancingPreview(rebalancingData = null) {
+  const root = document.getElementById('rebalance-preview');
+  if (!root) return;
+  const amount = Number(document.getElementById('rebalance-amount')?.value);
+  const data = rebalancingData || calculateRebalancingSuggestions(state.rows, state.params, state.liveData);
+  if (!data || !Number.isFinite(amount) || amount <= 0) {
+    root.textContent = '—';
+    return;
+  }
+  try {
+    const allocation = window.DcaFinancial.calculateReinforcementAllocation({
+      totalAmount: amount,
+      currentVWCE: data.allocations.find(item => item.asset === 'VWCE')?.current / 100 * data.totalValue,
+      currentAGGH: data.allocations.find(item => item.asset === 'AGGH')?.current / 100 * data.totalValue,
+      vwceTarget: state.params.pctSWDA,
+      agghTarget: state.params.pctAGGH
+    });
+    root.textContent = `VWCE ${money(allocation.vwceAmount)} · AGGH ${money(allocation.agghAmount)} (${data.source === 'live' ? 'cotações atuais' : 'último registo mensal'})`;
+  } catch (error) {
+    root.textContent = error.message;
+  }
+}
+
+function updateReconciliation() {
+  const root = document.getElementById('reconciliation-status');
+  const button = document.getElementById('btn-reconcile-shares');
+  if (!root || !button) return;
+  const latest = [...state.closures].reverse().find(item => item.status === 'complete' && item.sharesAfterPurchase);
+  if (!latest) {
+    root.innerHTML = '<p class="muted">A reconciliação fica disponível depois do primeiro fecho automático com unidades registadas.</p>';
+    button.hidden = true;
+    return;
+  }
+  const sinceMonth = latest.currentMonth || latest.month;
+  const laterReinforcements = state.reinforcements.filter(item => (item.month || item.date?.slice(0, 7)) >= sinceMonth);
+  const expected = window.DcaFinancial.calculateExpectedShares({ baselineShares: latest.sharesAfterPurchase, reinforcements: laterReinforcements });
+  const current = state.liveData.shares || { vwce: 0, aggh: 0 };
+  const differs = Math.abs(expected.vwce - current.vwce) > 0.0000001 || Math.abs(expected.aggh - current.aggh) > 0.0000001;
+  state.reconciliation = { expected, current, differs, baselineMonth: latest.month };
+  root.innerHTML = differs
+    ? `<p class="neg">Existe uma diferença entre as unidades calculadas e as unidades registadas.</p><p>Esperado: VWCE ${units(expected.vwce)} · AGGH ${units(expected.aggh)}<br>Registado: VWCE ${units(current.vwce)} · AGGH ${units(current.aggh)}</p>`
+    : `<p class="pos">As unidades coincidem com o histórico desde o fecho de ${escapeHTML(latest.month)}.</p>`;
+  button.hidden = !differs || state.accessMode !== 'write';
+}
+
+function bindDcaFeatures() {
+  ['btn-new-reinforcement', 'btn-new-reinforcement-secondary'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', () => openReinforcement());
+  });
+  document.querySelectorAll('[data-close-reinforcement]').forEach(button => {
+    button.addEventListener('click', () => document.getElementById('reinforcement-dialog')?.close());
+  });
+  document.getElementById('reinforcement-dialog')?.addEventListener('click', event => {
+    if (event.target.id === 'reinforcement-dialog') event.target.close();
+  });
+  document.getElementById('reinforcement-form')?.addEventListener('input', updateReinforcementPreview);
+  document.getElementById('reinforcement-form')?.addEventListener('submit', async event => {
+    event.preventDefault();
+    const preview = updateReinforcementPreview();
+    if (!preview) return;
+    const button = document.getElementById('btn-save-reinforcement');
+    button.disabled = true;
+    try {
+      await createReinforcement(reinforcementInput());
+      document.getElementById('reinforcement-dialog').close();
+      showToast('Reforço registado e posições atualizadas.', 'success');
+      await boot(true);
+    } catch (error) {
+      showFeedback('reinforcement-feedback', error.message || 'Não foi possível registar o reforço.', 'error', 8000);
+    } finally {
+      button.disabled = false;
+    }
+  });
+  document.getElementById('reinforcements-history')?.addEventListener('click', event => {
+    const button = event.target.closest('.btn-void-reinforcement');
+    if (!button) return;
+    const id = button.closest('[data-reinforcement-id]')?.dataset.reinforcementId;
+    if (!id) return;
+    showConfirm('Anular este reforço? As unidades e, se aplicável, o saldo serão revertidos. O registo será preservado.', async () => {
+      try {
+        await voidReinforcement(id, 'Anulação confirmada pelo utilizador');
+        showToast('Reforço anulado com registo de auditoria.', 'success');
+        await boot(true);
+      } catch (error) {
+        showToast(error.message, 'error', 6000);
+      }
+    }, null, { confirmLabel: 'Anular reforço' });
+  });
+  document.getElementById('btn-save-automation')?.addEventListener('click', event => {
+    const button = event.currentTarget;
+    showConfirm('Guardar estas definições no plano automático real? Esta alteração não modifica os cenários de simulação.', async () => {
+      button.disabled = true;
+      try {
+        state.automation = await saveAutomationSettings({
+          enabled: document.getElementById('automation-enabled').value === 'true',
+          effectiveFrom: document.getElementById('automation-effective-from').value,
+          vwceAmount: document.getElementById('automation-vwce-amount').value,
+          agghAmount: document.getElementById('automation-aggh-amount').value,
+          annualInterestRate: Number(document.getElementById('automation-interest-rate').value) / 100,
+          timezone: 'Europe/Lisbon', day: 1, time: '01:10'
+        });
+        showFeedback('automation-feedback', 'Plano automático guardado.');
+        await boot(true);
+      } catch (error) {
+        showFeedback('automation-feedback', error.message, 'error', 6000);
+      } finally {
+        button.disabled = false;
+      }
+    }, null, { confirmLabel: 'Guardar plano real' });
+  });
+  document.getElementById('btn-focus-balance')?.addEventListener('click', () => {
+    document.getElementById('juro-saldo-display')?.focus();
+    document.getElementById('juro-saldo-display')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  document.getElementById('btn-open-settings')?.addEventListener('click', () => {
+    const container = document.getElementById('params-container');
+    if (container) container.style.display = 'block';
+    const toggle = document.getElementById('btn-toggle-params');
+    if (toggle) toggle.textContent = 'Ocultar Parâmetros';
+    container?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.getElementById('rebalance-amount')?.addEventListener('input', () => updateRebalancingPreview());
+  document.getElementById('btn-use-rebalance')?.addEventListener('click', () => openReinforcement({
+    total: document.getElementById('rebalance-amount')?.value,
+    mode: 'automatic'
+  }));
+  document.getElementById('btn-reconcile-shares')?.addEventListener('click', () => {
+    if (!state.reconciliation?.differs) return;
+    showConfirm('Substituir explicitamente as quantidades registadas pelas quantidades calculadas? Será criado um registo de auditoria.', async () => {
+      try {
+        await reconcileShareQuantities(state.reconciliation.expected, `Reconciliação desde ${state.reconciliation.baselineMonth}`);
+        showToast('Quantidades reconciliadas.', 'success');
+        await boot(true);
+      } catch (error) {
+        showToast(error.message, 'error', 6000);
+      }
+    }, null, { confirmLabel: 'Reconciliar' });
+  });
 }
 
 function updateChartRangeLabel(totalPoints) {
@@ -500,28 +896,6 @@ function bindTableSaveHandler() {
   wrap.__boundSave = true;
 
   wrap.addEventListener('click', async (ev) => {
-    // Handle + extra buttons
-    const addSW = ev.target.closest('.btn-add-inv-swda');
-    if (addSW) {
-      const tr = addSW.closest('tr');
-      const input = tr?.querySelector('.inv-swda-extra');
-      if (input) {
-        const val = prompt('Adicionar extra VWCE para este mês (valor único):', input.value || '');
-        if (val !== null) input.value = val;
-      }
-      return;
-    }
-    const addAG = ev.target.closest('.btn-add-inv-aggh');
-    if (addAG) {
-      const tr = addAG.closest('tr');
-      const input = tr?.querySelector('.inv-aggh-extra');
-      if (input) {
-        const val = prompt('Adicionar extra AGGH para este mês (valor único):', input.value || '');
-        if (val !== null) input.value = val;
-      }
-      return;
-    }
-
     // Handle save button
     const saveBtn = ev.target.closest('.btn-save');
     if (saveBtn) {
@@ -531,12 +905,28 @@ function bindTableSaveHandler() {
 
       const manualSW = null;
       const manualAG = null;
-      const extraSW = parseFloat(tr.querySelector('.inv-swda-extra')?.value);
-      const extraAG = parseFloat(tr.querySelector('.inv-aggh-extra')?.value);
-
-      const swda = parseFloat(tr.querySelector('.swda')?.value) || null;
-      const aggh = parseFloat(tr.querySelector('.aggh')?.value) || null;
-      const cash = parseFloat(tr.querySelector('.cash')?.value) || null;
+      const optionalNumber = selector => {
+        const raw = tr.querySelector(selector)?.value;
+        if (raw === '' || raw == null) return null;
+        const value = Number(raw);
+        if (!Number.isFinite(value) || value < 0) throw new Error('Os valores mensais devem ser números não negativos.');
+        return Math.round(value * 100) / 100;
+      };
+      let extraSW;
+      let extraAG;
+      let swda;
+      let aggh;
+      let cash;
+      try {
+        extraSW = optionalNumber('.inv-swda-extra');
+        extraAG = optionalNumber('.inv-aggh-extra');
+        swda = optionalNumber('.swda');
+        aggh = optionalNumber('.aggh');
+        cash = optionalNumber('.cash');
+      } catch (error) {
+        showToast(error.message, 'warning');
+        return;
+      }
 
       try {
         saveBtn.textContent = '⏳';
@@ -564,7 +954,7 @@ function bindTableSaveHandler() {
       } catch (err) {
         saveBtn.textContent = '❌';
         saveBtn.disabled = false;
-        alert(err.message || 'Erro ao gravar. Tente novamente.');
+        showToast(err.message || 'Erro ao gravar. Tente novamente.', 'error');
         setTimeout(() => {
           saveBtn.textContent = '✓';
         }, 2000);
@@ -622,7 +1012,7 @@ function bindGlobalButtons() {
       if (state.rows && state.rows.length > 0) {
         exportToCSV(state.rows);
       } else {
-        alert('Não há dados para exportar.');
+        showToast('Não há dados para exportar.', 'warning');
       }
     });
   }
@@ -642,6 +1032,16 @@ async function boot(skipParamUI = false) {
       writeParamsToUI(state.params);
       updateScenarios(null, state.params);
     }
+
+    state.automation = await loadAutomationSettings({ readOnly: state.accessMode === 'read' });
+    writeAutomationToUI();
+    [state.reinforcements, state.juroMovements, state.closures] = await Promise.all([
+      loadReinforcements(),
+      loadRecentJuroMovements(),
+      loadMonthlyClosures()
+    ]);
+    renderReinforcementsHistory();
+    renderJuroMovements();
 
     const now = new Date();
 
@@ -665,8 +1065,8 @@ async function boot(skipParamUI = false) {
     const chartDocs = docs.filter(d => d.id <= chartLimitId);
 
     // MODIFIED: Pass liveData to buildModel
-    const rows = buildModel(subset, state.params, state.liveData);
-    const chartRows = buildModel(chartDocs, state.params, state.liveData);
+    const rows = buildModel(subset, state.params, state.liveData, state.reinforcements, state.closures);
+    const chartRows = buildModel(chartDocs, state.params, state.liveData, state.reinforcements, state.closures);
     state.rows = rows; // Store rows for table/export
     broadcastInvestedTotals(rows);
 
@@ -674,7 +1074,7 @@ async function boot(skipParamUI = false) {
     initializeCharts();
     
     // Update charts with data
-    const chartData = prepareChartData(chartRows, state.params);
+    const chartData = prepareChartData(chartRows, state.params, state.liveData);
     if (chartData) {
       state.chartData = chartData;
       if (!state.chartRange) {
@@ -707,14 +1107,16 @@ async function boot(skipParamUI = false) {
     const obsRoot = document.getElementById('dca-table-wrap');
     const totalInterest = somaJuroTabelaDCA(obsRoot, { excludeCurrentMonth: true });
     updateKPIs(kpis, totalInterest);
+    updateOverview(kpis);
 
     // Calculate and update advanced metrics
     const advancedMetrics = calculateAdvancedMetrics(rows, state.params, state.liveData);
     updateAdvancedMetrics(advancedMetrics);
 
     // Calculate rebalancing suggestions
-    const rebalancingData = calculateRebalancingSuggestions(rows, state.params);
+    const rebalancingData = calculateRebalancingSuggestions(rows, state.params, state.liveData);
     updateRebalancingSuggestions(rebalancingData);
+    updateRebalancingPreview(rebalancingData);
     maybeSendRebalancingAlert(rebalancingData);
 
     // Update progress bar
@@ -736,6 +1138,7 @@ async function boot(skipParamUI = false) {
 
     // Add scroll indicators
     requestAnimationFrame(addScrollIndicators);
+    updateReconciliation();
 
   } catch (err) {
     console.error('Boot error:', err);
@@ -751,6 +1154,18 @@ document.getElementById('btn-save-params')?.addEventListener('click', async () =
   const p = readParamsFromUI(DEFAULTS);
   if (!p.pctSumOk) {
     showFeedback('params-feedback', 'As percentagens VWCE+AGGH devem somar 100%.', 'error');
+    return;
+  }
+  if (!Number.isFinite(p.monthlyContribution) || p.monthlyContribution < 0) {
+    showFeedback('params-feedback', 'A contribuição mensal deve ser um valor não negativo.', 'error');
+    return;
+  }
+  if (!p.endYM?.y || !p.endYM?.m || ymCompare(p.endYM, START_YM) < 0) {
+    showFeedback('params-feedback', 'A data final não pode ser anterior a setembro de 2025.', 'error');
+    return;
+  }
+  if (Object.values(p.scenarioRates).some(rate => !Number.isFinite(rate) || rate < -50 || rate > 50)) {
+    showFeedback('params-feedback', 'As taxas dos cenários devem ficar entre -50% e 50%.', 'error');
     return;
   }
   
@@ -772,16 +1187,23 @@ document.getElementById('btn-save-saldo')?.addEventListener('click', async () =>
 
   const newSaldo = parseFloat(input.value);
   if (!Number.isFinite(newSaldo) || newSaldo < 0) {
-    alert('Saldo inválido. Por favor, introduza um valor válido.');
+    showToast('Saldo inválido. Introduza um valor não negativo.', 'warning');
     return;
   }
 
   try {
-    await saveJuroSaldo(newSaldo);
+    const reason = document.getElementById('juro-correction-reason')?.value?.trim();
+    if (!reason) {
+      showToast('Indique o motivo da correção do saldo.', 'warning');
+      return;
+    }
+    await saveJuroSaldo(newSaldo, reason);
+    document.getElementById('juro-correction-reason').value = '';
     state.liveData.saldo = newSaldo;
-    updateLiveCalculations();
+    showToast('Saldo corrigido e movimento registado.', 'success');
+    await boot(true);
   } catch (err) {
-    alert(err.message || 'Erro ao guardar saldo.');
+    showToast(err.message || 'Erro ao guardar saldo.', 'error');
   }
 });
 
@@ -808,6 +1230,7 @@ async function initializeDcaPage() {
   if (access.moduleKey !== 'dca' || access.mode === 'none') return;
   state.accessMode = access.mode;
   bindGlobalButtons();
+  bindDcaFeatures();
   await initJuroModule();
   initializeChartControls();
   await initEtfQuotes({ readOnly: state.accessMode === 'read' });

@@ -5,7 +5,7 @@
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",
-    "test": "node --test cleaning-alerts.test.js dca-monthly.test.js investment-access.test.js family-finance.test.js",
+    "test": "node --test cleaning-alerts.test.js dca-monthly.test.js dca-financial.test.js investment-access.test.js family-finance.test.js",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log"
   },

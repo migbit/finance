@@ -6,7 +6,17 @@ const MONTHLY_CONTRIBUTIONS = {
   previous: { vwce: 120, aggh: 30 },
   current: { vwce: 150, aggh: 50 },
 };
-const ETF_SYMBOLS = { vwce: "VWCE.DE", aggh: "EUNA.DE" };
+const ETF_SYMBOLS = { vwce: ["VWCE.DE"], aggh: ["EUNA.DE", "AGGH.DE"] };
+const DEFAULT_AUTOMATION = Object.freeze({
+  enabled: true,
+  effectiveFrom: CONTRIBUTION_CHANGE_MONTH,
+  vwceAmount: 150,
+  agghAmount: 50,
+  annualInterestRate: ANNUAL_INTEREST_RATE,
+  timezone: "Europe/Lisbon",
+  day: 1,
+  time: "01:10",
+});
 
 function round(value, decimals = 2) {
   const factor = 10 ** decimals;
@@ -24,11 +34,60 @@ function previousMonthRange(runDate) {
   return { id: monthId(start), start, end, currentId: monthId(currentStart), currentStart };
 }
 
-function getMonthlyContributions(month) {
-  const plan = month >= CONTRIBUTION_CHANGE_MONTH
-    ? MONTHLY_CONTRIBUTIONS.current
+function normalizeAutomation(data = {}) {
+  const effectiveFrom = /^\d{4}-\d{2}$/.test(data.effectiveFrom || "")
+    ? data.effectiveFrom
+    : DEFAULT_AUTOMATION.effectiveFrom;
+  const vwceCents = Number.isSafeInteger(data.vwceAmountCents)
+    ? data.vwceAmountCents
+    : Math.round(Number(data.vwceAmount ?? DEFAULT_AUTOMATION.vwceAmount) * 100);
+  const agghCents = Number.isSafeInteger(data.agghAmountCents)
+    ? data.agghAmountCents
+    : Math.round(Number(data.agghAmount ?? DEFAULT_AUTOMATION.agghAmount) * 100);
+  const annualInterestRate = Number(data.annualInterestRate ?? data.interestRate ?? ANNUAL_INTEREST_RATE);
+  if (vwceCents < 0 || agghCents < 0 || vwceCents + agghCents <= 0 || !Number.isSafeInteger(vwceCents) || !Number.isSafeInteger(agghCents)) {
+    throw new Error("Configuração automática com montantes inválidos");
+  }
+  if (!Number.isFinite(annualInterestRate) || annualInterestRate < 0 || annualInterestRate > 1) {
+    throw new Error("Configuração automática com taxa de juro inválida");
+  }
+  if ((data.timezone || DEFAULT_AUTOMATION.timezone) !== "Europe/Lisbon"
+      || Number(data.day ?? DEFAULT_AUTOMATION.day) !== 1
+      || (data.time || DEFAULT_AUTOMATION.time) !== "01:10") {
+    throw new Error("Agendamento automático incompatível com a função publicada");
+  }
+  return {
+    enabled: data.enabled !== false,
+    effectiveFrom,
+    vwceAmount: vwceCents / 100,
+    agghAmount: agghCents / 100,
+    annualInterestRate,
+    timezone: "Europe/Lisbon",
+    day: 1,
+    time: "01:10",
+  };
+}
+
+function getMonthlyContributions(month, automationData = null) {
+  const automation = normalizeAutomation(automationData || DEFAULT_AUTOMATION);
+  if (!automation.enabled) return { vwce: 0, aggh: 0 };
+  const plan = month >= automation.effectiveFrom
+    ? { vwce: automation.vwceAmount, aggh: automation.agghAmount }
     : MONTHLY_CONTRIBUTIONS.previous;
   return { ...plan };
+}
+
+function validateSufficientBalance(availableBalance, contributions) {
+  const available = round(availableBalance);
+  const required = round((Number(contributions?.vwce) || 0) + (Number(contributions?.aggh) || 0));
+  if (available < required) {
+    const error = new Error(`Saldo insuficiente: ${available} < ${required}`);
+    error.code = "insufficient_balance";
+    error.availableBalance = available;
+    error.requiredBalance = required;
+    throw error;
+  }
+  return { availableBalance: available, requiredBalance: required };
 }
 
 function daysInRange(start, end) {
@@ -86,6 +145,19 @@ async function fetchDailyClose(apiKey, symbol, cutoff) {
   return selectLastClose(payload["Time Series (Daily)"], cutoff);
 }
 
+async function fetchDailyCloseWithFallback(apiKey, symbols, cutoff, fetcher = fetchDailyClose) {
+  const candidates = Array.isArray(symbols) ? symbols : [symbols];
+  let lastError = null;
+  for (const symbol of candidates) {
+    try {
+      return { ...(await fetcher(apiKey, symbol, cutoff)), symbol };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("Sem símbolos configurados para obter a cotação");
+}
+
 async function loadMovements(firestore, start, end) {
   const snapshot = await firestore.collection("dca_juro_movements")
     .where("effectiveAt", ">=", admin.firestore.Timestamp.fromDate(start))
@@ -95,7 +167,7 @@ async function loadMovements(firestore, start, end) {
   return snapshot.docs.map((doc) => {
     const data = doc.data();
     return { ...data, effectiveAt: data.effectiveAt?.toDate?.() || new Date(data.effectiveAt) };
-  });
+  }).filter((item) => item.includedInOpeningBalance !== true);
 }
 
 async function closePreviousMonthAndOpenCurrent({ firestore, apiKey, runDate = new Date() }) {
@@ -106,32 +178,96 @@ async function closePreviousMonthAndOpenCurrent({ firestore, apiKey, runDate = n
     return { skipped: true, month: range.id, reason: "already-complete" };
   }
 
-  const [sharesSnap, interestSnap, monthSnap, vwceQuote, agghQuote] = await Promise.all([
+  const [sharesSnap, interestSnap, monthSnap, automationSnap] = await Promise.all([
     firestore.collection("dca_settings").doc("shares").get(),
     firestore.collection("dca_juro").doc("current").get(),
     firestore.collection("dca").doc(range.id).get(),
-    fetchDailyClose(apiKey, ETF_SYMBOLS.vwce, range.end),
-    fetchDailyClose(apiKey, ETF_SYMBOLS.aggh, range.end),
+    firestore.collection("dca_settings").doc("automation").get(),
   ]);
 
   const shares = sharesSnap.data() || {};
   const interestState = interestSnap.data() || {};
   const existingMonth = monthSnap.data() || {};
+  let automation;
+  try {
+    automation = normalizeAutomation(automationSnap.exists ? automationSnap.data() : DEFAULT_AUTOMATION);
+  } catch (configurationError) {
+    await closureRef.set({
+      status: "failed",
+      failureCode: "invalid_automation_configuration",
+      month: range.id,
+      currentMonth: range.currentId,
+      failureMessage: configurationError.message,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    throw configurationError;
+  }
   const movements = await loadMovements(firestore, range.start, range.end);
   const openingBalance = Number(interestState.periodOpeningBalance ?? interestState.saldo) || 0;
-  const interest = calculateDailyInterest(openingBalance, movements, range.start, range.end);
-  const monthlyContributions = getMonthlyContributions(range.currentId);
+  const interest = calculateDailyInterest(openingBalance, movements, range.start, range.end, automation.annualInterestRate);
+  const monthlyContributions = getMonthlyContributions(range.currentId, automation);
   const balanceAfterInterest = round(interest.closingBalanceBeforeInterest + interest.interest);
+  const requiredBalance = round(monthlyContributions.vwce + monthlyContributions.aggh);
+  try {
+    validateSufficientBalance(balanceAfterInterest, monthlyContributions);
+  } catch (validationError) {
+    await closureRef.set({
+      status: "failed",
+      failureCode: "insufficient_balance",
+      month: range.id,
+      currentMonth: range.currentId,
+      availableBalance: balanceAfterInterest,
+      requiredBalance,
+      attemptedPurchase: monthlyContributions,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    throw new Error(`Saldo insuficiente para o DCA ${range.currentId}: ${balanceAfterInterest} < ${requiredBalance}`);
+  }
+  let vwceQuote;
+  let agghQuote;
+  try {
+    [vwceQuote, agghQuote] = await Promise.all([
+      fetchDailyCloseWithFallback(apiKey, ETF_SYMBOLS.vwce, range.end),
+      fetchDailyCloseWithFallback(apiKey, ETF_SYMBOLS.aggh, range.end),
+    ]);
+  } catch (quoteError) {
+    await closureRef.set({
+      status: "failed",
+      failureCode: "quote_unavailable",
+      month: range.id,
+      currentMonth: range.currentId,
+      failureMessage: String(quoteError.message || quoteError).slice(0, 500),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    throw quoteError;
+  }
   const balanceAfterPurchase = round(balanceAfterInterest - monthlyContributions.vwce - monthlyContributions.aggh);
   const vwceSharesAtClose = Number(shares.vwce) || 0;
   const agghSharesAtClose = Number(shares.aggh) || 0;
   const newVwceShares = round(vwceSharesAtClose + monthlyContributions.vwce / vwceQuote.price, 8);
   const newAgghShares = round(agghSharesAtClose + monthlyContributions.aggh / agghQuote.price, 8);
   const closedAt = admin.firestore.FieldValue.serverTimestamp();
+  const interestMovementRef = firestore.collection("dca_juro_movements").doc(`interest_${range.id}`);
+  const dcaMovementRef = firestore.collection("dca_juro_movements").doc(`dca_${range.currentId}`);
 
   await firestore.runTransaction(async (transaction) => {
     const latestClosure = await transaction.get(closureRef);
     if (latestClosure.exists && latestClosure.data()?.status === "complete") return;
+    const latestSharesSnap = await transaction.get(firestore.collection("dca_settings").doc("shares"));
+    const latestInterestSnap = await transaction.get(firestore.collection("dca_juro").doc("current"));
+    const latestAutomationSnap = await transaction.get(firestore.collection("dca_settings").doc("automation"));
+    const latestSharesData = latestSharesSnap.data() || {};
+    const latestInterestData = latestInterestSnap.data() || {};
+    const latestAutomation = normalizeAutomation(latestAutomationSnap.exists ? latestAutomationSnap.data() : DEFAULT_AUTOMATION);
+    if (Number(latestSharesData.vwce || 0) !== vwceSharesAtClose
+        || Number(latestSharesData.aggh || 0) !== agghSharesAtClose
+        || Number(latestInterestData.saldo || 0) !== Number(interestState.saldo || 0)
+        || latestAutomation.enabled !== automation.enabled
+        || latestAutomation.vwceAmount !== automation.vwceAmount
+        || latestAutomation.agghAmount !== automation.agghAmount
+        || latestAutomation.annualInterestRate !== automation.annualInterestRate) {
+      throw new Error("O estado DCA mudou durante o fecho; a operação será repetida em segurança");
+    }
 
     transaction.set(firestore.collection("dca").doc(range.id), {
       id: range.id,
@@ -163,13 +299,34 @@ async function closePreviousMonthAndOpenCurrent({ firestore, apiKey, runDate = n
 
     transaction.set(firestore.collection("dca_juro").doc("current"), {
       saldo: balanceAfterPurchase,
-      taxa: ANNUAL_INTEREST_RATE,
+      taxa: automation.annualInterestRate,
       lastMonthlyInterest: interest.interest,
       lastClosedMonth: range.id,
       periodOpeningBalance: balanceAfterPurchase,
       periodStart: admin.firestore.Timestamp.fromDate(range.currentStart),
       updatedAt: closedAt,
     }, { merge: true });
+
+    transaction.set(interestMovementRef, {
+      type: "interest",
+      amount: interest.interest,
+      balanceAfter: balanceAfterInterest,
+      effectiveAt: admin.firestore.Timestamp.fromDate(range.currentStart),
+      description: `Juro de ${range.id}`,
+      includedInOpeningBalance: true,
+      createdAt: closedAt,
+    }, { merge: true });
+    if (requiredBalance > 0) {
+      transaction.set(dcaMovementRef, {
+        type: "dca",
+        amount: -requiredBalance,
+        balanceAfter: balanceAfterPurchase,
+        effectiveAt: admin.firestore.Timestamp.fromDate(range.currentStart),
+        description: `DCA de ${range.currentId}`,
+        includedInOpeningBalance: true,
+        createdAt: closedAt,
+      }, { merge: true });
+    }
 
     transaction.set(closureRef, {
       status: "complete",
@@ -185,6 +342,11 @@ async function closePreviousMonthAndOpenCurrent({ firestore, apiKey, runDate = n
       prices: { vwce: vwceQuote, aggh: agghQuote },
       purchase: monthlyContributions,
       sharesAfterPurchase: { vwce: newVwceShares, aggh: newAgghShares },
+      automation: {
+        enabled: automation.enabled,
+        effectiveFrom: automation.effectiveFrom,
+        annualInterestRate: automation.annualInterestRate,
+      },
     }, { merge: true });
   });
 
@@ -195,7 +357,10 @@ module.exports = {
   ANNUAL_INTEREST_RATE,
   calculateDailyInterest,
   closePreviousMonthAndOpenCurrent,
+  fetchDailyCloseWithFallback,
   getMonthlyContributions,
+  normalizeAutomation,
+  validateSufficientBalance,
   previousMonthRange,
   selectLastClose,
 };

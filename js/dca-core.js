@@ -3,8 +3,8 @@
 import { db } from '../js/script.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 import {
-  addDoc, collection, doc, getDoc, getDocs, setDoc, updateDoc,
-  query, orderBy
+  collection, doc, getDoc, getDocs, setDoc, updateDoc,
+  query, orderBy, limit, runTransaction, serverTimestamp
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
 // ---------- Constants ----------
@@ -27,12 +27,27 @@ export const DEFAULTS = {
 };
 
 export const TAXA_ANUAL_FIXA = 0.02; // 2%
+export const DEFAULT_AUTOMATION = Object.freeze({
+  enabled: true,
+  effectiveFrom: '2026-10',
+  vwceAmount: 150,
+  agghAmount: 50,
+  annualInterestRate: TAXA_ANUAL_FIXA,
+  timezone: 'Europe/Lisbon',
+  day: 1,
+  time: '01:10'
+});
 
 // ---------- Firestore Collections ----------
 const COL = collection(db, 'dca');
 const SETTINGS_D = doc(collection(db, 'dca_settings'), 'params');
 const JURO_DOC = doc(db, "dca_juro", "current");
 const SHARES_DOC = doc(collection(db, 'dca_settings'), 'shares');
+const AUTOMATION_DOC = doc(collection(db, 'dca_settings'), 'automation');
+const REINFORCEMENTS_COL = collection(db, 'dca_reinforcements');
+const JURO_MOVEMENTS_COL = collection(db, 'dca_juro_movements');
+const CLOSURES_COL = collection(db, 'dca_monthly_closures');
+const RECONCILIATIONS_COL = collection(db, 'dca_reconciliations');
 
 // ---------- Auth State ----------
 let __isAuthed = false;
@@ -169,21 +184,32 @@ export async function loadJuroSaldo() {
   }
 }
 
-export async function saveJuroSaldo(saldo) {
+export async function saveJuroSaldo(saldo, description = '') {
   try {
-    const nextBalance = parseFloat(saldo) || 0;
+    const nextBalance = Number(saldo);
+    if (!Number.isFinite(nextBalance) || nextBalance < 0) {
+      throw new Error('O saldo deve ser um valor válido e não negativo.');
+    }
     const effectiveAt = new Date();
-    await setDoc(JURO_DOC, {
-      saldo: nextBalance,
-      taxa: TAXA_ANUAL_FIXA,
-      updatedAt: effectiveAt
-    }, { merge: true });
-    await addDoc(collection(db, 'dca_juro_movements'), {
-      type: 'set_balance',
-      balance: nextBalance,
-      effectiveAt,
-      source: 'manual',
-      createdAt: effectiveAt
+    const movementRef = doc(JURO_MOVEMENTS_COL);
+    await runTransaction(db, async transaction => {
+      const currentSnap = await transaction.get(JURO_DOC);
+      const previousBalance = Number(currentSnap.data()?.saldo) || 0;
+      transaction.set(JURO_DOC, {
+        saldo: Math.round(nextBalance * 100) / 100,
+        taxa: Number(currentSnap.data()?.taxa) || TAXA_ANUAL_FIXA,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      transaction.set(movementRef, {
+        type: 'manual_correction',
+        amount: Math.round((nextBalance - previousBalance) * 100) / 100,
+        balance: Math.round(nextBalance * 100) / 100,
+        balanceAfter: Math.round(nextBalance * 100) / 100,
+        effectiveAt,
+        source: 'manual',
+        description: String(description || '').trim(),
+        createdAt: serverTimestamp()
+      });
     });
   } catch (err) {
     console.error('Error saving juro saldo:', err);
@@ -328,4 +354,270 @@ export async function saveShareQuantities(shares, options = {}) {
     console.error('Error saving shares:', err);
     throw new Error('Erro ao guardar quantidades.');
   }
+}
+
+function normalizedAutomation(data = {}) {
+  const vwceAmount = Number(data.vwceAmount ?? (Number(data.vwceAmountCents) / 100));
+  const agghAmount = Number(data.agghAmount ?? (Number(data.agghAmountCents) / 100));
+  const annualInterestRate = Number(data.annualInterestRate ?? data.interestRate ?? TAXA_ANUAL_FIXA);
+  return {
+    enabled: data.enabled !== false,
+    effectiveFrom: /^\d{4}-\d{2}$/.test(data.effectiveFrom || '') ? data.effectiveFrom : DEFAULT_AUTOMATION.effectiveFrom,
+    vwceAmount: Number.isFinite(vwceAmount) && vwceAmount >= 0 ? vwceAmount : DEFAULT_AUTOMATION.vwceAmount,
+    agghAmount: Number.isFinite(agghAmount) && agghAmount >= 0 ? agghAmount : DEFAULT_AUTOMATION.agghAmount,
+    annualInterestRate: Number.isFinite(annualInterestRate) && annualInterestRate >= 0 && annualInterestRate <= 1
+      ? annualInterestRate
+      : TAXA_ANUAL_FIXA,
+    timezone: data.timezone || DEFAULT_AUTOMATION.timezone,
+    day: Number(data.day) || DEFAULT_AUTOMATION.day,
+    time: data.time || DEFAULT_AUTOMATION.time,
+    updatedAt: normalizeTimestamp(data.updatedAt)
+  };
+}
+
+export async function loadAutomationSettings({ readOnly = false } = {}) {
+  const snap = await getDoc(AUTOMATION_DOC);
+  if (!snap.exists()) {
+    if (!readOnly) {
+      await setDoc(AUTOMATION_DOC, {
+        ...DEFAULT_AUTOMATION,
+        vwceAmountCents: 15000,
+        agghAmountCents: 5000,
+        updatedAt: serverTimestamp()
+      });
+    }
+    return { ...DEFAULT_AUTOMATION, updatedAt: null };
+  }
+  return normalizedAutomation(snap.data());
+}
+
+export async function saveAutomationSettings(settings) {
+  const rawVWCE = Number(settings.vwceAmount);
+  const rawAGGH = Number(settings.agghAmount);
+  const rawRate = Number(settings.annualInterestRate);
+  if (!/^\d{4}-\d{2}$/.test(settings.effectiveFrom || '')) throw new Error('Indique o mês de entrada em vigor.');
+  if (!Number.isFinite(rawVWCE) || !Number.isFinite(rawAGGH) || rawVWCE < 0 || rawAGGH < 0) {
+    throw new Error('Os montantes do plano automático devem ser números não negativos.');
+  }
+  if (!Number.isFinite(rawRate) || rawRate < 0 || rawRate > 1) {
+    throw new Error('A taxa anual deve ficar entre 0% e 100%.');
+  }
+  const normalized = normalizedAutomation(settings);
+  if (normalized.day !== 1 || normalized.time !== '01:10' || normalized.timezone !== 'Europe/Lisbon') {
+    throw new Error('O agendamento suportado é dia 1 às 01:10 em Europe/Lisbon.');
+  }
+  const vwceAmountCents = Math.round(normalized.vwceAmount * 100);
+  const agghAmountCents = Math.round(normalized.agghAmount * 100);
+  if (!Number.isSafeInteger(vwceAmountCents) || !Number.isSafeInteger(agghAmountCents)
+      || vwceAmountCents < 0 || agghAmountCents < 0 || vwceAmountCents + agghAmountCents <= 0) {
+    throw new Error('Os montantes do plano automático são inválidos.');
+  }
+  await setDoc(AUTOMATION_DOC, {
+    ...normalized,
+    vwceAmount: vwceAmountCents / 100,
+    agghAmount: agghAmountCents / 100,
+    vwceAmountCents,
+    agghAmountCents,
+    updatedAt: serverTimestamp()
+  }, { merge: true });
+  return normalized;
+}
+
+export async function loadReinforcements() {
+  const snap = await getDocs(query(REINFORCEMENTS_COL, orderBy('date', 'desc')));
+  return snap.docs.map(item => ({ id: item.id, ...item.data() }));
+}
+
+export async function loadRecentJuroMovements(maxItems = 8) {
+  const snap = await getDocs(query(JURO_MOVEMENTS_COL, orderBy('effectiveAt', 'desc'), limit(maxItems)));
+  return snap.docs.map(item => ({ id: item.id, ...item.data() }));
+}
+
+export async function loadMonthlyClosures() {
+  const snap = await getDocs(CLOSURES_COL);
+  return snap.docs.map(item => ({ id: item.id, ...item.data() }))
+    .sort((a, b) => String(a.month || a.id).localeCompare(String(b.month || b.id)));
+}
+
+function financialApi() {
+  if (!window.DcaFinancial) throw new Error('O módulo de cálculos financeiros não está disponível.');
+  return window.DcaFinancial;
+}
+
+function operationDate(dateString) {
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  return dateString === today ? new Date() : new Date(`${dateString}T12:00:00`);
+}
+
+export async function createReinforcement(input) {
+  const operationId = String(input.operationId || '').trim();
+  if (!/^[a-zA-Z0-9_-]{12,80}$/.test(operationId)) throw new Error('Identificador da operação inválido.');
+  const reinforcementRef = doc(REINFORCEMENTS_COL, operationId);
+  const month = String(input.date || '').slice(0, 7);
+  const monthRef = doc(COL, month);
+  const closureRef = doc(CLOSURES_COL, month);
+  const movementRef = doc(JURO_MOVEMENTS_COL, `reinforcement_${operationId}`);
+  const effectiveAt = operationDate(input.date);
+
+  return runTransaction(db, async transaction => {
+    const [existingSnap, sharesSnap, balanceSnap, monthSnap, closureSnap] = await Promise.all([
+      transaction.get(reinforcementRef),
+      transaction.get(SHARES_DOC),
+      transaction.get(JURO_DOC),
+      transaction.get(monthRef),
+      transaction.get(closureRef)
+    ]);
+    financialApi().assertUniqueOperation(existingSnap.exists());
+    if (monthSnap.data()?.snapshot_status === 'closed' || closureSnap.data()?.status === 'complete') {
+      throw new Error('Este mês já se encontra fechado. Utilize uma correção histórica específica.');
+    }
+
+    const shares = {
+      vwce: Number(sharesSnap.data()?.vwce) || 0,
+      aggh: Number(sharesSnap.data()?.aggh) || 0
+    };
+    const currentBalance = Number(balanceSnap.data()?.saldo) || 0;
+    const preview = financialApi().buildReinforcementPreview({
+      ...input,
+      currentShares: shares,
+      currentBalance,
+      currentVWCE: shares.vwce * Number(input.vwcePrice),
+      currentAGGH: shares.aggh * Number(input.agghPrice)
+    });
+    if (input.fundingSource === 'trade_republic_balance' && preview.totalAmount > currentBalance) {
+      throw new Error(`Saldo insuficiente. Disponível: ${currentBalance.toFixed(2)} €.`);
+    }
+
+    const nowStamp = serverTimestamp();
+    const nextShares = preview.afterShares;
+    const nextBalance = financialApi().roundMoney(currentBalance + preview.balanceImpact);
+    const record = {
+      id: operationId,
+      date: input.date,
+      month,
+      effectiveAt,
+      createdAt: nowStamp,
+      updatedAt: nowStamp,
+      totalAmount: preview.totalAmount,
+      totalAmountCents: preview.totalCents,
+      vwceAmount: preview.vwceAmount,
+      vwceAmountCents: preview.vwceCents,
+      vwcePrice: preview.vwcePrice,
+      vwcePriceMicros: preview.vwcePriceMicros,
+      vwceQuantity: preview.vwceQuantity,
+      agghAmount: preview.agghAmount,
+      agghAmountCents: preview.agghCents,
+      agghPrice: preview.agghPrice,
+      agghPriceMicros: preview.agghPriceMicros,
+      agghQuantity: preview.agghQuantity,
+      allocationMode: input.allocationMode,
+      fundingSource: input.fundingSource,
+      quoteSource: input.quoteSource || 'manual',
+      quoteTimestamp: input.quoteTimestamp || null,
+      notes: String(input.notes || '').trim().slice(0, 500),
+      status: 'active',
+      sharesBefore: shares,
+      sharesAfter: nextShares,
+      balanceBefore: currentBalance,
+      balanceAfter: nextBalance
+    };
+
+    transaction.set(reinforcementRef, record);
+    transaction.set(SHARES_DOC, {
+      ...nextShares,
+      updatedAt: nowStamp,
+      vwceUpdatedAt: preview.vwceQuantity ? nowStamp : (sharesSnap.data()?.vwceUpdatedAt || null),
+      agghUpdatedAt: preview.agghQuantity ? nowStamp : (sharesSnap.data()?.agghUpdatedAt || null)
+    }, { merge: true });
+
+    if (input.fundingSource === 'trade_republic_balance') {
+      transaction.set(JURO_DOC, { saldo: nextBalance, updatedAt: nowStamp }, { merge: true });
+      transaction.set(movementRef, {
+        type: 'reinforcement',
+        amount: -preview.totalAmount,
+        balanceAfter: nextBalance,
+        effectiveAt,
+        description: String(input.notes || 'Reforço extraordinário').trim().slice(0, 500),
+        reinforcementId: operationId,
+        createdAt: nowStamp
+      });
+    }
+    return record;
+  });
+}
+
+export async function voidReinforcement(id, reason = '') {
+  const reinforcementRef = doc(REINFORCEMENTS_COL, id);
+  const movementRef = doc(JURO_MOVEMENTS_COL, `reinforcement_void_${id}`);
+  return runTransaction(db, async transaction => {
+    const reinforcementSnap = await transaction.get(reinforcementRef);
+    if (!reinforcementSnap.exists()) throw new Error('Reforço não encontrado.');
+    const reinforcement = reinforcementSnap.data();
+    if ((reinforcement.status || 'active') !== 'active') throw new Error('Este reforço já está anulado.');
+    const month = reinforcement.month || String(reinforcement.date || '').slice(0, 7);
+    const [monthSnap, closureSnap, sharesSnap, balanceSnap] = await Promise.all([
+      transaction.get(doc(COL, month)),
+      transaction.get(doc(CLOSURES_COL, month)),
+      transaction.get(SHARES_DOC),
+      transaction.get(JURO_DOC)
+    ]);
+    if (monthSnap.data()?.snapshot_status === 'closed' || closureSnap.data()?.status === 'complete') {
+      throw new Error('Este reforço pertence a um mês fechado e não pode ser anulado automaticamente.');
+    }
+    const currentShares = sharesSnap.data() || {};
+    const reversal = financialApi().calculateReinforcementReversal({
+      shares: currentShares,
+      balance: Number(balanceSnap.data()?.saldo) || 0,
+      reinforcement
+    });
+    const nextShares = reversal.shares;
+    const nowStamp = serverTimestamp();
+    transaction.update(reinforcementRef, {
+      status: 'void',
+      voidReason: String(reason || '').trim().slice(0, 500),
+      voidedAt: nowStamp,
+      updatedAt: nowStamp
+    });
+    transaction.set(SHARES_DOC, { ...nextShares, updatedAt: nowStamp }, { merge: true });
+    if (reinforcement.fundingSource === 'trade_republic_balance') {
+      const restoredBalance = reversal.balance;
+      transaction.set(JURO_DOC, { saldo: restoredBalance, updatedAt: nowStamp }, { merge: true });
+      transaction.set(movementRef, {
+        type: 'reinforcement_void',
+        amount: Number(reinforcement.totalAmount) || 0,
+        balanceAfter: restoredBalance,
+        effectiveAt: new Date(),
+        description: String(reason || 'Anulação de reforço').trim().slice(0, 500),
+        reinforcementId: id,
+        createdAt: nowStamp
+      });
+    }
+    return { id, status: 'void', shares: nextShares };
+  });
+}
+
+export async function reconcileShareQuantities(expectedShares, note = '') {
+  const auditRef = doc(RECONCILIATIONS_COL);
+  return runTransaction(db, async transaction => {
+    const sharesSnap = await transaction.get(SHARES_DOC);
+    const previous = {
+      vwce: Number(sharesSnap.data()?.vwce) || 0,
+      aggh: Number(sharesSnap.data()?.aggh) || 0
+    };
+    const next = {
+      vwce: financialApi().roundUnits(expectedShares.vwce),
+      aggh: financialApi().roundUnits(expectedShares.aggh)
+    };
+    if (next.vwce < 0 || next.aggh < 0) throw new Error('Quantidades esperadas inválidas.');
+    const nowStamp = serverTimestamp();
+    transaction.set(SHARES_DOC, { ...next, updatedAt: nowStamp, vwceUpdatedAt: nowStamp, agghUpdatedAt: nowStamp }, { merge: true });
+    transaction.set(auditRef, {
+      previousShares: previous,
+      reconciledShares: next,
+      note: String(note || '').trim().slice(0, 500),
+      createdAt: nowStamp
+    });
+    return { previous, next };
+  });
 }

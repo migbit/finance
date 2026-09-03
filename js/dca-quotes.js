@@ -1,4 +1,5 @@
 import { loadShareQuantities, saveShareQuantities } from './dca-core.js';
+import { showToast } from './toast.js';
 
 const ETF_CONFIG = [
   {
@@ -35,6 +36,7 @@ const quoteState = new Map();
 const investedTotals = new Map();
 const quantityState = new Map();
 const quantityUpdatedAt = new Map();
+let activeQuotesPromise = null;
 
 const currencyFormatters = new Map();
 
@@ -405,7 +407,7 @@ export async function initEtfQuotes({ readOnly = false } = {}) {
           button.textContent = 'Guardar';
           button.style.background = '';
         }, 2000);
-        alert('Erro ao guardar quantidades. Tente novamente.');
+        showToast('Erro ao guardar quantidades. Tente novamente.', 'error');
       }
     });
   });
@@ -417,6 +419,7 @@ export async function initEtfQuotes({ readOnly = false } = {}) {
     if (updatedEl) {
       updatedEl.textContent = formatUpdatedLabel(date);
     }
+    if (date instanceof Date && !Number.isNaN(date.getTime())) window.dcaQuoteUpdatedAt = date;
   }
 
   function setLoading(loading) {
@@ -432,11 +435,12 @@ export async function initEtfQuotes({ readOnly = false } = {}) {
     errorEl.textContent = message || '';
   }
 
-  async function loadQuotes(force = false) {
-    if (isLoading) return;
-    setError('');
-    setLoading(true);
-    try {
+  function loadQuotes(force = false) {
+    if (activeQuotesPromise) return activeQuotesPromise;
+    activeQuotesPromise = (async () => {
+      setError('');
+      setLoading(true);
+      try {
       const cached = readQuoteCache();
       const now = Date.now();
       if (cached?.quotes && cached.timestamp) {
@@ -449,21 +453,26 @@ export async function initEtfQuotes({ readOnly = false } = {}) {
       }
       const cacheFresh = cached && (now - cached.timestamp) < CACHE_TTL_MS;
       if (cacheFresh && !force) {
-        return;
+        return quoteState;
       }
 
       const { quotes, updatedAt } = await fetchQuotes();
       applyQuotes(quotes);
       setUpdated(updatedAt);
       persistQuoteCache(quotes);
-    } catch (err) {
-      console.error('Erro ao carregar cotações:', err);
-      setError(err?.message || 'Não foi possível obter as cotações.');
-    } finally {
-      setLoading(false);
-    }
+      return quotes;
+      } catch (err) {
+        console.error('Erro ao carregar cotações:', err);
+        setError(err?.message || 'Não foi possível obter as cotações. Introduza preços manuais ao registar um reforço.');
+        return quoteState;
+      } finally {
+        setLoading(false);
+        activeQuotesPromise = null;
+      }
+    })();
+    return activeQuotesPromise;
   }
 
   refreshBtn?.addEventListener('click', () => loadQuotes(true));
-  loadQuotes(false);
+  return loadQuotes(false);
 }

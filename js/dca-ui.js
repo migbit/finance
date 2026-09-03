@@ -30,29 +30,18 @@ export function renderTable(rows, wrapElement) {
     table.className = 'table-dca';
 
     const theadHTML = `
-      <thead>
-        <tr>
-          <th rowspan="2">Mês</th>
-          <th rowspan="2" class="num">Inv.</th>
-          <th rowspan="2" class="num total-block">Total</th>
-          <th rowspan="2" class="num res-total-block">Res. Total</th>
-
-          <th colspan="3" class="swda-block" style="background: rgba(54,162,235,0.15); border-left: 3px solid rgba(54,162,235,0.8); border-right: 3px solid rgba(54,162,235,0.8);">VWCE</th>
-          <th colspan="3" class="aggh-block" style="background: rgba(245,133,20,0.15); border-left: 3px solid rgba(245,133,20,0.8); border-right: 3px solid rgba(245,133,20,0.8);">AGGH</th>
-
-          <th rowspan="2" class="num">Juro</th>
-          <th rowspan="2">Ações</th>
-        </tr>
-        <tr>
-          <th class="num swda-block" style="background: rgba(54,162,235,0.1); border-left: 3px solid rgba(54,162,235,0.8);">Inv.</th>
-          <th class="num swda-block" style="background: rgba(54,162,235,0.1);">Atual</th>
-          <th class="num swda-block" style="background: rgba(54,162,235,0.1); border-right: 3px solid rgba(54,162,235,0.8);">Delta</th>
-
-          <th class="num aggh-block" style="background: rgba(245,133,20,0.1); border-left: 3px solid rgba(245,133,20,0.8);">Inv.</th>
-          <th class="num aggh-block" style="background: rgba(245,133,20,0.1);">Atual</th>
-          <th class="num aggh-block" style="background: rgba(245,133,20,0.1); border-right: 3px solid rgba(245,133,20,0.8);">Delta</th>
-        </tr>
-      </thead>
+      <thead><tr>
+        <th>Mês</th>
+        <th class="num">Programado</th>
+        <th class="num">Reforços</th>
+        <th class="num">Investido acum.</th>
+        <th class="num total-block">Valor ETFs</th>
+        <th class="num res-total-block">Resultado</th>
+        <th class="num swda-block">VWCE atual</th>
+        <th class="num aggh-block">AGGH atual</th>
+        <th class="num">Juro</th>
+        <th>Ações</th>
+      </tr></thead>
     `;
 
     table.innerHTML = theadHTML + '<tbody></tbody>';
@@ -76,10 +65,11 @@ export function renderTable(rows, wrapElement) {
       const clsSWDA = r.resSWDA != null ? (r.resSWDA >= 0 ? 'pos' : 'neg') : '';
       const clsAGGH = r.resAGGH != null ? (r.resAGGH >= 0 ? 'pos' : 'neg') : '';
 
-      // Always allow saving/edits
-      const saveBtn = `<button class="btn btn-edit btn-save" type="button" title="Guardar registo" aria-label="Guardar registo">✓</button>`;
+      const saveBtn = r.isClosed
+        ? '<span class="dca-locked" title="Mês fechado; exige correção histórica explícita">🔒</span>'
+        : `<button class="btn btn-edit btn-save" type="button" title="Guardar registo" aria-label="Guardar registo">✓</button>`;
 
-      const inputDisabled = '';
+      const inputDisabled = r.isClosed ? 'disabled' : '';
 
       // Month cell with live indicator and estimation warning
       let monthCell = `${pad(r.m)}/${String(r.y).slice(-2)}`;
@@ -92,29 +82,25 @@ export function renderTable(rows, wrapElement) {
       if (r.snapshotSource === 'automatic') {
         monthCell += ' <span class="dca-auto-badge" title="Mês fechado automaticamente pelo servidor">Auto</span>';
       }
+      const legacyExtraBadge = r.legacyExtraUsed > 0
+        ? ` <small class="dca-legacy-extra" title="Inclui ${toEUR(r.legacyExtraUsed)} registados pelo sistema antigo">+ legado</small>`
+        : '';
+      const reinforcementLabel = r.reinforcementCount > 0
+        ? `${toEUR(r.reinforcementTotal)} <small>(${r.reinforcementCount})</small>`
+        : '—';
 
       tr.innerHTML = `
         <td>${monthCell}</td>
-        <td class="num">${toEUR(r.investedCum)}</td>
-        <td class="num total-block">${r.hasCurrent ? toEUR(r.totalNow) : '-'}</td>
-        <td class="num ${clsTotal}">${r.resTotal == null ? '-' : toEUR(r.resTotal)}${fmtPct(r.resTotalPct)}</td>
-
-        <td class="num swda-block" style="background: rgba(54,162,235,0.05); border-left: 3px solid rgba(54,162,235,0.8); display:flex; align-items:center; gap:4px;">
-          <span title="Investido acumulado VWCE">${toEUR(r.investedCumSWDA)}</span>
-          <button class="btn btn-small btn-add-inv-swda" type="button" title="Adicionar extra neste mês" aria-label="Adicionar extra VWCE" style="padding:1px 5px; min-width: 20px; font-size: 0.9em;">+</button>
+        <td class="num">${toEUR((r.regularContributionUsed || 0) + (r.legacyExtraUsed || 0))}${legacyExtraBadge}
           <input class="inv-swda-extra" type="hidden" value="${r.manualInvSWExtra ?? ''}" />
-        </td>
-        <td class="num swda-block" style="background: rgba(54,162,235,0.05);"><input class="cell swda" type="number" step="0.01" value="${r.swdaNow ?? ''}" ${inputDisabled} /></td>
-        <td class="num swda-block ${clsSWDA}" style="background: rgba(54,162,235,0.05); border-right: 3px solid rgba(54,162,235,0.8);">${r.resSWDA == null ? '-' : toEUR(r.resSWDA)}${fmtPct(r.resSWDAPct)}</td>
-
-        <td class="num aggh-block" style="background: rgba(245,133,20,0.05); border-left: 3px solid rgba(245,133,20,0.8); display:flex; align-items:center; gap:4px;">
-          <span title="Investido acumulado AGGH">${toEUR(r.investedCumAGGH)}</span>
-          <button class="btn btn-small btn-add-inv-aggh" type="button" title="Adicionar extra neste mês" aria-label="Adicionar extra AGGH" style="padding:1px 5px; min-width: 20px; font-size: 0.9em;">+</button>
           <input class="inv-aggh-extra" type="hidden" value="${r.manualInvAGExtra ?? ''}" />
         </td>
-        <td class="num aggh-block" style="background: rgba(245,133,20,0.05);"><input class="cell aggh" type="number" step="0.01" value="${r.agghNow ?? ''}" ${inputDisabled} /></td>
-        <td class="num aggh-block ${clsAGGH}" style="background: rgba(245,133,20,0.05); border-right: 3px solid rgba(245,133,20,0.8);">${r.resAGGH == null ? '-' : toEUR(r.resAGGH)}${fmtPct(r.resAGGHPct)}</td>
-
+        <td class="num">${reinforcementLabel}</td>
+        <td class="num">${toEUR(r.investedCum)}</td>
+        <td class="num total-block">${r.hasCurrent ? toEUR(r.etfTotalNow) : '-'}</td>
+        <td class="num ${clsTotal}">${r.resTotal == null ? '-' : toEUR(r.resTotal)}${fmtPct(r.resTotalPct)}</td>
+        <td class="num swda-block"><input class="cell swda" aria-label="Valor atual VWCE" type="number" step="0.01" value="${r.swdaNow ?? ''}" ${inputDisabled} /></td>
+        <td class="num aggh-block"><input class="cell aggh" aria-label="Valor atual AGGH" type="number" step="0.01" value="${r.agghNow ?? ''}" ${inputDisabled} /></td>
         <td class="num"><input class="cell cash" type="number" step="0.01" value="${r.cash_interest ?? ''}" ${inputDisabled} /></td>
         <td>${saveBtn}</td>
       `;
@@ -218,17 +204,24 @@ export function applyYearVisibility(showOthers) {
 // ---------- KPI Updates ----------
 export function updateKPIs(kpis, totalInterest) {
   if (!kpis) {
-    document.getElementById('kpi-total-invested').textContent = '-';
-    document.getElementById('kpi-current-value').textContent = '-';
-    document.getElementById('kpi-result').textContent = '-';
-    document.getElementById('kpi-result-pct').textContent = '';
-    document.getElementById('kpi-total-interest').textContent = toEUR(totalInterest || 0);
+    ['kpi-total-invested', 'kpi-current-value', 'kpi-result', 'kpi-balance', 'kpi-total-wealth'].forEach(id => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = '-';
+    });
+    const resultPct = document.getElementById('kpi-result-pct');
+    if (resultPct) resultPct.textContent = '';
+    const interest = document.getElementById('kpi-total-interest');
+    if (interest) interest.textContent = euroFmt(totalInterest || 0);
     return;
   }
   
-  document.getElementById('kpi-total-invested').textContent = toEUR(kpis.totalInvested);
-  document.getElementById('kpi-current-value').textContent = kpis.currentValue == null ? '-' : toEUR(kpis.currentValue);
-  document.getElementById('kpi-result').textContent = kpis.result == null ? '-' : toEUR(kpis.result);
+  document.getElementById('kpi-total-invested').textContent = euroFmt(kpis.totalInvested);
+  document.getElementById('kpi-current-value').textContent = kpis.currentValue == null ? '-' : euroFmt(kpis.currentValue);
+  document.getElementById('kpi-result').textContent = kpis.result == null ? '-' : euroFmt(kpis.result);
+  const balanceEl = document.getElementById('kpi-balance');
+  if (balanceEl) balanceEl.textContent = euroFmt(kpis.balance);
+  const wealthEl = document.getElementById('kpi-total-wealth');
+  if (wealthEl) wealthEl.textContent = kpis.totalWealth == null ? '-' : euroFmt(kpis.totalWealth);
   
   const pctEl = document.getElementById('kpi-result-pct');
   if (kpis.resultPct == null) {
@@ -239,7 +232,8 @@ export function updateKPIs(kpis, totalInterest) {
     pctEl.className = `kpi-sub ${kpis.result >= 0 ? 'pos' : 'neg'}`;
   }
   
-  document.getElementById('kpi-total-interest').textContent = toEUR(totalInterest || 0);
+  const interestEl = document.getElementById('kpi-total-interest');
+  if (interestEl) interestEl.textContent = euroFmt(totalInterest || 0);
 }
 
 // ---------- Progress Bar ----------
@@ -330,8 +324,7 @@ export function updateScenarios(scenarios, params) {
     if (diffEl) {
       const cls = data.diff >= 0 ? 'pos' : 'neg';
       const absValue = toEUR(Math.abs(data.diff));
-      const relation = data.diff > 0 ? 'acima' : (data.diff < 0 ? 'abaixo' : 'em linha');
-      diffEl.textContent = data.diff === 0 ? '(em linha)' : `(${absValue} ${relation})`;
+      diffEl.textContent = data.diff === 0 ? '(sem variação)' : `(${data.diff >= 0 ? '+' : '-'}${absValue.replace('-', '')} até à data final)`;
       diffEl.className = `scenario-diff ${cls}`;
     }
   }
@@ -511,6 +504,16 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
   const activeLabels = labels.slice(0, effectiveEnd);
   
   performanceChart.data.labels = activeLabels;
+  performanceChart.options.plugins.tooltip.callbacks = {
+    afterBody(items) {
+      const index = items?.[0]?.dataIndex;
+      if (!Number.isInteger(index)) return [];
+      const portfolio = datasets.portfolioValue?.[index];
+      const invested = datasets.contributions?.[index];
+      if (portfolio == null || invested == null) return [];
+      return [`Resultado: ${toEUR(portfolio - invested)}`];
+    }
+  };
   
   switch (chartType) {
     case 'portfolio-growth': {
@@ -535,6 +538,22 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
           tension: 0.25,
           pointRadius: 0,
           borderWidth: DEFAULT_LINE_WIDTH
+        },
+        {
+          type: 'bar',
+          label: 'Contribuição mensal',
+          data: sliceData(datasets.regularMonthlyContributions),
+          backgroundColor: 'rgba(99, 102, 241, 0.25)',
+          borderColor: 'rgba(99, 102, 241, 0.75)',
+          borderWidth: 1
+        },
+        {
+          type: 'bar',
+          label: 'Reforço extraordinário',
+          data: sliceData(datasets.reinforcementContributions),
+          backgroundColor: 'rgba(245, 158, 11, 0.45)',
+          borderColor: 'rgba(217, 119, 6, 0.9)',
+          borderWidth: 1
         }
       ];
       
@@ -734,9 +753,10 @@ export function updateRebalancingSuggestions(rebalancingData) {
   const { allocations, needsRebalancing, tolerance } = rebalancingData;
   
   if (statusEl) {
+    const sourceText = rebalancingData.source === 'live' ? 'com cotações atuais' : 'com o último registo mensal disponível';
     statusEl.innerHTML = needsRebalancing
-      ? `<p style="color: var(--bad);">⚠️ A alocação ultrapassou a margem de ${tolerance.toFixed(1)}%.</p>`
-      : `<p style="color: var(--ok);">✅ A alocação está dentro da margem de ${tolerance.toFixed(1)}%.</p>`;
+      ? `<p style="color: var(--bad);">⚠️ A alocação ultrapassou a margem de ${tolerance.toFixed(1)}% (${sourceText}).</p>`
+      : `<p style="color: var(--ok);">✅ A alocação está dentro da margem de ${tolerance.toFixed(1)}% (${sourceText}).</p>`;
   }
   
   if (suggestionsEl) suggestionsEl.style.display = 'block';
@@ -754,7 +774,7 @@ export function updateRebalancingSuggestions(rebalancingData) {
     if (rowClass) row.classList.add(rowClass);
     
     const actionText = item.action !== 'Manter'
-      ? `${item.action} ${toEUR(item.amount)}`
+      ? `${item.action} · desvio ${toEUR(item.amount)}`
       : 'Manter';
     
     row.innerHTML = `
@@ -762,7 +782,7 @@ export function updateRebalancingSuggestions(rebalancingData) {
       <td class="num">${item.current.toFixed(1)}%</td>
       <td class="num">${item.target.toFixed(1)}%</td>
       <td class="num ${diffClass}">${diffSign}${item.difference.toFixed(1)}%</td>
-      <td style="font-weight: 700; color: ${item.action === 'Manter' ? 'var(--text-dim)' : item.action === 'Comprar' ? 'var(--ok)' : 'var(--bad)'};">${actionText}</td>
+      <td style="font-weight: 700; color: ${item.action === 'Manter' ? 'var(--text-dim)' : item.action === 'Priorizar reforço' ? 'var(--ok)' : 'var(--bad)'};">${actionText}</td>
     `;
     
     tableEl.appendChild(row);
