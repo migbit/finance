@@ -12,14 +12,14 @@ import {
 } from './dca-core.js';
 
 import { 
-  buildModel, calculateKPIs, calculateScenarios, calculateProgress,
+  buildModel, calculateKPIs, calculateProgress,
   calculateGoalStatus, calculateJuroMensal, somaJuroTabelaDCA,
   prepareChartData, calculateAdvancedMetrics, calculateRebalancingSuggestions
 } from './dca-calculations.js';
 
 import {
   renderTable, applyYearVisibility, updateKPIs, updateProgressBar,
-  updateGoalStatus, updateScenarios, writeParamsToUI, readParamsFromUI,
+  updateGoalStatus, writeParamsToUI, readParamsFromUI,
   addScrollIndicators, showLoading, showError,
   initializeCharts, updatePerformanceChart, exportChartAsImage,
   updateAdvancedMetrics, updateRebalancingSuggestions,
@@ -82,9 +82,8 @@ function applyDcaReadOnlyUI() {
   const inputs = [
     '#etf-vwce-qty', '#etf-aggh-qty', '#juro-saldo', '#juro-saldo-display',
     '#end-date', '#pct-swda', '#pct-aggh', '#monthly-contribution',
-    '#scenario-rate-conservative', '#scenario-rate-moderate', '#scenario-rate-optimistic',
     '#automation-enabled', '#automation-effective-from', '#automation-vwce-amount', '#automation-aggh-amount',
-    '#automation-interest-rate', '#juro-correction-reason',
+    '#automation-interest-rate',
     '.swda', '.aggh', '.cash', '.inv-swda-extra', '.inv-aggh-extra'
   ];
   document.querySelectorAll(inputs.join(',')).forEach(element => { element.disabled = true; });
@@ -172,10 +171,6 @@ function updateJuroDisplay() {
   const saldoDisplay = document.getElementById('juro-saldo-display');
   const mensalDisplay = document.getElementById('juro-mensal-display');
   const acumDisplay = document.getElementById('juro-acumulado-display');
-  const automationStatus = document.getElementById('dca-automation-status');
-  const rateDisplay = document.getElementById('juro-taxa-display');
-  const updatedDisplay = document.getElementById('juro-last-updated');
-  const closedDisplay = document.getElementById('juro-last-closed');
 
   if (saldoDisplay) {
     const saldoValue = Number(state.liveData.saldo || 0);
@@ -194,29 +189,6 @@ function updateJuroDisplay() {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }) + ' €';
-  }
-
-  if (rateDisplay) rateDisplay.textContent = `${((state.liveData.annualInterestRate ?? TAXA_ANUAL_FIXA) * 100).toFixed(2)}%`;
-  if (updatedDisplay) {
-    const value = state.liveData.balanceUpdatedAt ? new Date(state.liveData.balanceUpdatedAt) : null;
-    updatedDisplay.textContent = value && !Number.isNaN(value.getTime()) ? value.toLocaleString('pt-PT') : '—';
-  }
-  if (closedDisplay) closedDisplay.textContent = state.liveData.lastClosedMonth || '—';
-
-  if (automationStatus) {
-    const lastClosed = state.liveData.lastClosedMonth;
-    const lastInterest = state.liveData.lastMonthlyInterest;
-    const plan = state.automation;
-    const planText = plan
-      ? `${plan.enabled ? 'Plano ativo' : 'Plano pausado'}: ${plan.vwceAmount.toFixed(2)} € em VWCE e ${plan.agghAmount.toFixed(2)} € em AGGH.`
-      : 'Plano automático a carregar.';
-    const failedClosure = [...state.closures].reverse().find(item => item.status === 'failed');
-    const failureText = failedClosure
-      ? ` Atenção: fecho ${failedClosure.month || failedClosure.id} falhou (${failedClosure.failureCode || 'erro'}).`
-      : '';
-    automationStatus.textContent = lastClosed
-      ? `Último fecho: ${lastClosed}${Number.isFinite(lastInterest) ? ` · juro: ${lastInterest.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €` : ''}. ${planText}${failureText}`
-      : `Fecho no dia 1 às 01:10. ${planText}${failureText}`;
   }
 
   // Calculate total accumulated juro from table
@@ -383,18 +355,6 @@ const formatDateTime = value => {
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleString('pt-PT') : '—';
 };
 
-function nextDcaDate() {
-  const now = new Date();
-  const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1, 1, 10);
-  return now < thisMonth ? thisMonth : new Date(now.getFullYear(), now.getMonth() + 1, 1, 1, 10);
-}
-
-function automaticPlanForMonth(month) {
-  if (!state.automation?.enabled) return { enabled: false, vwce: 0, aggh: 0 };
-  if (month < state.automation.effectiveFrom) return { enabled: true, vwce: 120, aggh: 30 };
-  return { enabled: true, vwce: state.automation.vwceAmount, aggh: state.automation.agghAmount };
-}
-
 function writeAutomationToUI() {
   if (!state.automation) return;
   const fields = {
@@ -415,10 +375,8 @@ function writeAutomationToUI() {
   }
 }
 
-function updateOverview(kpis) {
+function updateOverview() {
   const allocationEl = document.getElementById('kpi-allocation');
-  const planEl = document.getElementById('kpi-next-dca');
-  const planDateEl = document.getElementById('kpi-next-dca-date');
   const portfolio = window.DcaFinancial?.calculatePortfolioValue({
     shares: state.liveData.shares,
     quotes: state.liveData.quotes,
@@ -434,15 +392,6 @@ function updateOverview(kpis) {
         : '—';
     }
   }
-  if (planEl && state.automation) {
-    const date = nextDcaDate();
-    const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    const nextPlan = automaticPlanForMonth(month);
-    planEl.textContent = nextPlan.enabled
-      ? `${money(nextPlan.vwce)} VWCE · ${money(nextPlan.aggh)} AGGH · ${money(nextPlan.vwce + nextPlan.aggh)} total`
-      : 'Pausado';
-  }
-  if (planDateEl) planDateEl.textContent = nextDcaDate().toLocaleString('pt-PT', { dateStyle: 'long', timeStyle: 'short' });
 }
 
 function renderJuroMovements() {
@@ -680,7 +629,7 @@ function bindDcaFeatures() {
   });
   document.getElementById('btn-save-automation')?.addEventListener('click', event => {
     const button = event.currentTarget;
-    showConfirm('Guardar estas definições no plano automático real? Esta alteração não modifica os cenários de simulação.', async () => {
+    showConfirm('Guardar estas definições no plano automático real?', async () => {
       button.disabled = true;
       try {
         state.automation = await saveAutomationSettings({
@@ -707,9 +656,14 @@ function bindDcaFeatures() {
   document.getElementById('btn-open-settings')?.addEventListener('click', () => {
     const container = document.getElementById('params-container');
     if (container) container.style.display = 'block';
-    const toggle = document.getElementById('btn-toggle-params');
-    if (toggle) toggle.textContent = 'Ocultar Parâmetros';
+    document.getElementById('btn-open-settings')?.setAttribute('aria-expanded', 'true');
     container?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.getElementById('btn-close-settings')?.addEventListener('click', () => {
+    const container = document.getElementById('params-container');
+    if (container) container.style.display = 'none';
+    document.getElementById('btn-open-settings')?.setAttribute('aria-expanded', 'false');
+    document.getElementById('btn-open-settings')?.focus();
   });
   document.getElementById('rebalance-amount')?.addEventListener('input', () => updateRebalancingPreview());
   document.getElementById('btn-use-rebalance')?.addEventListener('click', () => openReinforcement({
@@ -993,18 +947,6 @@ function bindGlobalButtons() {
     });
   }
   
-  // Toggle Params button (ID changed from params-juro-container to params-container)
-  const toggleParamsBtn = document.getElementById('btn-toggle-params');
-  const paramsContainer = document.getElementById('params-container');
-  if (toggleParamsBtn && paramsContainer && !toggleParamsBtn.__bound) {
-    toggleParamsBtn.__bound = true;
-    toggleParamsBtn.addEventListener('click', () => {
-      const isHidden = paramsContainer.style.display === 'none';
-      paramsContainer.style.display = isHidden ? 'block' : 'none';
-      toggleParamsBtn.textContent = isHidden ? 'Ocultar Parâmetros' : 'Mostrar Parâmetros';
-    });
-  }
-
   const exportBtn = document.getElementById('export-csv-inline');
   if (exportBtn && !exportBtn.__bound) {
     exportBtn.__bound = true;
@@ -1030,7 +972,6 @@ async function boot(skipParamUI = false) {
       if (wrapEl) showLoading(wrapEl, 'A carregar dados...');
       state.params = await loadParams({ readOnly: state.accessMode === 'read' });
       writeParamsToUI(state.params);
-      updateScenarios(null, state.params);
     }
 
     state.automation = await loadAutomationSettings({ readOnly: state.accessMode === 'read' });
@@ -1107,7 +1048,7 @@ async function boot(skipParamUI = false) {
     const obsRoot = document.getElementById('dca-table-wrap');
     const totalInterest = somaJuroTabelaDCA(obsRoot, { excludeCurrentMonth: true });
     updateKPIs(kpis, totalInterest);
-    updateOverview(kpis);
+    updateOverview();
 
     // Calculate and update advanced metrics
     const advancedMetrics = calculateAdvancedMetrics(rows, state.params, state.liveData);
@@ -1127,15 +1068,6 @@ async function boot(skipParamUI = false) {
     const goalStatus = calculateGoalStatus(kpis, progress);
     updateGoalStatus(goalStatus);
 
-    // Update scenarios
-    if (kpis && kpis.lastFilledRow) {
-      const scenarioRow = { ...kpis.lastFilledRow, totalNow: kpis.currentValue };
-      const scenarios = calculateScenarios(scenarioRow, state.params);
-      updateScenarios(scenarios, state.params);
-    } else {
-      updateScenarios(null, state.params);
-    }
-
     // Add scroll indicators
     requestAnimationFrame(addScrollIndicators);
     updateReconciliation();
@@ -1151,7 +1083,7 @@ async function boot(skipParamUI = false) {
 
 // ---------- Save Params Button ----------
 document.getElementById('btn-save-params')?.addEventListener('click', async () => {
-  const p = readParamsFromUI(DEFAULTS);
+  const p = readParamsFromUI(state.params);
   if (!p.pctSumOk) {
     showFeedback('params-feedback', 'As percentagens VWCE+AGGH devem somar 100%.', 'error');
     return;
@@ -1164,11 +1096,6 @@ document.getElementById('btn-save-params')?.addEventListener('click', async () =
     showFeedback('params-feedback', 'A data final não pode ser anterior a setembro de 2025.', 'error');
     return;
   }
-  if (Object.values(p.scenarioRates).some(rate => !Number.isFinite(rate) || rate < -50 || rate > 50)) {
-    showFeedback('params-feedback', 'As taxas dos cenários devem ficar entre -50% e 50%.', 'error');
-    return;
-  }
-  
   const { pctSumOk, ...params } = p;
   state.params = params;
   
@@ -1192,13 +1119,7 @@ document.getElementById('btn-save-saldo')?.addEventListener('click', async () =>
   }
 
   try {
-    const reason = document.getElementById('juro-correction-reason')?.value?.trim();
-    if (!reason) {
-      showToast('Indique o motivo da correção do saldo.', 'warning');
-      return;
-    }
-    await saveJuroSaldo(newSaldo, reason);
-    document.getElementById('juro-correction-reason').value = '';
+    await saveJuroSaldo(newSaldo, 'Correção manual do saldo');
     state.liveData.saldo = newSaldo;
     showToast('Saldo corrigido e movimento registado.', 'success');
     await boot(true);

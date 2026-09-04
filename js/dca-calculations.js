@@ -189,7 +189,7 @@ export function calculateKPIs(rows, liveData = null) {
   const lastFilledRow = [...rows].reverse().find(row => row.hasCurrent);
   const investedAnchor = currentRow || lastFilledRow || lastRow;
 
-  // Prefer live snapshot (quotes × shares + juro) when available
+  // Prefer the live ETF snapshot (quotes × shares) when available.
   let currentValue = currentRow?.hasCurrent
     ? currentRow.etfTotalNow
     : (lastFilledRow?.etfTotalNow ?? null);
@@ -216,51 +216,24 @@ export function calculateKPIs(rows, liveData = null) {
   const resultPct = currentValue == null
     ? null
     : (totalInvested > 0 ? (result / totalInvested * 100) : 0);
+  const balance = Number(liveData?.saldo) || 0;
+  const etfCurrentValue = currentValue;
   
   return {
     totalInvested,
-    currentValue,
-    etfCurrentValue: currentValue,
+    currentValue: etfCurrentValue,
+    etfCurrentValue,
     etfInvested: totalInvested,
     unrealizedResult: result,
-    balance: Number(liveData?.saldo) || 0,
-    totalWealth: currentValue == null ? null : currentValue + (Number(liveData?.saldo) || 0),
+    balance,
+    // O saldo já inclui os juros capitalizados; não adicionar cash_interest novamente.
+    totalWealth: etfCurrentValue == null ? null : etfCurrentValue + balance,
     result,
     resultPct,
-    // Os cenários devem usar o investimento acumulado do mês atual, mesmo
-    // quando o respetivo valor vem das cotações live e a linha ainda está vazia.
+    // Mantém o investimento acumulado do mês atual mesmo quando a valorização
+    // vem das cotações live e a linha mensal ainda está vazia.
     lastFilledRow: { ...investedAnchor, totalNow: currentValue }
   };
-}
-
-// ---------- Scenario Calculations ----------
-export function calculateScenarios(lastFilledRow, params) {
-  if (!lastFilledRow || !lastFilledRow.totalNow || lastFilledRow.totalNow <= 0) return null;
-  
-  const currentTotal = lastFilledRow.totalNow;
-  const now = new Date();
-  const nextYM = now.getMonth() === 11
-    ? { y: now.getFullYear() + 1, m: 1 }
-    : { y: now.getFullYear(), m: now.getMonth() + 2 };
-  const futureMonths = monthsBetween(nextYM, params.endYM);
-  const rateDefaults = params?.scenarioRates ?? { conservative: 3, moderate: 5, optimistic: 7 };
-  
-  const scenarios = {
-    conservative: { rate: (rateDefaults.conservative ?? 0) / 100, ratePct: rateDefaults.conservative ?? 0, value: 0, diff: 0 },
-    moderate: { rate: (rateDefaults.moderate ?? 0) / 100, ratePct: rateDefaults.moderate ?? 0, value: 0, diff: 0 },
-    optimistic: { rate: (rateDefaults.optimistic ?? 0) / 100, ratePct: rateDefaults.optimistic ?? 0, value: 0, diff: 0 }
-  };
-  
-  for (const [key, scenario] of Object.entries(scenarios)) {
-    const monthlyRate = Math.pow(1 + scenario.rate, 1 / 12) - 1;
-    scenario.value = futureMonths.reduce((value, ym) => {
-      return (value + getPlannedContributions(ym, params).total) * (1 + monthlyRate);
-    }, currentTotal);
-    scenario.diff = scenario.value - currentTotal;
-    scenario.months = futureMonths.length;
-  }
-  
-  return scenarios;
 }
 
 // ---------- Progress Calculations ----------
@@ -361,7 +334,7 @@ export function somaJuroTabelaDCA(rootElement, { excludeCurrentMonth = false } =
 }
 
 // ---------- Chart Data Preparation ----------
-export function prepareChartData(rows, params, liveData = null) {
+export function prepareChartData(rows, _params, liveData = null) {
   if (!rows || rows.length === 0) return null;
   
   const labels = [];
@@ -372,11 +345,6 @@ export function prepareChartData(rows, params, liveData = null) {
   const monthlyReturns = [];
   const regularMonthlyContributions = [];
   const reinforcementContributions = [];
-  const scenarioConservative = [];
-  const scenarioModerate = [];
-  const scenarioOptimistic = [];
-  
-  const scenarioRates = params?.scenarioRates ?? { conservative: 3, moderate: 5, optimistic: 7 };
   const currentLiveValue = liveTotalValue(liveData);
   const lastActualIndex = rows.reduce((acc, row, idx) => {
     if ((row.isCurrent && currentLiveValue != null) || (row.hasCurrent && row.etfTotalNow != null && row.etfTotalNow > 0)) {
@@ -385,7 +353,6 @@ export function prepareChartData(rows, params, liveData = null) {
     return acc;
   }, -1);
 
-  let previousInvested = 0;
   let previousActualValue = null;
   let previousActualInvested = null;
   
@@ -424,35 +391,7 @@ export function prepareChartData(rows, params, liveData = null) {
       previousActualInvested = row.investedCum;
     }
 
-    const monthlyContribution = row.investedCum - previousInvested;
-    previousInvested = row.investedCum;
-
-    scenarioConservative.push(null);
-    scenarioModerate.push(null);
-    scenarioOptimistic.push(null);
   });
-
-  const liveValue = currentLiveValue;
-  let anchorIndex = rows.findIndex(row => row.isCurrent);
-  if (anchorIndex < 0) anchorIndex = lastActualIndex;
-  const anchorValue = liveValue ?? (anchorIndex >= 0 ? rows[anchorIndex]?.etfTotalNow : null);
-  if (anchorIndex >= 0 && Number(anchorValue) > 0) {
-    const projections = [
-      [scenarioConservative, Number(scenarioRates.conservative) || 0],
-      [scenarioModerate, Number(scenarioRates.moderate) || 0],
-      [scenarioOptimistic, Number(scenarioRates.optimistic) || 0]
-    ];
-    projections.forEach(([series, annualPct]) => {
-      let value = Number(anchorValue);
-      series[anchorIndex] = value;
-      const monthlyRate = Math.pow(1 + annualPct / 100, 1 / 12) - 1;
-      for (let index = anchorIndex + 1; index < rows.length; index += 1) {
-        const monthlyContribution = rows[index].investedCum - rows[index - 1].investedCum;
-        value = (value + Math.max(0, monthlyContribution)) * (1 + monthlyRate);
-        series[index] = value;
-      }
-    });
-  }
   
   return {
     labels,
@@ -463,12 +402,8 @@ export function prepareChartData(rows, params, liveData = null) {
       agghValues,
       monthlyReturns,
       regularMonthlyContributions,
-      reinforcementContributions,
-      scenarioConservative,
-      scenarioModerate,
-      scenarioOptimistic
+      reinforcementContributions
     },
-    scenarioRates,
     summary: {
       totalReturn: (() => {
         if (lastActualIndex < 0) return 0;

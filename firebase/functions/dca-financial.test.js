@@ -107,3 +107,13 @@ test('alocação atual é calculada a partir de posições atuais', () => {
   assert.equal(result.vwcePct, 79.2);
   assert.equal(result.agghPct, 20.8);
 });
+
+test('património total soma apenas os dois ETFs e o saldo já capitalizado', () => {
+  const result = finance.calculatePortfolioValue({
+    shares: { vwce: 10, aggh: 5 },
+    quotes: { vwce: 100, aggh: 50 },
+    balance: 2000
+  });
+  assert.equal(result.etfValue, 1250);
+  assert.equal(result.totalWealth, 3250);
+});

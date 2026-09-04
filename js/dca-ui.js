@@ -210,7 +210,7 @@ export function updateKPIs(kpis, totalInterest) {
     });
     const resultPct = document.getElementById('kpi-result-pct');
     if (resultPct) resultPct.textContent = '';
-    const interest = document.getElementById('kpi-total-interest');
+    const interest = document.getElementById('kpi-interest-earned');
     if (interest) interest.textContent = euroFmt(totalInterest || 0);
     return;
   }
@@ -232,7 +232,7 @@ export function updateKPIs(kpis, totalInterest) {
     pctEl.className = `kpi-sub ${kpis.result >= 0 ? 'pos' : 'neg'}`;
   }
   
-  const interestEl = document.getElementById('kpi-total-interest');
+  const interestEl = document.getElementById('kpi-interest-earned');
   if (interestEl) interestEl.textContent = euroFmt(totalInterest || 0);
 }
 
@@ -291,45 +291,6 @@ export function updateGoalStatus(goalStatus) {
   }
 }
 
-// ---------- Scenarios ----------
-export function updateScenarios(scenarios, params) {
-  const rates = params?.scenarioRates ?? {};
-  const rateEls = {
-    conservative: document.getElementById('scenario-conservative-rate'),
-    moderate: document.getElementById('scenario-moderate-rate'),
-    optimistic: document.getElementById('scenario-optimistic-rate')
-  };
-  Object.entries(rateEls).forEach(([key, el]) => {
-    if (!el) return;
-    const value = Number(rates[key] ?? 0);
-    const prefix = value >= 0 ? '+' : '';
-    el.textContent = `${prefix}${value.toFixed(1)}%`;
-  });
-  
-  if (!scenarios) {
-    ['conservative', 'moderate', 'optimistic'].forEach(s => {
-      const el = document.getElementById(`scenario-${s}`);
-      const diffEl = document.getElementById(`scenario-${s}-diff`);
-      if (el) el.textContent = '-';
-      if (diffEl) diffEl.textContent = '';
-    });
-    return;
-  }
-  
-  for (const [key, data] of Object.entries(scenarios)) {
-    const el = document.getElementById(`scenario-${key}`);
-    const diffEl = document.getElementById(`scenario-${key}-diff`);
-    
-    if (el) el.textContent = toEUR(data.value);
-    if (diffEl) {
-      const cls = data.diff >= 0 ? 'pos' : 'neg';
-      const absValue = toEUR(Math.abs(data.diff));
-      diffEl.textContent = data.diff === 0 ? '(sem variação)' : `(${data.diff >= 0 ? '+' : '-'}${absValue.replace('-', '')} até à data final)`;
-      diffEl.className = `scenario-diff ${cls}`;
-    }
-  }
-}
-
 // ---------- Params UI ----------
 export function writeParamsToUI(p) {
   const ed = document.getElementById('end-date');
@@ -344,13 +305,6 @@ export function writeParamsToUI(p) {
   const mc = document.getElementById('monthly-contribution');
   if (mc) mc.value = p.monthlyContribution;
 
-  const scen = p.scenarioRates || {};
-  const cons = document.getElementById('scenario-rate-conservative');
-  if (cons) cons.value = scen.conservative ?? 0;
-  const mod = document.getElementById('scenario-rate-moderate');
-  if (mod) mod.value = scen.moderate ?? 0;
-  const opt = document.getElementById('scenario-rate-optimistic');
-  if (opt) opt.value = scen.optimistic ?? 0;
 }
 
 export function readParamsFromUI(defaults) {
@@ -360,10 +314,6 @@ export function readParamsFromUI(defaults) {
   const pctS = asNum(document.getElementById('pct-swda')?.value) ?? defaults.pctSWDA;
   const pctA = asNum(document.getElementById('pct-aggh')?.value) ?? defaults.pctAGGH;
   const monthly = asNum(document.getElementById('monthly-contribution')?.value) ?? defaults.monthlyContribution;
-  const scenCons = asNum(document.getElementById('scenario-rate-conservative')?.value) ?? defaults.scenarioRates.conservative;
-  const scenMod = asNum(document.getElementById('scenario-rate-moderate')?.value) ?? defaults.scenarioRates.moderate;
-  const scenOpt = asNum(document.getElementById('scenario-rate-optimistic')?.value) ?? defaults.scenarioRates.optimistic;
-  
   const fix = (n) => Math.max(0, Math.min(100, n));
   const pctSumOk = Math.abs((pctS + pctA) - 100) < 0.01;
   
@@ -372,11 +322,7 @@ export function readParamsFromUI(defaults) {
     pctSWDA: fix(pctS), 
     pctAGGH: fix(pctA), 
     monthlyContribution: monthly, 
-    scenarioRates: {
-      conservative: scenCons,
-      moderate: scenMod,
-      optimistic: scenOpt
-    },
+    scenarioRates: { ...(defaults.scenarioRates || {}) },
     pctSumOk
   };
 }
@@ -557,47 +503,8 @@ export function updatePerformanceChart(chartData, chartType = 'portfolio-growth'
         }
       ];
       
-      if (datasets.scenarioConservative?.length) {
-        growthDatasets.push({
-          label: 'Cenário Conservador',
-          data: sliceData(datasets.scenarioConservative),
-          borderColor: 'rgba(22, 163, 74, 0.9)',
-          borderDash: [4, 4],
-          fill: false,
-          tension: 0.25,
-          pointRadius: 0,
-          borderWidth: DEFAULT_LINE_WIDTH
-        });
-      }
-      
-      if (datasets.scenarioModerate?.length) {
-        growthDatasets.push({
-          label: 'Cenário Moderado',
-          data: sliceData(datasets.scenarioModerate),
-          borderColor: 'rgba(14, 165, 233, 0.9)',
-          borderDash: [4, 4],
-          fill: false,
-          tension: 0.25,
-          pointRadius: 0,
-          borderWidth: DEFAULT_LINE_WIDTH
-        });
-      }
-      
-      if (datasets.scenarioOptimistic?.length) {
-        growthDatasets.push({
-          label: 'Cenário Otimista',
-          data: sliceData(datasets.scenarioOptimistic),
-          borderColor: 'rgba(249, 115, 22, 0.9)',
-          borderDash: [4, 4],
-          fill: false,
-          tension: 0.25,
-          pointRadius: 0,
-          borderWidth: DEFAULT_LINE_WIDTH
-        });
-      }
-      
       performanceChart.data.datasets = growthDatasets;
-      performanceChart.options.plugins.title.text = 'Crescimento vs Cenários';
+      performanceChart.options.plugins.title.text = 'Evolução da carteira';
       break;
     }
       
@@ -713,8 +620,6 @@ export function updateAdvancedMetrics(metrics) {
     document.getElementById('twr-value').textContent = '-';
     document.getElementById('mwr-value').textContent = '-';
     document.getElementById('annualized-return').textContent = '-';
-    const note = document.getElementById('annualized-history-note');
-    if (note) note.hidden = true;
     return;
   }
 
@@ -727,14 +632,6 @@ export function updateAdvancedMetrics(metrics) {
   document.getElementById('twr-value').textContent = `${metrics.timeWeightedReturn.toFixed(2)}%`;
   document.getElementById('mwr-value').textContent = `${metrics.moneyWeightedReturn.toFixed(2)}%`;
   document.getElementById('annualized-return').textContent = `${metrics.annualizedReturn.toFixed(2)}%`;
-  const note = document.getElementById('annualized-history-note');
-  if (note) {
-    const hasFullYear = metrics.historyDays >= 365;
-    note.hidden = hasFullYear;
-    note.textContent = hasFullYear
-      ? ''
-      : '* Histórico inferior a 12 meses: MWR anual e TWR anualizado são taxas equivalentes anuais e podem variar bastante.';
-  }
 }
 
 // ---------- Rebalancing Display ----------

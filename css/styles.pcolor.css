@@ -61,15 +61,27 @@ body[data-page="dca"] .dca-overview { padding: clamp(1rem, 2vw, 1.5rem); border:
 .dca-overview-head h3, .dca-section-head h4, .dca-dialog-head h3 { margin: 0; }
 .dca-eyebrow { margin: 0 0 .2rem; color: var(--p2); font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .dca-primary-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .55rem; }
-.dca-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
+.dca-summary-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
 .dca-summary-card { min-width: 0; padding: .9rem 1rem; border: 1px solid var(--border); border-radius: 13px; background: rgba(255,255,255,.9); }
 .dca-summary-card > span { display: block; color: var(--text-dim); font-size: .78rem; margin-bottom: .35rem; }
 .dca-summary-card > strong { display: block; color: var(--text); font-size: clamp(1rem, 2vw, 1.3rem); line-height: 1.2; overflow-wrap: anywhere; }
 .dca-summary-card > small { display: block; margin-top: .3rem; color: var(--text-dim); }
+.dca-summary-card > small strong { color: var(--text); }
+.dca-portfolio-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+.dca-portfolio-metrics > div { min-width: 0; }
+.dca-portfolio-metrics > div + div { padding-left: .75rem; border-left: 1px solid var(--border); }
+.dca-portfolio-metrics small { display: block; margin-bottom: .2rem; color: var(--text-dim); font-size: .72rem; }
+.dca-portfolio-metrics strong { display: block; color: var(--text); font-size: clamp(.95rem, 1.5vw, 1.25rem); line-height: 1.25; overflow-wrap: anywhere; }
 .dca-summary-featured { background: var(--p2); border-color: var(--p2); }
 .dca-summary-featured > span, .dca-summary-featured > strong { color: white; }
-.dca-interest-summary { margin: .8rem 0 0; text-align: right; color: var(--text-dim); }
-.juro-meta { display: flex; flex-wrap: wrap; gap: .65rem 1.5rem; margin: .5rem 0 1rem; color: var(--text-dim); font-size: .85rem; }
+.dca-cash-summary { display: grid; grid-template-columns: minmax(240px, 1.2fr) repeat(2, minmax(170px, 1fr)); gap: 1rem; align-items: end; margin-top: 1rem; }
+.dca-cash-summary .juro-label { margin-bottom: .3rem; color: var(--text-dim); font-size: .82rem; }
+.dca-cash-summary .juro-value { color: var(--text); font-size: clamp(1.25rem, 2.2vw, 1.65rem); font-weight: 700; }
+.dca-balance-editor { display: flex; align-items: center; gap: .5rem; }
+.dca-balance-editor input { width: min(180px, 100%); font: inherit; font-weight: 700; }
+.dca-movements { margin-top: 1.25rem; padding-top: .8rem; border-top: 1px solid var(--border); }
+.dca-settings-panel { padding-top: 1.25rem; }
+.dca-settings-head { margin-bottom: 1rem; }
 .dca-field { display: grid; gap: .35rem; min-width: 0; }
 .dca-field > span { color: var(--text-dim); font-size: .82rem; font-weight: 700; }
 .dca-field input, .dca-field select, .dca-field textarea { width: 100%; min-width: 0; padding: .7rem .75rem; border: 1px solid var(--border); border-radius: 9px; background: white; color: var(--text); font: inherit; }
@@ -101,8 +113,8 @@ body[data-page="dca"] .dca-overview { padding: clamp(1rem, 2vw, 1.5rem); border:
 .dca-preview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; margin-top: 1rem; }
 .dca-preview > div { display: grid; gap: .15rem; padding: .7rem; border: 1px solid var(--border); border-radius: 10px; }
 .dca-preview span, .dca-preview small { color: var(--text-dim); font-size: .78rem; }
-@media (max-width: 900px) { .dca-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dca-rebalance-action { grid-template-columns: 1fr; align-items: stretch; } }
-@media (max-width: 600px) { .dca-overview-head, .dca-section-head { align-items: stretch; flex-direction: column; } .dca-primary-actions { justify-content: stretch; } .dca-primary-actions button { flex: 1 1 100%; } .dca-summary-grid, .dca-form-grid, .dca-preview { grid-template-columns: 1fr; } .dca-field-wide { grid-column: auto; } .dca-dialog { width: 100vw; max-height: 92vh; margin: auto 0 0; border-radius: 18px 18px 0 0; } .dca-dialog form { max-height: 92vh; overflow-y: auto; } }
+@media (max-width: 1050px) { .dca-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dca-summary-portfolio { grid-column: 1 / -1; } .dca-cash-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dca-rebalance-action { grid-template-columns: 1fr; align-items: stretch; } }
+@media (max-width: 600px) { .dca-overview-head, .dca-section-head { align-items: stretch; flex-direction: column; } .dca-primary-actions { justify-content: stretch; } .dca-primary-actions button { flex: 1 1 100%; } .dca-summary-grid, .dca-form-grid, .dca-preview, .dca-cash-summary { grid-template-columns: 1fr; } .dca-summary-portfolio { grid-column: auto; } .dca-portfolio-metrics { grid-template-columns: 1fr; } .dca-portfolio-metrics > div + div { padding: .65rem 0 0; border-top: 1px solid var(--border); border-left: 0; } .dca-balance-editor { align-items: stretch; flex-direction: column; } .dca-balance-editor input { width: 100%; } .dca-field-wide { grid-column: auto; } .dca-dialog { width: 100vw; max-height: 92vh; margin: auto 0 0; border-radius: 18px 18px 0 0; } .dca-dialog form { max-height: 92vh; overflow-y: auto; } }
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -1403,25 +1415,6 @@ body[data-page="dca"] .donut-card .donut-canvas canvas {
   font-weight: 700;
   line-height: 1.4;
   vertical-align: middle;
-}
-
-.dca-automation-status {
-  margin-top: 0.9rem;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: 0.65rem;
-  background: rgba(16, 185, 129, 0.07);
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  line-height: 1.45;
-}
-
-.annualized-history-note {
-  margin: 0.75rem 0 0;
-  color: var(--text-dim);
-  font-size: 0.82rem;
-  line-height: 1.45;
-  text-align: center;
 }
 
 /* Live data indicator - green tint for current unclosed month */
@@ -2928,29 +2921,6 @@ body[data-page="diversos-page"] .tab-navigation {
   position: relative;
   box-shadow: 0 2px 6px rgba(26, 143, 93, 0.3);
 }
-.scenario-card {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.scenario-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
-}
-
-.scenario-diff {
-  font-weight: 600;
-}
-
-.scenario-diff.pos {
-  color: var(--ok);
-}
-
-.scenario-diff.neg {
-  color: var(--bad);
-}
 .form-feedback {
   margin-top: 0.75rem;
   min-height: 1.2rem;
@@ -2968,22 +2938,6 @@ body[data-page="diversos-page"] .tab-navigation {
 }
 .table-dca tr.rebalance-alert td {
   background: rgba(239, 68, 68, 0.08);
-}
-.scenario-rate-inputs {
-  justify-content: flex-start;
-  gap: 0.75rem;
-}
-
-.scenario-rate-label {
-  font-weight: 600;
-  color: var(--text-dim);
-}
-
-.scenario-value {
-  font-size: 1.1rem;
-  font-weight: 700;
-  text-align: center;
-  color: var(--text);
 }
 .benchmark-comparison {
   margin-top: 1.5rem;

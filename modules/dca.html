@@ -64,17 +64,25 @@
         <div class="dca-primary-actions">
           <button id="btn-new-reinforcement" type="button" class="primary">+ Novo reforço</button>
           <button id="btn-focus-balance" type="button">Movimentar saldo</button>
-          <button id="btn-open-settings" type="button">Definições</button>
+          <button id="btn-open-settings" type="button" aria-controls="params-container" aria-expanded="false">Definições</button>
         </div>
       </div>
       <div class="dca-summary-grid">
-        <article class="dca-summary-card"><span>Capital investido em ETFs</span><strong id="kpi-total-invested">—</strong></article>
-        <article class="dca-summary-card"><span>Valor atual dos ETFs</span><strong id="kpi-current-value">—</strong></article>
-        <article class="dca-summary-card"><span>Resultado não realizado</span><strong><span id="kpi-result">—</span> <small id="kpi-result-pct"></small></strong></article>
-        <article class="dca-summary-card"><span>Saldo remunerado</span><strong id="kpi-balance">—</strong></article>
+        <article class="dca-summary-card dca-summary-portfolio">
+          <span>Carteira de ETFs</span>
+          <div class="dca-portfolio-metrics">
+            <div><small>Capital investido</small><strong id="kpi-total-invested">—</strong></div>
+            <div><small>Valor atual</small><strong id="kpi-current-value">—</strong></div>
+            <div><small>Resultado não realizado</small><strong><span id="kpi-result">—</span> <small id="kpi-result-pct"></small></strong></div>
+          </div>
+        </article>
+        <article class="dca-summary-card">
+          <span>Saldo remunerado</span>
+          <strong id="kpi-balance">—</strong>
+          <small>Total ganho em juros: <strong id="kpi-interest-earned">—</strong></small>
+        </article>
         <article class="dca-summary-card dca-summary-featured"><span>Património total TR</span><strong id="kpi-total-wealth">—</strong></article>
         <article class="dca-summary-card"><span>Alocação atual</span><strong id="kpi-allocation">—</strong></article>
-        <article class="dca-summary-card"><span>Próximo DCA</span><strong id="kpi-next-dca">—</strong><small id="kpi-next-dca-date">—</small></article>
       </div>
     </section>
     <section class="report-section" id="dca-etf-quotes">
@@ -153,58 +161,42 @@
             </div>
           </article>
         </div>
-        <div class="dca-automation-status" id="dca-automation-status" aria-live="polite">
-          Fecho automático no dia 1 às 01:10: fecha o mês, capitaliza o juro e faz a compra mensal. Desde outubro de 2026: 150 € em VWCE e 50 € em AGGH.
-        </div>
       </div>
       <div class="viz-card juro-card">
-        <h4>Juro (Interesse sobre Saldo)</h4>
-        <div class="juro-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+        <h4>Saldo remunerado</h4>
+        <div class="dca-cash-summary">
           <div class="juro-item">
-            <div class="juro-label" style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.25rem;">Saldo Atual</div>
-            <div class="juro-value" style="font-size: 1.6rem; font-weight: 700; color: var(--text); display:flex; gap:0.5rem; align-items:center;">
-              <input id="juro-saldo-display" type="number" step="0.01" style="max-width: 140px; font-size: 1em; font-weight: 700;" />
-              <button id="btn-save-saldo" type="button" class="secondary" style="padding: 6px 10px;">💾</button>
+            <div class="juro-label">Saldo atual</div>
+            <div class="juro-value dca-balance-editor">
+              <input id="juro-saldo-display" type="number" min="0" step="0.01" aria-label="Saldo remunerado atual" />
+              <button id="btn-save-saldo" type="button" class="secondary">Guardar</button>
             </div>
           </div>
           <div class="juro-item">
-            <div class="juro-label" style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.25rem;">Taxa Anual</div>
-            <div class="juro-value" id="juro-taxa-display" style="font-size: 1.6rem; font-weight: 700; color: var(--text);">2.00%</div>
+            <div class="juro-label">Estimativa mensal</div>
+            <div class="juro-value pos" id="juro-mensal-display">—</div>
           </div>
           <div class="juro-item">
-            <div class="juro-label" style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.25rem;">Estimativa mensal ao saldo atual</div>
-            <div class="juro-value pos" id="juro-mensal-display" style="font-size: 1.6rem; font-weight: 700;">-</div>
+            <div class="juro-label">Total ganho em juros</div>
+            <div class="juro-value pos" id="juro-acumulado-display">—</div>
           </div>
-          <div class="juro-item">
-            <div class="juro-label" style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 0.25rem;">Juro Acumulado Total</div>
-            <div class="juro-value pos" id="juro-acumulado-display" style="font-size: 1.6rem; font-weight: 700;">-</div>
-          </div>
-          <div class="juro-meta">
-            <span>Última atualização: <strong id="juro-last-updated">—</strong></span>
-            <span>Último fecho: <strong id="juro-last-closed">—</strong></span>
-          </div>
-          <label class="dca-field dca-balance-reason">
-            <span>Motivo da correção manual</span>
-            <input id="juro-correction-reason" type="text" maxlength="500" placeholder="Ex.: depósito, levantamento ou correção" />
-          </label>
-          <details class="dca-details">
-            <summary>Movimentos recentes do saldo</summary>
-            <div id="juro-movements-list" class="dca-compact-list"><p class="muted">A carregar…</p></div>
-          </details>
-      </div>
+        </div>
+        <details class="dca-details dca-movements">
+          <summary>Movimentos</summary>
+          <div id="juro-movements-list" class="dca-compact-list"><p class="muted">A carregar…</p></div>
+        </details>
       </div>
     </section>
 
-    <!-- === Parâmetros (collapsible) === -->
-    <section class="report-section">
-      <div style="text-align: center; margin-bottom: 1rem;">
-        <button id="btn-toggle-params" type="button" class="primary">Mostrar Parâmetros</button>
+    <!-- === Definições abertas pelo botão no topo === -->
+    <section class="report-section dca-settings-panel" id="params-container" style="display: none;">
+      <div class="dca-section-head dca-settings-head">
+        <div><p class="dca-eyebrow">Configuração</p><h3>Definições</h3></div>
+        <button id="btn-close-settings" type="button" aria-label="Fechar definições">Fechar</button>
       </div>
-
-      <div id="params-container" style="display: none;">
         <!-- Parâmetros -->
         <div class="viz-card params-card">
-          <h4>Parâmetros</h4>
+          <h4>Carteira e horizonte</h4>
           <div class="table-wrap">
             <table class="table-dca params-table" id="params-table">
               <thead>
@@ -230,25 +222,6 @@
                     <button id="btn-save-params" type="button" class="primary" aria-label="Gravar parâmetros">✓</button>
                   </td>
                 </tr>
-                <tr class="scenario-rate-row">
-                  <td colspan="5">
-                    <div class="scenario-rate-inputs" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; justify-content: flex-start;">
-                      <span class="scenario-rate-label">Taxa dos Cenários:</span>
-                      <label style="display:flex; align-items:center; gap:0.4rem;">
-                        Conservador (%)
-                        <input id="scenario-rate-conservative" type="number" step="0.1" min="-50" max="50" style="width:90px;" />
-                      </label>
-                      <label style="display:flex; align-items:center; gap:0.4rem;">
-                        Moderado (%)
-                        <input id="scenario-rate-moderate" type="number" step="0.1" min="-50" max="50" style="width:90px;" />
-                      </label>
-                      <label style="display:flex; align-items:center; gap:0.4rem;">
-                        Otimista (%)
-                        <input id="scenario-rate-optimistic" type="number" step="0.1" min="-50" max="50" style="width:90px;" />
-                      </label>
-                    </div>
-                  </td>
-                </tr>
               </tbody>
             </table>
             <div id="params-feedback" class="form-feedback" aria-live="polite"></div>
@@ -259,7 +232,7 @@
             <div><p class="dca-eyebrow">Execução contabilística</p><h4>Plano automático</h4></div>
             <span id="automation-enabled-badge" class="dca-status-badge">Ativo</span>
           </div>
-          <p class="muted">Estas definições controlam a automação real. Os cenários acima são apenas simulações.</p>
+          <p class="muted">Estas definições controlam o plano contabilístico automático e a taxa aplicada ao saldo.</p>
           <div class="dca-form-grid">
             <label class="dca-field"><span>Estado</span><select id="automation-enabled"><option value="true">Ativo</option><option value="false">Pausado</option></select></label>
             <label class="dca-field"><span>Em vigor desde</span><input id="automation-effective-from" type="month" /></label>
@@ -271,15 +244,12 @@
           <div class="dca-form-actions"><button id="btn-save-automation" type="button" class="primary">Guardar plano automático</button></div>
           <div id="automation-feedback" class="form-feedback" aria-live="polite"></div>
         </div>
-      </div>
     </section>
 
-    <!-- === KPIs & Cenários === -->
+    <!-- === Indicadores de desempenho === -->
     <section class="report-section">
-      <div class="viz-card" id="kpi-cenarios-card">
-        <h4 style="margin-bottom: 1rem;">KPIs & Cenários</h4>
-        
-        <p class="dca-interest-summary">Juros acumulados: <strong id="kpi-total-interest">—</strong></p>
+      <div class="viz-card" id="dca-performance-card">
+        <h4 style="margin-bottom: 1rem;">Desempenho</h4>
 
         <!-- Investment Progress Bar -->
         <div class="progress-section" style="margin-top: 1.5rem;">
@@ -298,50 +268,6 @@
           </div>
           <div style="text-align: center; margin-top: 0.5rem; font-size: 0.85rem;">
             <span id="progress-months-remaining" style="color: var(--p2); font-weight: 600;">--</span>
-          </div>
-        </div>
-
-        <!-- Scenario Comparison -->
-        <div class="scenario-comparison" style="margin-top: 1.5rem;">
-          <h5 style="text-align: center; margin-bottom: .25rem; color: var(--text-dim);">Cenários de Crescimento</h5>
-          <p class="muted" style="text-align:center; margin-bottom:1rem;">Projeções hipotéticas até à data final; não constituem previsões.</p>
-          <div class="scenario-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-            <div class="scenario-card" data-scenario="conservative">
-              <div class="scenario-header" style="background: #e8f5e8; padding: 0.75rem; border-radius: 8px 8px 0 0;">
-                <div class="scenario-title" style="font-weight: 700; color: #2e7d32;">Conservador</div>
-                <div class="scenario-rate" id="scenario-conservative-rate" style="font-size: 0.9rem; color: #2e7d32;">+0%</div>
-              </div>
-              <div class="scenario-body" style="padding: 0.75rem; background: white; border-radius: 0 0 8px 8px;">
-                <div class="scenario-line" style="display: flex; align-items: baseline; gap: 0.35rem; justify-content: center;">
-                  <span class="scenario-value" id="scenario-conservative">-</span>
-                  <span class="scenario-diff" style="font-size: 0.85rem; font-weight: 600;" id="scenario-conservative-diff">-</span>
-                </div>
-              </div>
-            </div>
-            <div class="scenario-card" data-scenario="moderate">
-              <div class="scenario-header" style="background: #e3f2fd; padding: 0.75rem; border-radius: 8px 8px 0 0;">
-                <div class="scenario-title" style="font-weight: 700; color: #1565c0;">Moderado</div>
-                <div class="scenario-rate" id="scenario-moderate-rate" style="font-size: 0.9rem; color: #1565c0;">+0%</div>
-              </div>
-              <div class="scenario-body" style="padding: 0.75rem; background: white; border-radius: 0 0 8px 8px;">
-                <div class="scenario-line" style="display: flex; align-items: baseline; gap: 0.35rem; justify-content: center;">
-                  <span class="scenario-value" id="scenario-moderate">-</span>
-                  <span class="scenario-diff" style="font-size: 0.85rem; font-weight: 600;" id="scenario-moderate-diff">-</span>
-                </div>
-              </div>
-            </div>
-            <div class="scenario-card" data-scenario="optimistic">
-              <div class="scenario-header" style="background: #fff3e0; padding: 0.75rem; border-radius: 8px 8px 0 0;">
-                <div class="scenario-title" style="font-weight: 700; color: #ef6c00;">Otimista</div>
-                <div class="scenario-rate" id="scenario-optimistic-rate" style="font-size: 0.9rem; color: #ef6c00;">+0%</div>
-              </div>
-              <div class="scenario-body" style="padding: 0.75rem; background: white; border-radius: 0 0 8px 8px;">
-                <div class="scenario-line" style="display: flex; align-items: baseline; gap: 0.35rem; justify-content: center;">
-                  <span class="scenario-value" id="scenario-optimistic">-</span>
-                  <span class="scenario-diff" style="font-size: 0.85rem; font-weight: 600;" id="scenario-optimistic-diff">-</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -364,7 +290,6 @@
             <div class="metric-value" id="annualized-return">-</div>
           </div>
         </div>
-        <p id="annualized-history-note" class="annualized-history-note" hidden></p>
       </div>
     </section>
 
