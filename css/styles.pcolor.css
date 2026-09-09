@@ -60,7 +60,8 @@ body[data-page="dca"] .dca-overview { padding: clamp(1rem, 2vw, 1.5rem); border:
 .dca-overview-head, .dca-section-head, .dca-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .dca-overview-head h3, .dca-section-head h4, .dca-dialog-head h3 { margin: 0; }
 .dca-eyebrow { margin: 0 0 .2rem; color: var(--p2); font-size: .75rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.dca-primary-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .55rem; }
+.dca-primary-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; gap: .55rem; }
+.dca-settings-anchor { position: relative; }
 .dca-summary-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: .75rem; margin-top: 1rem; }
 .dca-summary-card { min-width: 0; padding: .9rem 1rem; border: 1px solid var(--border); border-radius: 13px; background: rgba(255,255,255,.9); }
 .dca-summary-card > span { display: block; color: var(--text-dim); font-size: .78rem; margin-bottom: .35rem; }
@@ -80,8 +81,10 @@ body[data-page="dca"] .dca-overview { padding: clamp(1rem, 2vw, 1.5rem); border:
 .dca-balance-editor { display: flex; align-items: center; gap: .5rem; }
 .dca-balance-editor input { width: min(180px, 100%); font: inherit; font-weight: 700; }
 .dca-movements { margin-top: 1.25rem; padding-top: .8rem; border-top: 1px solid var(--border); }
-.dca-settings-panel { padding-top: 1.25rem; }
+.dca-settings-panel { position: absolute; z-index: 80; top: calc(100% + .55rem); right: 0; width: min(820px, calc(100vw - 2rem)); max-height: min(760px, calc(100vh - 7rem)); margin: 0; padding: 1rem; overflow: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--card); box-shadow: 0 20px 55px rgba(15,23,42,.2); }
 .dca-settings-head { margin-bottom: 1rem; }
+.dca-settings-panel .params-card + .params-card { margin-top: .8rem; }
+.dca-inline-setting { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: end; gap: .75rem; margin-top: .8rem; }
 .dca-field { display: grid; gap: .35rem; min-width: 0; }
 .dca-field > span { color: var(--text-dim); font-size: .82rem; font-weight: 700; }
 .dca-field input, .dca-field select, .dca-field textarea { width: 100%; min-width: 0; padding: .7rem .75rem; border: 1px solid var(--border); border-radius: 9px; background: white; color: var(--text); font: inherit; }
@@ -114,7 +117,7 @@ body[data-page="dca"] .dca-overview { padding: clamp(1rem, 2vw, 1.5rem); border:
 .dca-preview > div { display: grid; gap: .15rem; padding: .7rem; border: 1px solid var(--border); border-radius: 10px; }
 .dca-preview span, .dca-preview small { color: var(--text-dim); font-size: .78rem; }
 @media (max-width: 1050px) { .dca-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dca-summary-portfolio { grid-column: 1 / -1; } .dca-cash-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dca-rebalance-action { grid-template-columns: 1fr; align-items: stretch; } }
-@media (max-width: 600px) { .dca-overview-head, .dca-section-head { align-items: stretch; flex-direction: column; } .dca-primary-actions { justify-content: stretch; } .dca-primary-actions button { flex: 1 1 100%; } .dca-summary-grid, .dca-form-grid, .dca-preview, .dca-cash-summary { grid-template-columns: 1fr; } .dca-summary-portfolio { grid-column: auto; } .dca-portfolio-metrics { grid-template-columns: 1fr; } .dca-portfolio-metrics > div + div { padding: .65rem 0 0; border-top: 1px solid var(--border); border-left: 0; } .dca-balance-editor { align-items: stretch; flex-direction: column; } .dca-balance-editor input { width: 100%; } .dca-field-wide { grid-column: auto; } .dca-dialog { width: 100vw; max-height: 92vh; margin: auto 0 0; border-radius: 18px 18px 0 0; } .dca-dialog form { max-height: 92vh; overflow-y: auto; } }
+@media (max-width: 600px) { .dca-overview-head, .dca-section-head { align-items: stretch; flex-direction: column; } .dca-primary-actions { justify-content: stretch; } .dca-primary-actions > button, .dca-settings-anchor, .dca-settings-anchor > button { width: 100%; } .dca-settings-panel { width: calc(100vw - 2rem); max-height: calc(100vh - 8rem); } .dca-inline-setting { grid-template-columns: 1fr; } .dca-summary-grid, .dca-form-grid, .dca-preview, .dca-cash-summary { grid-template-columns: 1fr; } .dca-summary-portfolio { grid-column: auto; } .dca-portfolio-metrics { grid-template-columns: 1fr; } .dca-portfolio-metrics > div + div { padding: .65rem 0 0; border-top: 1px solid var(--border); border-left: 0; } .dca-balance-editor { align-items: stretch; flex-direction: column; } .dca-balance-editor input { width: 100%; } .dca-field-wide { grid-column: auto; } .dca-dialog { width: 100vw; max-height: 92vh; margin: auto 0 0; border-radius: 18px 18px 0 0; } .dca-dialog form { max-height: 92vh; overflow-y: auto; } }
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;

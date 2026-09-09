@@ -64,7 +64,9 @@
         <div class="dca-primary-actions">
           <button id="btn-new-reinforcement" type="button" class="primary">+ Novo reforço</button>
           <button id="btn-focus-balance" type="button">Movimentar saldo</button>
-          <button id="btn-open-settings" type="button" aria-controls="params-container" aria-expanded="false">Definições</button>
+          <div class="dca-settings-anchor">
+            <button id="btn-open-settings" type="button" aria-controls="params-container" aria-expanded="false">Definições</button>
+          </div>
         </div>
       </div>
       <div class="dca-summary-grid">
@@ -194,6 +196,15 @@
         <div><p class="dca-eyebrow">Configuração</p><h3>Definições</h3></div>
         <button id="btn-close-settings" type="button" aria-label="Fechar definições">Fechar</button>
       </div>
+        <div class="viz-card params-card dca-interest-settings">
+          <h4>Juros do saldo</h4>
+          <p class="muted">Taxa anual usada para calcular a remuneração do saldo.</p>
+          <div class="dca-inline-setting">
+            <label class="dca-field"><span>Taxa anual de juros (%)</span><input id="automation-interest-rate" type="number" min="0" max="100" step="0.01" /></label>
+            <button id="btn-save-interest-rate" type="button" class="primary">Guardar taxa</button>
+          </div>
+          <div id="interest-rate-feedback" class="form-feedback" aria-live="polite"></div>
+        </div>
         <!-- Parâmetros -->
         <div class="viz-card params-card">
           <h4>Carteira e horizonte</h4>
@@ -232,13 +243,12 @@
             <div><p class="dca-eyebrow">Execução contabilística</p><h4>Plano automático</h4></div>
             <span id="automation-enabled-badge" class="dca-status-badge">Ativo</span>
           </div>
-          <p class="muted">Estas definições controlam o plano contabilístico automático e a taxa aplicada ao saldo.</p>
+          <p class="muted">Estas definições controlam o plano contabilístico automático.</p>
           <div class="dca-form-grid">
             <label class="dca-field"><span>Estado</span><select id="automation-enabled"><option value="true">Ativo</option><option value="false">Pausado</option></select></label>
             <label class="dca-field"><span>Em vigor desde</span><input id="automation-effective-from" type="month" /></label>
             <label class="dca-field"><span>VWCE (€)</span><input id="automation-vwce-amount" type="number" min="0" step="0.01" /></label>
             <label class="dca-field"><span>AGGH (€)</span><input id="automation-aggh-amount" type="number" min="0" step="0.01" /></label>
-            <label class="dca-field"><span>Taxa anual do saldo (%)</span><input id="automation-interest-rate" type="number" min="0" max="100" step="0.01" /></label>
             <label class="dca-field"><span>Agendamento</span><input value="Dia 1 · 01:10 · Europe/Lisbon" disabled /></label>
           </div>
           <div class="dca-form-actions"><button id="btn-save-automation" type="button" class="primary">Guardar plano automático</button></div>

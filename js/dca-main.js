@@ -90,7 +90,7 @@ function applyDcaReadOnlyUI() {
 
   const writeButtons = [
     '#btn-save-saldo', '#btn-juro-gravar', '#btn-save-params',
-    '#btn-save-automation', '#btn-new-reinforcement', '#btn-new-reinforcement-secondary',
+    '#btn-save-automation', '#btn-save-interest-rate', '#btn-new-reinforcement', '#btn-new-reinforcement-secondary',
     '#btn-use-rebalance', '#btn-reconcile-shares', '.btn-void-reinforcement',
     '.btn-save-qty', '.btn-save', '.btn-add-inv-swda', '.btn-add-inv-aggh'
   ];
@@ -585,6 +585,18 @@ function updateReconciliation() {
 }
 
 function bindDcaFeatures() {
+  const settingsAnchor = document.querySelector('.dca-settings-anchor');
+  const settingsPanel = document.getElementById('params-container');
+  const settingsButton = document.getElementById('btn-open-settings');
+  if (settingsAnchor && settingsPanel && settingsPanel.parentElement !== settingsAnchor) {
+    settingsAnchor.append(settingsPanel);
+  }
+  const setSettingsOpen = open => {
+    if (!settingsPanel) return;
+    settingsPanel.style.display = open ? 'block' : 'none';
+    settingsButton?.setAttribute('aria-expanded', String(open));
+  };
+
   ['btn-new-reinforcement', 'btn-new-reinforcement-secondary'].forEach(id => {
     document.getElementById(id)?.addEventListener('click', () => openReinforcement());
   });
@@ -649,21 +661,48 @@ function bindDcaFeatures() {
       }
     }, null, { confirmLabel: 'Guardar plano real' });
   });
+  document.getElementById('btn-save-interest-rate')?.addEventListener('click', async event => {
+    const button = event.currentTarget;
+    const annualRatePct = Number(document.getElementById('automation-interest-rate')?.value);
+    if (!Number.isFinite(annualRatePct) || annualRatePct < 0 || annualRatePct > 100) {
+      showFeedback('interest-rate-feedback', 'Introduza uma taxa anual entre 0% e 100%.', 'error');
+      return;
+    }
+    button.disabled = true;
+    try {
+      state.automation = await saveAutomationSettings({
+        ...state.automation,
+        annualInterestRate: annualRatePct / 100
+      });
+      showFeedback('interest-rate-feedback', 'Taxa anual guardada.');
+      await boot(true);
+    } catch (error) {
+      showFeedback('interest-rate-feedback', error.message || 'Não foi possível guardar a taxa.', 'error', 6000);
+    } finally {
+      button.disabled = false;
+    }
+  });
   document.getElementById('btn-focus-balance')?.addEventListener('click', () => {
     document.getElementById('juro-saldo-display')?.focus();
     document.getElementById('juro-saldo-display')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
-  document.getElementById('btn-open-settings')?.addEventListener('click', () => {
-    const container = document.getElementById('params-container');
-    if (container) container.style.display = 'block';
-    document.getElementById('btn-open-settings')?.setAttribute('aria-expanded', 'true');
-    container?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  settingsButton?.addEventListener('click', () => {
+    setSettingsOpen(settingsButton.getAttribute('aria-expanded') !== 'true');
   });
   document.getElementById('btn-close-settings')?.addEventListener('click', () => {
-    const container = document.getElementById('params-container');
-    if (container) container.style.display = 'none';
-    document.getElementById('btn-open-settings')?.setAttribute('aria-expanded', 'false');
-    document.getElementById('btn-open-settings')?.focus();
+    setSettingsOpen(false);
+    settingsButton?.focus();
+  });
+  document.addEventListener('click', event => {
+    if (settingsButton?.getAttribute('aria-expanded') === 'true' && !settingsAnchor?.contains(event.target)) {
+      setSettingsOpen(false);
+    }
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && settingsButton?.getAttribute('aria-expanded') === 'true') {
+      setSettingsOpen(false);
+      settingsButton.focus();
+    }
   });
   document.getElementById('rebalance-amount')?.addEventListener('input', () => updateRebalancingPreview());
   document.getElementById('btn-use-rebalance')?.addEventListener('click', () => openReinforcement({
@@ -1061,7 +1100,7 @@ async function boot(skipParamUI = false) {
     maybeSendRebalancingAlert(rebalancingData);
 
     // Update progress bar
-    const progress = calculateProgress(state.params);
+    const progress = calculateProgress(state.params, rows);
     updateProgressBar(progress);
 
     // Update goal status

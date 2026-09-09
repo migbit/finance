@@ -1,7 +1,7 @@
 // js/dca-calculations.js - Calculation logic for DCA
 
 import {
-  START_YM, TAXA_ANUAL_FIXA, getPlannedContributions, monthsBetween, ymMin
+  START_YM, TAXA_ANUAL_FIXA, getPlannedContributions, monthsBetween, ymCompare, ymMin
 } from './dca-core.js';
 
 // ---------- Helpers ----------
@@ -237,7 +237,7 @@ export function calculateKPIs(rows, liveData = null) {
 }
 
 // ---------- Progress Calculations ----------
-export function calculateProgress(params) {
+export function calculateProgress(params, rows = []) {
   const now = new Date();
   const nowYM = { y: now.getFullYear(), m: now.getMonth() + 1 };
   const clampedEnd = ymMin(params.endYM, nowYM);
@@ -245,7 +245,15 @@ export function calculateProgress(params) {
   const plannedTotal = (endYM) => monthsBetween(START_YM, endYM)
     .reduce((sum, ym) => sum + getPlannedContributions(ym, params).total, 0);
   const totalTarget = plannedTotal(params.endYM);
-  const invested = plannedTotal(clampedEnd);
+  const plannedInvested = plannedTotal(clampedEnd);
+  const currentRow = rows.find(row => row.isCurrent);
+  const latestRowToDate = [...rows].reverse().find(row => {
+    const rowYM = { y: Number(row.y), m: Number(row.m) };
+    return Number.isFinite(rowYM.y) && Number.isFinite(rowYM.m) && ymCompare(rowYM, nowYM) <= 0;
+  });
+  const actualInvested = Number(currentRow?.investedCum ?? latestRowToDate?.investedCum);
+  // investedCum inclui contribuições regulares, valores extra legados e reforços ativos.
+  const invested = Number.isFinite(actualInvested) ? actualInvested : plannedInvested;
 
   // Calculate months remaining
   const monthsRemaining = monthsBetween(nowYM, params.endYM).length;
