@@ -17,6 +17,17 @@ test('nega módulos à Filipa por defeito', () => {
   assert.equal(getModuleAccess(FILIPA_UID, 'novo-modulo', 'nova-area', 0), 'none');
 });
 
+test('o horário da Francisca está disponível a todas as contas autenticadas', () => {
+  const groups = [{ key: 'francisca', links: [{ key: 'francisca-horario' }] }];
+  for (const uid of [FILIPA_UID, FRANCISCA_UID, LEONOR_UID, 'outro-uid']) {
+    assert.equal(getModuleAccess(uid, 'francisca-horario', 'francisca'), 'write');
+    assert.equal(filterNavigation(groups, uid)[0].links[0].key, 'francisca-horario');
+  }
+  assert.equal(getModuleAccess(null, 'francisca-horario', 'francisca'), 'none');
+  assert.deepEqual(filterNavigation(groups, null), []);
+  assert.equal(getModuleAccess(LEONOR_UID, 'francisca-financas', 'francisca'), 'none');
+});
+
 test('autoriza apenas as áreas base da Filipa antes da data', () => {
   const before = INVESTMENTS_RELEASE_AT_MS - 1;
   assert.equal(getModuleAccess(FILIPA_UID, 'diversos', 'apartamentos', before), 'write');

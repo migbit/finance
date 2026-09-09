@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f3eee8">
+  <title>Horário da Francisca · 6.º ano</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/francisca-horario.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="manifest" href="../manifest.json">
+</head>
+<body data-page="francisca-horario" data-child="francisca">
+  <a class="schedule-skip" href="#schedule-content">Saltar para o horário</a>
+  <main id="schedule-content" class="schedule-page" aria-busy="true">
+    <header class="schedule-hero">
+      <div>
+        <p class="schedule-eyebrow">Francisca · 6.º ano</p>
+        <h1>Horário</h1>
+        <p>A semana, da escola à dança.</p>
+      </div>
+      <button id="schedule-print" type="button">Imprimir horário</button>
+    </header>
+    <section class="schedule-day-section" aria-labelledby="schedule-day-title">
+      <div class="schedule-heading">
+        <h2 id="schedule-day-title">O meu dia</h2>
+        <label for="schedule-day">Dia da semana
+          <select id="schedule-day">
+            <option value="0">Segunda-feira</option>
+            <option value="1">Terça-feira</option>
+            <option value="2">Quarta-feira</option>
+            <option value="3">Quinta-feira</option>
+            <option value="4">Sexta-feira</option>
+          </select>
+        </label>
+      </div>
+      <div id="schedule-day-content" class="schedule-day-grid" aria-live="polite"></div>
+    </section>
+    <section class="schedule-week-section" aria-labelledby="schedule-week-title">
+      <h2 id="schedule-week-title">A semana completa</h2>
+      <p class="schedule-scroll-hint">Desliza a grelha para os lados para ver todos os dias.</p>
+      <div id="schedule-week"></div>
+    </section>
+  </main>
+  <noscript>Ativa o JavaScript e inicia sessão para consultar o horário.</noscript>
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/francisca-horario.js"></script>
+</body>
+</html>

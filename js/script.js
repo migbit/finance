@@ -81,7 +81,8 @@ const NAV_GROUPS = [
     key: 'francisca',
     links: [
       { label: '💶 Finanças', key: 'francisca-financas', slug: 'modules/francisca-financas.html', module: true },
-      { label: '🐾 Calendário', key: 'francisca-calendario', slug: 'modules/francisca-calendario.html', module: true }
+      { label: '🐾 Calendário', key: 'francisca-calendario', slug: 'modules/francisca-calendario.html', module: true },
+      { label: '🕒 Horário', key: 'francisca-horario', slug: 'modules/francisca-horario.html', module: true }
     ]
   },
   {
@@ -125,6 +126,7 @@ const NAV_GROUPS = [
 ];
 
 const ACTIVE_KEY_MATCHERS = [
+  { key: 'francisca-horario', patterns: ['francisca-horario'] },
   { key: 'gestao-financas', patterns: ['gestao-financas'] },
   { key: 'francisca-calendario', patterns: ['francisca-calendario'] },
   { key: 'francisca-financas', patterns: ['francisca-financas'] },

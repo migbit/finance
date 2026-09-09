@@ -24,7 +24,8 @@ const FAMILY_FINANCE_MODULES = new Set([
 ]);
 
 const FAMILY_SHARED_MODULES = new Set([
-  'francisca-calendario'
+  'francisca-calendario',
+  'francisca-horario'
 ]);
 
 const CHILD_PROFILE_BY_UID = new Map([
@@ -67,7 +68,7 @@ export function getModuleAccess(uid, moduleKey, groupKey = '', now = Date.now())
 
   const childProfile = getChildProfile(uid);
   if (childProfile) {
-    if (moduleKey === 'francisca-calendario' && groupKey === 'francisca') return 'write';
+    if (FAMILY_SHARED_MODULES.has(moduleKey) && groupKey === 'francisca') return 'write';
     const ownsModule = moduleKey === childProfile.moduleKey;
     return ownsModule && groupKey === childProfile.groupKey
       ? 'write'
