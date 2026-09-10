@@ -18,6 +18,7 @@ body[data-page="francisca-horario"] { background: #f8f7f4; color: #28332c; }
 .schedule-day-list { display: grid; gap: .5rem; list-style: none; padding: 0; margin: 0; }
 .schedule-lesson { display: flex; flex-direction: column; justify-content: center; gap: .4rem; height: 100%; min-height: 62px; padding: .75rem; border-radius: 10px; color: #28332c; box-sizing: border-box; }
 .schedule-lesson strong { font-size: .9rem; line-height: 1.3; }
+.schedule-label-short { display: none; text-decoration: none; }
 .schedule-time { display: block; white-space: nowrap; font-size: .8rem; font-variant-numeric: tabular-nums; }
 .schedule-day-list .schedule-lesson { flex-direction: row-reverse; justify-content: flex-end; align-items: center; gap: 1rem; min-height: 52px; }
 .schedule-day-list .schedule-time { min-width: 104px; }
@@ -47,7 +48,21 @@ body[data-page="francisca-horario"] { background: #f8f7f4; color: #28332c; }
 .schedule-scroll-hint { display: none; color: #637067; font-size: .85rem; }
 .schedule-skip { position: fixed; top: -100px; left: 1rem; z-index: 3000; padding: 1rem; background: #28332c; color: #fff; }
 .schedule-skip:focus { top: 0; }
-@media (max-width: 900px) { .schedule-scroll-hint { display: block; } }
+@media screen and (max-width: 900px) {
+  .schedule-label-full { display: none; }
+  .schedule-label-short { display: inline; }
+  .schedule-scroll-hint { display: block; }
+  .schedule-page .schedule-table { min-width: 340px; }
+  .schedule-table th:first-child { width: 62px; }
+  .schedule-table thead th { padding: .65rem .15rem; text-transform: none; letter-spacing: 0; }
+  .schedule-table th, .schedule-table td { padding: .15rem; }
+  .schedule-table .schedule-slot { font-size: .75rem; letter-spacing: 0; }
+  .schedule-slot > span:not(.schedule-time-separator) { display: block; }
+  .schedule-time-separator { display: none; }
+  .schedule-table .schedule-lesson { min-height: 48px; padding: .45rem .15rem; border-radius: 6px; }
+  .schedule-table .schedule-time { display: none; }
+  .schedule-table .schedule-lesson strong { font-size: .75rem; overflow-wrap: normal; }
+}
 @media (max-width: 600px) {
   .schedule-hero { padding: 1.4rem; align-items: flex-start; flex-direction: column; }
   .schedule-heading { align-items: flex-start; flex-direction: column; }

@@ -37,7 +37,17 @@ function element(tag, className, text) {
 function lessonBlock(section, lesson) {
   const [name, color] = SUBJECTS[lesson.subject] || [lesson.subject, 'lilac'];
   const block = element('div', `schedule-lesson schedule-${color}`);
-  block.append(element('strong', '', name));
+  const label = element('strong');
+  if (name === lesson.subject) {
+    label.textContent = name;
+  } else {
+    label.append(element('span', 'schedule-label-full', name));
+    const abbreviation = element('abbr', 'schedule-label-short', lesson.subject);
+    abbreviation.title = name;
+    abbreviation.setAttribute('aria-label', name);
+    label.append(abbreviation);
+  }
+  block.append(label);
   block.append(element('span', 'schedule-time', `${section.slots[lesson.slot][0]} – ${section.slots[lesson.slot + lesson.span - 1][1]}`));
   return block;
 }
@@ -52,15 +62,21 @@ function renderWeek() {
   const table = element('table', 'schedule-table');
   table.setAttribute('aria-labelledby', 'schedule-week-title');
   const head = table.createTHead().insertRow();
-  ['Horas', ...DAYS].forEach(label => {
-    const th = element('th', '', label);
+  ['Horas', ...DAYS].forEach((label, index) => {
+    const th = element('th');
+    th.append(element('span', 'schedule-label-full', label));
+    const short = element('span', 'schedule-label-short', ['Horas', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex'][index]);
+    short.setAttribute('aria-label', label);
+    th.append(short);
     th.scope = 'col';
     head.append(th);
   });
   const body = table.createTBody();
   section.slots.forEach((slot, index) => {
     const row = body.insertRow();
-    const time = element('th', 'schedule-slot', slot.join(' – '));
+    const time = element('th', 'schedule-slot');
+    time.append(element('span', '', slot[0]), element('span', 'schedule-time-separator', ' – '), element('span', '', slot[1]));
+    time.setAttribute('aria-label', `${slot[0]} às ${slot[1]}`);
     time.scope = 'row';
     row.append(time);
     DAYS.forEach((_, day) => {
