@@ -1,6 +1,6 @@
 /* A APP – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v64`;
+const CACHE = `${CACHE_PREFIX}v65`;
 
 const CORE = [
   './',
@@ -28,8 +28,6 @@ const CORE = [
   './js/francisca-calendar.js',
   './js/francisca-horario.js',
   './js/francisca-horario-data.js',
-  './js/meditacao.js',
-  './js/meditacao-recommender.js',
   './modules/ginasio.html',
   './modules/alimentacao.html',
   './modules/filipa-ginasio.html',
@@ -39,16 +37,11 @@ const CORE = [
   './modules/gestao-financas.html',
   './modules/francisca-calendario.html',
   './modules/francisca-horario.html',
-  './modules/meditacao.html',
   './css/alimentacao.css',
   './css/financas.css',
   './css/gestao-financas.css',
   './css/francisca-calendar.css',
   './css/francisca-horario.css',
-  './css/meditacao.css',
-  './data/meditations/buddhist.json',
-  './data/meditations/asian-non-buddhist.json',
-  './data/meditations/global-modern.json',
   './manifest.json',
   './icons/icon-192-v2.png',
   './icons/icon-512-v2.png'

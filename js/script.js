@@ -113,7 +113,6 @@ const NAV_GROUPS = [
     links: [
       { label: '🏋️ Ginásio', key: 'ginasio', slug: 'modules/ginasio.html', module: true },
       { label: '🥗 Alimentação', key: 'alimentacao', slug: 'modules/alimentacao.html', module: true },
-      { label: '🧘 Meditação', key: 'meditacao', slug: 'modules/meditacao.html', module: true },
       {
         label: '🧾 Gestão Finanças',
         key: 'gestao-financas',
@@ -150,7 +149,6 @@ const ACTIVE_KEY_MATCHERS = [
   { key: 'dca', patterns: ['dca'] },
   { key: 'crypto', patterns: ['crypto'] },
   { key: 'alimentacao', patterns: ['alimentacao'] },
-  { key: 'meditacao', patterns: ['meditacao'] },
   { key: 'ginasio', patterns: ['ginasio'] }
 ];
 
