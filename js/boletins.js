@@ -211,7 +211,7 @@ function renderBoletimRows(boletins) {
         <td>${escapeHtml(formatStay(item.checkinDate, item.checkoutDate))}${!item.checkinDate || !item.checkoutDate ? '<br><small>Datas individuais em «Ver dados»</small>' : ''}</td>
         <td>${renderSendDeadline(item.checkinDate || item.guests.map(guest => guest.checkinDate).filter(Boolean).sort()[0], item.sentToAuthorities)}</td>
         <td><span class="status-badge ${statusClass}">${status}</span>${item.guests.some(guest => !guest.checkoutDate) ? '<br><span>Saída por confirmar</span>' : ''}</td>
-        <td>${item.guestSubmissions || 0}/${Number(item.expectedGuests || 0)}</td>
+        <td>${item.guestSubmissions || 0}/${Number(item.expectedGuests || 0)}<br><button type="button" data-action="guest-count" data-id="${item.id}">Alterar número</button></td>
         <td>
           <label class="sent-toggle">
             <input type="checkbox" data-action="sent" data-id="${item.id}" ${checked}>
@@ -222,9 +222,11 @@ function renderBoletimRows(boletins) {
           <button type="button" data-action="details" data-target="${detailsId}" ${item.guestSubmissions ? '' : 'disabled'}>
             Ver dados
           </button>
+          <button type="button" data-action="add-guest" data-id="${item.id}">Adicionar hóspede</button>
         </td>
         <td>
           ${closed ? '<span>Acesso dos hóspedes fechado</span>' : `<button type="button" data-action="copy" data-link="${escapeAttr(link)}">Copiar</button><div class="mono-link">${escapeHtml(link)}</div>`}
+          ${closed ? '' : `<button type="button" data-action="close-access" data-id="${item.id}">Fechar acesso dos hóspedes</button>`}
         </td>
         <td>
           <button type="button" data-action="delete" data-id="${item.id}" data-name="${escapeAttr(item.guestName || 'Sem nome')}">
@@ -259,6 +261,12 @@ function renderSendDeadline(checkinDate, sentToAuthorities) {
 }
 
 async function handleTableClick(event) {
+  const management = event.target.closest('button[data-action="close-access"], button[data-action="guest-count"], button[data-action="add-guest"]');
+  if (management) {
+    if (management.dataset.action === 'add-guest') openAdminGuest(management.dataset.id);
+    else await manageGuestAccess(management);
+    return;
+  }
   const edit = event.target.closest('button[data-action="edit-guest"]');
   if (edit) { openAdminGuest(edit.dataset.boletim, edit.dataset.guest); return; }
   const copyableCell = event.target.closest('[data-action="copy-value"]');
@@ -389,9 +397,15 @@ function buildPublicLink(token) {
 let editingAdminGuest = null;
 function openAdminGuest(boletimId, guestId) {
   const boletim = state.boletins.find(item => item.id === boletimId);
-  const guest = boletim?.guests.find(item => item.id === guestId);
+  if (!boletim) return;
+  const adding = !guestId;
+  const guest = adding ? { id: crypto.randomUUID(), checkinDate: boletim.checkinDate || '', checkoutDate: boletim.checkoutDate || '' } : boletim.guests.find(item => item.id === guestId);
   if (!guest) return;
-  editingAdminGuest = { boletim, guest };
+  editingAdminGuest = { boletim, guest, adding };
+  const dialog = document.getElementById('guest-edit-dialog');
+  dialog.querySelector('h3').textContent = adding ? 'Adicionar hóspede' : 'Corrigir dados do hóspede';
+  dialog.querySelector('p').textContent = adding ? 'Introduz os dados recebidos diretamente. Guardar aqui não reabre o link nem marca o boletim como enviado ao SIBA.' : 'A correção não reabre o link. Se já enviaste os dados ao SIBA, verifica também a correção junto do SIBA.';
+  dialog.querySelector('[type="submit"]').textContent = adding ? 'Guardar hóspede' : 'Guardar correção';
   const labels = {
     firstName: 'Nome', lastName: 'Apelido', birthDate: 'Data de nascimento',
     documentType: 'Tipo de documento', documentNumber: 'Número do documento',
@@ -404,7 +418,7 @@ function openAdminGuest(boletimId, guestId) {
     let input;
     if (['countryOrigin', 'countryResidence', 'documentCountry'].includes(key)) {
       const codes = [...new Set([...COUNTRY_CODES, value].filter(Boolean))].sort((a, b) => display.of(a).localeCompare(display.of(b), 'pt'));
-      input = `<select name="${key}" required>${codes.map(code => `<option value="${escapeAttr(code)}" ${code === value ? 'selected' : ''}>${escapeHtml(display.of(code))}</option>`).join('')}</select>`;
+      input = `<select name="${key}" required><option value="">Selecionar país</option>${codes.map(code => `<option value="${escapeAttr(code)}" ${code === value ? 'selected' : ''}>${escapeHtml(display.of(code))}</option>`).join('')}</select>`;
     } else if (key === 'documentType') {
       input = `<select name="${key}" required>${[['passport','Passaporte'],['id','Documento de identificação'],['other','Outro']].map(([code, text]) => `<option value="${code}" ${value === code ? 'selected' : ''}>${text}</option>`).join('')}</select>`;
     } else input = `<input name="${key}" type="${['birthDate', 'checkinDate', 'checkoutDate'].includes(key) ? 'date' : 'text'}" value="${escapeAttr(value)}" ${key === 'checkoutDate' ? '' : 'required'}>`;
@@ -423,10 +437,17 @@ async function saveAdminGuest(event) {
   if (changes.checkoutDate && changes.checkoutDate <= changes.checkinDate) {
     showToast('A saída tem de ser posterior à entrada.', 'warning'); return;
   }
-  const { boletim, guest } = editingAdminGuest;
+  const { boletim, guest, adding } = editingAdminGuest;
   changes.updatedAt = Timestamp.now();
   form.querySelectorAll('button').forEach(button => { button.disabled = true; });
   try {
+    if (adding) {
+      await addAdministrativeGuest(boletim, guest.id, changes);
+      document.getElementById('guest-edit-dialog').close();
+      await loadBoletins();
+      showToast('Hóspede guardado. Confirma o envio dos novos dados ao SIBA.', 'success');
+      return;
+    }
     const batch = writeBatch(db);
     const datesChanged = guest.checkinDate !== changes.checkinDate || guest.checkoutDate !== changes.checkoutDate;
     if (datesChanged) batch.update(doc(db, COLLECTION, boletim.id), { departureReportedDate: null, deleteAfter: null });
@@ -445,6 +466,69 @@ async function saveAdminGuest(event) {
     message.textContent = 'Não foi possível guardar. Tenta novamente.';
     message.hidden = false;
   } finally { form.querySelectorAll('button').forEach(button => { button.disabled = false; }); }
+}
+
+async function manageGuestAccess(button) {
+  const id = button.dataset.id;
+  const item = state.boletins.find(row => row.id === id);
+  if (!item) return;
+  const closing = button.dataset.action === 'close-access';
+  let expectedGuests;
+  if (!closing) {
+    const answer = window.prompt('Número de hóspedes que vão efetivamente ficar (1 a 30). Não pode ser inferior aos hóspedes já registados.', String(item.expectedGuests));
+    if (answer === null) return;
+    expectedGuests = Number(answer);
+    if (!Number.isInteger(expectedGuests) || expectedGuests < 1 || expectedGuests > 30) { showToast('Indica um número inteiro de 1 a 30.', 'warning'); return; }
+  }
+  button.disabled = true;
+  try {
+    await runTransaction(db, async tx => {
+      const ref = doc(db, COLLECTION, id);
+      const parent = await tx.get(ref);
+      if (!parent.exists()) throw new Error('O boletim já não existe.');
+      if (closing) {
+        tx.update(ref, { publicAccessClosed: true, updatedAt: Timestamp.now() });
+        return;
+      }
+      // Every submission/count change writes the parent, so concurrent submissions
+      // invalidate this transaction and the guest count is read again on retry.
+      const guests = await getDocs(collection(db, COLLECTION, id, 'guests'));
+      if (expectedGuests < guests.docs.length) throw new Error('O número não pode ser inferior aos hóspedes já registados.');
+      const previous = parent.data();
+      tx.update(ref, {
+        expectedGuests, updatedAt: Timestamp.now(),
+        publicAccessClosed: Boolean(previous.publicAccessClosed || previous.sentToAuthorities || guests.docs.length >= Number(previous.expectedGuests || 1) || guests.docs.length >= expectedGuests),
+        departureReportedDate: null, deleteAfter: null
+      });
+    });
+    await loadBoletins();
+    showToast(closing ? 'Acesso dos hóspedes fechado. Os dados continuam disponíveis para ti.' : 'Número atualizado. O link não é reaberto se já estava fechado.', 'success');
+  } catch (error) { showToast(error.message || 'Não foi possível guardar.', 'error'); }
+  finally { button.disabled = false; }
+}
+
+async function addAdministrativeGuest(boletim, guestId, changes) {
+  await runTransaction(db, async tx => {
+    const ref = doc(db, COLLECTION, boletim.id);
+    const parent = await tx.get(ref);
+    const guestRef = doc(db, COLLECTION, boletim.id, 'guests', guestId);
+    const existing = await tx.get(guestRef);
+    if (!parent.exists()) throw new Error('O boletim já não existe.');
+    if (existing.exists()) return; // Retry after an uncertain network response.
+    const guests = await getDocs(collection(db, COLLECTION, boletim.id, 'guests'));
+    const count = guests.docs.length + 1;
+    if (count > 30) throw new Error('Limite de 30 hóspedes atingido.');
+    const previous = parent.data();
+    const expectedGuests = Math.max(Number(previous.expectedGuests || 1), count);
+    const submittedAt = Timestamp.now();
+    tx.set(guestRef, { ...changes, submittedAt, enteredByAccommodation: true, declarationAccepted: false });
+    tx.set(doc(db, COLLECTION, boletim.id, 'guest_summaries', guestId), { firstName: changes.firstName, lastName: changes.lastName, submittedAt });
+    tx.update(ref, {
+      expectedGuests, updatedAt: submittedAt,
+      publicAccessClosed: Boolean(previous.publicAccessClosed || previous.sentToAuthorities || guests.docs.length >= Number(previous.expectedGuests || 1) || count >= expectedGuests),
+      sentToAuthorities: false, departureReportedDate: null, deleteAfter: null
+    });
+  });
 }
 
 let reportingBoletimId = '';

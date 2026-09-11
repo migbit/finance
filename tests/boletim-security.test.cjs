@@ -3,6 +3,25 @@ const assert = require('node:assert/strict');
 const admin = require('../firebase/functions/node_modules/firebase-admin');
 const { processRegistration, OWNER_UID, handler } = require('../firebase/functions/guest-registration');
 const { expiryFor, deleteExpiredBoletins } = require('../firebase/functions/boletim-retention');
+const vm = require('node:vm');
+const fs = require('node:fs');
+function administrativeActions() {
+  const context = vm.createContext({
+    db, Timestamp, console, document: {getElementById:()=>null,addEventListener:()=>{}},
+    window:{prompt:()=> '1'},
+    doc:(_db,...parts)=>db.doc(parts.join('/')),
+    collection:(_db,...parts)=>db.collection(parts.join('/')),
+    getDocs:ref=>ref.get(),
+    runTransaction:(_db,fn)=>db.runTransaction(async tx=>await fn({
+      get:async ref=>{const snap=await tx.get(ref);return {exists:()=>snap.exists,data:()=>snap.data()};},
+      set:(...args)=>tx.set(...args),update:(...args)=>tx.update(...args)
+    })),
+    showToast:()=>{}
+  });
+  const source=fs.readFileSync(require.resolve('../js/boletins.js'),'utf8').replace(/import[\s\S]*?from\s+'[^']+';/g,'');
+  vm.runInContext(source + '\nloadBoletins = async () => {}; globalThis.actions = { addAdministrativeGuest, manageGuestAccess, setItem: item => state.boletins = [item] };',context);
+  return context.actions;
+}
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error('These tests require the Firestore emulator. Never run against production.');
 const projectId = 'demo-boletim';
 admin.initializeApp({ projectId });
@@ -32,6 +51,39 @@ async function clientRead(path, uid) {
 }
 test.beforeEach(async () => seed());
 test.after(async () => { await db.recursiveDelete(ref); await admin.app().delete(); });
+
+test('manual closure blocks partial registration without marking SIBA sent; reducing count closes access', async () => {
+  const actions=administrativeActions();
+  actions.setItem({id:token,expectedGuests:2});
+  await actions.manageGuestAccess({dataset:{id:token,action:'close-access'}});
+  assert.equal((await ref.get()).data().sentToAuthorities,false);
+  assert.deepEqual(await request('save',{guestId:'test-guest-00000001',data:fields}),{closed:true,language:'pt'});
+  assert.equal((await ref.collection('guests').get()).size,0);
+  await seed();
+  await request('save',{guestId:'test-guest-00000001',data:fields});
+  await actions.manageGuestAccess({dataset:{id:token,action:'guest-count'}});
+  assert.equal((await ref.get()).data().expectedGuests,1);
+  assert.equal((await ref.get()).data().publicAccessClosed,true);
+});
+
+test('administrator adds received data to closed link atomically, without inventing guest consent; retries do not duplicate', async () => {
+  await seed({publicAccessClosed:true,sentToAuthorities:true,departureReportedDate:'2026-09-20'});
+  const actions=administrativeActions();
+  const {declarationAccepted,...data}=fields;
+  const payload={...data,checkinDate:'2026-09-11',checkoutDate:'2026-09-20'};
+  await actions.addAdministrativeGuest({id:token},'manual-guest-000001',payload);
+  await actions.addAdministrativeGuest({id:token},'manual-guest-000001',payload);
+  const parent=(await ref.get()).data();
+  assert.equal(parent.publicAccessClosed,true);
+  assert.equal(parent.sentToAuthorities,false);
+  assert.equal(parent.departureReportedDate,null);
+  assert.equal((await ref.collection('guests').get()).size,1);
+  const guest=(await ref.collection('guests').doc('manual-guest-000001').get()).data();
+  assert.equal(guest.enteredByAccommodation,true);
+  assert.equal(guest.declarationAccepted,false);
+  assert.equal((await ref.collection('guest_summaries').get()).size,1);
+  assert.deepEqual(await request('status'),{closed:true,language:'pt'});
+});
 
 test('missing booking dates are individual; unknown departure is explicit and fixed dates cannot be overridden', async () => {
   await seed({ checkinDate: '', checkoutDate: '', expectedGuests: 3 });

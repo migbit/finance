@@ -19,6 +19,15 @@ Property selection is stored on the parent as `propertyId` (`123` or `1248`).
 Old links without it remain usable and the administrator can associate a property.
 Guest data keys and country codes remain compatible with the existing records.
 
+The administrator can close a partially completed link without marking it sent,
+change the expected guest count (never below the number already stored), and add
+guest details received directly. Parent transactions serialize these operations
+with public submissions. Increasing the count never reopens a closed link.
+Manual additions are marked `enteredByAccommodation`, with no guest declaration
+invented. They reset the sent flag and departure/retention confirmation so the new
+guest is not missed in reporting. Closed-link text does not claim every guest
+submitted a form. No document image upload or storage is introduced.
+
 Guest check-in/check-out inherit each nonempty parent date; otherwise the guest
 provides individual dates. Arrival is required; departure may be explicitly unknown.
 The server validates dates and ignores attempts to override fixed parent dates.

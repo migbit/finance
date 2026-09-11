@@ -15,8 +15,8 @@ export const PRIVACY_COPY = {
     "purpose": "Utilizamos os dados fornecidos para cumprir a obrigação legal de registo de hóspedes em Portugal e comunicá-los à UCFE através do SIBA. O nosso prestador de alojamento de dados é a Google.",
     "retention": "Os registos são conservados durante um ano a partir do dia seguinte à comunicação da saída. Enquanto o registo estiver aberto, qualquer pessoa com o link pode consultar e corrigir os dados do grupo. Após o fecho do registo, o link deixa de permitir o acesso a esses dados.",
     "rights": "Contacte-nos para solicitar o acesso, a correção, o apagamento ou a limitação do tratamento dos seus dados, sujeitos às obrigações legais de conservação. Pode também apresentar reclamação à autoridade portuguesa de proteção de dados (CNPD).",
-    "closedTitle": "✓ Dados recebidos pelo alojamento",
-    "closedBody": "O registo está concluído e o acesso aos dados através deste link foi encerrado. Pode fechar esta página. Para corrigir alguma informação, contacte Miguel Maia.",
+    "closedTitle": "Registo online encerrado",
+    "closedBody": "O registo online foi encerrado pelo alojamento. Para qualquer alteração, contacte Miguel Maia.",
     "savedPrivate": "Guardado — acesso privado",
     "backToForm": "Voltar ao formulário"
   },
@@ -36,8 +36,8 @@ export const PRIVACY_COPY = {
     "purpose": "We use the information you provide to fulfil Portugal’s legal guest registration requirements and report it to UCFE through SIBA. Our data hosting provider is Google.",
     "retention": "Records are kept for one year from the day after departure is reported. While registration is open, anyone with your link can view and correct the group’s details. Once registration closes, the link no longer gives access to those details.",
     "rights": "Contact us to request access, correction, deletion or restriction of your data, subject to legal retention requirements. You may also complain to the Portuguese Data Protection Authority (CNPD).",
-    "closedTitle": "✓ Details received by your accommodation",
-    "closedBody": "Registration is complete and access to the details through this link has been closed. You can close this page. To correct any information, contact Miguel Maia.",
+    "closedTitle": "Online registration closed",
+    "closedBody": "Online registration has been closed by the accommodation. For any changes, contact Miguel Maia.",
     "savedPrivate": "Saved — private access",
     "backToForm": "Back to the form"
   },
@@ -57,8 +57,8 @@ export const PRIVACY_COPY = {
     "purpose": "Nous utilisons les informations fournies pour respecter l’obligation légale d’enregistrement des voyageurs au Portugal et les transmettre à l’UCFE via le SIBA. Notre prestataire d’hébergement des données est Google.",
     "retention": "Les registres sont conservés pendant un an à compter du lendemain de la déclaration du départ. Tant que l’enregistrement est ouvert, toute personne disposant du lien peut consulter et corriger les données du groupe. Une fois l’enregistrement fermé, le lien ne permet plus d’accéder à ces données.",
     "rights": "Contactez-nous pour demander l’accès, la rectification, l’effacement ou la limitation du traitement de vos données, sous réserve des obligations légales de conservation. Vous pouvez également déposer une réclamation auprès de l’autorité portugaise de protection des données (CNPD).",
-    "closedTitle": "✓ Informations reçues par l’hébergement",
-    "closedBody": "L’enregistrement est terminé et l’accès aux données par ce lien est fermé. Vous pouvez fermer cette page. Pour corriger une information, contactez Miguel Maia.",
+    "closedTitle": "Enregistrement en ligne fermé",
+    "closedBody": "L’hébergement a fermé l’enregistrement en ligne. Pour toute modification, contactez Miguel Maia.",
     "savedPrivate": "Enregistré — accès privé",
     "backToForm": "Revenir au formulaire"
   },
@@ -78,8 +78,8 @@ export const PRIVACY_COPY = {
     "purpose": "Utilizamos los datos facilitados para cumplir la obligación legal de registro de huéspedes en Portugal y comunicarlos a la UCFE a través del SIBA. Nuestro proveedor de alojamiento de datos es Google.",
     "retention": "Los registros se conservan durante un año desde el día siguiente a la comunicación de la salida. Mientras el registro esté abierto, cualquier persona con el enlace puede consultar y corregir los datos del grupo. Una vez cerrado el registro, el enlace deja de permitir el acceso a esos datos.",
     "rights": "Contacte con nosotros para solicitar el acceso, la rectificación, la supresión o la limitación del tratamiento de sus datos, sujetos a las obligaciones legales de conservación. También puede presentar una reclamación ante la autoridad portuguesa de protección de datos (CNPD).",
-    "closedTitle": "✓ Datos recibidos por el alojamiento",
-    "closedBody": "El registro está completo y el acceso a los datos mediante este enlace se ha cerrado. Puede cerrar esta página. Para corregir información, contacte con Miguel Maia.",
+    "closedTitle": "Registro online cerrado",
+    "closedBody": "El alojamiento ha cerrado el registro online. Para cualquier cambio, contacte con Miguel Maia.",
     "savedPrivate": "Guardado — acceso privado",
     "backToForm": "Volver al formulario"
   },
@@ -99,8 +99,8 @@ export const PRIVACY_COPY = {
     "purpose": "제공하신 정보는 포르투갈의 법적 게스트 등록 의무를 이행하고 SIBA를 통해 UCFE에 신고하는 데 사용됩니다. 데이터 호스팅 제공업체는 Google입니다.",
     "retention": "등록 기록은 체크아웃 신고 다음 날부터 1년간 보관됩니다. 등록이 열려 있는 동안 링크를 가진 사람은 누구나 일행의 정보를 확인하고 수정할 수 있습니다. 등록이 종료되면 해당 링크로 정보에 접근할 수 없습니다.",
     "rights": "개인정보의 열람, 정정, 삭제 또는 처리 제한을 요청하려면 연락해 주세요. 법적 보관 의무에 따라 권리 행사가 제한될 수 있습니다. 포르투갈 개인정보 보호 기관(CNPD)에 민원을 제기할 수도 있습니다.",
-    "closedTitle": "✓ 숙소에서 정보를 받았습니다",
-    "closedBody": "등록이 완료되었으며 이 링크를 통한 정보 접근이 차단되었습니다. 이 페이지를 닫으셔도 됩니다. 정보를 수정하려면 Miguel Maia에게 연락해 주세요.",
+    "closedTitle": "온라인 등록 종료",
+    "closedBody": "숙소에서 온라인 등록을 종료했습니다. 변경이 필요한 경우 Miguel Maia에게 연락해 주세요.",
     "savedPrivate": "저장 완료 — 비공개 접근",
     "backToForm": "양식으로 돌아가기"
   }

@@ -12,7 +12,7 @@ export const orderBy = () => null;
 export const Timestamp = {now:()=>new Date().toISOString(),fromDate:date=>date.toISOString()};
 export const runTransaction = async (_db, callback) => {
   const pending=[];
-  const result=await callback({get:async ref=>({exists:()=>records.has(ref.path),data:()=>({...records.get(ref.path)})}),update:(ref,value)=>pending.push(()=>updateDoc(ref,value))});
+  const result=await callback({get:async ref=>({exists:()=>records.has(ref.path),data:()=>({...records.get(ref.path)})}),update:(ref,value)=>pending.push(()=>updateDoc(ref,value)),set:(ref,value)=>pending.push(()=>setDoc(ref,value))});
   for(const update of pending) await update();
   return result;
 };
