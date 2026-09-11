@@ -12,6 +12,7 @@
   <link rel="manifest" href="../manifest.json">
   <meta name="theme-color" content="#000000">
   <style>
+    #generated-link[hidden] { display: none !important; }
     body[data-page="boletins"] main {
       width: 100%;
       max-width: min(1560px, calc(100vw - 48px));
@@ -259,6 +260,16 @@
     </nav>
   </header>
 
+  <dialog id="guest-edit-dialog" style="max-width:650px;width:calc(100% - 32px);max-height:90vh;overflow:auto;border:1px solid #ddd;border-radius:12px;padding:24px">
+    <form id="guest-edit-form">
+      <h3>Corrigir dados do hóspede</h3>
+      <p>A correção mantém o acesso do hóspede fechado. Se já enviaste o boletim ao SIBA, verifica também a correção junto do SIBA.</p>
+      <div id="guest-edit-fields" class="boletins-grid"></div>
+      <p id="guest-edit-error" role="alert" hidden></p>
+      <div class="boletins-actions"><button id="guest-edit-cancel" type="button">Cancelar</button><button class="primary" type="submit">Guardar correção</button></div>
+    </form>
+  </dialog>
+
   <main>
     <div class="page-intro">
       <h2>Boletins de Alojamento</h2>
@@ -268,11 +279,19 @@
     <section class="report-section">
       <div class="section-heading">
         <h4>Novo link para hóspede</h4>
-        <p>O link pode ser partilhado e permite várias submissões no mesmo boletim.</p>
+        <p>O acesso dos hóspedes fecha quando todos os dados forem guardados ou o boletim for marcado como enviado.</p>
       </div>
 
       <form id="boletim-form">
         <div class="boletins-grid">
+          <div class="field">
+            <label for="boletim-property">Apartamento</label>
+            <select id="boletim-property" required>
+              <option value="">Escolher apartamento</option>
+              <option value="123">Apartamento 4 quartos - Porto</option>
+              <option value="1248">Apartamento 4 quartos (2) - Porto</option>
+            </select>
+          </div>
           <div class="field">
             <label for="guest-name">Nome do hóspede</label>
             <input id="guest-name" type="text" autocomplete="name" required>
@@ -293,11 +312,13 @@
           </div>
           <div class="field">
             <label for="checkin-date">Check-in</label>
-            <input id="checkin-date" type="date" required>
+            <input id="checkin-date" type="date">
+            <small>Em branco: cada hóspede preenche.</small>
           </div>
           <div class="field">
             <label for="checkout-date">Check-out</label>
-            <input id="checkout-date" type="date" required>
+            <input id="checkout-date" type="date">
+            <small>Em branco: o hóspede preenche ou indica que ainda não sabe.</small>
           </div>
         </div>
         <div class="boletins-actions">
@@ -367,6 +388,19 @@
         <button id="boletins-sent-toggle" type="button" hidden>Mostrar mais</button>
       </div>
     </section>
+    <section class="report-section">
+      <div class="section-heading"><h4>A eliminar</h4><p>Eliminação automática diária após um ano, contado do dia seguinte à comunicação de todas as saídas deste boletim. Inclui os dados de todos os hóspedes e o link. Sem comunicação confirmada, não há eliminação automática.</p></div>
+      <div id="retention-list"></div>
+    </section>
+    <dialog id="departure-dialog" style="max-width:550px;padding:24px;border-radius:12px">
+      <form id="departure-form">
+        <h3>Confirmar comunicação das saídas</h3>
+        <p>Preenche apenas depois de comunicares ao SIBA a saída de todos os hóspedes deste boletim. Se comunicaste em dias diferentes, indica a data da última comunicação.</p>
+        <label>Data da última comunicação ao SIBA<input id="departure-reported-date" type="date" required></label>
+        <p id="departure-error" role="alert" hidden></p>
+        <div class="boletins-actions"><button type="button" id="departure-cancel">Cancelar</button><button type="submit">Confirmar e programar eliminação</button></div>
+      </form>
+    </dialog>
   </main>
 
   <script type="module" src="../js/script.js"></script>

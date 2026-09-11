@@ -8,8 +8,11 @@
   <link rel="stylesheet" href="../css/styles.pcolor.css">
   <link rel="icon" href="../favicon.ico" sizes="any">
   <meta name="theme-color" content="#f8f9fb">
+  <meta name="referrer" content="no-referrer">
   <style>
+    .public-checkin [hidden] { display: none !important; }
     body.public-checkin {
+      --primary: #1d4ed8;
       min-height: 100vh;
       background: #f8f9fb;
     }
@@ -63,6 +66,33 @@
       color: var(--text-dim);
       margin: 0;
     }
+
+    .form-intro { margin: 4px 0 18px; }
+    .form-intro h2 { text-align: left; font-size: 1.25rem; margin: 0 0 8px; padding: 0; }
+    .form-intro p, .field-help, .save-help { color: #475569; font-size: 0.9rem; line-height: 1.5; }
+    .public-checkin input, .public-checkin select { scroll-margin: 24px 0 180px; }
+    .property-context { margin: 0 0 16px; line-height: 1.5; }
+    .property-context strong { display: block; font-size: 1.1rem; }
+    .property-context small { display: block; color: #475569; }
+    .registration-information { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px; color: #475569; font-size: .9rem; line-height: 1.6; }
+    .registration-information h2 { font-size: 1rem; padding: 0; text-align: left; color: var(--text); }
+    .registration-information summary { cursor: pointer; padding: 12px 0; font-weight: 700; }
+    .registration-information a, .field-help a { color: #1d4ed8; text-decoration: underline; }
+    .registration-information p { margin: 10px 0; }
+    #legal-information { scroll-margin-top: 20px; }
+    .form-intro p { margin: 0; }
+    .field-help { display: block; margin: 5px 0 0; }
+    .field-error { display: block; color: #991b1b; margin-top: 5px; font-size: 0.9rem; }
+    .field [aria-invalid="true"] { border: 2px solid #b91c1c; }
+    .guest-progress summary { cursor: pointer; padding: 10px 0; font-weight: 700; }
+    .guest-progress progress { width: 100%; height: 10px; accent-color: var(--primary); }
+    .guest-progress details .guest-slot { margin-top: 8px; }
+    .guest-slot-complete strong { color: #166534; }
+    .checkin-message:focus, .form-intro h2:focus { outline: none; }
+    .checkin-message h2 { color: inherit; text-align: left; margin: 0 0 8px; font-size: 1.2rem; padding: 0; }
+    .checkin-message p { margin: 6px 0; }
+    .save-help { width: 100%; margin: 0; text-align: center; }
+    #submit-guest { min-height: 52px; font-size: 1rem; flex: 1; }
 
     .stay-dates {
       display: flex;
@@ -266,6 +296,19 @@
         width: 100%;
       }
 
+      .checkin-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 2;
+        margin: 18px -16px -16px;
+        padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+        background: var(--surface, #fff);
+        border-top: 1px solid var(--border);
+        box-shadow: 0 -4px 12px #00000008;
+      }
+
+      .field label { color: var(--text); }
+
       .guest-slot {
         align-items: flex-start;
         flex-direction: column;
@@ -305,6 +348,7 @@
       </div>
 
       <div class="checkin-header">
+        <div id="property-context" class="property-context" hidden></div>
         <h1 id="page-title">Check-in</h1>
         <p id="page-subtitle">Loading...</p>
         <div id="stay-dates" class="stay-dates" hidden></div>
@@ -312,11 +356,18 @@
 
       <div id="guest-progress" class="guest-progress" hidden></div>
 
+      <div id="checkin-message" class="checkin-message" role="status" aria-live="polite" tabindex="-1"></div>
+
       <form id="guest-form" hidden>
+        <div class="form-intro">
+          <h2 id="form-title" tabindex="-1"></h2>
+          <p id="form-instructions"></p>
+        </div>
         <div class="checkin-grid two">
           <div class="field">
             <label for="first-name" data-i18n="firstName">Name</label>
             <input id="first-name" type="text" autocomplete="given-name" enterkeyhint="next" required>
+            <small id="name-help" class="field-help"></small>
           </div>
           <div class="field">
             <label for="last-name" data-i18n="lastName">Last name</label>
@@ -338,6 +389,7 @@
         <div class="field">
           <label for="document-number" data-i18n="documentNumber">Identification number</label>
           <input id="document-number" type="text" autocomplete="off" enterkeyhint="next" required>
+          <small class="field-help"><a id="why-data" href="#legal-information"></a></small>
         </div>
 
         <div class="checkin-grid two">
@@ -356,6 +408,15 @@
           <select id="document-country" required></select>
         </div>
 
+        <div id="individual-dates">
+          <p data-i18n="stayHelp"></p>
+          <div class="checkin-grid two">
+            <div class="field"><label for="guest-checkin" data-i18n="checkin">Check-in</label><input id="guest-checkin" type="date" required></div>
+            <div class="field"><label for="guest-checkout" data-i18n="checkout">Check-out</label><input id="guest-checkout" type="date" required></div>
+          </div>
+          <label class="declaration" id="unknown-checkout-label"><input id="unknown-checkout" type="checkbox"><span data-i18n="checkoutUnknown"></span></label>
+          <p id="stay-error" role="alert" hidden></p>
+        </div>
         <label class="declaration">
           <input id="declaration" type="checkbox" required>
           <span data-i18n="declaration">I declare the veracity of the data provided and I am aware of the legal basis which requires me to provide the data included on this form.</span>
@@ -364,10 +425,10 @@
         <div class="checkin-actions">
           <button id="cancel-edit" type="button" hidden>Cancel</button>
           <button id="submit-guest" class="primary" type="submit">Submit</button>
+          <p id="save-help" class="save-help"></p>
         </div>
       </form>
-
-      <div id="checkin-message" class="checkin-message" role="status" aria-live="polite"></div>
+      <footer id="registration-information" class="registration-information"></footer>
     </section>
   </main>
 

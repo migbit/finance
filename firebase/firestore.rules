@@ -156,110 +156,12 @@ service cloud.firestore {
         && request.resource.data.notes.size() <= 500;
     }
 
+    // Public guest access is handled by guestRegistration, which checks closure
+    // transactionally. Firebase Authentication alone does not grant owner access.
     match /alojamento_boletins/{token} {
-      allow get: if true;
-      allow list, create, update, delete: if signedIn() && !isFilipa() && !isFamilyChild();
-
-      match /guests/{guestId} {
-        allow read: if (signedIn() && !isFilipa() && !isFamilyChild())
-          || exists(/databases/$(database)/documents/alojamento_boletins/$(token));
-        allow update, delete: if signedIn() && !isFilipa() && !isFamilyChild();
-        allow create: if exists(/databases/$(database)/documents/alojamento_boletins/$(token))
-          && request.resource.data.keys().hasOnly([
-            'firstName',
-            'lastName',
-            'birthDate',
-            'documentType',
-            'documentNumber',
-            'countryOrigin',
-            'countryResidence',
-            'documentCountry',
-            'checkinDate',
-            'checkoutDate',
-            'declarationAccepted',
-            'submittedAt',
-            'userAgent'
-          ])
-          && request.resource.data.firstName is string
-          && request.resource.data.lastName is string
-          && request.resource.data.birthDate is string
-          && request.resource.data.documentType in ['passport', 'id', 'other']
-          && request.resource.data.documentNumber is string
-          && request.resource.data.countryOrigin is string
-          && request.resource.data.countryResidence is string
-          && request.resource.data.documentCountry is string
-          && request.resource.data.checkinDate is string
-          && request.resource.data.checkoutDate is string
-          && request.resource.data.declarationAccepted == true;
-        allow update: if exists(/databases/$(database)/documents/alojamento_boletins/$(token))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'firstName',
-            'lastName',
-            'birthDate',
-            'documentType',
-            'documentNumber',
-            'countryOrigin',
-            'countryResidence',
-            'documentCountry',
-            'declarationAccepted',
-            'updatedAt'
-          ])
-          && request.resource.data.keys().hasOnly([
-            'firstName',
-            'lastName',
-            'birthDate',
-            'documentType',
-            'documentNumber',
-            'countryOrigin',
-            'countryResidence',
-            'documentCountry',
-            'checkinDate',
-            'checkoutDate',
-            'declarationAccepted',
-            'submittedAt',
-            'updatedAt',
-            'userAgent',
-            'createdByAdmin'
-          ])
-          && request.resource.data.firstName is string
-          && request.resource.data.lastName is string
-          && request.resource.data.birthDate is string
-          && request.resource.data.documentType in ['passport', 'id', 'other']
-          && request.resource.data.documentNumber is string
-          && request.resource.data.countryOrigin is string
-          && request.resource.data.countryResidence is string
-          && request.resource.data.documentCountry is string
-          && request.resource.data.declarationAccepted == true
-          && request.resource.data.updatedAt is timestamp;
-      }
-
-      match /guest_summaries/{summaryId} {
-        allow read: if true;
-        allow update, delete: if signedIn() && !isFilipa() && !isFamilyChild();
-        allow create: if exists(/databases/$(database)/documents/alojamento_boletins/$(token))
-          && request.resource.data.keys().hasOnly([
-            'firstName',
-            'lastName',
-            'submittedAt'
-          ])
-          && request.resource.data.firstName is string
-          && request.resource.data.lastName is string
-          && request.resource.data.firstName == getAfter(/databases/$(database)/documents/alojamento_boletins/$(token)/guests/$(summaryId)).data.firstName
-          && request.resource.data.lastName == getAfter(/databases/$(database)/documents/alojamento_boletins/$(token)/guests/$(summaryId)).data.lastName;
-        allow update: if exists(/databases/$(database)/documents/alojamento_boletins/$(token))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'firstName',
-            'lastName'
-          ])
-          && request.resource.data.keys().hasOnly([
-            'firstName',
-            'lastName',
-            'submittedAt'
-          ])
-          && request.resource.data.firstName is string
-          && request.resource.data.lastName is string
-          && request.resource.data.firstName == getAfter(/databases/$(database)/documents/alojamento_boletins/$(token)/guests/$(summaryId)).data.firstName
-          && request.resource.data.lastName == getAfter(/databases/$(database)/documents/alojamento_boletins/$(token)/guests/$(summaryId)).data.lastName;
+      allow read, write: if signedIn() && request.auth.uid == 'mnwi7SP84kZSXvxMPQz45RuvKG52';
+      match /{document=**} {
+        allow read, write: if signedIn() && request.auth.uid == 'mnwi7SP84kZSXvxMPQz45RuvKG52';
       }
     }
 
@@ -495,7 +397,8 @@ service cloud.firestore {
           'family_finance_quote_history',
           'family_finance_meta',
           'family_finance_audit',
-          'family_school_calendars'
+          'family_school_calendars',
+          'alojamento_boletins'
         ]);
     }
   }

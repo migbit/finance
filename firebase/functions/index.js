@@ -15,6 +15,12 @@ if (!admin.apps.length) {
 }
 
 const firestore = admin.firestore();
+exports.guestRegistration = onRequest({ region: 'europe-west1', invoker: 'public', maxInstances: 10 },
+  require('./guest-registration').handler(firestore, admin.firestore.Timestamp));
+exports.deleteExpiredBoletins = onSchedule({ region: 'europe-west1', schedule: '0 14 * * *', timeZone: 'Europe/Lisbon', maxInstances: 1 }, async () => {
+  const result = await require('./boletim-retention').deleteExpiredBoletins(firestore, admin.firestore.Timestamp);
+  console.info('Boletim retention completed', result);
+});
 const ACCESS_COLLECTION = "cleaning_hours_access";
 const ENTRIES_COLLECTION = "cleaning_hours_entries";
 const CALENDAR_STATE_COLLECTION = "cleaning_calendar_state";

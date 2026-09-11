@@ -1,95 +1,7 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  getFirestore,
-  setDoc,
-  Timestamp,
-  writeBatch
-} from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
-
-const firebaseConfig = {
-  apiKey: 'AIzaSyBRx2EYDi3FpfmJjttO2wd9zeFVV3uH6Q0',
-  authDomain: 'apartments-a4b17.firebaseapp.com',
-  projectId: 'apartments-a4b17',
-  storageBucket: 'apartments-a4b17.appspot.com',
-  messagingSenderId: '465612199373',
-  appId: '1:465612199373:web:2b8e1eb14f453caa532084'
-};
-
-const COLLECTION = 'alojamento_boletins';
-const db = getFirestore(initializeApp(firebaseConfig));
-
-const COUNTRY_CODES = [
-  'PT', 'ES', 'FR', 'IT', 'DE', 'GB', 'IE', 'NL', 'BE', 'LU', 'CH', 'AT', 'DK', 'SE', 'NO', 'FI',
-  'PL', 'CZ', 'SK', 'HU', 'RO', 'BG', 'GR', 'HR', 'SI', 'EE', 'LV', 'LT', 'MT', 'CY', 'IS', 'LI',
-  'US', 'CA', 'MX', 'BR', 'AR', 'CL', 'CO', 'PE', 'UY', 'VE', 'AU', 'NZ', 'CN', 'JP', 'KR', 'IN',
-  'IL', 'TR', 'MA', 'DZ', 'TN', 'ZA', 'AO', 'MZ', 'CV', 'GW', 'ST'
-];
-
-const FALLBACK_COUNTRIES = {
-  PT: 'Portugal',
-  ES: 'Spain',
-  FR: 'France',
-  IT: 'Italy',
-  DE: 'Germany',
-  GB: 'United Kingdom',
-  IE: 'Ireland',
-  NL: 'Netherlands',
-  BE: 'Belgium',
-  LU: 'Luxembourg',
-  CH: 'Switzerland',
-  AT: 'Austria',
-  DK: 'Denmark',
-  SE: 'Sweden',
-  NO: 'Norway',
-  FI: 'Finland',
-  PL: 'Poland',
-  CZ: 'Czechia',
-  SK: 'Slovakia',
-  HU: 'Hungary',
-  RO: 'Romania',
-  BG: 'Bulgaria',
-  GR: 'Greece',
-  HR: 'Croatia',
-  SI: 'Slovenia',
-  EE: 'Estonia',
-  LV: 'Latvia',
-  LT: 'Lithuania',
-  MT: 'Malta',
-  CY: 'Cyprus',
-  IS: 'Iceland',
-  LI: 'Liechtenstein',
-  US: 'United States',
-  CA: 'Canada',
-  MX: 'Mexico',
-  BR: 'Brazil',
-  AR: 'Argentina',
-  CL: 'Chile',
-  CO: 'Colombia',
-  PE: 'Peru',
-  UY: 'Uruguay',
-  VE: 'Venezuela',
-  AU: 'Australia',
-  NZ: 'New Zealand',
-  CN: 'China',
-  JP: 'Japan',
-  KR: 'South Korea',
-  IN: 'India',
-  IL: 'Israel',
-  TR: 'Turkey',
-  MA: 'Morocco',
-  DZ: 'Algeria',
-  TN: 'Tunisia',
-  ZA: 'South Africa',
-  AO: 'Angola',
-  MZ: 'Mozambique',
-  CV: 'Cape Verde',
-  GW: 'Guinea-Bissau',
-  ST: 'Sao Tome and Principe'
-};
+import { GUIDANCE } from './boletim-public-copy.js';
+import { DATES_COPY } from './boletim-dates-copy.js';
+import { PRIVACY_COPY } from './boletim-privacy-copy.js';
+import { PROPERTIES, COUNTRY_CODES, FALLBACK_COUNTRIES } from './boletim-properties.js';
 
 const COPY = {
   pt: {
@@ -274,6 +186,8 @@ const COPY = {
   }
 };
 
+Object.entries(GUIDANCE).forEach(([lang, guidance]) => Object.assign(COPY[lang], guidance, PRIVACY_COPY[lang], DATES_COPY[lang]));
+
 const els = {
   title: document.getElementById('page-title'),
   subtitle: document.getElementById('page-subtitle'),
@@ -283,6 +197,9 @@ const els = {
   firstName: document.getElementById('first-name'),
   lastName: document.getElementById('last-name'),
   birthDate: document.getElementById('birth-date'),
+  checkinDate: document.getElementById('guest-checkin'),
+  checkoutDate: document.getElementById('guest-checkout'),
+  checkoutUnknown: document.getElementById('unknown-checkout'),
   documentType: document.getElementById('document-type'),
   documentNumber: document.getElementById('document-number'),
   countryOrigin: document.getElementById('country-origin'),
@@ -293,24 +210,47 @@ const els = {
   stayDates: document.getElementById('stay-dates'),
   languageSelect: document.getElementById('language-select'),
   languageLabel: document.getElementById('language-label'),
-  cancelEdit: document.getElementById('cancel-edit')
+  cancelEdit: document.getElementById('cancel-edit'),
+  formTitle: document.getElementById('form-title'),
+  instructions: document.getElementById('form-instructions'),
+  nameHelp: document.getElementById('name-help'),
+  saveHelp: document.getElementById('save-help')
 };
 
 const state = {
   token: new URLSearchParams(window.location.search).get('t') || '',
   language: 'en',
-  previousOrigin: '',
   expectedGuests: 1,
   checkinDate: '',
   checkoutDate: '',
   guests: [],
-  editingGuestId: ''
+  editingGuestId: '',
+  busy: false,
+  ready: false,
+  drafts: new Map(),
+  baselines: new Map(),
+  notice: null,
+  pendingGuestRef: null,
+  propertyId: '',
+  closed: false
 };
 
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   bindLanguageEvents();
+  bindEvents();
+  els.form.noValidate = true;
+  const today = new Date();
+  els.birthDate.max = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  els.firstName.setAttribute('aria-describedby', 'name-help');
+  await openBoletim();
+  setInterval(checkAccess, 20000);
+  document.addEventListener('visibilitychange', checkAccess);
+  window.addEventListener('pageshow', checkAccess);
+}
+
+async function openBoletim() {
   setMessage(COPY.en.loading);
   if (!state.token) {
     applyLanguage('en');
@@ -319,41 +259,58 @@ async function init() {
   }
 
   try {
-    const snap = await getDoc(doc(db, COLLECTION, state.token));
-    if (!snap.exists()) {
-      applyLanguage('en');
-      showInvalid();
-      return;
-    }
-
-    const boletim = snap.data();
+    const boletim = await registrationRequest('status');
     state.language = COPY[boletim.language] ? boletim.language : 'en';
-    state.expectedGuests = Math.max(1, Number(boletim.expectedGuests || 1));
+    applyLanguage(state.language);
+    state.ready = true;
+    if (boletim.closed) { closePublicAccess(); return; }
+    state.expectedGuests = boletim.expectedGuests;
     state.checkinDate = boletim.checkinDate || '';
     state.checkoutDate = boletim.checkoutDate || '';
-    applyLanguage(state.language);
+    state.propertyId = boletim.propertyId || '';
+    state.guests = boletim.guests || [];
     populateCountries();
     els.subtitle.textContent = formatStaySubtitle();
     renderStayDates();
-    await loadGuests();
+    renderInformation();
+    state.ready = true;
     renderProgress();
-    els.form.hidden = false;
-    setMessage('');
-    bindEvents();
+    if (state.guests.length >= state.expectedGuests) {
+      showCompletion();
+    } else {
+      startAddingGuest(false);
+    }
   } catch (err) {
     console.error('Erro ao abrir boletim', err);
-    applyLanguage('en');
-    showInvalid();
+    els.form.hidden = true;
+    state.notice = { kind: err.code === 'invalid-link' ? 'invalidLink' : 'loadError' };
+    renderNotice();
   }
 }
 
 function bindEvents() {
-  els.countryOrigin.addEventListener('change', handleOriginChange);
-  els.countryResidence.addEventListener('change', () => els.countryResidence.dataset.touched = 'true');
-  els.documentCountry.addEventListener('change', () => els.documentCountry.dataset.touched = 'true');
+  document.getElementById('why-data').addEventListener('click', () => {
+    document.getElementById('legal-information')?.focus({ preventScroll: true });
+  });
   els.form.addEventListener('submit', handleSubmit);
   els.progress.addEventListener('click', handleProgressClick);
-  els.cancelEdit?.addEventListener('click', startAddingGuest);
+  els.cancelEdit?.addEventListener('click', returnToRegistration);
+  els.message.addEventListener('click', (event) => {
+    if (state.busy) return;
+    if (event.target.closest('[data-action="retry"]')) openBoletim();
+    if (event.target.closest('[data-action="add-guest"]')) startAddingGuest();
+    const editButton = event.target.closest('[data-action="edit-guest"]');
+    if (editButton) startEditingGuest(editButton.dataset.guestId);
+  });
+  els.form.addEventListener('input', handleFormInput);
+  els.form.addEventListener('change', handleFormInput);
+  window.addEventListener('beforeunload', (event) => {
+    rememberDraft();
+    if (state.busy || hasUnsavedDrafts()) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  });
 }
 
 function bindLanguageEvents() {
@@ -361,6 +318,7 @@ function bindLanguageEvents() {
 }
 
 function handleLanguageChange() {
+  if (state.busy) return;
   const nextLanguage = COPY[els.languageSelect.value] ? els.languageSelect.value : 'en';
   changeLanguage(nextLanguage);
 }
@@ -382,21 +340,22 @@ function changeLanguage(nextLanguage) {
 }
 
 function renderTranslatedContent() {
-  els.subtitle.textContent = formatStaySubtitle();
+  els.subtitle.textContent = state.closed ? '' : formatStaySubtitle();
+  renderInformation();
   renderStayDates();
-  if (state.guests.length || !els.progress.hidden) renderProgress();
+  if (!state.closed && (state.guests.length || !els.progress.hidden)) renderProgress();
   updateFormActions();
+  renderNotice();
+  if (els.form.querySelector('[aria-invalid="true"]')) validateForm(false);
 }
 
 async function handleSubmit(event) {
   event.preventDefault();
+  if (state.busy || state.closed || !state.ready || els.form.hidden) return;
   const t = COPY[state.language];
   const editingGuest = state.guests.find((guest) => guest.id === state.editingGuestId);
 
-  if (!els.form.reportValidity()) return;
-  els.submit.disabled = true;
-  if (els.cancelEdit) els.cancelEdit.disabled = true;
-  els.submit.textContent = editingGuest ? t.updating : t.submitting;
+  if (!validateForm()) return;
 
   const formData = {
     firstName: els.firstName.value.trim(),
@@ -407,11 +366,14 @@ async function handleSubmit(event) {
     countryOrigin: els.countryOrigin.value,
     countryResidence: els.countryResidence.value,
     documentCountry: els.documentCountry.value,
-    checkinDate: state.checkinDate,
-    checkoutDate: state.checkoutDate,
+    checkinDate: els.checkinDate.value,
+    checkoutDate: els.checkoutDate.value,
+    checkoutUnknown: els.checkoutUnknown.checked,
     declarationAccepted: els.declaration.checked
   };
 
+  setBusy(true);
+  els.submit.textContent = t.updating;
   try {
     if (editingGuest) {
       await updateGuest(editingGuest, formData);
@@ -419,75 +381,88 @@ async function handleSubmit(event) {
       await createGuest(formData);
     }
 
-    renderProgress();
-    const successMessage = editingGuest ? t.updateSuccess : t.success;
+    if (state.closed) { focusSection(els.message); return; }
+    state.drafts.delete(state.editingGuestId);
+    state.baselines.delete(state.editingGuestId);
     resetGuestForm();
-    setMessage(`${successMessage} <button id="add-another" type="button">${t.addAnother}</button>`, 'success');
-    els.form.hidden = true;
-    document.getElementById('add-another')?.addEventListener('click', startAddingGuest);
+    renderProgress();
+    const name = `${formData.firstName} ${formData.lastName}`;
+    // Keep a partially filled next guest when returning from an edit.
+    if (state.guests.length < state.expectedGuests || state.drafts.has('')) {
+      openGuestForm('');
+      state.notice = { kind: 'saved', name };
+      renderNotice();
+      focusSection(els.message);
+    } else {
+      showCompletion();
+      focusSection(els.message);
+    }
   } catch (err) {
     console.error('Erro ao guardar hóspede', err);
-    setMessage(t.saveError, 'error');
+    state.notice = { kind: 'saveError' };
+    renderNotice();
+    focusSection(els.message);
   } finally {
-    els.submit.disabled = false;
-    if (els.cancelEdit) els.cancelEdit.disabled = false;
+    setBusy(false);
     updateFormActions();
   }
 }
 
-async function createGuest(formData) {
-  const guestRef = doc(collection(db, COLLECTION, state.token, 'guests'));
-  const submittedAt = Timestamp.now();
-  const payload = {
-    ...formData,
-    submittedAt,
-    userAgent: navigator.userAgent || ''
-  };
-  await setDoc(guestRef, payload);
-  await setDoc(doc(db, COLLECTION, state.token, 'guest_summaries', guestRef.id), {
-    firstName: payload.firstName,
-    lastName: payload.lastName,
-    submittedAt
+async function registrationRequest(action, extra = {}) {
+  const response = await fetch('/api/guest-registration', {
+    method: 'POST', credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: state.token, action, ...extra })
   });
-  state.guests.push({ id: guestRef.id, ...payload });
-  sortGuests();
+  const result = await response.json();
+  if (!response.ok) {
+    const error = new Error(result.error || 'save-error');
+    error.code = result.error;
+    throw error;
+  }
+  return result;
+}
+
+async function createGuest(formData) {
+  state.pendingGuestRef ||= crypto.randomUUID();
+  const result = await registrationRequest('save', { guestId: state.pendingGuestRef, data: formData });
+  state.pendingGuestRef = null;
+  if (result.closed) { closePublicAccess(); return; }
+  state.guests = result.guests;
 }
 
 async function updateGuest(guest, formData) {
-  const changes = {
-    ...formData,
-    updatedAt: Timestamp.now()
-  };
-  const batch = writeBatch(db);
-  batch.update(doc(db, COLLECTION, state.token, 'guests', guest.id), changes);
-  batch.set(doc(db, COLLECTION, state.token, 'guest_summaries', guest.id), {
-    firstName: changes.firstName,
-    lastName: changes.lastName,
-    submittedAt: guest.submittedAt
-  }, { merge: true });
-  await batch.commit();
-  Object.assign(guest, changes);
-  sortGuests();
+  const result = await registrationRequest('save', { guestId: guest.id, editing: true, data: formData });
+  if (result.closed) { closePublicAccess(); return; }
+  state.guests = result.guests;
 }
 
-async function loadGuests() {
+function closePublicAccess() {
+  state.closed = true;
+  state.guests = [];
+  state.drafts.clear();
+  state.baselines.clear();
+  state.propertyId = '';
+  state.checkinDate = '';
+  state.checkoutDate = '';
+  state.pendingGuestRef = null;
+  resetGuestForm();
+  els.progress.replaceChildren();
+  els.progress.hidden = true;
+  els.stayDates.replaceChildren();
+  els.stayDates.hidden = true;
+  state.notice = { kind: 'closed' };
+  els.subtitle.textContent = '';
+  renderInformation();
+  renderNotice();
+}
+
+async function checkAccess() {
+  if (!state.ready || state.closed || state.busy || document.hidden) return;
   try {
-    const snap = await getDocs(collection(db, COLLECTION, state.token, 'guests'));
-    state.guests = snap.docs.map((docSnap) => ({
-      id: docSnap.id,
-      editable: true,
-      ...docSnap.data()
-    }));
-  } catch (err) {
-    console.warn('Leitura completa indisponível; a usar resumos dos hóspedes.', err);
-    const snap = await getDocs(collection(db, COLLECTION, state.token, 'guest_summaries'));
-    state.guests = snap.docs.map((docSnap) => ({
-      id: docSnap.id,
-      editable: false,
-      ...docSnap.data()
-    }));
-  }
-  sortGuests();
+    const result = await registrationRequest('status');
+    if (result.closed) closePublicAccess();
+  } catch { /* An unavailable connection must not erase an unsent draft. */ }
 }
 
 function sortGuests() {
@@ -507,7 +482,7 @@ function renderProgress() {
     slots.push(guest ? `
       <div class="guest-slot guest-slot-complete">
         <div class="guest-slot-info">
-          <strong>${t.guestLabel} ${index + 1}</strong>
+          <strong>✓ ${t.guestLabel} ${index + 1} · ${t.saved}</strong>
           <span>${escapeHtml(name || t.emptySlot)}</span>
         </div>
         ${guest.editable !== false ? `
@@ -517,29 +492,30 @@ function renderProgress() {
         ` : ''}
       </div>
     ` : `
-      <button type="button" class="guest-slot guest-slot-empty" data-action="add-guest">
+      <div class="guest-slot">
         <span class="guest-slot-info">
           <strong>${t.guestLabel} ${index + 1}</strong>
           <span>${t.emptySlot}</span>
         </span>
-        <span class="guest-slot-cta">${t.fillGuest} ↓</span>
-      </button>
+      </div>
     `);
   }
 
-  const hasEmptyExpectedSlots = state.guests.length < state.expectedGuests;
-
+  const expanded = els.progress.querySelector('details')?.open;
+  const progressLabel = interpolate(t.progress, { saved: state.guests.length, total });
   els.progress.innerHTML = `
-    <h2>${t.progressTitle}</h2>
-    ${slots.join('')}
-    ${hasEmptyExpectedSlots ? '' : `
-      <button type="button" class="guest-progress-add" data-action="add-guest">${t.addAnother}</button>
-    `}
+    <h2>${progressLabel}</h2>
+    <progress max="${total}" value="${state.guests.length}" aria-label="${progressLabel}"></progress>
+    <details ${expanded ? 'open' : ''}>
+      <summary>${t.viewGuests}</summary>
+      ${slots.join('')}
+    </details>
   `;
   els.progress.hidden = false;
 }
 
 function handleProgressClick(event) {
+  if (state.busy) return;
   const editButton = event.target.closest('[data-action="edit-guest"]');
   if (editButton) {
     startEditingGuest(editButton.dataset.guestId);
@@ -552,53 +528,109 @@ function handleProgressClick(event) {
 }
 
 function startEditingGuest(guestId) {
+  if (state.busy || state.closed) return;
   const guest = state.guests.find((item) => item.id === guestId);
-  if (!guest) return;
-
-  state.editingGuestId = guest.id;
-  els.firstName.value = guest.firstName || '';
-  els.lastName.value = guest.lastName || '';
-  els.birthDate.value = guest.birthDate || '';
-  els.documentType.value = guest.documentType || '';
-  els.documentNumber.value = guest.documentNumber || '';
-  els.countryOrigin.value = guest.countryOrigin || '';
-  els.countryResidence.value = guest.countryResidence || '';
-  els.documentCountry.value = guest.documentCountry || '';
-  els.declaration.checked = Boolean(guest.declarationAccepted);
-  els.countryResidence.dataset.touched = 'true';
-  els.documentCountry.dataset.touched = 'true';
-  state.previousOrigin = guest.countryOrigin || '';
-  els.form.hidden = false;
-  setMessage('');
-  updateFormActions();
-  els.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  els.firstName.focus({ preventScroll: true });
+  if (!guest || guest.editable === false) return;
+  rememberDraft();
+  openGuestForm(guest.id);
+  state.notice = null;
+  renderNotice();
+  focusSection(els.formTitle);
 }
 
-function startAddingGuest() {
-  resetGuestForm();
+function startAddingGuest(moveFocus = true) {
+  if (state.busy || state.closed) return;
+  rememberDraft();
+  openGuestForm('');
+  state.notice = null;
+  renderNotice();
+  if (moveFocus) focusSection(els.formTitle);
+}
+
+const FORM_FIELDS = ['firstName', 'lastName', 'birthDate', 'documentType', 'documentNumber', 'countryOrigin', 'countryResidence', 'documentCountry', 'checkinDate', 'checkoutDate'];
+
+function readForm() {
+  return {
+    ...Object.fromEntries(FORM_FIELDS.map((key) => [key, els[key].value])),
+    checkoutUnknown: els.checkoutUnknown.checked,
+    declarationAccepted: els.declaration.checked
+  };
+}
+
+function rememberDraft() {
+  if (!state.ready || els.form.hidden) return;
+  const value = readForm();
+  if (JSON.stringify(value) === state.baselines.get(state.editingGuestId)) {
+    state.drafts.delete(state.editingGuestId);
+  } else {
+    state.drafts.set(state.editingGuestId, value);
+  }
+}
+
+function hasUnsavedDrafts() {
+  return state.drafts.size > 0;
+}
+
+function openGuestForm(guestId) {
+  state.editingGuestId = guestId;
+  const guest = state.guests.find((item) => item.id === guestId) || {};
+  const baseline = {
+    ...Object.fromEntries(FORM_FIELDS.map((key) => [key, guest[key] || ''])),
+    checkinDate: guest.checkinDate || state.checkinDate,
+    checkoutDate: guest.checkoutDate || state.checkoutDate,
+    checkoutUnknown: Boolean(guest.id && !guest.checkoutDate && !state.checkoutDate),
+    declarationAccepted: Boolean(guest.declarationAccepted)
+  };
+  state.baselines.set(guestId, JSON.stringify(baseline));
+  const values = state.drafts.get(guestId) || baseline;
+  FORM_FIELDS.forEach((key) => { els[key].value = values[key] || ''; });
+  els.declaration.checked = Boolean(values.declarationAccepted);
+  els.checkoutUnknown.checked = Boolean(values.checkoutUnknown);
+  updateDateControls();
+  clearErrors();
   els.form.hidden = false;
-  setMessage('');
   updateFormActions();
-  els.form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  els.firstName.focus({ preventScroll: true });
+}
+
+function returnToRegistration() {
+  if (state.busy) return;
+  rememberDraft();
+  // Returning keeps edits in memory; they are sent only by pressing Save.
+  els.form.hidden = true;
+  if (state.guests.length < state.expectedGuests) {
+    startAddingGuest();
+  } else {
+    showCompletion();
+    focusSection(els.message);
+  }
 }
 
 function resetGuestForm() {
   state.editingGuestId = '';
   els.form.reset();
-  els.countryResidence.dataset.touched = '';
-  els.documentCountry.dataset.touched = '';
-  state.previousOrigin = '';
+  clearErrors();
+  els.form.hidden = true;
 }
 
 function updateFormActions() {
   const t = COPY[state.language] || COPY.en;
   const isEditing = Boolean(state.editingGuestId);
-  els.submit.textContent = isEditing ? t.saveChanges : t.submit;
+  const guest = state.guests.find((item) => item.id === state.editingGuestId);
+  const current = state.guests.length + 1;
+  const isLast = current >= state.expectedGuests;
+  els.submit.textContent = state.busy ? t.updating : isEditing ? t.saveChanges
+    : !isLast ? t.submitNext : state.expectedGuests === 1 || current > state.expectedGuests ? t.submitSingle : t.submitLast;
+  els.formTitle.textContent = isEditing
+    ? interpolate(t.editTitle, { name: `${guest?.firstName || ''} ${guest?.lastName || ''}`.trim() })
+    : current > state.expectedGuests ? t.extraTitle : interpolate(t.formTitle, { current, total: state.expectedGuests });
+  els.instructions.textContent = t.instructions;
+  els.nameHelp.textContent = t.nameHelp;
+  els.saveHelp.textContent = t.saveHelp;
+  const numberLabel = document.querySelector('[for="document-number"]');
+  numberLabel.textContent = els.documentType.value === 'passport' ? t.passportNumber : t.idNumber;
   if (els.cancelEdit) {
-    els.cancelEdit.textContent = t.cancel;
-    els.cancelEdit.hidden = !isEditing;
+    els.cancelEdit.textContent = t.back;
+    els.cancelEdit.hidden = !isEditing && current <= state.expectedGuests;
   }
 }
 
@@ -610,31 +642,14 @@ function renderStayDates() {
   }
 
   els.stayDates.innerHTML = `
-    <span class="stay-date">${t.checkin}: ${escapeHtml(formatDateOnly(state.checkinDate, state.language))}</span>
-    <span class="stay-date">${t.checkout}: ${escapeHtml(formatDateOnly(state.checkoutDate, state.language))}</span>
+    <span class="stay-date">${t.checkin}: ${escapeHtml(formatLongDate(state.checkinDate, state.language))}</span>
+    <span class="stay-date">${t.checkout}: ${escapeHtml(formatLongDate(state.checkoutDate, state.language))}</span>
   `;
   els.stayDates.hidden = false;
 }
 
 function formatStaySubtitle() {
-  const t = COPY[state.language];
-  if (!state.checkinDate || !state.checkoutDate) {
-    return t.subtitle;
-  }
-
-  return t.staySubtitle
-    .replace('{start}', formatLongDate(state.checkinDate, state.language))
-    .replace('{end}', formatLongDate(state.checkoutDate, state.language));
-}
-
-function handleOriginChange() {
-  const value = els.countryOrigin.value;
-  const shouldSyncResidence = !els.countryResidence.dataset.touched || els.countryResidence.value === state.previousOrigin;
-  const shouldSyncDocument = !els.documentCountry.dataset.touched || els.documentCountry.value === state.previousOrigin;
-
-  if (shouldSyncResidence) els.countryResidence.value = value;
-  if (shouldSyncDocument) els.documentCountry.value = value;
-  state.previousOrigin = value;
+  return COPY[state.language].intro;
 }
 
 function applyLanguage(lang) {
@@ -660,7 +675,7 @@ function applyLanguage(lang) {
 
 function populateCountries() {
   const countries = getCountries(state.language);
-  const placeholder = `<option value="">${COPY[state.language].countryOrigin}</option>`;
+  const placeholder = `<option value="">${COPY[state.language].selectCountry}</option>`;
   const options = countries
     .map((country) => `<option value="${country.code}">${escapeHtml(country.name)}</option>`)
     .join('');
@@ -692,13 +707,156 @@ function getCountries(lang) {
 function showInvalid() {
   els.form.hidden = true;
   els.subtitle.textContent = '';
-  setMessage(COPY[state.language]?.invalidLink || COPY.en.invalidLink, 'error');
+  state.notice = { kind: 'invalidLink' };
+  renderNotice();
 }
 
 function setMessage(message, type = '') {
   els.message.className = `checkin-message ${type}`.trim();
   els.message.innerHTML = message || '';
   els.message.hidden = !message;
+}
+
+function interpolate(template, values) {
+  return template.replace(/\{(\w+)\}/g, (match, key) => String(values[key] ?? match));
+}
+
+function focusSection(element) {
+  element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  element.focus({ preventScroll: true });
+}
+
+function setBusy(busy) {
+  state.busy = busy;
+  els.form.setAttribute('aria-busy', String(busy));
+  document.querySelectorAll('input, select, button').forEach((control) => { control.disabled = busy; });
+  if (!busy) updateDateControls();
+}
+
+function showCompletion() {
+  els.form.hidden = true;
+  state.notice = { kind: 'complete' };
+  renderNotice();
+}
+
+function renderNotice() {
+  const t = COPY[state.language];
+  const notice = state.notice;
+  if (!notice) { setMessage(''); return; }
+  if (notice.kind === 'closed') {
+    setMessage(`<h2>${t.closedTitle}</h2><p>${t.closedBody}</p><p><a href="mailto:apartments.oporto@gmail.com">apartments.oporto@gmail.com</a><br><a href="tel:+351935519009">+351 935 519 009</a></p>`, 'success');
+    return;
+  }
+  if (notice.kind === 'complete') {
+    const pending = [...state.drafts.keys()];
+    if (pending.length) {
+      setMessage(`<h2>${t.draftNotice}</h2><p>${t.pendingHelp}</p>${pending.map((id) => {
+        const guest = state.guests.find((item) => item.id === id);
+        return id ? `<button type="button" data-action="edit-guest" data-guest-id="${escapeHtml(id)}">${t.edit}: ${escapeHtml(guest?.firstName || t.guestLabel)}</button>`
+          : `<button type="button" data-action="add-guest">${t.resume}</button>`;
+      }).join(' ')}`);
+      return;
+    }
+    const body = state.guests.length === 1 ? t.completeSingle : interpolate(t.completeBody, { total: state.guests.length });
+    setMessage(`<h2>${t.completeTitle}</h2><p>${body}</p><details><summary>${t.additional}</summary><button type="button" data-action="add-guest">${t.addAnother}</button></details>`, 'success');
+    return;
+  }
+  if (notice.kind === 'saved') {
+    const remaining = Math.max(0, state.expectedGuests - state.guests.length);
+    setMessage(`<strong>${escapeHtml(interpolate(t.savedGuest, { name: notice.name }))}</strong>${remaining ? `<p>${interpolate(t.remaining, { remaining })}</p>` : ''}`, 'success');
+    return;
+  }
+  const retry = notice.kind === 'loadError' ? `<p><button type="button" data-action="retry">${t.retry}</button></p>` : '';
+  setMessage(`${t[notice.kind] || t.saveError}${retry}`, 'error');
+}
+
+function renderInformation() {
+  const t = COPY[state.language];
+  const property = PROPERTIES[state.propertyId];
+  const context = document.getElementById('property-context');
+  context.innerHTML = state.closed ? '' : `${property ? `<strong>${property.names[state.language]}</strong>` : ''}<small>${t.host}: Miguel Maia</small>${property ? `<small>${t.licence}: ${property.licence}</small>` : ''}`;
+  context.hidden = state.closed;
+  document.getElementById('why-data').textContent = t.why;
+  const information = document.getElementById('registration-information');
+  const expanded = information.querySelector('details')?.open;
+  information.innerHTML = `
+    <section id="legal-information" tabindex="-1">
+      <h2>${t.legalTitle}</h2><p>${t.legalBody}</p><p><strong>${t.noCopy}</strong></p>
+      <p><a href="https://siba.ssi.gov.pt/ajuda/perguntas-frequentes/" target="_blank" rel="noopener noreferrer">${t.verify} ↗</a></p>
+      ${state.closed ? '' : `<a href="#form-title">${t.backToForm} ↑</a>`}
+    </section>
+    <details ${expanded ? 'open' : ''}><summary>${t.privacyTitle}</summary>
+      <p><strong>${t.controller}:</strong> Oliveira Maia &amp; Maia Teixeira, Lda.</p>
+      <p><strong>${t.contact}:</strong> Miguel Maia · <a href="tel:+351935519009">+351 935 519 009</a> · <a href="mailto:apartments.oporto@gmail.com">apartments.oporto@gmail.com</a></p>
+      <p>${t.purpose}</p><p>${t.retention}</p><p>${t.rights} <a href="https://www.cnpd.pt/" target="_blank" rel="noopener noreferrer">CNPD ↗</a></p>
+    </details>`;
+}
+
+function clearFieldError(field) {
+  field.removeAttribute('aria-invalid');
+  document.getElementById(`${field.id}-error`)?.remove();
+  const describedBy = (field.getAttribute('aria-describedby') || '').split(' ').filter((id) => id && id !== `${field.id}-error`);
+  if (describedBy.length) field.setAttribute('aria-describedby', describedBy.join(' '));
+  else field.removeAttribute('aria-describedby');
+}
+
+function clearErrors() {
+  els.form.querySelectorAll('[aria-invalid="true"]').forEach(clearFieldError);
+  document.getElementById('stay-error').hidden = true;
+}
+
+function handleFormInput(event) {
+  const field = event.target;
+  if (field.matches('input, select')) clearFieldError(field);
+  if (field === els.documentType) updateFormActions();
+  if (field === els.checkoutUnknown) updateDateControls();
+  rememberDraft();
+}
+
+function validateForm(moveFocus = true) {
+  clearErrors();
+  const t = COPY[state.language];
+  let firstInvalid = null;
+  els.form.querySelectorAll('[required]').forEach((field) => {
+    let message = '';
+    if (field === els.declaration && !field.checked) message = t.requiredDeclaration;
+    else if (field === els.birthDate && (!field.value || !field.validity.valid)) message = t.invalidDate;
+    else if (field.type !== 'checkbox' && !field.value.trim()) message = field.tagName === 'SELECT' ? t.requiredSelect : t.requiredField;
+    if (!message) return;
+    firstInvalid ||= field;
+    field.setAttribute('aria-invalid', 'true');
+    const error = document.createElement('small');
+    error.id = `${field.id}-error`;
+    error.className = 'field-error';
+    error.textContent = message;
+    const container = field === els.declaration ? field.closest('label').querySelector('span') : field.parentElement;
+    container.append(error);
+    field.setAttribute('aria-describedby', `${field.getAttribute('aria-describedby') || ''} ${error.id}`.trim());
+  });
+  if (!els.checkinDate.value || !els.checkinDate.validity.valid || (!els.checkoutUnknown.checked && (!els.checkoutDate.value || !els.checkoutDate.validity.valid || els.checkoutDate.value <= els.checkinDate.value))) {
+    const error = document.getElementById('stay-error');
+    error.textContent = t.invalidStay;
+    error.hidden = false;
+    firstInvalid ||= !els.checkinDate.value ? els.checkinDate : els.checkoutDate;
+  }
+  if (firstInvalid) {
+    state.notice = { kind: 'fixErrors' };
+    renderNotice();
+    if (moveFocus) focusSection(firstInvalid);
+    return false;
+  }
+  return true;
+}
+
+function updateDateControls() {
+  els.checkinDate.readOnly = Boolean(state.checkinDate);
+  els.checkoutDate.readOnly = Boolean(state.checkoutDate);
+  document.getElementById('unknown-checkout-label').hidden = Boolean(state.checkoutDate);
+  if (state.checkoutDate) els.checkoutUnknown.checked = false;
+  if (els.checkoutUnknown.checked) els.checkoutDate.value = '';
+  els.checkoutDate.disabled = els.checkoutUnknown.checked || state.busy;
+  els.checkoutDate.required = !els.checkoutUnknown.checked;
+  document.getElementById('individual-dates').hidden = Boolean(state.checkinDate && state.checkoutDate);
 }
 
 function toMillis(value) {

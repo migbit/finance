@@ -17,6 +17,7 @@
       ".codex",
       ".codex/**",
       "firebase-debug.log",
+      "**/*-debug.log",
       ".git/**",
       "node_modules/**",
       "**/.*",
@@ -24,7 +25,17 @@
       "docs/**",
       "tests/**"
     ],
+    "headers": [
+      { "source": "/modules/boletim.html", "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "Referrer-Policy", "value": "no-referrer" }
+      ] }
+    ],
     "rewrites": [
+      {
+        "source": "/api/guest-registration",
+        "function": { "functionId": "guestRegistration", "region": "europe-west1" }
+      },
       {
         "source": "/api/family-finance/quotes",
         "function": {
