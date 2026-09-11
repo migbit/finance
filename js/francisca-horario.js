@@ -9,6 +9,7 @@ const SUBJECTS = {
   CNA: ['Ciências Naturais', 'green'],
   CD: ['Cidadania e Desenvolvimento', 'lilac'],
   EDV: ['Educação Visual', 'aqua'],
+  'EDV P2': ['Educação Visual · P2', 'aqua'],
   'TDClass 3': ['TDClass 3', 'classical-3'],
   'TDClass 2': ['TDClass 2', 'classical-2'],
   Calma: ['Calma', 'calm'],

@@ -27,10 +27,6 @@ export const SCHEDULE = [
       [
         "12:50",
         "13:40"
-      ],
-      [
-        "13:50",
-        "14:40"
       ]
     ],
     "lessons": [
@@ -55,13 +51,13 @@ export const SCHEDULE = [
       {
         "day": 1,
         "slot": 0,
-        "span": 1,
-        "subject": "CD"
+        "span": 2,
+        "subject": "EDV P2"
       },
       {
         "day": 1,
-        "slot": 1,
-        "span": 2,
+        "slot": 2,
+        "span": 1,
         "subject": "PORT"
       },
       {
@@ -69,12 +65,6 @@ export const SCHEDULE = [
         "slot": 3,
         "span": 1,
         "subject": "CNA"
-      },
-      {
-        "day": 1,
-        "slot": 5,
-        "span": 2,
-        "subject": "EDV"
       },
       {
         "day": 2,
@@ -96,6 +86,12 @@ export const SCHEDULE = [
       },
       {
         "day": 3,
+        "slot": 0,
+        "span": 2,
+        "subject": "PORT"
+      },
+      {
+        "day": 3,
         "slot": 2,
         "span": 1,
         "subject": "CNA"
@@ -104,7 +100,7 @@ export const SCHEDULE = [
         "day": 3,
         "slot": 3,
         "span": 1,
-        "subject": "PORT"
+        "subject": "CD"
       },
       {
         "day": 4,
