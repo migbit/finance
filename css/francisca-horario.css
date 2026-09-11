@@ -44,6 +44,14 @@ body[data-page="francisca-horario"] { background: #f8f7f4; color: #28332c; }
 .schedule-table th:first-child { width: 130px; }
 .schedule-table .schedule-slot { position: sticky; left: 0; background: #fffaf4; color: #53634b; font-size: .8rem; font-variant-numeric: tabular-nums; z-index: 1; }
 .schedule-table .schedule-lesson { min-height: 78px; }
+@media screen {
+  .schedule-table td[rowspan]:not([rowspan="1"]) { position: relative; }
+  .schedule-table td[rowspan]:not([rowspan="1"]) > .schedule-lesson {
+    position: absolute;
+    inset: .35rem;
+    height: auto;
+  }
+}
 .schedule-empty, .schedule-muted { color: #637067; }
 .schedule-scroll-hint { display: none; color: #637067; font-size: .85rem; }
 .schedule-skip { position: fixed; top: -100px; left: 1rem; z-index: 3000; padding: 1rem; background: #28332c; color: #fff; }
@@ -60,6 +68,7 @@ body[data-page="francisca-horario"] { background: #f8f7f4; color: #28332c; }
   .schedule-slot > span:not(.schedule-time-separator) { display: block; }
   .schedule-time-separator { display: none; }
   .schedule-table .schedule-lesson { min-height: 48px; padding: .45rem .15rem; border-radius: 6px; }
+  .schedule-table td[rowspan]:not([rowspan="1"]) > .schedule-lesson { inset: .15rem; }
   .schedule-table .schedule-time { display: none; }
   .schedule-table .schedule-lesson strong { font-size: .75rem; overflow-wrap: normal; }
 }
