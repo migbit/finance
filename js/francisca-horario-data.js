@@ -198,14 +198,14 @@ export const SCHEDULE = [
       {
         "day": 3,
         "slot": 2,
-        "span": 2,
-        "subject": "TDCont"
+        "span": 1,
+        "subject": "Música"
       },
       {
         "day": 3,
-        "slot": 4,
-        "span": 1,
-        "subject": "Música"
+        "slot": 3,
+        "span": 2,
+        "subject": "TDCont"
       },
       {
         "day": 4,
