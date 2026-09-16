@@ -2071,6 +2071,10 @@ body[data-page="filipa-alimentacao"] {
   border-radius: 20px;
 }
 
+.food-restaurants > section + section {
+  margin-top: 2rem;
+}
+
 .food-restaurant-options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
