@@ -2065,6 +2065,44 @@ body[data-page="filipa-alimentacao"] {
   }
 }
 
+.food-page .food-restaurants {
+  margin-top: 1.5rem;
+  padding: clamp(1.1rem, 3vw, 2rem);
+  border-radius: 20px;
+}
+
+.food-restaurant-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.food-restaurant-option {
+  padding: 1.25rem;
+  color: var(--food-ink);
+  border: 1px solid var(--food-line);
+  border-radius: 16px;
+  background: var(--food-green-soft);
+}
+
+.food-restaurant-option h4 {
+  margin: 0 0 1.25rem;
+  font-size: 1.15rem;
+}
+
+.food-restaurant-option h5 {
+  margin: 1rem 0 0.35rem;
+  color: var(--food-green-dark);
+  font-size: 0.9rem;
+}
+
+.food-restaurant-option ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.65;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .food-form-step {
     animation: none;
