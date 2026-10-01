@@ -122,6 +122,24 @@ function gerarRelatorioTMTDeApt(faturas, apt) {
 }
 
 /* ========== Shared bits ========== */
+function calcularNoitesExtra(fatura) {
+  const ano = Number(fatura.ano);
+  const mes = Number(fatura.mes);
+  const valorGuardado = Number(fatura.noitesExtra || 0);
+  // Preservar os relatórios anteriores ao 3.º trimestre de 2026.
+  if (!(ano > 2026 || (ano === 2026 && mes >= 7))) return valorGuardado;
+
+  const noites = Number(fatura.noites);
+  const adultos = Number(fatura.hospedesAdultos);
+  // Registos sem os dados da estadia continuam a usar o valor manual.
+  if (fatura.noites == null || fatura.noites === '' ||
+      fatura.hospedesAdultos == null || fatura.hospedesAdultos === '' ||
+      !Number.isFinite(noites) || !Number.isFinite(adultos) ||
+      noites <= 0 || adultos < 0) return valorGuardado;
+
+  return Math.max(0, noites - 7) * adultos;
+}
+
 function calcularNoitesBebes(fatura) {
   const bebes = Number(fatura.hospedesBebes || 0);
   const noites = Number(fatura.noites || 0);
@@ -143,7 +161,7 @@ function agruparPorAnoTrimestreApartamento(faturas) {
     acc[apt][key] ??= { valorOperador:0, valorDireto:0, noitesExtra:0, noitesCriancas:0, valorTmt:f.valorTmt, detalhes:[] };
     acc[apt][key].valorOperador  += Number(f.valorOperador || 0);
     acc[apt][key].valorDireto   += Number(f.valorDireto  || 0);
-    acc[apt][key].noitesExtra   += Number(f.noitesExtra  || 0);
+    acc[apt][key].noitesExtra   += calcularNoitesExtra(f);
     acc[apt][key].noitesCriancas+= Number(f.noitesCriancas || 0) + calcularNoitesBebes(f);
     acc[apt][key].detalhes.push(f);
     return acc;
@@ -198,7 +216,7 @@ function gerarHTMLDetalhesTMT(items) {
         <td>${d.ano}</td>
         <td>${meses[(d.mes|0)-1] || ''}</td>
         <td>${est}</td>
-        <td>${Number(d.noitesExtra||0)}</td>
+        <td>${calcularNoitesExtra(d)}</td>
         <td>${noitesCriancas}</td>
         <td>€${base.toFixed(2)}</td>
         <td>€${valTmt.toFixed(2)}</td>
