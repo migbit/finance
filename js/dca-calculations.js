@@ -77,8 +77,6 @@ export function buildModel(docs, params, liveData = null, reinforcements = [], c
         swda: Number(item.purchase.vwce) || 0,
         aggh: Number(item.purchase.aggh) || 0
       });
-    } else if (item.status === 'failed') {
-      automaticPurchasesByMonth.set(item.currentMonth, { swda: 0, aggh: 0 });
     }
   });
 
@@ -88,6 +86,8 @@ export function buildModel(docs, params, liveData = null, reinforcements = [], c
     const isClosed = d.snapshot_status === 'closed';
 
     const simulatedPlan = getPlannedContributions(rowYM, params);
+    // Uma falha no fecho automático não anula a contribuição mensal do plano.
+    // Só uma compra concluída substitui o plano pelos montantes registados.
     const recordedAutomaticPurchase = automaticPurchasesByMonth.get(d.id);
     const planned = recordedAutomaticPurchase
       ? {
