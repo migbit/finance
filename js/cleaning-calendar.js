@@ -417,7 +417,7 @@ function canvasToBlob(canvas) {
 
 function setLoading(isLoading) {
   generateButton.disabled = isLoading;
-  generateButton.textContent = isLoading ? 'A gerar...' : 'Gerar calendário de limpezas';
+  generateButton.textContent = isLoading ? 'A gerar...' : 'Gerar imagem';
 }
 
 function setStatus(message, isError = false) {

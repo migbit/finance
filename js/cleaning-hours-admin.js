@@ -55,6 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (manualEntryDate) manualEntryDate.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   manualEntryForm?.addEventListener('submit', handleManualEntry);
+  document.querySelectorAll('[data-hours]').forEach((button) => {
+    button.addEventListener('click', () => {
+      manualEntryHours.value = button.dataset.hours;
+      manualEntryHours.focus();
+    });
+  });
   filterYear?.addEventListener('change', renderEntries);
   filterMonth?.addEventListener('change', renderEntries);
   filterApartment?.addEventListener('change', renderEntries);
@@ -71,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
       entryRows = [];
       setSyncState('warning', 'Login necessário', 'Inicia sessão para carregar os dados do Firebase.');
       renderCalendarShareLinks();
-      if (entriesBody) entriesBody.innerHTML = '<tr><td colspan="7" class="empty-state">Inicia sessão para ver os registos.</td></tr>';
+      if (entriesBody) entriesBody.innerHTML = '<tr><td colspan="5" class="empty-state">Inicia sessão para ver os registos.</td></tr>';
       if (summaryWrap) summaryWrap.innerHTML = '';
       return;
     }
@@ -110,10 +116,7 @@ function renderCalendarShareLinks() {
     const shareUrl = buildShareUrl(row.shareToken);
     return `
       <div class="calendar-share-link">
-        <div class="calendar-share-link-info">
-          <strong>${escapeHtml(row.employeeName || row.employeeId || 'Funcionária')}</strong>
-          <a href="${escapeAttr(shareUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shareUrl)}</a>
-        </div>
+        <a href="${escapeAttr(shareUrl)}" target="_blank" rel="noopener noreferrer">Abrir calendário da Natally ↗</a>
         <button type="button" class="btn" data-copy-calendar-link="${escapeAttr(shareUrl)}">Copiar link</button>
       </div>
     `;
@@ -144,7 +147,7 @@ function renderEntries() {
   updateSyncStatus();
 
   if (!filtered.length) {
-    entriesBody.innerHTML = '<tr><td colspan="7" class="empty-state">Sem registos para os filtros selecionados.</td></tr>';
+    entriesBody.innerHTML = '<tr><td colspan="5" class="empty-state">Sem registos para os filtros selecionados.</td></tr>';
     return;
   }
 
@@ -154,15 +157,10 @@ function renderEntries() {
       <td>${Number(row.hours || 0).toLocaleString('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
       <td>${escapeHtml(row.apartment || '-')}</td>
       <td>${formatEuroNumber(getEntryAmount(row))} €</td>
-      <td>${renderApprovalCell(row)}</td>
-      <td>${escapeHtml(row.source || 'manual')}</td>
       <td>${renderActionsCell(row)}</td>
     </tr>
   `).join('');
 
-  entriesBody.querySelectorAll('[data-approve-id]').forEach((button) => {
-    button.addEventListener('click', () => approveEntry(button.getAttribute('data-approve-id')));
-  });
   entriesBody.querySelectorAll('[data-edit-id]').forEach((button) => {
     button.addEventListener('click', () => editEntry(button.getAttribute('data-edit-id')));
   });
@@ -249,7 +247,7 @@ async function handleManualEntry(event) {
   const hours = Number(String(manualEntryHours?.value || '').replace(',', '.'));
   const apartment = manualEntryApartment?.value || '';
 
-  if (!employeeId || !date || !Number.isFinite(hours) || hours < 0 || !['123', '1248', 'Ambos', 'Ferro 123', 'Ferro 1248', 'Ferro Ambos'].includes(apartment)) {
+  if (!employeeId || !date || !Number.isFinite(hours) || hours <= 0 || !['123', '1248', 'Ambos', 'Ferro 123', 'Ferro 1248', 'Ferro Ambos'].includes(apartment)) {
     showToast(employeeId ? 'Preenche os dados da entrada manual.' : 'Não foi possível encontrar a configuração da Natally. Recarrega a página.', 'warning');
     return;
   }
@@ -281,7 +279,9 @@ async function handleManualEntry(event) {
     filterApartment.value = '';
     renderEntries();
     manualEntryHours?.focus();
-    showToast('Entrada manual adicionada e aprovada.', 'success');
+    const feedback = document.getElementById('entry-feedback');
+    if (feedback) feedback.textContent = `${hours.toLocaleString('pt-PT')} h · ${apartment} · ${formatPtDate(date)} — guardado`;
+    showToast('Horas guardadas.', 'success');
   } catch (error) {
     console.error(error);
     showToast('Erro ao adicionar entrada manual.', 'error');
@@ -301,13 +301,6 @@ function getPublicAppOrigin() {
   return PUBLIC_APP_ORIGIN;
 }
 
-function renderApprovalCell(row) {
-  if (row.approved) {
-    return '<span class="pill">Aprovado</span>';
-  }
-  return `<button type="button" class="btn" data-approve-id="${escapeAttr(row.id)}">Aprovar</button>`;
-}
-
 function getSplitHours(row, apartment) {
   const hours = Number(row.hours) || 0;
   if (row.apartment === apartment) return hours;
@@ -315,20 +308,6 @@ function getSplitHours(row, apartment) {
   if (row.apartment === `Ferro ${apartment}`) return hours;
   if (row.apartment === 'Ferro Ambos') return hours / 2;
   return 0;
-}
-
-async function approveEntry(entryId) {
-  if (!entryId) return;
-  try {
-    await updateDoc(doc(db, ENTRIES_COLLECTION, entryId), {
-      approved: true,
-      approvedAt: serverTimestamp()
-    });
-    showToast('Registo aprovado.', 'success');
-  } catch (error) {
-    console.error(error);
-    showToast('Erro ao aprovar registo.', 'error');
-  }
 }
 
 function setupLiveEntriesListener() {
@@ -379,7 +358,7 @@ function toMillis(value) {
 
 function updateSyncStatus() {
   const meta = [];
-  if (liveEntryCount) meta.push(`${liveEntryCount} registos no Firebase`);
+
   if (liveLastUpdatedAt) meta.push(`Última alteração: ${formatDateTime(liveLastUpdatedAt)}`);
 
   if (!renderedEntrySignature && !liveEntrySignature) {
@@ -388,7 +367,7 @@ function updateSyncStatus() {
   }
 
   if (renderedEntrySignature === liveEntrySignature) {
-    setSyncState('ok', 'Sincronizado com Firebase', meta.join(' • '));
+    setSyncState('ok', '✓ Atualizado', meta.join(' • '));
     return;
   }
 
@@ -526,7 +505,8 @@ async function editEntry(entryId) {
       date: trimmedDate,
       hours: newHours,
       apartment,
-      approved: false,
+      approved: true,
+      approvedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
     showToast('Registo editado.', 'success');
