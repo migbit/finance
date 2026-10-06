@@ -31,7 +31,6 @@
     #manual-hours-form { grid-template-columns: 1.2fr .8fr 1fr auto; }
     #manual-hours-form .btn { min-height: 44px; }
     .entry-shortcuts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: .85rem; color: var(--text-dim); }
-    .entry-shortcuts .btn { padding: 5px 12px; box-shadow: none; min-height: 36px; }
     #entry-feedback { color: #166534; margin-left: auto; }
     .hours-filters { margin: 16px 0 20px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--border); min-width: 0; }
     .hours-filters legend { padding-right: 10px; font-size: .85rem; color: var(--text-dim); }
@@ -44,7 +43,8 @@
     .table-wrap th, .table-wrap td { padding: 12px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
     .table-wrap th { color: var(--text-dim); font-size: .8rem; background: var(--p4); }
     .table-wrap td:nth-child(2), .table-wrap td:nth-child(4) { font-variant-numeric: tabular-nums; font-weight: 600; }
-    .table-wrap th:nth-child(2), .table-wrap td:nth-child(2), .table-wrap th:nth-child(4), .table-wrap td:nth-child(4) { text-align: right; }
+    .hours-table .cell-content { display: block; width: 100%; text-align: center; }
+    .hours-table .hours-row-actions { justify-content: center; }
     body[data-page="cleaning-hours"] .hours-table { width: 100%; min-width: 820px; table-layout: fixed; }
     .hours-table col { width: 20%; }
     body[data-page="cleaning-hours"] .hours-table th,
@@ -115,8 +115,16 @@
           </div>
 
           <div class="field">
-            <label for="manual-entry-hours">Horas</label>
-            <input id="manual-entry-hours" type="number" min="0.5" step="0.5" placeholder="Ex.: 2,5" required>
+            <label for="manual-hours-choice">Horas</label>
+            <select id="manual-hours-choice" required>
+              <option value="" disabled selected>Selecionar</option>
+              <option value="1">1 hora</option>
+              <option value="2">2 horas</option>
+              <option value="3">3 horas</option>
+              <option value="4">4 horas</option>
+              <option value="manual">Outro valor…</option>
+            </select>
+            <input id="manual-entry-hours" type="number" min="0.01" step="any" placeholder="Ex.: 2,5" aria-label="Horas — valor manual" hidden disabled>
           </div>
 
           <div class="field">
@@ -135,11 +143,7 @@
             <button type="submit" class="btn primary">Adicionar horas</button>
           </div>
         </form>
-        <div class="entry-shortcuts" aria-label="Preencher horas rapidamente">
-          <span>Horas frequentes</span>
-          <button type="button" class="btn" data-hours="2">2 h</button>
-          <button type="button" class="btn" data-hours="3">3 h</button>
-          <button type="button" class="btn" data-hours="4">4 h</button>
+        <div class="entry-shortcuts">
           <span id="entry-feedback" role="status" aria-live="polite"></span>
         </div>
 
@@ -187,11 +191,11 @@
             </colgroup>
             <thead>
               <tr>
-                <th scope="col">Data</th>
-                <th scope="col">Horas</th>
-                <th scope="col">Apartamento</th>
-                <th scope="col">Valor</th>
-                <th scope="col">Ações</th>
+                <th scope="col"><span class="cell-content">Data</span></th>
+                <th scope="col"><span class="cell-content">Horas</span></th>
+                <th scope="col"><span class="cell-content">Apartamento</span></th>
+                <th scope="col"><span class="cell-content">Valor</span></th>
+                <th scope="col"><span class="cell-content">Ações</span></th>
               </tr>
             </thead>
             <tbody id="hours-entries-body">
@@ -232,7 +236,7 @@
   </main>
 
   <script type="module" src="../js/script.js"></script>
-  <script type="module" src="../js/cleaning-hours-admin.js?v=20261006-4"></script>
+  <script type="module" src="../js/cleaning-hours-admin.js?v=20261006-6"></script>
   <script type="module" src="../js/cleaning-calendar.js?v=20261006-2"></script>
 </body>
 </html>

@@ -20,6 +20,7 @@ const PUBLIC_APP_ORIGIN = 'https://apartments-a4b17.web.app';
 
 const manualEntryForm = document.getElementById('manual-hours-form');
 const manualEntryDate = document.getElementById('manual-entry-date');
+const manualHoursChoice = document.getElementById('manual-hours-choice');
 const manualEntryHours = document.getElementById('manual-entry-hours');
 const manualEntryApartment = document.getElementById('manual-entry-apartment');
 const calendarShareLinks = document.getElementById('calendar-share-links');
@@ -55,11 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (manualEntryDate) manualEntryDate.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   manualEntryForm?.addEventListener('submit', handleManualEntry);
-  document.querySelectorAll('[data-hours]').forEach((button) => {
-    button.addEventListener('click', () => {
-      manualEntryHours.value = button.dataset.hours;
-      manualEntryHours.focus();
-    });
+  manualHoursChoice?.addEventListener('change', () => {
+    const isManual = manualHoursChoice.value === 'manual';
+    manualEntryHours.hidden = !isManual;
+    manualEntryHours.disabled = !isManual;
+    manualEntryHours.required = isManual;
+    manualEntryHours.value = isManual ? '' : manualHoursChoice.value;
+    if (isManual) manualEntryHours.focus();
   });
   filterYear?.addEventListener('change', renderEntries);
   filterMonth?.addEventListener('change', renderEntries);
@@ -153,10 +156,10 @@ function renderEntries() {
 
   entriesBody.innerHTML = filtered.map((row) => `
     <tr>
-      <td>${escapeHtml(formatPtDate(row.date))}</td>
-      <td>${Number(row.hours || 0).toLocaleString('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
-      <td>${escapeHtml(row.apartment || '-')}</td>
-      <td>${formatEuroNumber(getEntryAmount(row))} €</td>
+      <td><span class="cell-content">${escapeHtml(formatPtDate(row.date))}</span></td>
+      <td><span class="cell-content">${Number(row.hours || 0).toLocaleString('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</span></td>
+      <td><span class="cell-content">${escapeHtml(row.apartment || '-')}</span></td>
+      <td><span class="cell-content">${formatEuroNumber(getEntryAmount(row))} €</span></td>
       <td>${renderActionsCell(row)}</td>
     </tr>
   `).join('');
@@ -270,6 +273,12 @@ async function handleManualEntry(event) {
     });
 
     if (manualEntryHours) manualEntryHours.value = '';
+    if (manualHoursChoice) {
+      manualHoursChoice.value = '';
+      manualEntryHours.hidden = true;
+      manualEntryHours.disabled = true;
+      manualEntryHours.required = false;
+    }
     filterYear.value = date.slice(0, 4);
     if (!filterYear.value) {
       filterYear.add(new Option(date.slice(0, 4), date.slice(0, 4)));
@@ -278,7 +287,7 @@ async function handleManualEntry(event) {
     filterMonth.value = date.slice(5, 7);
     filterApartment.value = '';
     renderEntries();
-    manualEntryHours?.focus();
+    (manualHoursChoice || manualEntryHours)?.focus();
     const feedback = document.getElementById('entry-feedback');
     if (feedback) feedback.textContent = `${hours.toLocaleString('pt-PT')} h · ${apartment} · ${formatPtDate(date)} — guardado`;
     showToast('Horas guardadas.', 'success');
