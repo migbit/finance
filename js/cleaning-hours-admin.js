@@ -465,7 +465,7 @@ function formatEuroNumber(value) {
 
 function renderActionsCell(row) {
   return `
-    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <div class="hours-row-actions">
       <button type="button" class="btn" data-edit-id="${escapeAttr(row.id)}">Editar</button>
       <button type="button" class="btn" data-delete-id="${escapeAttr(row.id)}">Apagar</button>
     </div>

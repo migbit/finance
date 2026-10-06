@@ -45,8 +45,20 @@
     .table-wrap th { color: var(--text-dim); font-size: .8rem; background: var(--p4); }
     .table-wrap td:nth-child(2), .table-wrap td:nth-child(4) { font-variant-numeric: tabular-nums; font-weight: 600; }
     .table-wrap th:nth-child(2), .table-wrap td:nth-child(2), .table-wrap th:nth-child(4), .table-wrap td:nth-child(4) { text-align: right; }
-    .table-wrap td:last-child { width: 1%; white-space: nowrap; }
-    .table-wrap .btn { box-shadow: none; padding: 6px 10px; }
+    body[data-page="cleaning-hours"] .hours-table { width: 100%; min-width: 600px; table-layout: fixed; }
+    .hours-table .col-date { width: 22%; }
+    .hours-table .col-hours { width: 12%; }
+    .hours-table .col-amount { width: 18%; }
+    .hours-table .col-actions { width: 164px; }
+    body[data-page="cleaning-hours"] .hours-table th,
+    body[data-page="cleaning-hours"] .hours-table td { padding: 10px 14px; }
+    .hours-table td:first-child,
+    .hours-table td:nth-child(4) { white-space: nowrap; }
+    .hours-row-actions { display: flex; gap: 8px; flex-wrap: nowrap; }
+    body[data-page="cleaning-hours"] .hours-row-actions .btn {
+      flex: 0 0 auto; width: auto; min-height: 36px; margin: 0;
+      box-shadow: none; padding: 6px 10px; font-size: .8rem; white-space: nowrap;
+    }
     .empty-state { text-align: center; color: var(--text-dim); padding: 24px; }
     .sync-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 14px; font-size: .8rem; }
     .sync-pill { color: #166534; }
@@ -71,7 +83,6 @@
       .filters-bar { grid-template-columns: 1fr 1fr; }
       .hours-filters .field:last-child { grid-column: 1 / -1; }
       #entry-feedback { width: 100%; margin-left: 0; }
-      body[data-page="cleaning-hours"] .table-wrap table { min-width: 520px; }
     }
   </style>
 </head>
@@ -169,14 +180,21 @@
         <div id="hours-summary" class="hours-summary"></div>
 
         <div class="table-wrap">
-          <table>
+          <table class="hours-table">
+            <colgroup>
+              <col class="col-date">
+              <col class="col-hours">
+              <col>
+              <col class="col-amount">
+              <col class="col-actions">
+            </colgroup>
             <thead>
               <tr>
-                <th>Data</th>
-                <th>Horas</th>
-                <th>Apartamento</th>
-                <th>Valor</th>
-                <th>Ações</th>
+                <th scope="col">Data</th>
+                <th scope="col">Horas</th>
+                <th scope="col">Apartamento</th>
+                <th scope="col">Valor</th>
+                <th scope="col">Ações</th>
               </tr>
             </thead>
             <tbody id="hours-entries-body">
@@ -217,7 +235,7 @@
   </main>
 
   <script type="module" src="../js/script.js"></script>
-  <script type="module" src="../js/cleaning-hours-admin.js?v=20261006-3"></script>
+  <script type="module" src="../js/cleaning-hours-admin.js?v=20261006-4"></script>
   <script type="module" src="../js/cleaning-calendar.js?v=20261006-2"></script>
 </body>
 </html>
