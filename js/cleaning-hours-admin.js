@@ -2,6 +2,7 @@ import { db } from './script.js';
 import { showToast } from './toast.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -10,7 +11,6 @@ import {
   orderBy,
   query,
   serverTimestamp,
-  setDoc,
   updateDoc
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
@@ -18,19 +18,12 @@ const ACCESS_COLLECTION = 'cleaning_hours_access';
 const ENTRIES_COLLECTION = 'cleaning_hours_entries';
 const PUBLIC_APP_ORIGIN = 'https://apartments-a4b17.web.app';
 
-const accessForm = document.getElementById('cleaning-access-form');
-const accessList = document.getElementById('access-list');
-const generatedLinkBox = document.getElementById('generated-link-box');
-const generatedLinkAnchor = document.getElementById('generated-link');
-const copyGeneratedLinkBtn = document.getElementById('copy-generated-link');
 const manualEntryForm = document.getElementById('manual-hours-form');
-const manualEntryEmployee = document.getElementById('manual-entry-employee');
 const manualEntryDate = document.getElementById('manual-entry-date');
 const manualEntryHours = document.getElementById('manual-entry-hours');
 const manualEntryApartment = document.getElementById('manual-entry-apartment');
 const calendarShareLinks = document.getElementById('calendar-share-links');
 
-const filterEmployee = document.getElementById('hours-filter-employee');
 const filterYear = document.getElementById('hours-filter-year');
 const filterMonth = document.getElementById('hours-filter-month');
 const filterApartment = document.getElementById('hours-filter-apartment');
@@ -39,9 +32,15 @@ const entriesBody = document.getElementById('hours-entries-body');
 const syncPill = document.getElementById('hours-sync-pill');
 const syncMeta = document.getElementById('hours-sync-meta');
 
+let savingEntry = false;
+
+function getNatally() {
+  return accessRows.find((row) => String(row.employeeName || '').trim().toLowerCase().split(/\s+/)[0] === 'natally')
+    || accessRows.find((row) => /(^|-)natally($|-)/i.test(row.employeeId || row.id || ''));
+}
+
 let accessRows = [];
 let entryRows = [];
-let lastGeneratedLink = '';
 let liveEntrySignature = '';
 let renderedEntrySignature = '';
 let liveEntryCount = 0;
@@ -53,15 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
   populateMonthSelect();
   filterYear.value = String(now.getFullYear());
   filterMonth.value = String(now.getMonth() + 1).padStart(2, '0');
-  if (manualEntryDate) manualEntryDate.value = now.toISOString().slice(0, 10);
+  if (manualEntryDate) manualEntryDate.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-  accessForm?.addEventListener('submit', handleCreateOrRenewAccess);
-  copyGeneratedLinkBtn?.addEventListener('click', copyGeneratedLink);
   manualEntryForm?.addEventListener('submit', handleManualEntry);
-  filterEmployee?.addEventListener('change', renderEntries);
   filterYear?.addEventListener('change', renderEntries);
   filterMonth?.addEventListener('change', renderEntries);
   filterApartment?.addEventListener('change', renderEntries);
+  document.getElementById('copy-monthly-summary')?.addEventListener('click', copyMonthlySummary);
 
   const auth = getAuth();
   onAuthStateChanged(auth, async (user) => {
@@ -74,15 +71,15 @@ document.addEventListener('DOMContentLoaded', () => {
       entryRows = [];
       setSyncState('warning', 'Login necessário', 'Inicia sessão para carregar os dados do Firebase.');
       renderCalendarShareLinks();
-      if (accessList) accessList.innerHTML = '<div class="empty-state">Inicia sessão para ver os links.</div>';
-      if (entriesBody) entriesBody.innerHTML = '<tr><td colspan="8" class="empty-state">Inicia sessão para ver os registos.</td></tr>';
+      if (entriesBody) entriesBody.innerHTML = '<tr><td colspan="7" class="empty-state">Inicia sessão para ver os registos.</td></tr>';
       if (summaryWrap) summaryWrap.innerHTML = '';
       return;
     }
 
     try {
       await loadAccessRows();
-      renderAccessList();
+      populateApartmentFilter();
+      renderCalendarShareLinks();
       renderEntries();
       if (!unsubscribeEntries) {
         setupLiveEntriesListener();
@@ -99,90 +96,11 @@ async function loadAccessRows() {
   accessRows = snap.docs.map((item) => ({ id: item.id, ...item.data() }));
 }
 
-async function handleCreateOrRenewAccess(event) {
-  event.preventDefault();
-
-  const employeeName = document.getElementById('employee-name').value.trim();
-  const employeeIdRaw = document.getElementById('employee-id').value.trim();
-  const hourlyRate = Number(document.getElementById('employee-hourly-rate').value || 0);
-
-  if (!employeeName || !employeeIdRaw) {
-    showToast('Preencha o nome e o ID interno.', 'warning');
-    return;
-  }
-
-  const employeeId = slugify(employeeIdRaw);
-  const shareToken = generateToken();
-  const shareUrl = buildShareUrl(shareToken);
-  const tokenHash = await sha256Hex(shareToken);
-
-  await setDoc(doc(db, ACCESS_COLLECTION, employeeId), {
-    employeeId,
-    employeeName,
-    hourlyRate: Number.isFinite(hourlyRate) ? hourlyRate : 0,
-    allowedApartments: ['123', '1248', 'Ambos', 'Ferro 123', 'Ferro 1248', 'Ferro Ambos'],
-    shareToken,
-    tokenHash,
-    active: true,
-    updatedAt: serverTimestamp(),
-    createdAt: serverTimestamp()
-  }, { merge: true });
-
-  lastGeneratedLink = shareUrl;
-  generatedLinkAnchor.href = shareUrl;
-  generatedLinkAnchor.textContent = shareUrl;
-  generatedLinkBox.hidden = false;
-
-  showToast('Link criado/renovado com sucesso.', 'success');
-  await loadAccessRows();
-  renderAccessList();
-  renderEntries();
-}
-
-function renderAccessList() {
-  if (!accessList) return;
-
-  populateEmployeeFilter();
-  populateManualEmployeeSelect();
-  populateApartmentFilter();
-  renderCalendarShareLinks();
-
-  if (!accessRows.length) {
-    accessList.innerHTML = '<div class="empty-state">Ainda não existem funcionárias configuradas.</div>';
-    return;
-  }
-
-  accessList.innerHTML = accessRows.map((row) => {
-    const shareUrl = buildShareUrl(row.shareToken || '');
-
-    return `
-      <article class="link-item">
-        <div class="link-item-head">
-          <div>
-            <strong>${escapeHtml(row.employeeName || row.employeeId || 'Sem nome')}</strong>
-            <div>ID: ${escapeHtml(row.employeeId || row.id || '-')}</div>
-          </div>
-          <span class="pill ${row.active === false ? 'is-off' : ''}">${row.active === false ? 'Inativo' : 'Ativo'}</span>
-        </div>
-        <div><strong>Apartamentos:</strong> 123, 1248, Ambos, Ferro 123, Ferro 1248, Ferro Ambos</div>
-        <div><strong>Valor/hora:</strong> ${formatEuroNumber(row.hourlyRate || 0)} €</div>
-        <div><strong>Link:</strong> <a href="${escapeAttr(shareUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(shareUrl)}</a></div>
-        <div class="form-actions">
-          <button type="button" class="btn" data-edit-access-id="${escapeAttr(row.employeeId || row.id || '')}">Alterar</button>
-        </div>
-      </article>
-    `;
-  }).join('');
-
-  accessList.querySelectorAll('[data-edit-access-id]').forEach((button) => {
-    button.addEventListener('click', () => editAccess(button.getAttribute('data-edit-access-id')));
-  });
-}
-
 function renderCalendarShareLinks() {
   if (!calendarShareLinks) return;
 
-  const activeRows = accessRows.filter((row) => row.active !== false && row.shareToken);
+  const employee = getNatally();
+  const activeRows = employee?.active !== false && employee?.shareToken ? [employee] : [];
   if (!activeRows.length) {
     calendarShareLinks.innerHTML = '<span class="sync-meta">Ainda não existe um link ativo.</span>';
     return;
@@ -220,19 +138,19 @@ function renderEntries() {
   if (!entriesBody) return;
 
   const filtered = applyFilters(entryRows);
+  liveEntrySignature = createEntrySignature(filtered);
   renderedEntrySignature = createEntrySignature(filtered);
   renderSummary(filtered);
   updateSyncStatus();
 
   if (!filtered.length) {
-    entriesBody.innerHTML = '<tr><td colspan="8" class="empty-state">Sem registos para os filtros selecionados.</td></tr>';
+    entriesBody.innerHTML = '<tr><td colspan="7" class="empty-state">Sem registos para os filtros selecionados.</td></tr>';
     return;
   }
 
   entriesBody.innerHTML = filtered.map((row) => `
     <tr>
       <td>${escapeHtml(formatPtDate(row.date))}</td>
-      <td>${escapeHtml(row.employeeName || row.employeeId || '-')}</td>
       <td>${Number(row.hours || 0).toLocaleString('pt-PT', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</td>
       <td>${escapeHtml(row.apartment || '-')}</td>
       <td>${formatEuroNumber(getEntryAmount(row))} €</td>
@@ -260,7 +178,6 @@ function renderSummary(rows) {
   const total123 = rows.reduce((sum, row) => sum + getSplitHours(row, '123'), 0);
   const total1248 = rows.reduce((sum, row) => sum + getSplitHours(row, '1248'), 0);
   const totalAmount = rows.reduce((sum, row) => sum + getEntryAmount(row), 0);
-  const employees = new Set(rows.map((row) => row.employeeId).filter(Boolean)).size;
 
   summaryWrap.innerHTML = `
     <div class="kpi-card">
@@ -279,39 +196,23 @@ function renderSummary(rows) {
       <span>Total a transferir</span>
       <strong>${formatEuroNumber(totalAmount)} €</strong>
     </div>
-    <div class="kpi-card">
-      <span>Funcionárias</span>
-      <strong>${employees}</strong>
-    </div>
   `;
 }
 
 function applyFilters(rows) {
-  const employee = filterEmployee?.value || '';
+  const employee = getNatally();
   const year = filterYear?.value || '';
   const month = filterMonth?.value || '';
   const apartment = filterApartment?.value || '';
 
   return rows.filter((row) => {
-    if (employee && row.employeeId !== employee) return false;
+    if (!employee || row.employeeId !== (employee.employeeId || employee.id)) return false;
     const rowDate = String(row.date || '');
     if (year && !rowDate.startsWith(`${year}-`)) return false;
     if (month && rowDate.slice(5, 7) !== month) return false;
     if (apartment && row.apartment !== apartment) return false;
     return true;
   });
-}
-
-function populateEmployeeFilter() {
-  if (!filterEmployee) return;
-
-  const current = filterEmployee.value;
-  const options = accessRows
-    .map((row) => `<option value="${escapeAttr(row.employeeId)}">${escapeHtml(row.employeeName || row.employeeId)}</option>`)
-    .join('');
-
-  filterEmployee.innerHTML = `<option value="">Todas</option>${options}`;
-  filterEmployee.value = current;
 }
 
 function populateApartmentFilter() {
@@ -338,47 +239,26 @@ function populateApartmentFilter() {
   filterApartment.value = current;
 }
 
-function populateManualEmployeeSelect() {
-  if (!manualEntryEmployee) return;
-
-  const current = manualEntryEmployee.value;
-  const options = accessRows
-    .map((row) => `<option value="${escapeAttr(row.employeeId)}">${escapeHtml(row.employeeName || row.employeeId)}</option>`)
-    .join('');
-
-  manualEntryEmployee.innerHTML = options;
-  if (current && accessRows.some((row) => row.employeeId === current)) {
-    manualEntryEmployee.value = current;
-  }
-}
-
-async function copyGeneratedLink() {
-  if (!lastGeneratedLink) return;
-  await navigator.clipboard.writeText(lastGeneratedLink);
-  showToast('Link copiado.', 'success');
-}
-
 async function handleManualEntry(event) {
   event.preventDefault();
 
-  const employeeId = manualEntryEmployee?.value || '';
+  if (savingEntry) return;
+  const employee = getNatally();
+  const employeeId = employee?.employeeId || employee?.id || '';
   const date = manualEntryDate?.value || '';
   const hours = Number(String(manualEntryHours?.value || '').replace(',', '.'));
   const apartment = manualEntryApartment?.value || '';
 
   if (!employeeId || !date || !Number.isFinite(hours) || hours < 0 || !['123', '1248', 'Ambos', 'Ferro 123', 'Ferro 1248', 'Ferro Ambos'].includes(apartment)) {
-    showToast('Preenche os dados da entrada manual.', 'warning');
+    showToast(employeeId ? 'Preenche os dados da entrada manual.' : 'Não foi possível encontrar a configuração da Natally. Recarrega a página.', 'warning');
     return;
   }
 
-  const employee = accessRows.find((row) => row.employeeId === employeeId);
-  if (!employee) {
-    showToast('Funcionária inválida.', 'warning');
-    return;
-  }
-
+  savingEntry = true;
+  const submitButton = manualEntryForm?.querySelector('[type=submit]');
+  if (submitButton) submitButton.disabled = true;
   try {
-    await setDoc(doc(db, ENTRIES_COLLECTION, `${employeeId}__${date}`), {
+    await addDoc(collection(db, ENTRIES_COLLECTION), {
       employeeId,
       employeeName: employee.employeeName || employeeId,
       date,
@@ -389,15 +269,25 @@ async function handleManualEntry(event) {
       source: 'admin_manual',
       updatedAt: serverTimestamp(),
       createdAt: serverTimestamp()
-    }, { merge: true });
+    });
 
-    manualEntryForm?.reset();
-    if (manualEntryDate) manualEntryDate.value = new Date().toISOString().slice(0, 10);
-    if (manualEntryEmployee) manualEntryEmployee.value = employeeId;
+    if (manualEntryHours) manualEntryHours.value = '';
+    filterYear.value = date.slice(0, 4);
+    if (!filterYear.value) {
+      filterYear.add(new Option(date.slice(0, 4), date.slice(0, 4)));
+      filterYear.value = date.slice(0, 4);
+    }
+    filterMonth.value = date.slice(5, 7);
+    filterApartment.value = '';
+    renderEntries();
+    manualEntryHours?.focus();
     showToast('Entrada manual adicionada e aprovada.', 'success');
   } catch (error) {
     console.error(error);
     showToast('Erro ao adicionar entrada manual.', 'error');
+  } finally {
+    savingEntry = false;
+    if (submitButton) submitButton.disabled = false;
   }
 }
 
@@ -409,15 +299,6 @@ function buildShareUrl(shareToken) {
 
 function getPublicAppOrigin() {
   return PUBLIC_APP_ORIGIN;
-}
-
-function parseApartments(value) {
-  const parts = String(value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  return parts.length ? parts : ['123', '1248'];
 }
 
 function renderApprovalCell(row) {
@@ -447,42 +328,6 @@ async function approveEntry(entryId) {
   } catch (error) {
     console.error(error);
     showToast('Erro ao aprovar registo.', 'error');
-  }
-}
-
-async function editAccess(employeeId) {
-  const row = accessRows.find((item) => item.employeeId === employeeId || item.id === employeeId);
-  if (!row) return;
-
-  const employeeName = window.prompt('Nome da funcionária:', row.employeeName || '');
-  if (employeeName === null) return;
-  const trimmedName = String(employeeName).trim();
-  if (!trimmedName) {
-    showToast('Nome inválido.', 'warning');
-    return;
-  }
-
-  const hourlyRateRaw = window.prompt('Valor por hora (€):', String(Number(row.hourlyRate || 0)));
-  if (hourlyRateRaw === null) return;
-  const hourlyRate = Number(String(hourlyRateRaw).replace(',', '.'));
-  if (!Number.isFinite(hourlyRate) || hourlyRate < 0) {
-    showToast('Valor por hora inválido.', 'warning');
-    return;
-  }
-
-  try {
-    await updateDoc(doc(db, ACCESS_COLLECTION, row.employeeId || row.id), {
-      employeeName: trimmedName,
-      hourlyRate,
-      updatedAt: serverTimestamp()
-    });
-    showToast('Funcionária atualizada.', 'success');
-    await loadAccessRows();
-    renderAccessList();
-    renderEntries();
-  } catch (error) {
-    console.error(error);
-    showToast('Erro ao atualizar funcionária.', 'error');
   }
 }
 
@@ -566,12 +411,6 @@ function formatDateTime(value) {
   return date.toLocaleString('pt-PT');
 }
 
-function generateToken() {
-  const bytes = new Uint8Array(24);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('');
-}
-
 function populateYearSelect() {
   if (!filterYear) return;
   const current = filterYear.value;
@@ -607,8 +446,31 @@ function populateMonthSelect() {
 }
 
 function getHourlyRate(employeeId) {
-  const employee = accessRows.find((row) => row.employeeId === employeeId);
+  const employee = accessRows.find((row) => (row.employeeId || row.id) === employeeId);
   return Number(employee?.hourlyRate || 0);
+}
+
+async function copyMonthlySummary() {
+  const rows = applyFilters(entryRows).slice().sort((a, b) => a.date.localeCompare(b.date));
+  if (!rows.length) {
+    showToast('Sem horas para copiar neste período.', 'warning');
+    return;
+  }
+  const lines = [
+    `Horas da Natally · ${filterMonth.selectedOptions[0].textContent} ${filterYear.value}`,
+    ...(filterApartment.value ? [`Filtro: ${filterApartment.value}`] : []),
+    ...rows.map((row) => `${formatPtDate(row.date)} · ${row.apartment} · ${Number(row.hours).toLocaleString('pt-PT')} h`),
+    '',
+    `Total: ${rows.reduce((sum, row) => sum + Number(row.hours || 0), 0).toLocaleString('pt-PT')} h`,
+    `Total a transferir: ${formatEuroNumber(rows.reduce((sum, row) => sum + getEntryAmount(row), 0))} €`
+  ];
+  try {
+    await navigator.clipboard.writeText(lines.join('\n'));
+    showToast('Resumo copiado para enviares à Natally.', 'success');
+  } catch (error) {
+    console.error(error);
+    showToast('Não foi possível copiar o resumo.', 'error');
+  }
 }
 
 function getEntryAmount(row) {
@@ -660,27 +522,13 @@ async function editEntry(entryId) {
   }
 
   try {
-    const targetId = `${row.employeeId}__${trimmedDate}`;
-    if (targetId !== entryId) {
-      const { id, ...rowData } = row;
-      await setDoc(doc(db, ENTRIES_COLLECTION, targetId), {
-        ...rowData,
-        date: trimmedDate,
-        hours: newHours,
-        apartment,
-        approved: false,
-        updatedAt: serverTimestamp()
-      });
-      await deleteDoc(doc(db, ENTRIES_COLLECTION, entryId));
-    } else {
-      await updateDoc(doc(db, ENTRIES_COLLECTION, entryId), {
-        date: trimmedDate,
-        hours: newHours,
-        apartment,
-        approved: false,
-        updatedAt: serverTimestamp()
-      });
-    }
+    await updateDoc(doc(db, ENTRIES_COLLECTION, entryId), {
+      date: trimmedDate,
+      hours: newHours,
+      apartment,
+      approved: false,
+      updatedAt: serverTimestamp()
+    });
     showToast('Registo editado.', 'success');
   } catch (error) {
     console.error(error);
@@ -701,21 +549,6 @@ async function deleteEntry(entryId) {
     console.error(error);
     showToast('Erro ao apagar registo.', 'error');
   }
-}
-
-async function sha256Hex(value) {
-  const bytes = new TextEncoder().encode(value);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest), (item) => item.toString(16).padStart(2, '0')).join('');
-}
-
-function slugify(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'funcionaria';
 }
 
 function formatPtDate(value) {

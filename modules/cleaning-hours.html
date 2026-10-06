@@ -28,17 +28,17 @@
       color: var(--text-dim);
     }
 
-    .hours-grid {
-      display: grid;
-      grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-      gap: 18px;
-      align-items: start;
+    .report-section { margin-top: 18px; }
+    .hours-filters {
+      margin: 18px 0;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--p4);
     }
-
-    .field-grid {
-      display: grid;
-      gap: 12px;
-    }
+    .hours-filters legend { font-weight: 600; padding: 0 6px; }
+    .hours-filters .filters-bar { margin-bottom: 0; }
+    .table-wrap { overflow-x: auto; }
 
     .field {
       display: grid;
@@ -59,32 +59,6 @@
       background: #fff;
       color: var(--text);
       font: inherit;
-    }
-
-    .field small {
-      color: var(--text-dim);
-    }
-
-    .form-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
-
-    .hours-link-box {
-      display: grid;
-      gap: 8px;
-      margin-top: 14px;
-      padding: 12px;
-      border-radius: var(--radius-sm);
-      background: var(--p4);
-      border: 1px solid var(--border);
-    }
-
-    .hours-link-box a,
-    .hours-link-box code {
-      word-break: break-all;
     }
 
     .filters-bar {
@@ -182,28 +156,6 @@
       font-style: italic;
     }
 
-    .link-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .link-item {
-      border: 1px solid var(--border);
-      background: #fff;
-      border-radius: var(--radius-md);
-      padding: 12px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .link-item-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
     .pill {
       display: inline-flex;
       align-items: center;
@@ -213,11 +165,6 @@
       font-weight: 700;
       background: #e9f7ef;
       color: #166534;
-    }
-
-    .pill.is-off {
-      background: #fef2f2;
-      color: #991b1b;
     }
 
     .calendar-builder {
@@ -330,10 +277,6 @@
       body[data-page="cleaning-hours"] main {
         padding: var(--space-4);
       }
-
-      .hours-grid {
-        grid-template-columns: 1fr;
-      }
     }
   </style>
 </head>
@@ -355,14 +298,14 @@
   <main>
     <div class="page-intro">
       <h2>Horas de Limpeza</h2>
-      <p>Criar links simples para a funcionária e acompanhar os registos gravados no Firebase.</p>
+      <p>Regista as horas da Natally e consulta o resumo de cada mês.</p>
     </div>
 
     <section class="viz-card calendar-builder" aria-labelledby="cleaning-calendar-title">
       <div class="calendar-builder-head">
         <div>
           <h4 id="cleaning-calendar-title">Criar calendário</h4>
-          <p>Gera uma imagem simples com as limpezas e disponibilidade dos apartamentos 123 e 1248 para os próximos 14 dias.</p>
+          <p>Calendário dos próximos 14 dias, com base nos iCal dos apartamentos 123 e 1248.</p>
         </div>
         <div class="calendar-builder-actions">
           <button type="button" id="generate-cleaning-calendar" class="btn primary">Gerar calendário de limpezas</button>
@@ -375,65 +318,18 @@
         <small>Azul: apartamento 123 · Laranja: apartamento 1248 · Vermelho: limpeza obrigatória · Preto: primeira data possível</small>
       </div>
       <div class="calendar-share-box">
-        <strong>Link da funcionária para reenviar</strong>
+        <strong>Calendário da Natally · atualizado automaticamente</strong>
         <div id="calendar-share-links" class="calendar-share-links">
           <span class="sync-meta">A carregar link...</span>
         </div>
       </div>
     </section>
 
-    <section class="hours-grid">
-      <div class="viz-card">
-        <h4>Novo link de acesso</h4>
-        <form id="cleaning-access-form" class="field-grid">
-          <div class="field">
-            <label for="employee-name">Nome da funcionária</label>
-            <input id="employee-name" name="employee-name" type="text" required placeholder="Ex.: Ana">
-          </div>
-
-          <div class="field">
-            <label for="employee-id">ID interno</label>
-            <input id="employee-id" name="employee-id" type="text" required placeholder="Ex.: ana-limpeza">
-            <small>Usado para identificar os registos da funcionária.</small>
-          </div>
-
-          <div class="field">
-            <label for="employee-hourly-rate">Valor por hora (€)</label>
-            <input id="employee-hourly-rate" name="employee-hourly-rate" type="number" min="0" step="0.01" placeholder="Ex.: 7.50">
-          </div>
-
-          <div class="form-actions">
-            <button type="submit" class="btn">Criar ou renovar link</button>
-          </div>
-        </form>
-
-        <div id="generated-link-box" class="hours-link-box" hidden>
-          <strong>Link para enviar</strong>
-          <a id="generated-link" href="#" target="_blank" rel="noopener noreferrer"></a>
-          <div class="form-actions">
-            <button type="button" id="copy-generated-link" class="btn">Copiar link</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="viz-card">
-        <h4>Links ativos</h4>
-        <div id="access-list" class="link-list">
-          <div class="empty-state">A carregar...</div>
-        </div>
-      </div>
-    </section>
-
     <section class="report-section">
       <div class="viz-card">
-        <h4>Registos</h4>
+        <h4>Adicionar horas · Natally</h4>
 
-        <form id="manual-hours-form" class="filters-bar" style="margin-bottom:18px;">
-          <div class="field">
-            <label for="manual-entry-employee">Funcionária</label>
-            <select id="manual-entry-employee" required></select>
-          </div>
-
+        <form id="manual-hours-form" class="filters-bar">
           <div class="field">
             <label for="manual-entry-date">Data</label>
             <input id="manual-entry-date" type="date" required>
@@ -457,36 +353,40 @@
           </div>
 
           <div class="field">
-            <label>&nbsp;</label>
-            <button type="submit" class="btn">Adicionar manualmente</button>
+            <button type="submit" class="btn primary">Adicionar horas</button>
           </div>
         </form>
 
-        <div class="filters-bar">
-          <div class="field">
-            <label for="hours-filter-employee">Funcionária</label>
-            <select id="hours-filter-employee">
-              <option value="">Todas</option>
-            </select>
-          </div>
+      </div>
+    </section>
 
-          <div class="field">
-            <label for="hours-filter-year">Ano</label>
-            <select id="hours-filter-year"></select>
-          </div>
-
-          <div class="field">
-            <label for="hours-filter-month">Mês</label>
-            <select id="hours-filter-month"></select>
-          </div>
-
-          <div class="field">
-            <label for="hours-filter-apartment">Apartamento</label>
-            <select id="hours-filter-apartment">
-              <option value="">Todos</option>
-            </select>
-          </div>
+    <section class="report-section" aria-labelledby="monthly-title">
+      <div class="viz-card">
+        <div class="calendar-builder-head">
+          <h4 id="monthly-title">Resumo mensal · Natally</h4>
+          <button type="button" id="copy-monthly-summary" class="btn">Copiar resumo para enviar</button>
         </div>
+        <fieldset class="hours-filters">
+          <legend>Filtrar horas apresentadas</legend>
+          <div class="filters-bar">
+            <div class="field">
+              <label for="hours-filter-year">Ano</label>
+              <select id="hours-filter-year"></select>
+            </div>
+
+            <div class="field">
+              <label for="hours-filter-month">Mês</label>
+              <select id="hours-filter-month"></select>
+            </div>
+
+            <div class="field">
+              <label for="hours-filter-apartment">Apartamento</label>
+              <select id="hours-filter-apartment">
+                <option value="">Todos</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
 
         <div class="sync-bar">
           <div id="hours-sync-pill" class="sync-pill is-neutral">A sincronizar...</div>
@@ -500,7 +400,6 @@
             <thead>
               <tr>
                 <th>Data</th>
-                <th>Funcionária</th>
                 <th>Horas</th>
                 <th>Apartamento</th>
                 <th>Valor</th>
@@ -510,7 +409,7 @@
               </tr>
             </thead>
             <tbody id="hours-entries-body">
-              <tr><td colspan="8" class="empty-state">A carregar...</td></tr>
+              <tr><td colspan="7" class="empty-state">A carregar...</td></tr>
             </tbody>
           </table>
         </div>
@@ -519,7 +418,7 @@
   </main>
 
   <script type="module" src="../js/script.js"></script>
-  <script type="module" src="../js/cleaning-hours-admin.js?v=20260630-4"></script>
+  <script type="module" src="../js/cleaning-hours-admin.js?v=20261006-1"></script>
   <script type="module" src="../js/cleaning-calendar.js?v=20260803-1"></script>
 </body>
 </html>
