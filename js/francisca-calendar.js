@@ -13,7 +13,8 @@ import { db, whenAccessResolved } from './script.js';
 import {
   FRANCISCA_SUBJECTS,
   PALLCO_CALENDAR,
-  pallcoEventsOn,
+  AEGO_CALENDAR,
+  schoolEventsOn,
   countdownLabel,
   daysUntil,
   filterTests,
@@ -205,14 +206,14 @@ function dayAriaLabel(cell, tests) {
 
 function openDay(dateKey) {
   const dayTests = sortTests(filterTests(state.tests, state.filter).filter(test => test.testDate === dateKey));
-  const schoolEvents = pallcoEventsOn(dateKey);
+  const schoolEvents = schoolEventsOn(dateKey);
   if (!dayTests.length && !schoolEvents.length) return;
   elements.dayTitle.textContent = formatDateLong(dateKey);
   elements.dayTests.replaceChildren();
   schoolEvents.forEach(title => {
     const item = document.createElement('p');
     item.className = 'school-pallco-detail';
-    item.textContent = `PallCo · ${title}`;
+    item.textContent = title;
     elements.dayTests.append(item);
   });
   dayTests.forEach(test => {
@@ -246,7 +247,7 @@ function renderCalendar() {
 
   monthGrid(state.view.year, state.view.month).forEach(cell => {
     const cellTests = sortTests(byDate.get(cell.key) || []);
-    const schoolEvents = pallcoEventsOn(cell.key);
+    const schoolEvents = schoolEventsOn(cell.key);
     const day = document.createElement('div');
     day.className = 'school-day';
     day.classList.toggle('is-current-month', cell.inMonth);
@@ -316,7 +317,11 @@ function renderCalendar() {
       const label = document.createElement('span');
       label.className = 'school-pallco-marker';
       label.textContent = schoolEvents.join(' · ');
-      label.title = `PallCo · ${schoolEvents.join(' · ')}`;
+      label.title = schoolEvents.join(' · ');
+      label.dataset.schools = [
+        schoolEvents.some(title => title.startsWith('PallCo')) ? 'P' : '',
+        schoolEvents.some(title => title.startsWith('Garcia de Orta')) ? 'G' : ''
+      ].filter(Boolean).join('·');
       day.append(label);
     }
     elements.calendar.append(day);
@@ -370,15 +375,20 @@ function renderPast() {
 }
 
 function renderPallcoDates() {
-  const container = document.getElementById('school-pallco-dates');
+  renderSchoolDates('school-pallco-dates', PALLCO_CALENDAR, 'Períodos letivos');
+  renderSchoolDates('school-aego-dates', AEGO_CALENDAR, 'Semestres letivos');
+}
+
+function renderSchoolDates(containerId, calendar, termHeading) {
+  const container = document.getElementById(containerId);
   container.replaceChildren();
-  for (const [type, heading] of [['term', 'Períodos letivos'], ['break', 'Interrupções letivas']]) {
+  for (const [type, heading] of [['term', termHeading], ['break', 'Interrupções letivas']]) {
     const group = document.createElement('div');
     const title = document.createElement('h3');
     title.textContent = heading;
     group.append(title);
     const list = document.createElement('dl');
-    PALLCO_CALENDAR.filter(entry => entry.type === type).forEach(entry => {
+    calendar.filter(entry => entry.type === type).forEach(entry => {
       const item = document.createElement('div');
       const name = document.createElement('dt');
       name.textContent = entry.title;

@@ -393,7 +393,7 @@ body[data-page="francisca-calendario"] {
 .school-pallco-detail { padding: .8rem; border-radius: 12px; background: var(--school-sand); }
 @media (max-width: 700px) {
   .school-pallco-marker { overflow: hidden; font-size: 0; }
-  .school-pallco-marker::after { content: 'P'; display: block; font-size: .65rem; font-weight: 800; text-align: center; }
+  .school-pallco-marker::after { content: attr(data-schools); display: block; font-size: .65rem; font-weight: 800; text-align: center; }
 }
 
 .school-past-section { overflow: hidden; }

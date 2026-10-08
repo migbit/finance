@@ -35,14 +35,42 @@ export const PALLCO_CALENDAR = Object.freeze([
   { title: 'Páscoa', start: '2027-03-22', end: '2027-04-02', type: 'break' }
 ].map(Object.freeze));
 
+export const AEGO_CALENDAR = Object.freeze([
+  { title: '1.º semestre — pré-escolar e ensino básico', start: '2026-09-14', end: '2027-02-02', type: 'term' },
+  { title: '1.º semestre — ensino secundário', start: '2026-09-21', end: '2027-02-02', type: 'term' },
+  { title: '2.º semestre — 9.º, 11.º e 12.º anos', start: '2027-02-11', end: '2027-06-04', type: 'term' },
+  { title: '2.º semestre — 5.º, 6.º, 7.º, 8.º e 10.º anos', start: '2027-02-11', end: '2027-06-11', type: 'term' },
+  { title: '2.º semestre — pré-escolar e 1.º ciclo', start: '2027-02-11', end: '2027-06-30', type: 'term' },
+  { title: 'Novembro — pré-escolar e 1.º ciclo', start: '2026-11-12', end: '2026-11-13', type: 'break' },
+  { title: 'Novembro — 2.º e 3.º ciclos e secundário', start: '2026-11-11', end: '2026-11-13', type: 'break' },
+  { title: 'Natal', start: '2026-12-21', end: '2027-01-01', type: 'break' },
+  { title: 'Avaliação sumativa', start: '2027-02-03', end: '2027-02-05', type: 'break' },
+  { title: 'Carnaval', start: '2027-02-08', end: '2027-02-10', type: 'break' },
+  { title: 'Páscoa', start: '2027-03-24', end: '2027-04-02', type: 'break' }
+].map(Object.freeze));
+
 export function pallcoEventsOn(dateKey) {
+  return calendarEventsOn(PALLCO_CALENDAR, dateKey);
+}
+
+export function schoolEventsOn(dateKey) {
+  return [
+    ...pallcoEventsOn(dateKey).map(title => `PallCo · ${title}`),
+    ...calendarEventsOn(AEGO_CALENDAR, dateKey).map(title => `Garcia de Orta · ${title}`)
+  ];
+}
+
+function calendarEventsOn(calendar, dateKey) {
   const events = [];
-  for (const entry of PALLCO_CALENDAR) {
+  for (const entry of calendar) {
     if (entry.type === 'break' && dateKey >= entry.start && dateKey <= entry.end) {
       events.push(`Interrupção letiva — ${entry.title}`);
     } else if (entry.type === 'term') {
       if (dateKey === entry.start) {
-        const title = `Início do ${entry.title.split(' — ')[0]}`;
+        const name = entry.title.split(' — ')[0];
+        const differentStarts = calendar.some(other => other.type === 'term'
+          && other.title.split(' — ')[0] === name && other.start !== entry.start);
+        const title = `Início do ${differentStarts ? entry.title : name}`;
         if (!events.includes(title)) events.push(title);
       }
       if (dateKey === entry.end) events.push(`Fim do ${entry.title}`);

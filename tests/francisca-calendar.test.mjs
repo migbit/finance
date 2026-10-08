@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   FRANCISCA_SUBJECTS,
   pallcoEventsOn,
+  schoolEventsOn,
   addTestRecord,
   countdownLabel,
   dateOnlyToOrdinal,
@@ -23,6 +24,39 @@ import {
 
 const root = new URL('../', import.meta.url);
 const today = '2026-09-15';
+
+test('distingue as interrupções de cada escola quando as datas divergem ou coincidem', () => {
+  assert.deepEqual(schoolEventsOn('2026-12-16'), ['PallCo · Interrupção letiva — Natal']);
+  assert.deepEqual(schoolEventsOn('2026-12-21'), [
+    'PallCo · Interrupção letiva — Natal', 'Garcia de Orta · Interrupção letiva — Natal'
+  ]);
+  assert.deepEqual(schoolEventsOn('2027-01-01'), ['Garcia de Orta · Interrupção letiva — Natal']);
+  assert.equal(schoolEventsOn('2027-02-10').length, 2);
+  assert.deepEqual(schoolEventsOn('2027-02-11'), [
+    'PallCo · Interrupção letiva — Carnaval', 'Garcia de Orta · Início do 2.º semestre'
+  ]);
+  assert.equal(schoolEventsOn('2027-03-22').length, 1);
+  assert.equal(schoolEventsOn('2027-03-24').length, 2);
+  assert.equal(schoolEventsOn('2027-04-02').length, 2);
+  assert.deepEqual(schoolEventsOn('2027-04-03'), []);
+});
+
+test('preserva as diferenças por ciclo e os semestres da Garcia de Orta', () => {
+  assert.deepEqual(schoolEventsOn('2026-09-14'), ['Garcia de Orta · Início do 1.º semestre — pré-escolar e ensino básico']);
+  assert.deepEqual(schoolEventsOn('2026-09-21'), ['Garcia de Orta · Início do 1.º semestre — ensino secundário']);
+  assert.equal(schoolEventsOn('2026-11-11').length, 1);
+  assert.equal(schoolEventsOn('2026-11-12').length, 2);
+  assert.equal(schoolEventsOn('2026-11-13').length, 2);
+  assert.deepEqual(schoolEventsOn('2026-11-14'), []);
+  for (const date of ['2027-02-03', '2027-02-04', '2027-02-05']) {
+    assert.deepEqual(schoolEventsOn(date), ['Garcia de Orta · Interrupção letiva — Avaliação sumativa']);
+  }
+  assert.deepEqual(schoolEventsOn('2027-02-06'), []);
+  assert.equal(schoolEventsOn('2027-02-02').length, 2);
+  assert.equal(schoolEventsOn('2027-06-04').length, 2);
+  assert.equal(schoolEventsOn('2027-06-11').length, 2);
+  assert.deepEqual(schoolEventsOn('2027-06-30'), ['Garcia de Orta · Fim do 2.º semestre — pré-escolar e 1.º ciclo']);
+});
 
 test('assinala interrupções inclusivas e respeita os dias de regresso às aulas', () => {
   for (const [start, middle, end, after, name] of [
