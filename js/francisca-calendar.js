@@ -12,6 +12,8 @@ import {
 import { db, whenAccessResolved } from './script.js';
 import {
   FRANCISCA_SUBJECTS,
+  PALLCO_CALENDAR,
+  pallcoEventsOn,
   countdownLabel,
   daysUntil,
   filterTests,
@@ -203,9 +205,16 @@ function dayAriaLabel(cell, tests) {
 
 function openDay(dateKey) {
   const dayTests = sortTests(filterTests(state.tests, state.filter).filter(test => test.testDate === dateKey));
-  if (!dayTests.length) return;
+  const schoolEvents = pallcoEventsOn(dateKey);
+  if (!dayTests.length && !schoolEvents.length) return;
   elements.dayTitle.textContent = formatDateLong(dateKey);
   elements.dayTests.replaceChildren();
+  schoolEvents.forEach(title => {
+    const item = document.createElement('p');
+    item.className = 'school-pallco-detail';
+    item.textContent = `PallCo · ${title}`;
+    elements.dayTests.append(item);
+  });
   dayTests.forEach(test => {
     const button = document.createElement('button');
     button.type = 'button';
@@ -237,20 +246,21 @@ function renderCalendar() {
 
   monthGrid(state.view.year, state.view.month).forEach(cell => {
     const cellTests = sortTests(byDate.get(cell.key) || []);
+    const schoolEvents = pallcoEventsOn(cell.key);
     const day = document.createElement('div');
     day.className = 'school-day';
     day.classList.toggle('is-current-month', cell.inMonth);
     day.classList.toggle('is-today', cell.key === todayKey());
     day.classList.toggle('has-tests', cellTests.length > 0);
     day.setAttribute('role', 'gridcell');
-    day.setAttribute('aria-label', dayAriaLabel(cell, cellTests));
+    day.setAttribute('aria-label', [dayAriaLabel(cell, cellTests), ...schoolEvents].join('. '));
 
     const number = document.createElement('span');
     number.className = 'school-day-number';
     number.textContent = String(cell.day);
     day.append(number);
 
-    if (cellTests.length) {
+    if (cellTests.length || schoolEvents.length) {
       day.tabIndex = 0;
       day.addEventListener('click', () => openDay(cell.key));
       day.addEventListener('keydown', event => {
@@ -300,6 +310,14 @@ function renderCalendar() {
         dots.append(count);
       }
       day.append(dots);
+    }
+    if (schoolEvents.length) {
+      day.classList.add('has-pallco-event');
+      const label = document.createElement('span');
+      label.className = 'school-pallco-marker';
+      label.textContent = schoolEvents.join(' · ');
+      label.title = `PallCo · ${schoolEvents.join(' · ')}`;
+      day.append(label);
     }
     elements.calendar.append(day);
   });
@@ -351,7 +369,37 @@ function renderPast() {
   });
 }
 
+function renderPallcoDates() {
+  const container = document.getElementById('school-pallco-dates');
+  container.replaceChildren();
+  for (const [type, heading] of [['term', 'Períodos letivos'], ['break', 'Interrupções letivas']]) {
+    const group = document.createElement('div');
+    const title = document.createElement('h3');
+    title.textContent = heading;
+    group.append(title);
+    const list = document.createElement('dl');
+    PALLCO_CALENDAR.filter(entry => entry.type === type).forEach(entry => {
+      const item = document.createElement('div');
+      const name = document.createElement('dt');
+      name.textContent = entry.title;
+      const dates = document.createElement('dd');
+      const start = document.createElement('time');
+      start.dateTime = entry.start;
+      start.textContent = formatDateLong(entry.start);
+      const end = document.createElement('time');
+      end.dateTime = entry.end;
+      end.textContent = formatDateLong(entry.end);
+      dates.append(start, ' a ', end);
+      item.append(name, dates);
+      list.append(item);
+    });
+    group.append(list);
+    container.append(group);
+  }
+}
+
 function renderAll() {
+  renderPallcoDates();
   renderUpcoming();
   renderSummary();
   renderCalendar();
@@ -521,6 +569,8 @@ function bindEvents() {
 async function init() {
   setupSubjects();
   bindEvents();
+  renderPallcoDates();
+  renderCalendar();
   const access = await whenAccessResolved();
   if (access.mode !== 'write' || !access.user) {
     elements.main.setAttribute('aria-busy', 'false');

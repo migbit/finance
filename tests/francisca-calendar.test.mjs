@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   FRANCISCA_SUBJECTS,
+  pallcoEventsOn,
   addTestRecord,
   countdownLabel,
   dateOnlyToOrdinal,
@@ -22,6 +23,31 @@ import {
 
 const root = new URL('../', import.meta.url);
 const today = '2026-09-15';
+
+test('assinala interrupções inclusivas e respeita os dias de regresso às aulas', () => {
+  for (const [start, middle, end, after, name] of [
+    ['2026-12-16', '2026-12-25', '2026-12-31', '2027-01-01', 'Natal'],
+    ['2027-02-08', '2027-02-10', '2027-02-12', '2027-02-13', 'Carnaval'],
+    ['2027-03-22', '2027-03-28', '2027-04-02', '2027-04-03', 'Páscoa']
+  ]) {
+    for (const day of [start, middle, end]) {
+      assert.deepEqual(pallcoEventsOn(day), [`Interrupção letiva — ${name}`]);
+    }
+    assert.deepEqual(pallcoEventsOn(after), []);
+  }
+  assert.deepEqual(pallcoEventsOn('2026-09-10'), ['Início do 1.º período']);
+  assert.deepEqual(pallcoEventsOn('2026-12-15'), ['Fim do 1.º período']);
+  assert.deepEqual(pallcoEventsOn('2027-01-04'), ['Início do 2.º período']);
+  assert.deepEqual(pallcoEventsOn('2027-03-19'), ['Fim do 2.º período']);
+});
+
+test('o terceiro período tem um início comum e três términos por ano ou curso', () => {
+  assert.deepEqual(pallcoEventsOn('2027-04-05'), ['Início do 3.º período']);
+  assert.deepEqual(pallcoEventsOn('2027-06-04'), ['Fim do 3.º período — 9.º, 11.º e 12.º anos']);
+  assert.deepEqual(pallcoEventsOn('2027-06-11'), ['Fim do 3.º período — 5.º, 6.º, 7.º, 8.º e 10.º anos']);
+  assert.deepEqual(pallcoEventsOn('2027-07-16'), ['Fim do 3.º período — iniciações e cursos livres']);
+  assert.deepEqual(pallcoEventsOn('2027-06-05'), []);
+});
 const sample = [
   { id: 'math-2', subject: 'Matemática', testDate: '2026-10-03', description: 'Teste 2' },
   { id: 'port-1', subject: 'Português', testDate: '2026-09-15', description: 'Apresentação oral' },

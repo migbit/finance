@@ -382,6 +382,20 @@ body[data-page="francisca-calendario"] {
 .school-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin-top: .8rem; }
 .school-legend span { display: flex; align-items: center; gap: .35rem; color: var(--school-muted); font-size: .68rem; }
 
+.school-pallco-dates { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.5rem; }
+.school-pallco-dates h3 { margin-bottom: .7rem; font-size: 1rem; }
+.school-pallco-dates dl { display: grid; gap: .65rem; }
+.school-pallco-dates dl > div { padding: .75rem; border-radius: 12px; background: var(--school-cream); }
+.school-pallco-dates dt { font-weight: 700; font-size: .85rem; }
+.school-pallco-dates dd { margin: .3rem 0 0; color: var(--school-muted); font-size: .8rem; }
+.school-day.has-pallco-event { box-shadow: inset 0 -3px #708266; cursor: pointer; }
+.school-pallco-marker { display: block; margin-top: .25rem; color: var(--school-green-dark); font-size: .6rem; overflow-wrap: anywhere; }
+.school-pallco-detail { padding: .8rem; border-radius: 12px; background: var(--school-sand); }
+@media (max-width: 700px) {
+  .school-pallco-marker { overflow: hidden; font-size: 0; }
+  .school-pallco-marker::after { content: 'P'; display: block; font-size: .65rem; font-weight: 800; text-align: center; }
+}
+
 .school-past-section { overflow: hidden; }
 .school-past-section summary { display: flex; min-height: 64px; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; font-weight: 800; cursor: pointer; }
 .school-count { display: grid; min-width: 30px; height: 30px; place-items: center; border-radius: 999px; background: var(--school-sand); font-size: .75rem; }

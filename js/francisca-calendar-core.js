@@ -24,6 +24,33 @@ export const SUBJECT_COLORS = Object.freeze([
   '#4f7793'
 ]);
 
+export const PALLCO_CALENDAR = Object.freeze([
+  { title: '1.º período', start: '2026-09-10', end: '2026-12-15', type: 'term' },
+  { title: '2.º período', start: '2027-01-04', end: '2027-03-19', type: 'term' },
+  { title: '3.º período — 9.º, 11.º e 12.º anos', start: '2027-04-05', end: '2027-06-04', type: 'term' },
+  { title: '3.º período — 5.º, 6.º, 7.º, 8.º e 10.º anos', start: '2027-04-05', end: '2027-06-11', type: 'term' },
+  { title: '3.º período — iniciações e cursos livres', start: '2027-04-05', end: '2027-07-16', type: 'term' },
+  { title: 'Natal', start: '2026-12-16', end: '2026-12-31', type: 'break' },
+  { title: 'Carnaval', start: '2027-02-08', end: '2027-02-12', type: 'break' },
+  { title: 'Páscoa', start: '2027-03-22', end: '2027-04-02', type: 'break' }
+].map(Object.freeze));
+
+export function pallcoEventsOn(dateKey) {
+  const events = [];
+  for (const entry of PALLCO_CALENDAR) {
+    if (entry.type === 'break' && dateKey >= entry.start && dateKey <= entry.end) {
+      events.push(`Interrupção letiva — ${entry.title}`);
+    } else if (entry.type === 'term') {
+      if (dateKey === entry.start) {
+        const title = `Início do ${entry.title.split(' — ')[0]}`;
+        if (!events.includes(title)) events.push(title);
+      }
+      if (dateKey === entry.end) events.push(`Fim do ${entry.title}`);
+    }
+  }
+  return events;
+}
+
 const DAY_MS = 86_400_000;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DATE_FORMATTER = new Intl.DateTimeFormat('pt-PT', {
