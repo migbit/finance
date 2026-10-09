@@ -1,0 +1,132 @@
+/* Shared, opt-in theme. Load after the base/mobile styles and add
+   data-theme="dark" to <body>. Page layouts belong in their own stylesheet. */
+body[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #101722;
+  --surface: #182231;
+  --surface-raised: #202d3e;
+  --primary: #2563eb;
+  --secondary: #93c5fd;
+  --accent: #60a5fa;
+  --text: #f0f4fa;
+  --text-dim: #b7c5d8;
+  --muted: #94a6be;
+  --border: #394b63;
+  --divider: #2b3b50;
+  --p1: var(--primary);
+  --p2: var(--secondary);
+  --p3: var(--muted);
+  --p4: var(--background);
+  --bg: var(--background);
+  --card: var(--surface);
+  --th-bg: var(--surface-raised);
+  --tr-alt: #1c2838;
+  --tr-hover: #25364c;
+  --ok: #6ee7a0;
+  --bad: #fda4af;
+  --positive-bg: #183b32;
+  --negative-bg: #432b38;
+  --selected-bg: #334b66;
+  --selected-border: #6c88a8;
+  --selected-text: #fff;
+  --shadow-1: none;
+  --shadow-2: 0 18px 48px #0006;
+  background: var(--background);
+  color: var(--text);
+}
+
+body[data-theme="dark"] :is(h1, h2, h3, h4, h5) { color: var(--text); }
+body[data-theme="dark"] :is(.viz-card, .card, .loading-content) {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+body[data-theme="dark"] :is(button, select, input, textarea) { font: inherit; }
+body[data-theme="dark"] :is(select, input, textarea) {
+  background: var(--background);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+body[data-theme="dark"] select { min-height: 44px; padding: .55rem .7rem; }
+body[data-theme="dark"] :is(button, select, input, a, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+body[data-theme="dark"] .segmented {
+  padding: 7px;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  box-shadow: none;
+}
+body[data-theme="dark"] :is(.segmented button, .chip-btn, .filter-btn) {
+  width: auto;
+  min-height: 40px;
+  padding: .55rem .85rem;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-dim);
+  box-shadow: none;
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transform: none;
+}
+body[data-theme="dark"] button.chip-btn { border-color: var(--border); }
+body[data-theme="dark"] :is(.segmented button, .chip-btn, .filter-btn):hover {
+  color: var(--text);
+  background: var(--surface-raised);
+  box-shadow: none;
+  transform: none;
+}
+body[data-theme="dark"] :is(.segmented button, .chip-btn, .filter-btn)[aria-pressed="true"] {
+  background: var(--selected-bg);
+  border-color: var(--selected-border);
+  color: var(--selected-text);
+  box-shadow: none;
+}
+body[data-theme="dark"] :is(.segmented button, .chip-btn)[aria-pressed="true"]:hover {
+  background: #405d7c;
+}
+body[data-theme="dark"] table { color: var(--text); background: var(--card); }
+body[data-theme="dark"] :is(th, td) { border-color: var(--divider); }
+body[data-theme="dark"] th { background: var(--th-bg); color: var(--text-dim); }
+body[data-theme="dark"] tbody tr:nth-child(even) { background: var(--tr-alt); }
+body[data-theme="dark"] tbody tr:hover { background: var(--tr-hover); }
+
+/* Navigation is shared by all pages. Keep these rules alongside the theme. */
+body[data-theme="dark"] > header,
+body[data-theme="dark"] #nav-menu,
+body[data-theme="dark"] #nav-menu .nav-links .nav-group .nav-dropdown {
+  background: var(--card);
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: none;
+}
+body[data-theme="dark"] #nav-menu .nav-links .nav-link,
+body[data-theme="dark"] #nav-menu .nav-links .nav-group .nav-dropdown a,
+body[data-theme="dark"] #nav-menu .login-block a,
+body[data-theme="dark"] #menu-icon {
+  background: transparent;
+  color: var(--text-dim);
+  border-color: var(--border);
+  box-shadow: none;
+}
+body[data-theme="dark"] #nav-menu .nav-links .nav-link {
+  font-size: .8rem;
+  padding: .5rem .7rem;
+}
+body[data-theme="dark"] #nav-menu .nav-links .nav-link:hover,
+body[data-theme="dark"] #nav-menu .nav-links .nav-group .nav-dropdown a:hover,
+body[data-theme="dark"] #nav-menu .nav-links .nav-group .nav-dropdown a.active {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+body[data-theme="dark"] .module-loading::after { background: #101722b3; }
+body[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-raised) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+}

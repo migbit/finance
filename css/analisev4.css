@@ -1,0 +1,193 @@
+/* Análise layout; shared colors and controls live in theme-dark.css. */
+body[data-page="analisev4"][data-theme="dark"] main {
+  padding-inline: clamp(16px, 3vw, 40px);
+  padding-bottom: 40px;
+}
+body[data-page="analisev4"][data-theme="dark"] .analisev4-intro h2 {
+  text-align: left;
+  font-size: 1.2rem;
+  color: var(--text-dim);
+}
+body[data-page="analisev4"][data-theme="dark"] .report-section { margin: 0; border-radius: 0; }
+body[data-page="analisev4"][data-theme="dark"] .viz-card {
+  padding: 24px;
+  border-radius: 14px;
+}
+body[data-page="analisev4"][data-theme="dark"] .analisev4-panel { display: block; }
+body[data-page="analisev4"][data-theme="dark"] .analisev4-panel > .report-section + .report-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--divider);
+}
+body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+body[data-page="analisev4"][data-theme="dark"] :is(.analisev4-dashboard-header, .analisev4-section-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  text-align: left;
+}
+body[data-page="analisev4"][data-theme="dark"] :is(.analisev4-dashboard-header, .analisev4-section-header, .analisev4-details-summary) h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  text-align: left;
+  letter-spacing: 0;
+}
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-title p {
+  margin-top: 6px;
+  color: var(--text-dim);
+  font-size: .85rem;
+}
+body[data-page="analisev4"][data-theme="dark"] .analisev4-global-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile {
+  padding: 16px;
+  background: var(--background);
+  border: 1px solid var(--divider);
+  border-radius: 10px;
+  gap: 8px;
+  order: 1;
+  font-variant-numeric: tabular-nums;
+}
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile--primary {
+  order: 0;
+  background: #1b3050;
+  border-color: #588bcd;
+}
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-label { font-size: .72rem; letter-spacing: .025em; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile strong { font-size: clamp(1.1rem, 1.8vw, 1.65rem); }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile small { font-size: .78rem; line-height: 1.5; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-single,
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-compare-row { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-comparison { display: grid; grid-template-rows: repeat(2, 1fr); flex: 1; gap: 14px; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-compare-row + .progresso-v4-compare-row { border-top: 1px solid var(--border); padding-top: 14px; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-apartment { font-size: .8rem; font-weight: 700; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-single[hidden],
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-comparison[hidden] { display: none; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-delta { font-size: .78rem; white-space: normal; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-delta.is-positive { background: var(--positive-bg); color: var(--ok); }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-delta.is-negative { background: var(--negative-bg); color: var(--bad); }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-delta.is-neutral { background: var(--surface-raised); color: var(--text-dim); }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile[data-progress-kpi="target"] { grid-column: auto; border-style: dashed; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile[data-progress-kpi="target"] strong { font-size: 1.25rem; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-target-track { position: relative; height: 24px; background: var(--divider); border: 1px solid var(--border); }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-target-track .progresso-v4-target-fill { background: #42638b; }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-target-track .progresso-v4-target-label {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 2px #0008;
+}
+body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-heading {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-metric-switch { width: auto; }
+body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-heading > .segmented { margin: 0; }
+body[data-page="analisev4"][data-theme="dark"] #faturacao-v4-mode-switch { width: max-content; flex: 0 0 auto; }
+body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-toolbar {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'left right';
+  gap: 12px;
+}
+body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-chart-wrap { height: 340px; }
+body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-toolbar:has(#faturacao-v4-toggle-chart-years[hidden]) { display: none; }
+body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-table-actions { justify-content: flex-start; }
+body[data-page="analisev4"][data-theme="dark"] .analisev4-mobile-select { display: none; }
+body[data-page="analisev4"][data-theme="dark"] .reservas-v4-card { display: block; }
+body[data-page="analisev4"][data-theme="dark"] .analisev4-details-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+  min-height: 32px;
+}
+body[data-page="analisev4"][data-theme="dark"] .analisev4-details-summary::-webkit-details-marker { display: none; }
+body[data-page="analisev4"][data-theme="dark"] .analisev4-details-summary::after { content: '+'; margin-left: auto; color: var(--accent); font-size: 1.4rem; }
+body[data-page="analisev4"][data-theme="dark"] details[open] > .analisev4-details-summary::after { content: '−'; }
+body[data-page="analisev4"][data-theme="dark"] #reservas-v4-context { color: var(--text-dim); font-size: .85rem; }
+body[data-page="analisev4"][data-theme="dark"] .reservas-v4-content { display: grid; gap: 16px; margin-top: 24px; }
+body[data-page="analisev4"][data-theme="dark"] .reservas-v4-controls { align-items: flex-start; }
+body[data-page="analisev4"][data-theme="dark"] .reservas-v4-table-switch { flex-wrap: wrap; }
+body[data-page="analisev4"][data-theme="dark"] .reservas-v4-table-actions { justify-content: flex-end; }
+body[data-page="analisev4"][data-theme="dark"] .reservas-v4-note { text-align: left; }
+
+/* Override legacy light table colors, including frozen headers/first columns. */
+body[data-page="analisev4"][data-theme="dark"] :is(.faturacao-v4-table, .reservas-v4-table) thead th { background: var(--th-bg); }
+body[data-page="analisev4"][data-theme="dark"] :is(.faturacao-v4-table, .reservas-v4-table) thead th:first-child { background: var(--th-bg); }
+body[data-page="analisev4"][data-theme="dark"] :is(.faturacao-v4-total-row, .reservas-v4-total-row) td { background: var(--th-bg) !important; border-color: var(--border); }
+body[data-page="analisev4"][data-theme="dark"] :is(.faturacao-v4-table td.faturacao-v4-best, .reservas-v4-highlight, tr.reservas-v4-highlight td) { background: var(--positive-bg) !important; color: var(--ok); box-shadow: none; }
+body[data-page="analisev4"][data-theme="dark"] :is(.faturacao-v4-table .faturacao-v4-diff-positive, .reservas-v4-diff-positive) { color: var(--ok) !important; }
+body[data-page="analisev4"][data-theme="dark"] :is(.faturacao-v4-table .faturacao-v4-diff-negative, .reservas-v4-diff-negative) { color: var(--bad) !important; }
+body[data-page="analisev4"][data-theme="dark"] :is(.faturacao-v4-cell-123, .apt-123) { color: #93c5fd; }
+body[data-page="analisev4"][data-theme="dark"] :is(.faturacao-v4-cell-1248, .apt-1248) { color: rgb(245, 133, 20); }
+body[data-page="analisev4"][data-theme="dark"] .progresso-v4-compare-row[data-apartment="1248"] .progresso-v4-target-track .progresso-v4-target-fill { background: #955016; }
+body[data-page="analisev4"][data-theme="dark"] .qualidade-v4-alert { background: var(--negative-bg); color: var(--bad); border-color: #805060; box-shadow: none; }
+
+@media (max-width: 1000px) {
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile--primary { grid-column: 1 / -1; }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile[data-progress-kpi="avg"],
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile[data-progress-kpi="nights"] { order: 2; }
+}
+@media (max-width: 768px) {
+  body[data-page="analisev4"][data-theme="dark"] .viz-card { padding: 16px; }
+  body[data-page="analisev4"][data-theme="dark"] :is(.analisev4-dashboard-header, .analisev4-section-header) { align-items: stretch; flex-direction: column; }
+  body[data-page="analisev4"][data-theme="dark"] .analisev4-shared-view { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(78px, 1.4fr); width: 100%; overflow: visible; }
+  body[data-page="analisev4"][data-theme="dark"] .analisev4-shared-view button { padding-inline: 2px; font-size: .8rem; }
+  body[data-page="analisev4"][data-theme="dark"] .analisev4-global-controls { display: grid; gap: 10px; width: 100%; }
+  body[data-page="analisev4"][data-theme="dark"] .analisev4-fee-switch { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  body[data-page="analisev4"][data-theme="dark"] .analisev4-fee-switch button { height: auto; padding: 8px 4px; font-size: .8rem; white-space: normal; }
+  body[data-page="analisev4"][data-theme="dark"] .segmented button { width: auto; min-width: 0; min-height: 44px; }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile { padding: 12px; grid-column: auto; }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile--primary { grid-column: 1 / -1; }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile strong { font-size: 1.25rem; }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-tile--primary strong { font-size: 1.9rem; }
+  body[data-page="analisev4"][data-theme="dark"] :is(.faturacao-v4-metric-switch, .reservas-v4-table-switch) { display: none; }
+  body[data-page="analisev4"][data-theme="dark"] .analisev4-mobile-select { display: grid; gap: 6px; width: 100%; color: var(--text-dim); font-size: .85rem; }
+  body[data-page="analisev4"][data-theme="dark"] .analisev4-mobile-select select { width: 100%; min-width: 0; }
+  body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-toolbar { grid-template-columns: 1fr; grid-template-areas: 'left' 'right'; gap: 8px; }
+  body[data-page="analisev4"][data-theme="dark"] #faturacao-v4-mode-switch { display: flex; width: 100%; overflow: visible; }
+  body[data-page="analisev4"][data-theme="dark"] #faturacao-v4-mode-switch button { flex: 1; }
+  body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-toolbar .toolbar-right { justify-content: flex-start; }
+  body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-toolbar .toolbar-right:has([hidden]) { display: none; }
+  body[data-page="analisev4"][data-theme="dark"] .faturacao-v4-chart-wrap { height: 290px; min-height: 0; }
+  body[data-page="analisev4"][data-theme="dark"] .analisev4-details-summary { flex-wrap: wrap; }
+  body[data-page="analisev4"][data-theme="dark"] .analisev4-details-summary h3 { font-size: 1rem; }
+  body[data-page="analisev4"][data-theme="dark"] .reservas-v4-year-control { width: 100%; justify-content: space-between; }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-grid.is-comparing { grid-template-columns: minmax(0, 1fr); }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-comparison { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; gap: 12px; }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-compare-row + .progresso-v4-compare-row { border-top: 0; padding-top: 0; border-left: 1px solid var(--border); padding-left: 12px; }
+  body[data-page="analisev4"][data-theme="dark"] .progresso-v4-comparison strong { font-size: 1.2rem; }
+}

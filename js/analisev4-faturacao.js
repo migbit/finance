@@ -1,43 +1,25 @@
 import { createChart, destroyChartSafe } from './analisev2-charts.js';
 import { getFaturas } from './analise-data.js';
+import { applyAirbnbFeeMode } from './analisev4-values.js';
 import { computeOccupancyPercent } from './analise-metrics.js';
 import { formatEuro, parseLocalDate, splitFaturaPorDia, valorFatura, MONTH_LABELS } from './analisev2-core.js';
 
 const BASE_YEAR = 2024;
-const OCCUPANCY_BASE_YEAR = 2024;
+const OCCUPANCY_BASE_YEAR = 2025;
 const APARTMENTS = ['123', '1248'];
 const COLORS = {
-  total: 'rgb(20, 78, 3)',
-  '123': 'rgba(54,162,235,1)',
+  total: 'rgb(96, 165, 250)',
+  '123': 'rgba(96,165,250,1)',
   '1248': 'rgba(245,133,20,1)'
 };
-const HISTORICAL_AVERAGE_COLOR = 'rgba(71, 85, 105, 0.72)';
 const TOTAL_YEAR_COLORS = [
-  'rgb(20, 78, 3)',
-  'rgba(99,102,241,1)',
-  'rgba(16,185,129,1)',
-  'rgba(225,29,72,1)',
-  'rgba(100,116,139,1)',
-  'rgba(147,51,234,1)'
+  'rgb(251, 191, 36)',
+  'rgba(192,132,252,1)',
+  'rgba(96,165,250,1)',
+  'rgba(94,234,212,1)',
+  'rgba(251,146,60,1)',
+  'rgba(244,114,182,1)'
 ];
-const APARTMENT_YEAR_COLORS = {
-  '123': [
-    'rgba(37,99,235,1)',
-    'rgba(14,165,233,1)',
-    'rgba(29,78,216,1)',
-    'rgba(6,182,212,1)',
-    'rgba(30,64,175,1)',
-    'rgba(96,165,250,1)'
-  ],
-  '1248': [
-    'rgba(217,119,6,1)',
-    'rgba(245,158,11,1)',
-    'rgba(234,88,12,1)',
-    'rgba(251,191,36,1)',
-    'rgba(194,65,12,1)',
-    'rgba(253,186,116,1)'
-  ]
-};
 
 const VIEW_CONFIG = {
   total: { apartments: ['123', '1248'], color: COLORS.total },
@@ -50,7 +32,8 @@ const state = {
   metric: 'revenue',
   mode: 'mes',
   view: 'total',
-  progressView: 'total',
+  includeAirbnbFee: true,
+  sourceFaturas: [],
   faturas: [],
   dailyEntries: [],
   chart: null,
@@ -64,7 +47,6 @@ let modeButtonsController = null;
 let metricButtonsController = null;
 let viewButtonsController = null;
 let tableButtonsController = null;
-let progressButtonsController = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!document.querySelector('[data-module="faturacao-v4"]')) return;
@@ -82,8 +64,8 @@ async function loadData() {
   window.loadingManager?.show('faturacao-v4', { type: 'skeleton' });
   try {
     const rows = await getFaturas();
-    state.faturas = rows.filter((row) => APARTMENTS.includes(String(row.apartamento)));
-    state.dailyEntries = buildDailyEntries(state.faturas);
+    state.sourceFaturas = rows.filter((row) => APARTMENTS.includes(String(row.apartamento)));
+    rebuildAnalysisValues();
     if (!state.dailyEntries.length) {
       showEmptyState('Sem dados disponíveis.');
       return;
@@ -92,6 +74,7 @@ async function loadData() {
   } catch (error) {
     window.errorHandler?.handleError('faturacao-v4', error, 'loadData', loadData);
     state.faturas = [];
+    state.sourceFaturas = [];
     state.dailyEntries = [];
     showEmptyState('Sem dados disponíveis.');
   } finally {
@@ -104,7 +87,6 @@ function bindControls() {
   bindModeButtons();
   bindViewButtons();
   bindTableButtons();
-  bindProgressButtons();
 }
 
 function bindMetricButtons() {
@@ -116,14 +98,21 @@ function bindMetricButtons() {
     btn.addEventListener('click', () => {
       const metric = btn.dataset.faturacaoV4Metric;
       if (!metric || metric === state.metric) return;
-      state.metric = metric;
-      if (metric === 'avg-night') state.mode = 'mes';
-      updateMetricButtons();
-      updateModeButtons();
-      render();
+      selectMetric(metric);
     }, { signal });
   });
+  document.getElementById('faturacao-v4-metric-select')?.addEventListener('change', (event) => {
+    selectMetric(event.target.value);
+  }, { signal });
   updateMetricButtons();
+}
+
+function selectMetric(metric) {
+  state.metric = metric;
+  if (metric === 'avg-night') state.mode = 'mes';
+  updateMetricButtons();
+  updateModeButtons();
+  render();
 }
 
 function bindModeButtons() {
@@ -151,13 +140,30 @@ function bindViewButtons() {
   document.querySelectorAll('[data-faturacao-v4-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const view = btn.dataset.faturacaoV4View;
-      if (!view || view === state.view) return;
+      if (!VIEW_CONFIG[view] || view === state.view) return;
       state.view = view;
       updateViewButtons();
       render();
+      window.dispatchEvent(new CustomEvent('analisev4:view-change', { detail: { view: view === 'compare' ? 'total' : view } }));
+    }, { signal });
+  });
+  document.querySelectorAll('[data-airbnb-fee]').forEach(button => {
+    button.addEventListener('click', () => {
+      const includeFee = button.dataset.airbnbFee === 'included';
+      if (includeFee === state.includeAirbnbFee) return;
+      state.includeAirbnbFee = includeFee;
+      rebuildAnalysisValues();
+      updateViewButtons();
+      render();
+      window.dispatchEvent(new CustomEvent('analisev4:fee-change', { detail: { includeFee } }));
     }, { signal });
   });
   updateViewButtons();
+}
+
+function rebuildAnalysisValues() {
+  state.faturas = applyAirbnbFeeMode(state.sourceFaturas, state.includeAirbnbFee);
+  state.dailyEntries = buildDailyEntries(state.faturas);
 }
 
 function bindTableButtons() {
@@ -202,23 +208,6 @@ function bindTableButtons() {
   }, { signal });
 }
 
-function bindProgressButtons() {
-  if (progressButtonsController) progressButtonsController.abort();
-  progressButtonsController = new AbortController();
-  const { signal } = progressButtonsController;
-
-  document.querySelectorAll('[data-progresso-v4-view]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const view = btn.dataset.progressoV4View;
-      if (!view || view === state.progressView) return;
-      state.progressView = view;
-      updateProgressButtons();
-      renderProgressDashboard();
-    }, { signal });
-  });
-  updateProgressButtons();
-}
-
 function updateModeButtons() {
   document.querySelectorAll('[data-faturacao-v4-mode]').forEach((btn) => {
     const active = btn.dataset.faturacaoV4Mode === state.mode;
@@ -228,6 +217,8 @@ function updateModeButtons() {
 }
 
 function updateMetricButtons() {
+  const select = document.getElementById('faturacao-v4-metric-select');
+  if (select) select.value = state.metric;
   document.querySelectorAll('[data-faturacao-v4-metric]').forEach((btn) => {
     const active = btn.dataset.faturacaoV4Metric === state.metric;
     btn.classList.toggle('active', active);
@@ -236,16 +227,13 @@ function updateMetricButtons() {
 }
 
 function updateViewButtons() {
+  document.querySelectorAll('[data-airbnb-fee]').forEach(button => {
+    const active = (button.dataset.airbnbFee === 'included') === state.includeAirbnbFee;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
   document.querySelectorAll('[data-faturacao-v4-view]').forEach((btn) => {
     const active = btn.dataset.faturacaoV4View === state.view;
-    btn.classList.toggle('active', active);
-    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
-}
-
-function updateProgressButtons() {
-  document.querySelectorAll('[data-progresso-v4-view]').forEach((btn) => {
-    const active = btn.dataset.progressoV4View === state.progressView;
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
@@ -283,14 +271,15 @@ function updateTableVisibility() {
     tableBtn.setAttribute('aria-expanded', state.tableVisible ? 'true' : 'false');
   }
   if (yearsBtn) {
-    yearsBtn.hidden = !state.tableVisible || getAvailableYears().length <= getDefaultTableYears().length;
-    yearsBtn.textContent = state.showAllYears ? 'Mostrar só atual e anterior' : 'Mostrar anos desde 2024';
+    yearsBtn.hidden = !state.tableVisible || getTableAvailableYears().length <= getDefaultTableYears().length;
+    yearsBtn.textContent = state.showAllYears ? 'Mostrar só atual e anterior' : 'Mostrar histórico';
   }
   if (chartYearsBtn) {
     const metricYears = getDataYearsForMetric();
-    const canExpandYears = metricYears.length > getDefaultChartYears(metricYears).length && state.view !== 'compare';
+    const canExpandYears = metricYears.length > getDefaultChartYears(metricYears).length
+      && !(state.view === 'compare' && ['revpan', 'avg-night'].includes(state.metric));
     chartYearsBtn.hidden = !canExpandYears;
-    chartYearsBtn.textContent = state.showAllChartYears ? 'Ver 2024, atual e anterior' : 'Ver todos os anos';
+    chartYearsBtn.textContent = state.showAllChartYears ? 'Ocultar anos anteriores' : 'Ver anos anteriores';
     chartYearsBtn.setAttribute('aria-pressed', state.showAllChartYears ? 'true' : 'false');
   }
   if (expandBtn) {
@@ -312,57 +301,104 @@ function render() {
 
 function renderProgressDashboard() {
   const currentYear = getCurrentDataYear();
-  const previousYear = currentYear - 1;
-  const previousYearEl = document.getElementById('progresso-v4-previous-year');
-  if (previousYearEl) previousYearEl.textContent = previousYear;
-
-  const apartments = VIEW_CONFIG[state.progressView]?.apartments || VIEW_CONFIG.total.apartments;
   const now = new Date();
-  const month = now.getMonth() + 1;
-  const day = now.getDate();
+  setText('progresso-v4-current-year', currentYear);
+  setText('progresso-v4-previous-year', currentYear - 1);
+  setText('progresso-v4-cutoff', `Até ${now.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })}`);
+  const comparing = state.view === 'compare';
+  setProgressComparison(comparing);
+  if (comparing) {
+    const snapshots = APARTMENTS.map(apartment => ({
+      apartment,
+      metrics: getProgressMetrics([apartment], currentYear, now.getMonth() + 1, now.getDate())
+    }));
+    document.querySelectorAll('[data-progress-comparison]').forEach(container => {
+      const key = container.dataset.progressComparison;
+      container.innerHTML = snapshots.map(({ apartment, metrics }) =>
+        progressComparisonRow(apartment, metrics[key])
+      ).join('');
+    });
+    return;
+  }
+  const apartments = VIEW_CONFIG[state.view]?.apartments || VIEW_CONFIG.total.apartments;
+  const metrics = getProgressMetrics(apartments, currentYear, now.getMonth() + 1, now.getDate());
+  Object.entries(metrics).forEach(([key, metric]) => setProgressTile(key, metric));
+  updateTargetProgress(metrics.target.base + metrics.target.diff, metrics.target.base);
+}
 
+function getProgressMetrics(apartments, currentYear, month, day) {
+  const previousYear = currentYear - 1;
+  const metrics = {};
   const currentMonth = summarizeEntries({ apartments, year: currentYear, month, maxDay: day });
   const previousMonth = summarizeEntries({ apartments, year: previousYear, month, maxDay: day });
   const currentYtd = summarizeEntries({ apartments, year: currentYear, maxMonth: month, currentMonthDay: day });
   const previousYtd = summarizeEntries({ apartments, year: previousYear, maxMonth: month, currentMonthDay: day });
   const previousFullYear = summarizeEntries({ apartments, year: previousYear });
 
-  setProgressTile('month', {
+  metrics.month = {
     value: formatEuro(currentMonth.revenue),
     meta: `${MONTH_LABELS[month - 1]} ${currentYear}: ${formatEuro(previousMonth.revenue)} em ${previousYear}`,
     diff: currentMonth.revenue - previousMonth.revenue,
     base: previousMonth.revenue
-  });
-  setProgressTile('ytd', {
+  };
+  metrics.ytd = {
     value: formatEuro(currentYtd.revenue),
     meta: `Jan-${MONTH_LABELS[month - 1]} ${currentYear}: ${formatEuro(previousYtd.revenue)} em ${previousYear}`,
     diff: currentYtd.revenue - previousYtd.revenue,
     base: previousYtd.revenue
-  });
-  setProgressTile('target', {
+  };
+  metrics.target = {
     value: formatTargetGap(currentYtd.revenue, previousFullYear.revenue),
     meta: `Total ${previousYear}: ${formatEuro(previousFullYear.revenue)}`,
     diff: currentYtd.revenue - previousFullYear.revenue,
     base: previousFullYear.revenue,
     neutral: true
-  });
-  updateTargetProgress(currentYtd.revenue, previousFullYear.revenue);
-  setProgressTile('avg', {
+  };
+  metrics.avg = {
     value: formatEuro(avgNight(currentYtd)),
     meta: `${previousYear}: ${formatEuro(avgNight(previousYtd))}`,
     diff: avgNight(currentYtd) - avgNight(previousYtd),
     base: avgNight(previousYtd)
-  });
-  setProgressTile('nights', {
+  };
+  metrics.nights = {
     value: formatNumber(currentYtd.nights),
     meta: `${previousYear}: ${formatNumber(previousYtd.nights)} noites`,
     diff: currentYtd.nights - previousYtd.nights,
     base: previousYtd.nights,
     unit: 'noites'
-  });
+  };
+  return metrics;
+}
+
+function setProgressComparison(comparing) {
+  document.querySelector('.progresso-v4-grid')?.classList.toggle('is-comparing', comparing);
+  document.querySelectorAll('.progresso-v4-single').forEach(el => { el.hidden = comparing; });
+  document.querySelectorAll('[data-progress-comparison]').forEach(el => { el.hidden = !comparing; });
+}
+
+function progressComparisonRow(apartment, metric) {
+  const { value, meta, diff, base, unit = '€', neutral = false } = metric;
+  const progress = base > 0 ? ((base + diff) / base) * 100 : 0;
+  const delta = neutral
+    ? (base > 0 ? `${Math.round(progress)}% do total anterior` : 'Sem base de comparação')
+    : formatProgressDelta(diff, base, unit);
+  const tone = neutral ? 'neutral' : diff >= 0 ? 'positive' : 'negative';
+  const track = neutral ? `<div class="progresso-v4-target-track" role="progressbar"
+    aria-label="AL ${apartment}: progresso para igualar o total do ano anterior"
+    aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(Math.max(0, Math.min(100, progress)))}" aria-valuetext="${escapeHtml(delta)}">
+    <span class="progresso-v4-target-fill" style="width:${Math.max(0, Math.min(100, progress))}%"></span>
+    <span class="progresso-v4-target-label">${base > 0 ? `${Math.round(progress)}%` : '—'}</span></div>` : '';
+  return `<div class="progresso-v4-compare-row" data-apartment="${apartment}">
+    <span class="progresso-v4-apartment apt-${apartment}">${apartment}</span>
+    <strong>${escapeHtml(value)}</strong>
+    <small>${escapeHtml(meta)}</small>
+    ${track}
+    ${neutral ? '' : `<span class="progresso-v4-delta is-${tone}">${escapeHtml(delta)}</span>`}
+  </div>`;
 }
 
 function renderProgressEmpty() {
+  setProgressComparison(false);
   ['month', 'ytd', 'target', 'avg', 'nights'].forEach((key) => {
     setText(`progresso-v4-${key}-value`, '—');
     setText(`progresso-v4-${key}-meta`, 'Sem dados');
@@ -373,8 +409,9 @@ function renderProgressEmpty() {
 
 function formatTargetGap(currentRevenue, previousFullYearRevenue) {
   const diff = currentRevenue - previousFullYearRevenue;
-  if (diff >= 0) return `${formatEuro(diff)} acima`;
-  return `Faltam ${formatEuro(Math.abs(diff))}`;
+  const amount = formatEuro(Math.abs(diff)).replace(' €', '\u00a0€');
+  if (diff >= 0) return `${amount} acima`;
+  return `Faltam ${amount}`;
 }
 
 function setProgressTile(key, { value, meta, diff, base, unit = '€', neutral = false }) {
@@ -400,13 +437,16 @@ function updateTargetProgress(currentRevenue, previousRevenue) {
   const bar = document.getElementById('progresso-v4-target-bar');
   const delta = document.getElementById('progresso-v4-target-delta');
   if (bar) bar.style.width = `${bounded}%`;
-  if (track) track.setAttribute('aria-valuenow', String(Math.round(bounded)));
+  if (track) {
+    track.setAttribute('aria-valuenow', String(Math.round(bounded)));
+    track.setAttribute('aria-valuetext', previousRevenue > 0 ? `${Math.round(progress)}% do total anterior` : 'Sem base de comparação');
+  }
   if (delta) {
     delta.classList.remove('is-positive', 'is-negative');
     delta.classList.add('is-neutral');
     delta.textContent = previousRevenue > 0
-      ? `${Math.round(progress)}% do total anterior`
-      : 'Sem base de comparação';
+      ? `${Math.round(progress)}%`
+      : '—';
   }
 }
 
@@ -480,7 +520,7 @@ function renderYearChart() {
 
   const datasets = years.map((year) => {
     const values = yearly[year] || emptySeriesForMode();
-    const color = resolveYearColor(year, cfg, years);
+    const color = resolveYearColor(year);
     const data = prepareChartData(values, year);
     return {
       label: String(year),
@@ -491,7 +531,7 @@ function renderYearChart() {
       borderWidth: year === currentYear ? 2.5 : 1.6,
       pointRadius: 3,
       pointHoverRadius: 5,
-      pointBackgroundColor: '#fff',
+      pointBackgroundColor: '#182231',
       pointBorderColor: color,
       pointBorderWidth: 2,
       tension: 0.18,
@@ -499,22 +539,11 @@ function renderYearChart() {
     };
   });
 
-  appendHistoricalAverage(
-    datasets,
-    'Média histórica',
-    allYears.map((year) => prepareChartData(yearly[year] || emptySeriesForMode(), year))
-  );
   createOrUpdateChart(labels, datasets);
 }
 
-function resolveYearColor(year, cfg, years) {
-  const idx = years.indexOf(year);
-  if (state.view === '123' || state.view === '1248') {
-    const palette = APARTMENT_YEAR_COLORS[state.view];
-    return palette[idx % palette.length];
-  }
-  if (state.view !== 'total') return cfg.color;
-  return TOTAL_YEAR_COLORS[idx % TOTAL_YEAR_COLORS.length];
+function resolveYearColor(year) {
+  return TOTAL_YEAR_COLORS[(year - BASE_YEAR) % TOTAL_YEAR_COLORS.length];
 }
 
 function renderCompareChart() {
@@ -543,10 +572,6 @@ function renderCompareChart() {
   const series1248 = timeline.map(({ year, month }) => monthly1248[year]?.[month - 1] || 0);
   const data123 = state.mode === 'cumulativo' ? cumulativeTimeline(series123, timeline) : series123;
   const data1248 = state.mode === 'cumulativo' ? cumulativeTimeline(series1248, timeline) : series1248;
-  const historicalMonthlyAverage = buildHistoricalMonthlyAverage([monthly123, monthly1248], timeline);
-  const historicalAverage = state.mode === 'cumulativo'
-    ? cumulativeTimeline(historicalMonthlyAverage, timeline)
-    : historicalMonthlyAverage;
 
   const datasets = [
     {
@@ -557,7 +582,7 @@ function renderCompareChart() {
       borderWidth: 2.4,
       pointRadius: 3,
       pointHoverRadius: 5,
-      pointBackgroundColor: '#fff',
+      pointBackgroundColor: '#182231',
       pointBorderColor: COLORS['123'],
       pointBorderWidth: 2,
       tension: 0.18
@@ -570,12 +595,11 @@ function renderCompareChart() {
       borderWidth: 2.4,
       pointRadius: 3,
       pointHoverRadius: 5,
-      pointBackgroundColor: '#fff',
+      pointBackgroundColor: '#182231',
       pointBorderColor: COLORS['1248'],
       pointBorderWidth: 2,
       tension: 0.18
-    },
-    historicalAverageDataset(historicalAverage, 'Média histórica / apt.')
+    }
   ];
 
   createOrUpdateChart(labels, datasets);
@@ -603,7 +627,7 @@ function renderNightlyMetricComparisonChart(aggregateMetric) {
       borderWidth: 2.4,
       pointRadius: 3,
       pointHoverRadius: 5,
-      pointBackgroundColor: '#fff',
+      pointBackgroundColor: '#182231',
       pointBorderColor: COLORS['123'],
       pointBorderWidth: 2,
       tension: 0.18,
@@ -617,7 +641,7 @@ function renderNightlyMetricComparisonChart(aggregateMetric) {
       borderWidth: 2.4,
       pointRadius: 3,
       pointHoverRadius: 5,
-      pointBackgroundColor: '#fff',
+      pointBackgroundColor: '#182231',
       pointBorderColor: COLORS['1248'],
       pointBorderWidth: 2,
       tension: 0.18,
@@ -635,7 +659,7 @@ function renderOccupancyDifferenceChart() {
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
 
-  const datasets = years.map((year, idx) => {
+  const datasets = years.map((year) => {
     const pointColors = [];
     const winners = [];
     const data = MONTH_LABELS.map((label, monthIdx) => {
@@ -656,8 +680,8 @@ function renderOccupancyDifferenceChart() {
       label: String(year),
       data,
       winners,
-      borderColor: TOTAL_YEAR_COLORS[idx % TOTAL_YEAR_COLORS.length],
-      backgroundColor: withAlpha(TOTAL_YEAR_COLORS[idx % TOTAL_YEAR_COLORS.length], 0.08),
+      borderColor: resolveYearColor(year),
+      backgroundColor: withAlpha(resolveYearColor(year), 0.08),
       borderDash: year === currentYear ? [] : [6, 4],
       borderWidth: year === currentYear ? 2.5 : 1.6,
       pointRadius: 4,
@@ -670,80 +694,21 @@ function renderOccupancyDifferenceChart() {
     };
   });
 
-  appendHistoricalAverage(datasets, 'Média histórica Δ');
   createOrUpdateChart(MONTH_LABELS, datasets);
 }
 
-function appendHistoricalAverage(datasets, label = 'Média histórica', sourceSeries = null) {
-  const series = sourceSeries || datasets
-    .filter((dataset) => !dataset.isHistoricalAverage)
-    .map((dataset) => dataset.data);
-  if (series.length < 2) return;
-  const data = averageSeries(series);
-  if (!data.some((value) => value != null)) return;
-  datasets.push(historicalAverageDataset(data, label));
-}
-
-function averageSeries(seriesList) {
-  const length = Math.max(0, ...seriesList.map((series) => series?.length || 0));
-  return Array.from({ length }, (_, index) => {
-    const values = seriesList
-      .map((series) => series?.[index])
-      .filter((value) => value != null && Number.isFinite(Number(value)))
-      .map(Number);
-    if (!values.length) return null;
-    return values.reduce((sum, value) => sum + value, 0) / values.length;
-  });
-}
-
-function historicalAverageDataset(data, label) {
-  return {
-    label,
-    data,
-    isHistoricalAverage: true,
-    borderColor: HISTORICAL_AVERAGE_COLOR,
-    backgroundColor: 'transparent',
-    borderDash: [],
-    borderWidth: 1.5,
-    pointRadius: 0,
-    pointHoverRadius: 3,
-    pointHitRadius: 8,
-    pointStyle: 'line',
-    tension: 0.18,
-    spanGaps: true
-  };
-}
-
-function buildHistoricalMonthlyAverage(monthlyMaps, timeline) {
-  const years = getAvailableYears();
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
-  const averagesByMonth = Array.from({ length: 12 }, (_, monthIdx) => {
-    const values = monthlyMaps.flatMap((monthly) => years
-      .filter((year) => year !== currentYear || monthIdx + 1 <= currentMonth)
-      .map((year) => monthly[year]?.[monthIdx])
-      .filter((value) => value != null && Number.isFinite(Number(value)))
-      .map(Number));
-    return values.length
-      ? values.reduce((sum, value) => sum + value, 0) / values.length
-      : 0;
-  });
-  return timeline.map(({ month }) => averagesByMonth[month - 1]);
-}
-
 function getOccupancyCompareYears(occ123, occ1248) {
-  return getAvailableYears()
+  const years = getAvailableYears()
     .filter((year) => year >= OCCUPANCY_BASE_YEAR)
-    .filter((year) =>
-      (occ123[year] || []).some((value) => value > 0)
-      || (occ1248[year] || []).some((value) => value > 0)
-    );
+    .filter((year) => (occ123[year] || []).some((value) => value > 0)
+      || (occ1248[year] || []).some((value) => value > 0));
+  return state.showAllChartYears ? years : getDefaultChartYears(years);
 }
 
 function buildCompareTimeline(monthlyMaps) {
   const end = determineCompareTimelineEnd(monthlyMaps);
-  const startYear = state.metric === 'occupancy' ? OCCUPANCY_BASE_YEAR : BASE_YEAR;
+  const baseYear = state.metric === 'occupancy' ? OCCUPANCY_BASE_YEAR : BASE_YEAR;
+  const startYear = state.showAllChartYears ? baseYear : Math.max(baseYear, new Date().getFullYear() - 2);
   const timeline = [];
   for (let year = startYear; year <= end.year; year++) {
     const lastMonth = year === end.year ? end.month : 12;
@@ -809,11 +774,12 @@ function createOrUpdateChart(labels, datasets) {
     type: 'line',
     data: { labels, datasets },
     options: {
+      color: '#b7c5d8',
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: {
           display: true,
-          labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true }
+          labels: { color: '#b7c5d8', padding: 18, boxWidth: 10, boxHeight: 10, usePointStyle: true }
         },
         tooltip: {
           callbacks: {
@@ -835,18 +801,20 @@ function createOrUpdateChart(labels, datasets) {
           min: yMin,
           max: yMax,
           ticks: {
+            color: '#b7c5d8',
             precision: 0,
             callback(value) {
               return formatChartValue(value, true);
             }
           },
-          grid: { color: 'rgba(15, 23, 42, 0.06)' },
+          grid: { color: 'rgba(183, 197, 216, 0.12)' },
           border: { display: false }
         },
         x: {
           grid: { display: false },
           border: { display: false },
           ticks: {
+            color: '#b7c5d8',
             autoSkip: true,
             maxTicksLimit: 12
           }
@@ -1514,15 +1482,19 @@ function getAvailableYears() {
   )].sort((a, b) => a - b);
 }
 
+function getTableAvailableYears() {
+  return getAvailableYears().filter((year) => state.metric !== 'occupancy' || year >= OCCUPANCY_BASE_YEAR);
+}
+
 function getDefaultTableYears() {
-  const years = getAvailableYears();
+  const years = getTableAvailableYears();
   const currentYear = getCurrentDataYear();
   const previousYear = currentYear - 1;
   return years.filter((year) => year === previousYear || year === currentYear);
 }
 
 function getTableYears() {
-  return state.showAllYears ? getAvailableYears() : getDefaultTableYears();
+  return state.showAllYears ? getTableAvailableYears() : getDefaultTableYears();
 }
 
 function getChartYears(yearly, options = {}) {
@@ -1536,14 +1508,8 @@ function getChartYears(yearly, options = {}) {
 }
 
 function getDefaultChartYears(years) {
-  if (years.length <= 2) return years;
-  const currentDataYear = getCurrentDataYear();
-  const preferred = years.filter((year) => (
-    year === BASE_YEAR
-    || year === currentDataYear
-    || year === currentDataYear - 1
-  ));
-  return preferred.length ? preferred : years.slice(-2);
+  const currentYear = new Date().getFullYear();
+  return years.filter((year) => year >= currentYear - 2 && year <= currentYear);
 }
 
 function getDataYearsForMetric() {
@@ -1650,12 +1616,10 @@ function cleanup() {
   modeButtonsController?.abort();
   viewButtonsController?.abort();
   tableButtonsController?.abort();
-  progressButtonsController?.abort();
   modeButtonsController = null;
   metricButtonsController = null;
   viewButtonsController = null;
   tableButtonsController = null;
-  progressButtonsController = null;
   document.body.classList.remove('analisev4-table-open');
   resetChart();
 }

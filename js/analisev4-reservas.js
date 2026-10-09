@@ -1,5 +1,6 @@
 import { MONTH_LABELS, VIEW_APTS, formatEuro, parseLocalDate } from './analisev2-core.js';
-import { getFaturas, getNightlyEntries } from './analise-data.js';
+import { getFaturas } from './analise-data.js';
+import { applyAirbnbFeeMode, preciseAnalysisNights } from './analisev4-values.js';
 import { bucketLeadTimes, computeWeekpartMetrics } from './analise-metrics.js';
 
 const NIGHT_BUCKETS = ['2', '3', '4', '5', '6', '7', '≥8'];
@@ -19,7 +20,7 @@ const state = {
   year: String(new Date().getFullYear()),
   table: 'nights',
   rows: [],
-  nightlyEntries: []
+  includeAirbnbFee: true
 };
 
 let controlsController = null;
@@ -39,18 +40,13 @@ window.addEventListener('beforeunload', cleanup);
 async function loadData() {
   window.loadingManager?.show('reservas-v4', { type: 'skeleton' });
   try {
-    const [rows, nightlyEntries] = await Promise.all([
-      getFaturas(),
-      getNightlyEntries({ preciseOnly: true })
-    ]);
+    const rows = await getFaturas();
     state.rows = rows;
-    state.nightlyEntries = nightlyEntries;
     syncYearSelect();
     render();
     renderQualityDashboard();
   } catch (error) {
     state.rows = [];
-    state.nightlyEntries = [];
     renderMessage('Sem dados disponíveis.');
     const qualityAlert = document.getElementById('qualidade-v4-alert');
     const qualityContent = document.getElementById('qualidade-v4-alert-content');
@@ -69,16 +65,19 @@ function bindControls() {
   controlsController = new AbortController();
   const { signal } = controlsController;
 
-  document.querySelectorAll('[data-reservas-v4-view]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const view = button.dataset.reservasV4View;
-      if (!view || view === state.view) return;
-      state.view = view;
-      syncYearSelect();
-      updateControls();
-      render();
-    }, { signal });
-  });
+  window.addEventListener('analisev4:fee-change', (event) => {
+    state.includeAirbnbFee = event.detail.includeFee;
+    render();
+  }, { signal });
+
+  window.addEventListener('analisev4:view-change', (event) => {
+    const view = event.detail?.view;
+    if (!VIEW_APTS[view] || view === state.view) return;
+    state.view = view;
+    syncYearSelect();
+    updateControls();
+    render();
+  }, { signal });
 
   document.querySelectorAll('[data-reservas-v4-table]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -89,6 +88,13 @@ function bindControls() {
       render();
     }, { signal });
   });
+
+  document.getElementById('reservas-v4-table-select')?.addEventListener('change', (event) => {
+    if (!TABLE_RENDERERS[event.target.value]) return;
+    state.table = event.target.value;
+    updateControls();
+    render();
+  }, { signal });
 
   document.getElementById('reservas-v4-year')?.addEventListener('change', (event) => {
     state.year = event.target.value || 'all';
@@ -115,11 +121,10 @@ function bindControls() {
 }
 
 function updateControls() {
-  document.querySelectorAll('[data-reservas-v4-view]').forEach((button) => {
-    const active = button.dataset.reservasV4View === state.view;
-    button.classList.toggle('active', active);
-    button.setAttribute('aria-pressed', active ? 'true' : 'false');
-  });
+  const context = document.getElementById('reservas-v4-context');
+  if (context) context.textContent = state.view === 'total' ? 'Total' : `AL ${state.view}`;
+  const tableSelect = document.getElementById('reservas-v4-table-select');
+  if (tableSelect) tableSelect.value = state.table;
   document.querySelectorAll('[data-reservas-v4-table]').forEach((button) => {
     const active = button.dataset.reservasV4Table === state.table;
     button.classList.toggle('active', active);
@@ -154,8 +159,9 @@ function syncYearSelect() {
 function render() {
   const renderer = TABLE_RENDERERS[state.table];
   if (!renderer) return;
-  const rows = filterRows(state.rows);
-  const entries = filterRows(state.nightlyEntries);
+  const analysisRows = applyAirbnbFeeMode(state.rows, state.includeAirbnbFee);
+  const rows = filterRows(analysisRows);
+  const entries = filterRows(preciseAnalysisNights(analysisRows));
   renderer(rows, entries);
 }
 
@@ -381,7 +387,7 @@ function renderBookingMonthTable(rows) {
     const total = rowTotals[stayIdx];
     const cells = matrix[stayIdx].map((value) => {
       const alpha = value ? 0.08 + (value / max) * 0.32 : 0;
-      return `<td style="background:rgba(20, 78, 3, ${alpha.toFixed(3)})">${value || '—'}</td>`;
+      return `<td style="background:rgba(96, 165, 250, ${alpha.toFixed(3)})">${value || '—'}</td>`;
     }).join('');
     return `<tr><td>${stayLabel}</td>${cells}<td class="${total === maxRowTotal && maxRowTotal > 0 ? 'reservas-v4-highlight' : ''}"><strong>${total}</strong></td></tr>`;
   }).join('');
