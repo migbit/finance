@@ -7,546 +7,20 @@
   <title>Ginásio</title>
   <link rel="stylesheet" href="../css/styles.pcolor.css">
   <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/theme-dark.css">
+  <link rel="stylesheet" href="../css/ginasio.css">
   <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="manifest" href="../manifest.json">
-  <meta name="theme-color" content="#000000">
-  <style>
-    .ginasio-page {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      max-width: 1680px;
-      padding-left: clamp(0.75rem, 2vw, 2rem);
-      padding-right: clamp(0.75rem, 2vw, 2rem);
-    }
-    .ginasio-page .report-section,
-    .ginasio-page .viz-card {
-      width: 100%;
-      max-width: none;
-    }
-    .ginasio-page .viz-card {
-      padding: clamp(0.85rem, 1.4vw, 1.25rem);
-    }
-    .gym-controls {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 1rem;
-      align-items: end;
-    }
-    .gym-controls label {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-      font-weight: 600;
-    }
-    .gym-workout {
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
-    .gym-workout-block {
-      margin: 0.8rem 0 0;
-      padding: 0.65rem 0.8rem;
-      border-left: 4px solid var(--primary);
-      border-radius: 8px;
-      background: rgba(59, 130, 246, 0.08);
-      font-size: 1rem;
-    }
-    .gym-machine-card {
-      border-radius: 16px;
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      background: var(--surface-soft);
-      padding: 1rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.85rem;
-    }
-    .gym-machine-card > summary {
-      cursor: pointer;
-      list-style: none;
-    }
-    .gym-machine-card > summary::after {
-      content: "⌄";
-      flex: 0 0 auto;
-      margin-left: auto;
-      color: var(--text-dim);
-      font-size: 1.2rem;
-      line-height: 1;
-      transition: transform 0.18s ease;
-    }
-    .gym-machine-card[open] > summary::after {
-      transform: rotate(180deg);
-    }
-    .gym-machine-card > summary:focus-visible,
-    .ginasio-page button:focus-visible {
-      outline: 3px solid rgba(37, 99, 235, 0.45);
-      outline-offset: 3px;
-    }
-    .gym-machine-card > summary::-webkit-details-marker {
-      display: none;
-    }
-    .gym-machine-card:not([open]) {
-      padding-bottom: 1rem;
-    }
-    .gym-machine-card[data-has-data="true"] {
-      border-color: rgba(34, 197, 94, 0.55);
-    }
-    .gym-machine-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.6rem 1.2rem;
-    }
-    .gym-machine-title {
-      font-size: 1.05rem;
-      font-weight: 700;
-    }
-    .gym-machine-meta {
-      color: var(--text-dim);
-      font-size: 0.9rem;
-    }
-    .gym-series-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .gym-series-table th,
-    .gym-series-table td {
-      padding: 0.6rem 0.5rem;
-      text-align: left;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.25);
-    }
-    .gym-series-rule {
-      display: inline-block;
-      margin-left: 0.6rem;
-      font-size: 0.85rem;
-      color: var(--text-dim);
-    }
-    .gym-series-table td[data-total-cell="true"] .gym-total {
-      display: none;
-    }
-    .gym-recommendations {
-      margin-top: 0.8rem;
-      padding-top: 0.8rem;
-      border-top: 1px dashed rgba(148, 163, 184, 0.4);
-      display: flex;
-      flex-direction: column;
-      gap: 0.3rem;
-    }
-    .gym-recommendations textarea {
-      height: var(--ctrl-h);
-      min-height: var(--ctrl-h);
-      resize: none;
-      line-height: 1.2;
-    }
-    #gym-machine-note {
-      height: var(--ctrl-h);
-      min-height: var(--ctrl-h);
-      resize: none;
-      line-height: 1.2;
-    }
-    .gym-rules {
-      margin-top: 0.8rem;
-      padding-top: 0.8rem;
-      border-top: 1px dashed rgba(148, 163, 184, 0.35);
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      font-size: 0.92rem;
-      color: var(--text-dim);
-    }
-    .gym-rules-series {
-      display: flex;
-      flex-direction: column;
-      gap: 0.2rem;
-    }
-    .gym-session-bar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      padding: 0.75rem 1rem;
-      border-radius: 12px;
-      background: rgba(15, 23, 42, 0.06);
-      margin-top: 1rem;
-    }
-    .gym-session-time {
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-    }
-    .gym-session-metrics {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1.25rem;
-    }
-    .gym-active-rest {
-      width: 100%;
-      display: none;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      padding: 0.7rem 0.8rem;
-      border-radius: 10px;
-      color: #fff;
-      background: #2563eb;
-    }
-    .gym-active-rest[data-active="true"] {
-      display: flex;
-    }
-    .gym-active-rest-time {
-      font-size: 1.25rem;
-      font-weight: 800;
-      font-variant-numeric: tabular-nums;
-    }
-    .gym-active-rest-actions {
-      display: flex;
-      gap: 0.4rem;
-    }
-    .gym-active-rest-actions button {
-      border-color: rgba(255, 255, 255, 0.55);
-      color: #fff;
-      background: rgba(255, 255, 255, 0.14);
-    }
-    .gym-notification-controls {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 0.5rem;
-    }
-    .gym-music-mode {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      min-height: var(--ctrl-h);
-      padding: 0 0.7rem;
-      border: 1px solid rgba(148, 163, 184, 0.4);
-      border-radius: 8px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .gym-music-mode input {
-      margin: 0;
-    }
-    .gym-notification-status {
-      width: 100%;
-      color: var(--text-dim);
-      font-size: 0.82rem;
-      text-align: right;
-    }
-    .gym-notification-status[data-state="ready"] {
-      color: #15803d;
-    }
-    .gym-notification-status[data-state="warning"] {
-      color: #b45309;
-    }
-    .gym-warmup {
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      border-radius: 12px;
-      padding: 0.75rem;
-      background: rgba(148, 163, 184, 0.08);
-      display: flex;
-      flex-direction: column;
-      gap: 0.6rem;
-    }
-    .gym-warmup-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.6rem;
-    }
-    .gym-warmup-actions {
-      display: inline-flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .gym-warmup-status {
-      color: var(--text-dim);
-      font-size: 0.9rem;
-      font-variant-numeric: tabular-nums;
-    }
-    .gym-rule-note {
-      color: var(--text);
-      font-size: 0.9rem;
-    }
-    .gym-rest-wrap {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 0.6rem;
-    }
-    .gym-rest-btn {
-      padding: 0 0.7rem;
-      height: var(--ctrl-h);
-      border-radius: 999px;
-      font-size: 0.85rem;
-    }
-    .gym-progress-badge {
-      background: #ef4444;
-      color: #fff;
-      border-radius: 999px;
-      padding: 0.15rem 0.6rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-    }
-    .gym-series-table th {
-      font-size: 0.85rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--text-dim);
-    }
-    .gym-series-table td:last-child,
-    .gym-series-table th:last-child {
-      text-align: right;
-    }
-    .gym-series-table input,
-    .gym-series-table select {
-      width: 100%;
-      min-width: 110px;
-    }
-    .gym-straps-control {
-      display: inline-flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 0.4rem;
-      min-height: var(--ctrl-h);
-      cursor: pointer;
-      font-size: 0.88rem;
-      font-weight: 600;
-    }
-    .gym-series-table .gym-straps-input {
-      width: 1.25rem;
-      min-width: 1.25rem;
-      height: 1.25rem;
-      margin: 0;
-      accent-color: #2563eb;
-    }
-    .gym-total {
-      display: block;
-      margin-top: 0.3rem;
-      font-size: 0.85rem;
-      color: var(--text-dim);
-    }
-    .gym-empty {
-      padding: 1rem;
-      border-radius: 12px;
-      background: rgba(148, 163, 184, 0.12);
-      color: var(--text-dim);
-      font-size: 0.95rem;
-    }
-    .gym-save-wrap {
-      display: flex;
-      justify-content: flex-end;
-      margin-top: 1rem;
-    }
-    .gym-summary-list {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-    .gym-summary-card {
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      border-radius: 14px;
-      padding: 0.9rem 1rem;
-      background: var(--surface);
-    }
-    .gym-summary-header {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem 1rem;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.6rem;
-    }
-    .gym-summary-actions {
-      display: inline-flex;
-      gap: 0.6rem;
-      align-items: center;
-    }
-    .gym-summary-details[hidden] {
-      display: none;
-    }
-    .gym-summary-details {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      margin-top: 0.75rem;
-    }
-    .gym-summary-card > .gym-summary-header {
-      margin-bottom: 0;
-    }
-    .gym-summary-details .gym-summary-actions {
-      justify-content: flex-end;
-    }
-    .gym-summary-header strong {
-      font-size: 1rem;
-    }
-    .gym-summary-card pre {
-      margin: 0;
-      white-space: pre-wrap;
-      font-family: "Courier New", monospace;
-      font-size: 0.9rem;
-      background: rgba(148, 163, 184, 0.12);
-      border-radius: 10px;
-      padding: 0.75rem;
-    }
-    .gym-evolution-toolbar {
-      display: grid;
-      grid-template-columns: minmax(220px, 420px) repeat(2, minmax(130px, 180px));
-      gap: 0.8rem;
-      align-items: end;
-      margin-bottom: 1rem;
-    }
-    .gym-evolution-stat {
-      min-height: var(--ctrl-h);
-      padding: 0.55rem 0.75rem;
-      border: 1px solid rgba(148, 163, 184, 0.3);
-      border-radius: 10px;
-      background: rgba(148, 163, 184, 0.08);
-    }
-    .gym-evolution-stat span {
-      display: block;
-      color: var(--text-dim);
-      font-size: 0.76rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    .gym-evolution-stat strong {
-      display: block;
-      margin-top: 0.15rem;
-      font-variant-numeric: tabular-nums;
-    }
-    .gym-evolution-chart {
-      width: 100%;
-      min-height: 260px;
-      overflow-x: auto;
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      border-radius: 12px;
-      background: var(--surface);
-      padding: 0.5rem;
-    }
-    .gym-evolution-chart svg {
-      display: block;
-      width: 100%;
-      min-width: 560px;
-      height: auto;
-    }
-    .gym-evolution-grid {
-      stroke: rgba(148, 163, 184, 0.35);
-      stroke-width: 1;
-    }
-    .gym-evolution-line {
-      fill: none;
-      stroke: #2563eb;
-      stroke-width: 3;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-    .gym-evolution-point {
-      fill: #2563eb;
-      stroke: #fff;
-      stroke-width: 2;
-    }
-    .gym-evolution-label {
-      fill: var(--text-dim);
-      font-size: 12px;
-    }
-    @media (max-width: 720px) {
-      .gym-series-table {
-        display: block;
-      }
-      .gym-series-table thead {
-        display: none;
-      }
-      .gym-series-table tbody,
-      .gym-series-table tr,
-      .gym-series-table td {
-        display: block;
-        width: 100%;
-      }
-      .gym-series-table tr {
-        border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-        padding: 0.6rem 0;
-      }
-      .gym-series-table td {
-        border-bottom: none;
-        padding: 0.35rem 0;
-        display: grid;
-        grid-template-columns: minmax(105px, 0.8fr) minmax(0, 1.2fr);
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .gym-series-table td::before {
-        content: attr(data-label);
-        color: var(--text-dim);
-        font-size: 0.78rem;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-      }
-      .gym-series-table td:last-child {
-        text-align: left;
-      }
-      .gym-straps-control {
-        justify-content: flex-start;
-      }
-      .gym-notification-controls {
-        width: 100%;
-        justify-content: flex-start;
-      }
-      .gym-notification-status {
-        text-align: left;
-      }
-      .gym-active-rest {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-      .gym-active-rest[data-active="true"] {
-        position: fixed;
-        top: calc(var(--mobile-header-height, 60px) + 0.5rem);
-        left: 0.75rem;
-        right: 0.75rem;
-        z-index: 900;
-        width: auto;
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.3);
-      }
-      .gym-active-rest-actions {
-        width: 100%;
-      }
-      .gym-active-rest-actions button {
-        flex: 1;
-      }
-      .gym-save-wrap {
-        position: sticky;
-        bottom: 0.5rem;
-        z-index: 8;
-      }
-      .gym-save-wrap #gym-save {
-        width: 100%;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
-      }
-      .gym-evolution-toolbar {
-        grid-template-columns: 1fr 1fr;
-      }
-      .gym-evolution-toolbar label {
-        grid-column: 1 / -1;
-      }
-    }
-  </style>
+  <meta name="theme-color" content="#101722">
 </head>
-<body data-page="ginasio">
+<body data-page="ginasio" data-theme="dark">
   <button id="menu-icon" aria-label="Abrir menu">☰</button>
   <header>
     <nav id="nav-menu"></nav>
   </header>
 
   <main class="ginasio-page">
-    <h2 class="page-title center">Ginásio</h2>
+    <h2 class="page-title">Ginásio</h2>
 
     <section class="report-section">
       <div class="viz-card">
@@ -588,16 +62,19 @@
               <div id="gym-workout-progress" class="gym-session-time">0 / 0 séries</div>
             </div>
           </div>
-          <div class="gym-notification-controls">
+          <details class="gym-settings">
+            <summary class="gym-details-summary">Alertas e opções</summary>
+            <div class="gym-notification-controls">
             <button type="button" id="gym-enable-notifications">Ativar notificações</button>
             <button type="button" id="gym-test-sound">Testar alerta</button>
             <label class="gym-music-mode">
               <input type="checkbox" id="gym-music-mode">
               Estou a ouvir música
             </label>
-            <button type="button" id="gym-clear-draft">Apagar temporário</button>
+            <button type="button" id="gym-clear-draft">Limpar rascunho</button>
             <div id="gym-notification-status" class="gym-notification-status" aria-live="polite"></div>
-          </div>
+            </div>
+          </details>
           <div id="gym-active-rest" class="gym-active-rest" data-active="false">
             <div>
               <div id="gym-active-rest-machine">Descanso</div>
@@ -617,7 +94,7 @@
 
     <section class="report-section">
       <div class="viz-card">
-        <h3>Máquinas e séries</h3>
+        <h3>O teu treino</h3>
         <div id="gym-workout" class="gym-workout"></div>
         <div class="gym-save-wrap">
           <button type="button" class="primary" id="gym-save">Guardar treino</button>
@@ -626,8 +103,9 @@
     </section>
 
     <section class="report-section">
-      <div class="viz-card">
-        <h3>Adicionar máquina</h3>
+      <details class="viz-card gym-disclosure">
+        <summary class="gym-details-summary">Adicionar máquina</summary>
+        <div class="gym-disclosure-content">
         <div class="gym-controls">
           <label>
             Nome da máquina
@@ -655,22 +133,27 @@
             <textarea id="gym-machine-note" rows="1" placeholder="Notas para esta máquina..."></textarea>
           </label>
         </div>
-      </div>
+        </div>
+      </details>
     </section>
 
     <section class="report-section">
-      <div class="viz-card">
+      <details class="viz-card gym-disclosure">
+        <summary class="gym-details-summary">Treinos recentes</summary>
+        <div class="gym-disclosure-content">
         <div class="gym-summary-header">
-          <h3>Treinos recentes</h3>
+          <span class="gym-machine-meta">Consulta ou copia os teus últimos treinos.</span>
           <button type="button" id="summaries-refresh">Atualizar</button>
         </div>
         <div id="gym-summaries" class="gym-summary-list"></div>
-      </div>
+        </div>
+      </details>
     </section>
 
     <section class="report-section">
-      <div class="viz-card">
-        <h3>Evolução</h3>
+      <details class="viz-card gym-disclosure">
+        <summary class="gym-details-summary">Evolução</summary>
+        <div class="gym-disclosure-content">
         <div class="gym-evolution-toolbar">
           <label>
             Exercício
@@ -690,7 +173,8 @@
         <div id="gym-evolution-chart" class="gym-evolution-chart" role="img" aria-label="Sem dados de evolução">
           <div class="gym-empty">Ainda não existem treinos suficientes para mostrar a evolução.</div>
         </div>
-      </div>
+        </div>
+      </details>
     </section>
   </main>
 

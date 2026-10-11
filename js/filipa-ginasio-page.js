@@ -7,13 +7,8 @@ async function mountFilipaGym() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const source = new DOMParser().parseFromString(await response.text(), 'text/html');
-    const sourceStyle = source.querySelector('head style');
     const sourceMain = source.querySelector('main.ginasio-page');
-    if (!sourceStyle || !sourceMain) throw new Error('Estrutura da página de referência incompleta.');
-
-    const sharedStyle = sourceStyle.cloneNode(true);
-    sharedStyle.dataset.gymSharedStyle = 'true';
-    document.head.appendChild(sharedStyle);
+    if (!sourceMain) throw new Error('Estrutura da página de referência incompleta.');
 
     const gymMain = sourceMain.cloneNode(true);
     gymMain.setAttribute('aria-label', 'Ginásio da Filipa');

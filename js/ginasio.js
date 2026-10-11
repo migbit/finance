@@ -2023,12 +2023,14 @@ function updateTotalDisplay(row, initialResistance) {
   const baseLabel = `${formatWeight(baseValue)} kg`;
   if (initialResistance === null || Number.isNaN(initialResistance)) {
     totalEl.textContent = '';
+    totalEl.removeAttribute('title');
     if (totalCell) totalCell.dataset.totalCell = 'true';
     return;
   }
   if (totalCell) totalCell.dataset.totalCell = 'false';
   const total = baseValue + initialResistance;
-  totalEl.textContent = `Resistência inicial ${formatWeight(initialResistance)} kg + ${baseLabel} = ${formatWeight(total)} kg`;
+  totalEl.textContent = `Total ${formatWeight(total)} kg`;
+  totalEl.title = `Resistência inicial ${formatWeight(initialResistance)} kg + ${baseLabel} = ${formatWeight(total)} kg`;
 }
 
 function createRepsSelect(value = 0) {
@@ -2469,8 +2471,12 @@ function renderRulesBlock(card, rules) {
   if (existing) existing.remove();
   if (!rules) return;
 
-  const block = document.createElement('div');
+  const block = document.createElement('details');
   block.className = 'gym-rules';
+  const summary = document.createElement('summary');
+  summary.className = 'gym-details-summary';
+  summary.textContent = 'Aquecimento e progressão';
+  block.appendChild(summary);
 
   if (rules.warmup) {
     const w = document.createElement('div');
