@@ -83,6 +83,9 @@ details[open] > .gym-details-summary::after { content: '−'; }
 .gym-rule-note { line-height: 1.6; margin-top: 8px; }
 .gym-empty { padding: 16px; border-radius: 10px; background: var(--background); color: var(--text-dim); font-size: .9rem; }
 .gym-save-wrap { display: flex; justify-content: flex-end; margin-top: 20px; }
+.gym-saved-copy { margin-top: 12px; }
+.gym-saved-copy p { color: var(--text-dim); line-height: 1.5; }
+.gym-saved-copy textarea { width: 100%; margin-top: 12px; }
 .gym-summary-list, .gym-summary-details { display: flex; flex-direction: column; gap: 12px; }
 .gym-summary-list { margin-top: 16px; }
 .gym-summary-card { padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); }
@@ -139,4 +142,11 @@ details[open] > .gym-details-summary::after { content: '−'; }
   .gym-save-wrap button { width: 100%; }
   .gym-evolution-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gym-evolution-toolbar label { grid-column: 1 / -1; }
+}
+.gym-plan-notice {
+  grid-column: 1 / -1;
+  margin: 0 0 0.75rem;
+  padding: 0.8rem;
+  border-left: 3px solid var(--accent, #6ea8fe);
+  line-height: 1.5;
 }

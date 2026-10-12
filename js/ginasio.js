@@ -2,6 +2,7 @@ import { db, copiarMensagem } from './script.js';
 import { showConfirm, showToast } from './toast.js';
 import { FILIPA_UID } from './access-control.js';
 import { FILIPA_WORKOUT_TEMPLATES } from './filipa-ginasio-config.js';
+import { buildMiguelPlans, resolveExerciseChoices, usesLegacyPlan, isReviewedMiguelTraining, MIGUEL_PLAN_VERSION, normalTraining, SHORT_SUFFIX } from './miguel-ginasio-plan.js';
 import {
   collection,
   doc,
@@ -17,7 +18,7 @@ import {
   where
 } from 'https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore.js';
 
-const MIGUEL_WORKOUT_TEMPLATES = {
+const MIGUEL_LEGACY_TEMPLATES = {
   'Dragão': {
     'Pernas': [
       {
@@ -1036,6 +1037,7 @@ const MIGUEL_WORKOUT_TEMPLATES = {
   }
 };
 
+const MIGUEL_WORKOUT_TEMPLATES = buildMiguelPlans(MIGUEL_LEGACY_TEMPLATES);
 const IS_FILIPA_GYM = document.body.dataset.page === 'filipa-ginasio';
 const WORKOUT_TEMPLATES = IS_FILIPA_GYM
   ? FILIPA_WORKOUT_TEMPLATES
@@ -1619,9 +1621,10 @@ function setStateFromInputs() {
 }
 
 function getTemplate(gym, treino) {
-  const base = WORKOUT_TEMPLATES?.[gym]?.[treino];
+  const templates = !IS_FILIPA_GYM && usesLegacyPlan(state.session) ? MIGUEL_LEGACY_TEMPLATES : WORKOUT_TEMPLATES;
+  const base = templates?.[gym]?.[treino];
   if (!base) return null;
-  const merged = JSON.parse(JSON.stringify(base));
+  const merged = resolveExerciseChoices(base, state.session);
   if (!state.customMachines.length) return merged;
 
   state.customMachines.forEach(custom => {
@@ -1678,9 +1681,9 @@ function getSavedMachine(machineId) {
 
 function getSavedSeries(savedMachine, index) {
   if (!Array.isArray(savedMachine?.series)) return {};
-  return savedMachine.series.find(item => Number(item?.seriesIndex) === index)
-    || savedMachine.series[index]
-    || {};
+  const indexed = savedMachine.series.some(item => item?.seriesIndex != null);
+  return (indexed ? savedMachine.series.find(item => Number(item?.seriesIndex) === index)
+    : savedMachine.series[index]) || {};
 }
 
 function getSavedWarmup(savedMachine, index) {
@@ -2289,9 +2292,9 @@ function createSeriesTable(machine, variant, savedMachine) {
       row.setAttribute('data-rest-before-sec', String(savedSeries.restBeforeSec));
     }
 
-    const baseWeight = state.baseWeights[seriesKey]
+    const baseWeight = savedSeries.baseWeight
+      ?? state.baseWeights[seriesKey]
       ?? state.lastWeights?.[seriesKey]
-      ?? savedSeries.baseWeight
       ?? series.baseWeight
       ?? 0;
     const repsValue = savedSeries.reps ?? 0;
@@ -2309,6 +2312,7 @@ function createSeriesTable(machine, variant, savedMachine) {
       <td data-label="${completionOnly ? 'Etapa' : 'Série'}">
         ${completionOnly ? `${index + 1}º ${completionLabel}` : `${index + 1}ª série`}
         ${ruleText ? `<span class="gym-series-rule">${ruleText}</span>` : ''}
+        ${series.introduction ? `<span class="gym-series-rule">${series.introduction}</span>` : ''}
       </td>
       ${completionOnly ? `
         <td data-label="Tempo / volume">${series.volumeLabel || seriesRule?.volume || '—'}</td>
@@ -2439,9 +2443,7 @@ function renderRecommendations(card, machine) {
     : '';
   const noteValue = state.recommendedReps[noteKey]
     ?? state.recommendedReps[legacyKey]
-    ?? variantNote
-    ?? machine.note
-    ?? '';
+    ?? (variantNote || machine.note || '');
 
   const textarea = document.createElement('textarea');
   textarea.rows = 1;
@@ -2526,6 +2528,8 @@ function meetsRirRange(actual, required) {
 }
 
 function canProgress(machine, variantId) {
+  // A confirmação de execução, sintomas e duas sessões comparáveis é manual no novo plano.
+  if (!IS_FILIPA_GYM && !usesLegacyPlan(state.session) && isReviewedMiguelTraining(state.gym, state.treino)) return false;
   const rules = getMachineRules(machine, variantId);
   if (!rules?.progressCheck?.length) return false;
   return rules.progressCheck.every((check, index) => {
@@ -2861,6 +2865,33 @@ function renderMachine(machine) {
   header.append(titleWrap, meta);
   card.appendChild(header);
 
+  if (machine.choiceOptions) {
+    card.dataset.choiceGroup = machine.choiceGroup;
+    const label = document.createElement('label');
+    label.className = 'gym-machine-meta';
+    label.textContent = 'Escolher um exercício: ';
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', `Alternativa a ${machine.name}`);
+    machine.choiceOptions.forEach(option => select.add(new Option(option.name, option.id)));
+    select.value = machine.id;
+    select.addEventListener('change', () => {
+      const snapshot = buildSessionFromDom();
+      if (snapshot.machines[machine.id] || activeRest) {
+        select.value = machine.id;
+        showToast('Troca de exercício disponível antes de registar aquecimento ou séries e sem descanso ativo.', 'warning');
+        return;
+      }
+      state.session = snapshot;
+      state.session.exerciseChoices[machine.choiceGroup] = select.value;
+      renderWorkout();
+      const selectedCard = workoutWrap.querySelector(`[data-machine-id="${select.value}"]`);
+      if (selectedCard) selectedCard.open = true;
+      scheduleLocalDraftSave();
+    });
+    label.appendChild(select);
+    card.appendChild(label);
+  }
+
   let variant = machine;
   const updateMeta = () => {
     const displayResistance = machine.variants
@@ -2964,6 +2995,7 @@ function renderMachine(machine) {
 }
 
 function renderWorkout() {
+  document.getElementById('gym-saved-copy')?.remove();
   workoutWrap.innerHTML = '';
   const template = getTemplate(state.gym, state.treino);
   if (!state.gym || !state.treino) {
@@ -2973,6 +3005,20 @@ function renderWorkout() {
   if (!template) {
     renderEmpty('Treino ainda não configurado para esta combinação.');
     return;
+  }
+  if (!IS_FILIPA_GYM) {
+    const notice = document.createElement('p');
+    notice.className = 'gym-plan-notice';
+    const reviewed = isReviewedMiguelTraining(state.gym, state.treino);
+    notice.textContent = usesLegacyPlan(state.session)
+      ? 'Registo anterior: conserva a estrutura do plano original.'
+      : state.treino.endsWith(SHORT_SUFFIX)
+        ? 'Treino curto · exceção por falta de tempo. Mantém os aquecimentos e descansos; não compenses com falha. Os três treinos normais continuam a ser a base semanal.'
+        : reviewed
+          ? 'Plano normal · 3 sessões semanais. Introduz gradualmente as séries acrescentadas e regista apenas as que fizeres.'
+            + (state.treino === 'Pernas' ? ' Retoma gémeos e abdutora antes de acrescentar a 4.ª série de curl, conforme recuperação e tolerância.' : ' Progride depois de confirmar execução, esforço e recuperação em duas sessões comparáveis.')
+          : 'Esta combinação conserva o plano anterior; a revisão abrange Pernas e Peito + Ombro + Braços no Dragão, e Costas na Constituição.';
+    workoutWrap.appendChild(notice);
   }
   let currentBlock = '';
   template.forEach(machine => {
@@ -3276,6 +3322,9 @@ async function loadLastReps(gym, treino) {
     .filter(data => data.gym === gym);
   docs.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   const latest = docs[0];
+  if (!latest && !IS_FILIPA_GYM && treino.endsWith(SHORT_SUFFIX)) {
+    return loadLastReps(gym, normalTraining(treino));
+  }
   const lastReps = {};
   const lastRir = {};
   const lastWeights = {};
@@ -3284,6 +3333,7 @@ async function loadLastReps(gym, treino) {
     Object.entries(machines).forEach(([machineId, machine]) => {
       const variantId = machine?.variantId || '';
       (machine?.series || []).forEach((series, index) => {
+        index = Number(series.seriesIndex ?? index);
         if (typeof series?.baseWeight === 'number') {
           const key = getSeriesKey(machineId, variantId, index);
           lastWeights[key] = series.baseWeight;
@@ -3308,6 +3358,10 @@ function buildSessionFromDom() {
     gym: state.gym,
     treino: state.treino,
     date: state.date,
+    ...(!IS_FILIPA_GYM ? {
+      planVersion: usesLegacyPlan(state.session) ? 'legacy' : MIGUEL_PLAN_VERSION,
+      exerciseChoices: { ...state.session?.exerciseChoices }
+    } : {}),
     machines: {},
     timing: {
       startedAt: state.timing.startedAt || null,
@@ -3319,6 +3373,7 @@ function buildSessionFromDom() {
   const machineEls = Array.from(document.querySelectorAll('.gym-machine-card'));
   machineEls.forEach((machineEl, machineIndex) => {
     const machineId = machineEl.dataset.machineId;
+    if (machineEl.dataset.choiceGroup) session.exerciseChoices[machineEl.dataset.choiceGroup] = machineId;
     const machineName = machineEl.dataset.machineName || '';
     const variantId = machineEl.dataset.variantId || '';
     const variantLabel = machineEl.dataset.variantLabel || '';
@@ -3471,6 +3526,51 @@ function buildSummaryText(session) {
   return lines.join('\n');
 }
 
+async function copySavedWorkoutSummary(summary) {
+  document.getElementById('gym-saved-copy')?.remove();
+  const panel = document.createElement('div');
+  panel.id = 'gym-saved-copy';
+  panel.className = 'gym-saved-copy';
+  const status = document.createElement('p');
+  status.setAttribute('role', 'status');
+  const copyButton = document.createElement('button');
+  copyButton.type = 'button';
+  copyButton.textContent = 'Copiar resumo';
+  const manualText = document.createElement('textarea');
+  manualText.readOnly = true;
+  manualText.rows = 8;
+  manualText.hidden = true;
+  manualText.value = summary;
+  manualText.setAttribute('aria-label', 'Resumo do treino gravado para copiar');
+  panel.append(status, copyButton, manualText);
+  saveBtn.closest('.gym-save-wrap').after(panel);
+
+  const copy = async (manual = false) => {
+    copyButton.disabled = true;
+    try {
+      // Copiar só depois de confirmar a gravação; nunca anunciar sucesso antes de resolver.
+      await navigator.clipboard.writeText(summary);
+      status.textContent = 'Treino gravado e resumo copiado. Já podes colar no ChatGPT.';
+      copyButton.textContent = 'Copiar novamente';
+      manualText.hidden = true;
+      showToast('Treino gravado e resumo copiado para o clipboard.', 'success');
+    } catch (_) {
+      status.textContent = manual
+        ? 'Treino gravado. Seleciona e copia o texto abaixo para colar no ChatGPT.'
+        : 'Treino gravado. A cópia automática foi bloqueada; toca em “Copiar resumo”.';
+      if (manual) {
+        manualText.hidden = false;
+        manualText.focus();
+        manualText.select();
+      }
+    } finally {
+      copyButton.disabled = false;
+    }
+  };
+  copyButton.addEventListener('click', () => void copy(true));
+  await copy();
+}
+
 async function saveSession() {
   if (saveBtn?.disabled) return;
   setStateFromInputs();
@@ -3502,6 +3602,7 @@ async function saveSession() {
   const docId = getSessionId(state.gym, state.treino, state.date);
   const ref = doc(gymCollection('ginasio_treinos'), docId);
   const originalSaveLabel = saveBtn?.textContent || 'Guardar treino';
+  document.getElementById('gym-saved-copy')?.remove();
   if (saveBtn) {
     saveBtn.disabled = true;
     saveBtn.textContent = 'A guardar…';
@@ -3540,7 +3641,11 @@ async function saveSession() {
     stopTotalTimer();
     if (totalTimerEl) totalTimerEl.textContent = formatClockDuration(session.timing?.durationSec || 0);
     saveCurrentSelection();
-    showToast('Treino gravado com sucesso.', 'success');
+    if (IS_FILIPA_GYM) {
+      showToast('Treino gravado com sucesso.', 'success');
+    } else {
+      await copySavedWorkoutSummary(summary);
+    }
     await loadSummaries();
   } catch (err) {
     console.error('Erro ao gravar treino:', err);
@@ -3860,7 +3965,9 @@ function init() {
       musicModeInput.checked = false;
     }
   }
-  updateTrainingOptions(gymSelect.value, restoredSelection?.treino || trainingSelect.value);
+  const restoredTraining = restoredSelection?.treino || trainingSelect.value;
+  updateTrainingOptions(gymSelect.value, !IS_FILIPA_GYM && restoredSelection?.date !== getTodayLocalISO()
+    ? normalTraining(restoredTraining) : restoredTraining);
   updateNotificationStatus();
 
   gymSelect.addEventListener('change', () => {
