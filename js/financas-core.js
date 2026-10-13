@@ -38,16 +38,17 @@ export const CHILD_PROFILES = Object.freeze({
     age: 11,
     kicker: 'Aprender hoje para escolher melhor amanhã',
     title: 'As minhas finanças',
-    lead: 'Planeia, distingue necessidades de desejos e descobre como o dinheiro pode crescer.',
+    lead: 'Recebes 25 € por mês, em duas entregas de 12,50 €. Regista entradas e compras; os pais confirmam. Planeia o que gastas e guardas.',
     investLabel: 'Investir',
     availableLabel: 'Disponível para usar',
     goalEmpty: 'Cria um objetivo e acompanha quanto falta para o alcançar.',
     movementIntro: 'Aqui vês o que aconteceu e o que ainda aguarda validação.',
     chartMode: 'doughnut',
     learningTips: Object.freeze([
-      'Antes de gastar, compara o preço com o valor que esse dinheiro tem para o teu objetivo.',
-      'Um ETF reparte o dinheiro por várias empresas; uma ação depende de uma só empresa.',
-      'O valor de mercado sobe e desce. Ganhos e perdas só ficam realizados quando vendes.'
+      'Compara o preço da mesma coisa em duas lojas e explica qual escolherias.',
+      'Planeia uma pequena compra e decide quanto queres guardar para o teu objetivo.',
+      'Espera dois dias antes de uma compra por impulso. Ainda a queres fazer?',
+      'Conversa com os pais sobre uma escolha deste mês: o que correu bem e o que mudarias?'
     ])
   }),
   leonor: Object.freeze({
@@ -56,16 +57,17 @@ export const CHILD_PROFILES = Object.freeze({
     age: 8,
     kicker: 'Aprender passo a passo',
     title: 'O meu dinheiro',
-    lead: 'Vê quanto tens, escolhe com calma e aprende para onde vai cada moeda.',
-    investLabel: 'Pôr a crescer',
+    lead: 'Recebes 3 € por semana, cerca de 13 € por mês. Regista o que recebes e gastas; os pais confirmam. Guarda um pouco para o teu objetivo.',
+    investLabel: 'Guardar e investir',
     availableLabel: 'Dinheiro que podes usar',
     goalEmpty: 'Escolhe algo para o qual gostavas de guardar dinheiro.',
     movementIntro: 'Os teus últimos movimentos e os registos por validar aparecem aqui.',
     chartMode: 'bar',
     learningTips: Object.freeze([
-      'Guardar um pouco agora pode ajudar-te a comprar algo importante mais tarde.',
-      'Antes de gastar, pergunta: preciso mesmo ou posso esperar?',
-      'Quando o dinheiro está no mercado, o valor pode subir e também pode descer.'
+      'Conta as moedas que tens contigo e vê se o valor coincide com a página.',
+      'Escolhe uma coisa para a qual queres poupar e descobre quanto custa.',
+      'Compara dois preços com os pais. Qual escolherias e porquê?',
+      'Antes de comprares uma coisa, espera dois dias. Ainda a queres?'
     ])
   })
 });
@@ -105,7 +107,7 @@ const CATEGORY_LABELS = new Map([
   ['investment_realized_gain', 'Ganhos realizados'],
   ['investment_realized_loss', 'Perdas realizadas'],
   ['vault', 'Cofre a prazo'],
-  ['market', 'Mercado simulado'],
+  ['market', 'Aprender a investir'],
   ['savings_goal', 'Objetivo de poupança'],
   ['cash_transfer', 'Dinheiro comigo'],
   ['reversal', 'Estorno']

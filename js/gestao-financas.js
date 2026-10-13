@@ -55,7 +55,7 @@ const CATEGORY_LABELS = Object.freeze({
   investment_realized_gain: 'Ganhos realizados',
   investment_realized_loss: 'Perdas realizadas',
   vault: 'Cofre a prazo',
-  market: 'Mercado simulado',
+  market: 'Aprender a investir',
   savings_goal: 'Objetivo de poupança',
   cash_transfer: 'Dinheiro físico',
   reversal: 'Estorno'

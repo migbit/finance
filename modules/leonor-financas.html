@@ -21,7 +21,7 @@
       <p class="financas-kicker" data-profile-kicker>Aprender passo a passo</p>
       <h1 data-profile-title>O meu dinheiro</h1>
       <p class="financas-lead" data-profile-lead>
-        Vê quanto tens, escolhe com calma e aprende para onde vai cada moeda.
+        Recebes 3 € por semana, cerca de 13 € por mês. Regista o que recebes e gastas; os pais confirmam. Guarda um pouco para o teu objetivo.
       </p>
     </header>
 
@@ -35,6 +35,8 @@
         <p id="financas-balance-title" data-available-label>Dinheiro que podes usar</p>
         <strong id="balance-available" aria-live="polite">0,00&nbsp;€</strong>
       </div>
+      <details class="financas-balance-details">
+        <summary>Ver onde está o meu dinheiro</summary>
       <dl class="financas-balance-grid">
         <div>
           <dt>Guardado com os pais</dt>
@@ -57,7 +59,7 @@
           <dd id="balance-vault">0,00&nbsp;€</dd>
         </div>
         <div>
-          <dt>A crescer no mercado</dt>
+          <dt>No mercado</dt>
           <dd id="balance-market">0,00&nbsp;€</dd>
         </div>
         <div id="balance-debt-card" class="financas-debt" hidden>
@@ -65,10 +67,11 @@
           <dd id="balance-debt">0,00&nbsp;€</dd>
         </div>
         <div class="financas-total">
-          <dt>Todo o meu património</dt>
+          <dt>Todo o meu dinheiro</dt>
           <dd id="balance-total">0,00&nbsp;€</dd>
         </div>
       </dl>
+      </details>
       <p class="financas-balance-note">O dinheiro principal só muda quando um dos pais valida o registo.</p>
       <p id="balance-projected" class="financas-balance-projected" hidden></p>
       <p id="balance-debt-help" class="financas-debt-help" hidden></p>
@@ -87,7 +90,7 @@
       </button>
       <button type="button" class="financas-action financas-action--invest" data-open-finance-dialog="invest">
         <span class="financas-action-icon" aria-hidden="true">↗</span>
-        <span><strong data-invest-label>Pôr a crescer</strong><small>No cofre ou no mercado</small></span>
+        <span><strong data-invest-label>Guardar e investir</strong><small>No cofre ou no mercado</small></span>
       </button>
       <button type="button" class="financas-action financas-action--cash" data-open-finance-dialog="cash">
         <span class="financas-action-icon" aria-hidden="true">⇄</span>
@@ -114,9 +117,9 @@
       <aside class="financas-card financas-learning" aria-labelledby="learning-title">
         <div class="financas-learning-icon" aria-hidden="true">💡</div>
         <div>
-          <p class="financas-eyebrow">Ideia do dia</p>
+          <p class="financas-eyebrow">Missão da semana</p>
           <h2 id="learning-title">Uma pequena escolha</h2>
-          <p id="learning-tip">Guardar um pouco agora pode ajudar-te a comprar algo importante mais tarde.</p>
+          <p id="learning-tip">Conta as moedas que tens contigo e vê se o valor coincide com a página.</p>
         </div>
       </aside>
     </section>
@@ -140,9 +143,9 @@
     <section class="financas-card" aria-labelledby="investments-title">
       <div class="financas-section-heading">
         <div>
-          <p class="financas-eyebrow">Investir · Pôr a crescer</p>
+          <p class="financas-eyebrow">Guardar e investir</p>
           <h2 id="investments-title">Onde está o dinheiro?</h2>
-          <p>No cofre, os pais prometem a recompensa. No mercado, o valor pode subir e descer.</p>
+          <p>No cofre, os pais pagam os juros combinados. No mercado, podes ganhar ou perder dinheiro real. Experimenta começar com 5 € e conversa com os pais uma vez por mês.</p>
         </div>
         <time id="quotes-updated" class="financas-cache-time">Preços ainda não carregados</time>
       </div>
@@ -152,7 +155,7 @@
           <div id="vaults-list"><p class="financas-empty">Ainda não tens dinheiro num cofre.</p></div>
         </article>
         <article class="financas-subcard" aria-labelledby="positions-title">
-          <h3 id="positions-title">Mercado de brincar</h3>
+          <h3 id="positions-title">Aprender a investir</h3>
           <div id="positions-list"><p class="financas-empty">Ainda não tens ETF nem ações.</p></div>
         </article>
       </div>
@@ -195,7 +198,7 @@
     </section>
 
     <p class="financas-simulation-note">
-      Este mercado serve para aprender e não compra nada numa bolsa verdadeira. Se subir ou descer, o teu dinheiro guardado pelos pais acompanha o resultado.
+      Não compramos ações na bolsa. Os ganhos e perdas mudam o dinheiro real que tens guardado com os pais. Mantém o dinheiro do teu objetivo separado do mercado.
     </p>
   </main>
 

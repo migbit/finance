@@ -113,8 +113,8 @@ function applyProfileCopy() {
   if (movementIntro) movementIntro.textContent = profile.movementIntro;
   const tip = document.getElementById('learning-tip');
   if (tip) {
-    const dayIndex = Math.floor(Date.now() / 86400000) % profile.learningTips.length;
-    tip.textContent = profile.learningTips[dayIndex];
+    const weekIndex = Math.floor((Date.now() + 3 * 86400000) / (7 * 86400000)) % profile.learningTips.length;
+    tip.textContent = profile.learningTips[weekIndex];
   }
 }
 
@@ -894,7 +894,7 @@ function renderInvestmentFields(path = 'vault') {
         </label>
         <label class="financas-choice">
           <input type="radio" name="investmentPath" value="market"${path === 'market' ? ' checked' : ''}>
-          <span>Mercado simulado<small>O valor pode subir ou descer</small></span>
+          <span>Aprender a investir<small>Podes ganhar ou perder dinheiro real</small></span>
         </label>
       </div>
     </fieldset>
@@ -973,11 +973,11 @@ function dialogCopy(mode) {
       submit: simple ? 'Enviar para os pais' : 'Enviar para validação'
     },
     invest: {
-      kicker: simple ? 'Aprender a esperar' : 'Simulação educativa',
-      title: simple ? 'Pôr dinheiro a crescer' : 'Investir dinheiro',
+      kicker: 'Aprender a investir',
+      title: simple ? 'Guardar e investir' : 'Investir dinheiro',
       intro: simple
-        ? 'No cofre, os pais prometem uma recompensa. No mercado, o valor sobe e desce.'
-        : 'Escolhe entre um prazo garantido pelos pais e o mercado simulado. Nenhuma ordem segue para uma corretora.',
+        ? 'No cofre, os pais pagam os juros combinados. No mercado, podes ganhar ou perder o teu dinheiro real. Não compramos ações na bolsa.'
+        : 'Escolhe o cofre ou o mercado. Nenhuma ordem segue para uma corretora, mas os ganhos e perdas alteram o teu dinheiro real guardado pelos pais.',
       submit: simple ? 'Enviar para validar' : 'Enviar para validação'
     },
     goal: {
