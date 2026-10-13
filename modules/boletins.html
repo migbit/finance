@@ -10,7 +10,7 @@
   <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
   <link rel="manifest" href="../manifest.json">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#101722">
   <style>
     #generated-link[hidden] { display: none !important; }
     body[data-page="boletins"] main {
@@ -60,15 +60,15 @@
     }
 
     .status-badge.pending {
-      color: #92400e;
-      background: #fffbeb;
-      border-color: #fde68a;
+      color: var(--warning, #92400e);
+      background: var(--surface-raised, #fffbeb);
+      border-color: var(--border, #fde68a);
     }
 
     .status-badge.done {
-      color: #166534;
-      background: #f0fdf4;
-      border-color: #bbf7d0;
+      color: var(--ok, #166534);
+      background: var(--surface-raised, #f0fdf4);
+      border-color: var(--border, #bbf7d0);
     }
 
     .sent-toggle {
@@ -194,14 +194,14 @@
 
     .copyable-cell:hover,
     .copyable-cell:focus {
-      color: var(--primary);
+      color: var(--link, var(--primary));
       background: color-mix(in srgb, var(--primary) 8%, transparent);
       outline: none;
     }
 
     .copyable-cell.is-copied {
-      color: #166534;
-      background: #dcfce7;
+      color: var(--ok, #166534);
+      background: var(--positive-bg, #dcfce7);
       box-shadow: inset 3px 0 0 #22c55e;
       text-decoration: none;
     }
@@ -209,7 +209,7 @@
     .copyable-cell.is-copied::after {
       content: " ✓";
       font-weight: 700;
-      color: #15803d;
+      color: var(--ok, #15803d);
     }
 
     .sent-more-actions {
@@ -245,8 +245,9 @@
 
     }
   </style>
+  <link rel="stylesheet" href="../css/theme-dark.css" media="screen">
 </head>
-<body data-page="boletins">
+<body data-page="boletins" data-theme="dark">
   <button id="menu-icon" aria-label="Open menu">☰</button>
 
   <header>
@@ -260,7 +261,7 @@
     </nav>
   </header>
 
-  <dialog id="guest-edit-dialog" style="max-width:650px;width:calc(100% - 32px);max-height:90vh;overflow:auto;border:1px solid #ddd;border-radius:12px;padding:24px">
+  <dialog id="guest-edit-dialog" style="max-width:650px;width:calc(100% - 32px);max-height:90vh;overflow:auto;border: 1px solid var(--border, #ddd);border-radius:12px;padding:24px">
     <form id="guest-edit-form">
       <h3>Corrigir dados do hóspede</h3>
       <p>A correção mantém o acesso do hóspede fechado. Se já enviaste o boletim ao SIBA, verifica também a correção junto do SIBA.</p>

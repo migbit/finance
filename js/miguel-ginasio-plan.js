@@ -4,7 +4,7 @@ export const SHORT_SUFFIX = ' — curto (exceção)';
 export const normalTraining = name => name.endsWith(SHORT_SUFFIX) ? name.slice(0, -SHORT_SUFFIX.length) : name;
 export const isReviewedMiguelTraining = (gym, training) =>
   (gym === 'Dragão' && ['Pernas', 'Peito + Ombro + Braços'].includes(normalTraining(training)))
-  || (gym === 'Constituição' && normalTraining(training) === 'Costas');
+  || (gym === 'Constituição' && ['Costas', 'Peito + Ombro + Braços'].includes(normalTraining(training)));
 const clone = value => JSON.parse(JSON.stringify(value));
 
 function prescribe(exercise, count, reps, rest, { rir = '1–3', introduction = '', note = '' } = {}) {
@@ -60,6 +60,47 @@ export function buildMiguelPlans(legacy) {
   const biceps = { id: 'biceps-choice', name: 'Bíceps', choices: [chest[4], chest[6]] };
   plans['Dragão']['Peito + Ombro + Braços'] = [...chest.slice(0, 3), triceps, biceps];
 
+  // Equipamento da Constituição: cargas próprias, a calibrar na primeira sessão.
+  // O antigo Peito fica apenas no catálogo legado e nos registos já guardados.
+  const constitutionExercise = (id, name, reps, rest, note, warmup, options = {}) => {
+    const exercise = prescribe({
+      id: `${id}-constituicao-pob`, name, initialResistance: null,
+      series: [{ baseWeight: 0 }], rules: { warmup }
+    }, 3, reps, rest, { ...options, note });
+    return exercise;
+  };
+  const calibrate = 'Carga a definir nesta máquina: começar com 2–3 repetições em reserva. Não copiar os kg do Dragão.';
+  const lightWarmup = 'Se necessário, 1×10–12 leve de familiarização | RIR 4+';
+  const constitutionChest = [
+    constitutionExercise('chest-press', 'Technogym Chest Press', '8–12', '2:30',
+      `${calibrate} Escolher a pega horizontal ou vertical conforme conforto e execução. Registar a pega e o ajuste do banco nas notas.`,
+      '1×10–12 leve | RIR 4+; Opcional: 1×6–8 de aproximação | RIR 4+'),
+    constitutionExercise('pectoral', 'Technogym Pectoral', '12–20', '1:30',
+      `${calibrate} Usar amplitude confortável, sem forçar o alongamento. Introduzir a terceira série conforme tolerância e recuperação do ombro.`,
+      lightWarmup, { rir: '2–3' }),
+    constitutionExercise('lateral-halteres', 'Elevação lateral com halteres', '12–20', '1:30',
+      'Dois braços em simultâneo. Registar o peso de cada halter. Carga a definir com 2–3 repetições em reserva e amplitude confortável. Introduzir a terceira série conforme tolerância do ombro.',
+      lightWarmup, { rir: '2–3' }),
+    constitutionExercise('arm-extension', 'Technogym Arm Extension', '10–15', '1:30',
+      `${calibrate} Ajustar o apoio e manter o movimento controlado.`, lightWarmup),
+    constitutionExercise('arm-curl', 'Technogym Arm Curl', '8–12', '1:30',
+      `${calibrate} Ajustar o banco e manter os braços apoiados.`, lightWarmup)
+  ];
+  const withAlternative = (index, id, name, note) => {
+    const main = constitutionChest[index];
+    const alternative = constitutionExercise(id, name, main.rules.series[0].reps, '1:30',
+      note, lightWarmup, { rir: main.rules.series[0].rir });
+    constitutionChest[index] = { id: `${id}-choice-constituicao`, name: main.name, choices: [main, alternative] };
+  };
+  withAlternative(2, 'lateral-cabo', 'Elevação lateral no cabo unilateral',
+    'Carga própria do cabo, a definir. Cada série inclui os dois lados, com 12–20 repetições por lado. Usar amplitude confortável; no normal, introduzir a terceira série conforme tolerância.');
+  withAlternative(3, 'triceps-cabo', 'Extensão de tríceps no cabo',
+    'Alternativa à Arm Extension. Carga própria do cabo, a definir com 2–3 repetições em reserva. Registar o acessório usado nas notas.');
+  withAlternative(4, 'scott-halter', 'Curl Scott com halter',
+    'Alternativa à Arm Curl. Registar o peso de um halter. Cada série inclui os dois braços, com 8–12 repetições por braço. Carga a definir com 2–3 repetições em reserva.');
+  delete plans['Constituição']['Peito'];
+  plans['Constituição']['Peito + Ombro + Braços'] = constitutionChest;
+
   // As versões curtas são sessões distintas: não substituem o plano normal nem a sua progressão.
   const shorten = (exercises, counts) => exercises.flatMap((exercise, index) => {
     if (!counts[index]) return [];
@@ -81,6 +122,7 @@ export function buildMiguelPlans(legacy) {
   plans['Dragão'][`Pernas${SHORT_SUFFIX}`] = shorten(legs, [2, 2, 2, 0, 2, 0]);
   plans['Constituição'][`Costas${SHORT_SUFFIX}`] = shorten(back, [2, 2, 0, 0, 0, 2]);
   plans['Dragão'][`Peito + Ombro + Braços${SHORT_SUFFIX}`] = shorten(plans['Dragão']['Peito + Ombro + Braços'], [3, 0, 2, 1, 1]);
+  plans['Constituição'][`Peito + Ombro + Braços${SHORT_SUFFIX}`] = shorten(constitutionChest, [3, 0, 2, 1, 1]);
   return plans;
 }
 

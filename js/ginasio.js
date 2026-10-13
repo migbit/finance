@@ -3,6 +3,7 @@ import { showConfirm, showToast } from './toast.js';
 import { FILIPA_UID } from './access-control.js';
 import { FILIPA_WORKOUT_TEMPLATES } from './filipa-ginasio-config.js';
 import { buildMiguelPlans, resolveExerciseChoices, usesLegacyPlan, isReviewedMiguelTraining, MIGUEL_PLAN_VERSION, normalTraining, SHORT_SUFFIX } from './miguel-ginasio-plan.js';
+import { warmupAdvice, warmupProfile } from './ginasio-warmup.js';
 import {
   collection,
   doc,
@@ -1844,7 +1845,12 @@ function parseWarmupSets(text, workWeight = 0) {
 function renderWarmupBlock(card, machine, variant, savedMachine) {
   const rules = variant?.rules || machine.rules || null;
   const firstWorkWeight = Number(variant?.series?.[0]?.baseWeight ?? machine.series?.[0]?.baseWeight ?? 0) || 0;
-  const templateWarmups = parseWarmupSets(rules?.warmup || '', firstWorkWeight);
+  let templateWarmups = parseWarmupSets(rules?.warmup || '', firstWorkWeight);
+  const adaptive = !IS_FILIPA_GYM && !usesLegacyPlan(state.session)
+    && warmupProfile(variant?.id || machine.id);
+  if (adaptive && (!templateWarmups.length || /não necessita|S1 já/i.test(rules?.warmup || ''))) {
+    templateWarmups = [{ baseWeight: 0, reps: '6–8', rir: '4+' }];
+  }
   const savedWarmups = Array.isArray(savedMachine?.warmups) ? savedMachine.warmups : [];
   const variantId = variant?.id || '';
   const warmups = savedWarmups.length
@@ -1876,6 +1882,25 @@ function renderWarmupBlock(card, machine, variant, savedMachine) {
   actions.append(status, btn);
   header.append(title, actions);
   block.appendChild(header);
+  if (adaptive) {
+    block.dataset.adaptiveWarmup = 'true';
+    const guidance = document.createElement('p');
+    guidance.className = 'gym-warmup-guidance';
+    guidance.setAttribute('data-warmup-guidance', 'true');
+    guidance.setAttribute('aria-live', 'polite');
+    const help = document.createElement('p');
+    help.className = 'gym-warmup-help';
+    help.textContent = 'Máquina/carga nova ou sensação de frio: usa a preparação completa. Se houver dor, adapta ou interrompe. Quando o peso estiver a zero, define uma carga leve. Não procures fadiga.';
+    const override = document.createElement('button');
+    override.type = 'button';
+    override.setAttribute('data-warmup-override', 'true');
+    override.textContent = 'Mostrar aquecimento completo';
+    override.addEventListener('click', () => {
+      block.dataset.forceFull = block.dataset.forceFull === 'true' ? 'false' : 'true';
+      refreshAdaptiveWarmups();
+    });
+    block.append(guidance, override, help);
+  }
 
   const table = document.createElement('table');
   table.className = 'gym-series-table';
@@ -1894,12 +1919,12 @@ function renderWarmupBlock(card, machine, variant, savedMachine) {
   warmups.forEach((warmup, index) => {
     const row = document.createElement('tr');
     row.setAttribute('data-warmup-row', 'true');
-    row.setAttribute('data-warmup-index', String(index));
+    row.setAttribute('data-warmup-index', String(warmup.warmupIndex ?? index));
     if (savedWarmups[index]) row.dataset.recorded = 'true';
     if (warmup.startedAt) row.dataset.startedAt = String(warmup.startedAt);
     if (warmup.finishedAt) row.dataset.finishedAt = String(warmup.finishedAt);
     row.innerHTML = `
-      <td data-label="Série">${index + 1}ª aquecimento</td>
+      <td data-label="Série">${(warmup.warmupIndex ?? index) + 1}ª aquecimento</td>
       <td data-label="Peso"><input type="number" min="0" step="0.1" value="${warmup.baseWeight ?? 0}" data-warmup-weight></td>
       <td data-label="Reps"><input type="text" value="${warmup.reps ?? ''}" data-warmup-reps></td>
       <td data-label="RIR"></td>
@@ -1927,6 +1952,42 @@ function renderWarmupBlock(card, machine, variant, savedMachine) {
   }
 }
 
+function refreshAdaptiveWarmups() {
+  if (IS_FILIPA_GYM || !workoutWrap) return;
+  const cards = Array.from(workoutWrap.querySelectorAll('.gym-machine-card'));
+  const work = cards.flatMap(card => Array.from(card.querySelectorAll('[data-series-row]')).map(row => ({
+    id: card.dataset.variantId || card.dataset.machineId,
+    name: card.dataset.variantLabel || card.dataset.machineName,
+    reps: Number(row.querySelector('[data-reps]')?.value || 0),
+    at: Number(row.dataset.registeredAt || 0)
+  })));
+  cards.forEach(card => {
+    const block = card.querySelector('[data-adaptive-warmup]');
+    if (!block) return;
+    const rows = Array.from(block.querySelectorAll('[data-warmup-row]'));
+    const guidance = block.querySelector('[data-warmup-guidance]');
+    const override = block.querySelector('[data-warmup-override]');
+    // Never hide or rewrite anything the user has edited, started or saved.
+    if (rows.some(row => row.dataset.touched === 'true' || row.dataset.recorded === 'true' || Number(row.dataset.startedAt))) {
+      guidance.textContent = 'Preparação já iniciada ou registada. Mantém-se o teu registo. Após uma pausa prolongada, reavalia a preparação antes de retomar.';
+      override.hidden = true;
+      return;
+    }
+    const advice = warmupAdvice({ id: card.dataset.variantId || card.dataset.machineId }, work);
+    const forceFull = block.dataset.forceFull === 'true';
+    const mode = forceFull ? 'full' : advice.mode;
+    block.dataset.warmupMode = mode;
+    guidance.textContent = forceFull ? 'Preparação completa escolhida por ti. Ajusta a carga e mantém margem confortável.' : advice.reason;
+    rows.forEach((row, index) => { row.hidden = mode === 'optional' || (mode === 'specific' && index !== rows.length - 1); });
+    block.querySelector('table').hidden = mode === 'optional';
+    block.querySelector('[data-warmup-toggle]').hidden = mode === 'optional';
+    block.querySelector('[data-warmup-status]').hidden = mode === 'optional';
+    override.hidden = !forceFull && advice.mode === 'full';
+    override.textContent = forceFull ? 'Voltar à sugestão automática' : 'Mostrar aquecimento completo';
+    override.setAttribute('aria-expanded', String(forceFull));
+  });
+}
+
 function updateWarmupStatus(block) {
   const status = block.querySelector('[data-warmup-status]');
   const btn = block.querySelector('[data-warmup-toggle]');
@@ -1942,7 +2003,7 @@ function updateWarmupStatus(block) {
 
 function toggleWarmup(card, btn, status) {
   const block = card.querySelector('[data-warmup-block]');
-  const rows = Array.from(block?.querySelectorAll('[data-warmup-row]') || []);
+  const rows = Array.from(block?.querySelectorAll('[data-warmup-row]') || []).filter(row => !row.hidden);
   if (!rows.length) return;
   const activeRows = rows.filter(row => Number(row.dataset.startedAt || 0) && !Number(row.dataset.finishedAt || 0));
   const now = Date.now();
@@ -2483,7 +2544,9 @@ function renderRulesBlock(card, rules) {
   if (rules.warmup) {
     const w = document.createElement('div');
     w.className = 'gym-rule-note';
-    w.textContent = `Aquecimento: ${rules.warmup}`;
+    w.textContent = !IS_FILIPA_GYM && !usesLegacyPlan(state.session)
+      ? `Referência de aquecimento: ${rules.warmup}. A sugestão acima adapta-se ao trabalho já registado.`
+      : `Aquecimento: ${rules.warmup}`;
     block.appendChild(w);
   }
   if (rules.progression) {
@@ -2976,6 +3039,7 @@ function renderMachine(machine) {
           progressBadge.style.display = 'none';
         }
         scheduleLocalDraftSave();
+        refreshAdaptiveWarmups();
       }
     });
   }
@@ -3015,10 +3079,9 @@ function renderWorkout() {
       : state.treino.endsWith(SHORT_SUFFIX)
         ? 'Treino curto · exceção por falta de tempo. Mantém os aquecimentos e descansos; não compenses com falha. Os três treinos normais continuam a ser a base semanal.'
         : reviewed
-          ? 'Plano normal · 3 sessões semanais. Introduz gradualmente as séries acrescentadas e regista apenas as que fizeres.'
-            + (state.treino === 'Pernas' ? ' Retoma gémeos e abdutora antes de acrescentar a 4.ª série de curl, conforme recuperação e tolerância.' : ' Progride depois de confirmar execução, esforço e recuperação em duas sessões comparáveis.')
-          : 'Esta combinação conserva o plano anterior; a revisão abrange Pernas e Peito + Ombro + Braços no Dragão, e Costas na Constituição.';
-    workoutWrap.appendChild(notice);
+          ? ''
+          : 'Esta combinação conserva o plano anterior; a revisão abrange Pernas e Peito + Ombro + Braços no Dragão, e Costas e Peito + Ombro + Braços na Constituição.';
+    if (notice.textContent) workoutWrap.appendChild(notice);
   }
   let currentBlock = '';
   template.forEach(machine => {
@@ -3033,6 +3096,7 @@ function renderWorkout() {
     workoutWrap.appendChild(renderMachine(machine));
   });
   updateWorkoutProgress();
+  refreshAdaptiveWarmups();
   syncTimingFromDom();
   const savedDuration = Number(state.session?.timing?.durationSec || 0);
   const savedFinishedAt = Number(state.session?.timing?.finishedAt || 0);
@@ -3391,6 +3455,7 @@ function buildSessionFromDom() {
         recorded: row.dataset.recorded === 'true'
           || row.dataset.touched === 'true'
           || Boolean(startedAt),
+        ...(!IS_FILIPA_GYM ? { warmupIndex: Number(row.dataset.warmupIndex || 0) } : {}),
         baseWeight: parseFloat(row.querySelector('[data-warmup-weight]')?.value || 0) || 0,
         reps: row.querySelector('[data-warmup-reps]')?.value.trim() || '',
         rir: row.querySelector('[data-rir]')?.value || '?',
@@ -3942,6 +4007,9 @@ function updateGymOptions(preferredGym = '') {
 
 function updateTrainingOptions(gym, preferredTraining = '') {
   if (!trainingSelect) return;
+  if (!IS_FILIPA_GYM && gym === 'Constituição' && preferredTraining === 'Peito') {
+    preferredTraining = 'Peito + Ombro + Braços';
+  }
   const trainings = Object.keys(WORKOUT_TEMPLATES[gym] || {});
   trainingSelect.innerHTML = '<option value="">Selecionar</option>';
   trainings.forEach(training => {
@@ -4016,6 +4084,7 @@ function init() {
       finishActiveWarmupForSeries(event.target);
       recordSeriesTiming(event.target);
       markExerciseTouched(event.target);
+      refreshAdaptiveWarmups();
       return;
     }
     const row = event.target.closest('[data-series-row]');
@@ -4023,8 +4092,13 @@ function init() {
       delete row.dataset.registeredAt;
       delete row.dataset.restBeforeSec;
       syncTimingFromDom();
+      refreshAdaptiveWarmups();
     }
   });
+  workoutWrap.addEventListener('toggle', event => {
+    if (event.target.matches('.gym-machine-card') && event.target.open) refreshAdaptiveWarmups();
+  }, true);
+  if (!IS_FILIPA_GYM) setInterval(refreshAdaptiveWarmups, 30000);
   window.addEventListener('pagehide', () => {
     flushLocalDraft();
   });
@@ -4033,6 +4107,7 @@ function init() {
     if (document.visibilityState === 'visible') {
       refreshRestTimers();
       updateNotificationStatus();
+      refreshAdaptiveWarmups();
     }
   });
   saveBtn.addEventListener('click', saveSession);

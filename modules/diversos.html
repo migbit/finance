@@ -35,7 +35,7 @@
             color: var(--p2);
         }
         .tab-btn.active {
-            background: var(--p2);
+            background: var(--primary);
             color: white;
             border-bottom: 2px solid var(--p2);
         }
@@ -101,7 +101,7 @@
             margin-bottom: 8px;
         }
         .cleaning-alert-error {
-            color: #b42318;
+            color: var(--bad, #b42318);
         }
 
         /* Obras (sub-tabs) */
@@ -129,7 +129,7 @@
             color: var(--p2);
         }
         .obras-tab-btn.active {
-            background: var(--p2);
+            background: var(--primary);
             color: white;
             border-bottom: 2px solid var(--p2);
         }
@@ -187,8 +187,10 @@
             }
         }
     </style>
+  <meta name="theme-color" content="#101722">
+  <link rel="stylesheet" href="../css/theme-dark.css" media="screen">
 </head>
-<body id="diversos-page" data-page="diversos-page">
+<body id="diversos-page" data-page="diversos-page" data-theme="dark">
     <!-- Hamburger icon (always visible on mobile) -->
     <button id="menu-icon" aria-label="Open menu">☰</button>
     
@@ -314,7 +316,7 @@
                     <!-- Display the selected message -->
                     <div id="mensagem-secao" style="display: none;">
                         <h4>Mensagem Selecionada:</h4>
-                        <div id="mensagem-container" style="cursor: pointer; background-color: #f0f0f0; padding: 10px; margin-bottom: 1rem;"></div>
+                        <div id="mensagem-container" style="cursor: pointer; background-color: var(--surface-raised, #f0f0f0); padding: 10px; margin-bottom: 1rem;"></div>
                     </div>
 
                     <!-- Baby message and SMS copy buttons, hidden by default -->

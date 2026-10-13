@@ -73,3 +73,68 @@ gravação não desencadeia a cópia. Se o browser recusar a cópia automática,
 aparece o botão «Copiar resumo»; se também recusar esse gesto, apresenta o texto
 selecionável. O botão reutiliza o resumo gravado, não alterações ainda por
 guardar. A página da Filipa mantém o comportamento anterior.
+
+## Constituição — Peito + Ombro + Braços, aprovado em 12/10/2026
+
+Substitui a opção Peito no seletor de Miguel. O catálogo legado e os resumos
+guardados mantêm o treino antigo; não se apagam nem renomeiam dados remotos.
+A seleção anterior de Peito passa a sugerir o novo treino, sem reutilizar o
+rascunho antigo como se fosse uma sessão deste plano.
+
+- Normal: Chest Press Technogym 3×8–12, Pectoral Technogym 3×12–20,
+  elevação lateral com halteres 3×12–20, Arm Extension Technogym 3×10–15,
+  Arm Curl Technogym 3×8–12. Total: 15 séries.
+- Curto excecional: press 3, lateral 2, tríceps 1, bíceps 1. Total: 7 séries.
+- Alternativas exclusivas: lateral no cabo unilateral, tríceps no cabo e
+  Scott com halter. Cada série unilateral inclui ambos os lados.
+- Novos IDs e cargas iniciais a definir (campo a zero), sem herdar kg do
+  Dragão ou do antigo Peito. Nas elevações e Scott regista-se o peso por halter.
+- Descanso de 2min30 no press e 1min30 nos restantes. Aquecimento leve,
+  configuração da pega/banco nas notas e ajuste inicial com 2–3 reps em reserva.
+
+## Aquecimento adaptado à ordem real — Miguel, 12/10/2026
+
+`js/ginasio-warmup.js` define relações explícitas entre os exercícios conhecidos
+de todos os planos de Miguel, incluindo curtos e alternativas. Não modifica
+as séries de trabalho, repetições ou cargas. A página da Filipa e a apresentação
+de sessões legadas não recebem esta adaptação. Máquinas personalizadas sem
+correspondência conservam as suas instruções, sem inferir preparação muscular.
+
+| Situação | Antes | Agora |
+| --- | --- | --- |
+| Primeiro movimento ou grupo ainda não preparado | Texto fixo | Preparação específica de referência |
+| Press antes de tríceps/peitoral isolado | Aquecimento repetido | Extra opcional, recolhido, com botão para mostrar |
+| Puxada/remada antes de bíceps | Aquecimento repetido | Extra opcional |
+| Leg press antes de extensão | Aquecimento repetido | Extra opcional |
+| Remada após puxada; press após fly | Texto fixo | Uma série de adaptação específica, sem eliminar toda a preparação |
+| Hip thrust antes de leg curl | Texto fixo | Preparação própria do curl mantida |
+
+São consideradas pelo menos duas séries de trabalho compatíveis registadas
+nos últimos 20 minutos, com hora válida e repetições positivas. Esta janela e
+contagem são regras práticas conservadoras, não limiares fisiológicos validados.
+Um registo do próprio exercício evita sugerir novo aquecimento entre séries.
+Abrir um cartão, regressar à página, corrigir repetições ou decorrer tempo
+atualiza a sugestão. Valores predefinidos, aquecimentos apenas planeados e
+registos de outras sessões não contam como trabalho realizado.
+
+O utilizador pode mostrar a preparação completa para máquina/carga nova ou
+sensação de frio. Dor exige adaptar/interromper, não apenas aquecer mais.
+Quando falta preparação específica num exercício conhecido, disponibiliza-se
+uma série leve de familiarização (6–8 reps, RIR 4+, carga a definir).
+Os aquecimentos iniciados, editados e guardados nunca são ocultados ou apagados
+pela sugestão. Linhas recolhidas não são iniciadas pelo cronómetro nem entram
+automaticamente no resumo. O índice original da série de aquecimento é
+preservado nos novos registos para recuperar uma preparação reduzida.
+
+Fundamentação: a revisão de Ribeiro et al. (2021),
+https://doi.org/10.6063/motricidade.21143, descreve resultados heterogéneos.
+Viveiros et al. (2024), https://doi.org/10.1016/j.jbmt.2024.08.004, encontrou
+vantagem de um aquecimento específico com menos repetições num ensaio com 15
+homens treinados. Nenhum destes trabalhos valida este algoritmo entre exercícios
+nem garante prevenção de lesões; a transferência é uma aplicação prática
+prudente com controlo manual e manutenção da preparação específica.
+
+Validação: `node --test tests/ginasio-warmup.test.mjs tests/miguel-ginasio-plan.test.mjs tests/filipa-ginasio-page.test.mjs`.
+Chromium com Firebase simulado: ordem inversa, correção de séries, pausa,
+controlo manual, persistência de aquecimentos iniciados e de índices omitidos,
+gravação/cópia, ausência de overflow mobile e isolamento da Filipa.

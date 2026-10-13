@@ -34,6 +34,7 @@ export function applyDailyPlanDate(profile = {}, dateKey = getLocalDateKey()) {
       lunchExternal: false,
       selectedDinnerId: '',
       snacks: [],
+      consumedMeals: {},
       mealCalories: { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 }
     },
     didReset: true
@@ -80,8 +81,10 @@ export function rebalanceMealCalories(totalCalories, baseTargets = {}, fixedCalo
   return result;
 }
 
-export function adjustMealToCalories(meal, calorieTarget) {
+// Opt-in keeps the shared Filipa planner's existing portion behaviour intact.
+export function adjustMealToCalories(meal, calorieTarget, { practicalPortions = false } = {}) {
   if (!meal || !(finite(meal.calories) > 0) || !(finite(calorieTarget) > 0)) return null;
+  if (practicalPortions) return practicalMealPortion(meal, calorieTarget);
   const calories = Math.round(finite(calorieTarget));
   const factor = calories / finite(meal.calories);
   const adjustment = meal.calorieAdjustment;
@@ -123,6 +126,49 @@ export function adjustMealToCalories(meal, calorieTarget) {
   };
 }
 
+function practicalMealPortion(meal, calorieTarget) {
+  const adjustment = meal.calorieAdjustment;
+  const adjustable = adjustment?.baseQuantity > 0 && adjustment?.calories > 0;
+  const baseQuantity = adjustable ? Number(adjustment.baseQuantity) : null;
+  const step = Math.max(1, finite(adjustment?.step) || 5);
+  const desired = adjustable
+    ? baseQuantity * (1 + (calorieTarget - meal.calories) / adjustment.calories)
+    : null;
+  const quantity = adjustable ? Math.max(
+    finite(adjustment.minQuantity) || baseQuantity * 0.75,
+    Math.min(finite(adjustment.maxQuantity) || baseQuantity * 1.5, Math.round(desired / step) * step)
+  ) : null;
+  const ratio = adjustable ? quantity / baseQuantity - 1 : 0;
+  const calories = Math.round(meal.calories + (adjustable ? adjustment.calories * ratio : 0));
+  const nutrition = Object.fromEntries(NUTRITION_FIELDS.slice(1).map(field => [field,
+    meal[field] == null ? null : round(Math.max(0, finite(meal[field]) + finite(adjustment?.[field]) * ratio))
+  ]));
+  return {
+    id: meal.id, name: meal.name, baseCalories: meal.calories, calories, ...nutrition,
+    servingFactor: round(calories / meal.calories, 2),
+    adjustmentLabel: adjustable ? adjustment.label : '',
+    adjustmentUnit: adjustable ? adjustment.unit : '',
+    baseQuantity, adjustedQuantity: quantity,
+    isPracticalPortion: true,
+    targetCalories: Math.round(calorieTarget),
+    calorieGap: Math.round(calorieTarget - calories)
+  };
+}
+
+export function normalizeConsumedMeals(value = {}) {
+  return Object.fromEntries(['breakfast', 'lunch', 'dinner'].flatMap(key => {
+    const meal = value?.[key];
+    if (!meal || !Number.isFinite(Number(meal.calories)) || Number(meal.calories) <= 0) return [];
+    return [[key, {
+      ...meal,
+      name: String(meal.name || 'Refeição consumida'),
+      ...Object.fromEntries(NUTRITION_FIELDS.map(field => [field,
+        meal[field] == null || !Number.isFinite(Number(meal[field])) ? null : Math.max(0, Number(meal[field]))
+      ]))
+    }]];
+  }));
+}
+
 export function calculateDailyPlan({
   targetCalories,
   breakfast = null,
@@ -133,6 +179,8 @@ export function calculateDailyPlan({
   dinner = null,
   snacks = [],
   mealCalories = {},
+  consumedMeals = {},
+  practicalPortions = false,
   lunchTarget = 840,
   dinnerTarget = 720
 } = {}) {
@@ -148,6 +196,7 @@ export function calculateDailyPlan({
   const baseDinner = Math.max(0, Math.round(finite(dinnerTarget)));
   const baseSnacks = Math.max(0, target - baseBreakfast - baseLunch - baseDinner);
   const fixed = {};
+  const consumed = normalizeConsumedMeals(consumedMeals);
   if (manual.breakfast > 0) fixed.breakfast = manual.breakfast;
   else if (breakfast) fixed.breakfast = Math.round(finite(breakfast.calories));
   else if (breakfastSkipped) fixed.breakfast = 0;
@@ -155,6 +204,7 @@ export function calculateDailyPlan({
   if (manual.dinner > 0) fixed.dinner = manual.dinner;
   if (manual.snacks > 0) fixed.snacks = manual.snacks;
   else if (hasEnteredSnacks) fixed.snacks = Math.round(snackTotals.calories);
+  Object.entries(consumed).forEach(([key, meal]) => { fixed[key] = Math.round(meal.calories); });
 
   const targets = rebalanceMealCalories(target, {
     breakfast: baseBreakfast,
@@ -166,25 +216,27 @@ export function calculateDailyPlan({
   const plannedLunchCalories = targets.lunch;
   const plannedDinnerCalories = targets.dinner;
   const snackBudget = targets.snacks;
-  const manualItem = (name, calories) => ({ name, calories, protein: 0, carbs: 0, fat: 0, fiber: 0 });
-  const resolvedBreakfast = manual.breakfast > 0
+  const manualItem = (name, calories) => ({ name, calories, protein: null, carbs: null, fat: null, fiber: null });
+  const resolvedBreakfast = consumed.breakfast || (manual.breakfast > 0
     ? manualItem('Pequeno-almoço registado', manual.breakfast)
-    : (breakfastSkipped ? null : breakfast);
-  const adjustedLunch = manual.lunch > 0
+    : (breakfastSkipped ? null : breakfast));
+  const adjustedLunch = consumed.lunch || (manual.lunch > 0
     ? manualItem('Almoço registado', manual.lunch)
-    : adjustMealToCalories(lunch, plannedLunchCalories);
-  const adjustedDinner = manual.dinner > 0
+    : adjustMealToCalories(lunch, plannedLunchCalories, { practicalPortions }));
+  const adjustedDinner = consumed.dinner || (manual.dinner > 0
     ? manualItem('Jantar registado', manual.dinner)
-    : adjustMealToCalories(dinner, plannedDinnerCalories);
+    : adjustMealToCalories(dinner, plannedDinnerCalories, { practicalPortions }));
   const resolvedSnacks = manual.snacks > 0
     ? [manualItem('Lanches registados', manual.snacks)]
     : snacks;
-  const selectedNutrition = sumNutrition([
+  const selectedItems = [
     resolvedBreakfast,
     adjustedLunch,
     adjustedDinner,
     ...resolvedSnacks
-  ]);
+  ].filter(Boolean);
+  const selectedNutrition = sumNutrition(selectedItems);
+  const partialNutrients = NUTRITION_FIELDS.slice(1).filter(field => selectedItems.some(item => item[field] == null));
   const allMealsSelected = Boolean(resolvedBreakfast && adjustedLunch && adjustedDinner);
   const breakfastResolved = Boolean(resolvedBreakfast || breakfastSkipped);
   const lunchResolved = Boolean(adjustedLunch || lunchExternal);
@@ -214,6 +266,9 @@ export function calculateDailyPlan({
     adjustedLunch,
     adjustedDinner,
     selectedNutrition,
+    resolvedBreakfast,
+    partialNutrients,
+    consumedCalories: Math.round(sumNutrition(Object.values(consumed)).calories),
     reservedBreakfastCalories: Math.round(reservedBreakfastCalories),
     reservedLunchCalories: Math.round(reservedLunchCalories),
     reservedDinnerCalories: Math.round(reservedDinnerCalories),
@@ -272,7 +327,8 @@ export function recommendMainMeals(meals = [], {
   excludedIds = [],
   mealSlotsRemaining = 1,
   dailyProteinTarget = 135,
-  dailyFiberTarget = 30
+  dailyFiberTarget = 30,
+  practicalPortions = false
 } = {}) {
   const excluded = new Set(excludedIds);
   const slots = Math.max(1, Math.round(finite(mealSlotsRemaining)));
@@ -282,7 +338,7 @@ export function recommendMainMeals(meals = [], {
   return meals
     .filter(meal => !excluded.has(meal.id))
     .map(meal => {
-      const adjusted = adjustMealToCalories(meal, calorieTarget);
+      const adjusted = adjustMealToCalories(meal, calorieTarget, { practicalPortions });
       if (!adjusted) return null;
       const pairingBonus = meal.pairsAfter?.includes(breakfastId) ? 8 : 0;
       const lowFiberBonus = finite(consumedNutrition.fiber) < 8 && adjusted.fiber >= 18 ? 4 : 0;

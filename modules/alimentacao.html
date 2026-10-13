@@ -4,15 +4,16 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#f4f7f2">
+  <meta name="theme-color" content="#101722">
   <title>Alimentação</title>
   <link rel="stylesheet" href="../css/styles.pcolor.css">
   <link rel="stylesheet" href="../css/mobile.css">
   <link rel="stylesheet" href="../css/alimentacao.css">
   <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="manifest" href="../manifest.json">
+  <link rel="stylesheet" href="../css/theme-dark.css" media="screen">
 </head>
-<body data-page="alimentacao">
+<body data-page="alimentacao" data-theme="dark">
   <button id="menu-icon" aria-label="Abrir menu">☰</button>
   <header><nav id="nav-menu"></nav></header>
 
@@ -27,10 +28,11 @@
           <strong id="food-profile-target">Base diária · 2 400 kcal</strong>
           <small id="food-save-state">Guardado neste dispositivo</small>
         </div>
+        <button type="button" class="food-settings-button" data-food-settings-open aria-label="Alterar meta diária">⚙ Meta diária</button>
       </div>
     </section>
 
-    <nav class="food-meal-switcher food-meal-switcher--five" aria-label="Escolher refeição a planear">
+    <nav class="food-meal-switcher" aria-label="Escolher refeição a planear">
       <button type="button" data-food-meal-jump="breakfast" aria-current="true">
         <span>01</span>
         <strong>Pequeno-almoço</strong>
@@ -50,11 +52,6 @@
         <span>04</span>
         <strong>Lanches</strong>
         <small id="food-snacks-jump-state">Por escolher</small>
-      </button>
-      <button type="button" class="food-settings-button" data-food-settings-open aria-label="Abrir configuração">
-        <span aria-hidden="true">⚙</span>
-        <strong>Configuração</strong>
-        <small>Meta diária</small>
       </button>
     </nav>
 
@@ -85,7 +82,7 @@
             <div><span>Alvo-base diário</span><strong id="food-recipes-daily-target">2 400 kcal</strong></div>
             <div><span>Pequeno-almoço</span><strong id="food-recipes-breakfast-target">≈ 600 kcal</strong></div>
             <div><span>Proteína diária</span><strong id="food-recipes-protein-target">≈ 120–150 g</strong></div>
-            <div><span>Whey 2 × 30 g</span><strong>230 kcal · 46,8 g proteína</strong></div>
+            <div><span>Whey de referência</span><strong>Evowhey · contar apenas as doses escolhidas</strong></div>
           </div>
 
           <div class="food-recipe-grid" id="food-recipe-grid"></div>
@@ -129,6 +126,7 @@
               </div>
               <div class="food-stage-heading-actions">
                 <strong id="food-lunch-calorie-target">≈ 840 kcal</strong>
+                <button type="button" data-food-add-recipe="main">+ Criar receita</button>
               </div>
             </div>
             <details class="food-meal-calorie-entry">
@@ -151,6 +149,7 @@
                 <p id="food-dinner-context" hidden></p>
               </div>
               <strong id="food-dinner-calorie-target">≈ 720 kcal</strong>
+              <button type="button" data-food-add-recipe="main">+ Criar receita</button>
             </div>
             <details class="food-meal-calorie-entry">
               <summary>Inserir apenas o total desta refeição</summary>
@@ -171,6 +170,7 @@
                 <h3 id="food-snacks-title">Lanches</h3>
               </div>
               <strong id="food-snack-budget">—</strong>
+              <button type="button" data-food-add-recipe="snack">+ Criar receita</button>
             </div>
 
             <details class="food-meal-calorie-entry">
@@ -238,22 +238,21 @@
         <section class="food-summary-card card">
           <p class="food-eyebrow">Resumo</p>
           <h2 id="food-macro-summary-title">Totais selecionados</h2>
+          <p id="food-summary-remaining" class="food-summary-remaining" aria-live="polite"></p>
           <div class="food-summary-macros">
-            <div><span>Energia</span><strong id="food-summary-calories">—</strong></div>
+            <div><span>Escolhido / meta</span><strong id="food-summary-calories">—</strong></div>
             <div><span>Proteína</span><strong id="food-summary-protein">—</strong></div>
             <div><span>Hidratos</span><strong id="food-summary-carbs">—</strong></div>
             <div><span>Gordura</span><strong id="food-summary-fat">—</strong></div>
           </div>
+          <p id="food-summary-note" class="food-method-note"></p>
+          <div id="food-consumed-meals"></div>
+          <p class="food-method-note">Marca “Já comi” para fixar a porção. Só as refeições ainda planeadas são ajustadas.</p>
         </section>
       </aside>
     </section>
-    <section class="food-restaurants card" id="food-restaurants" aria-labelledby="food-restaurants-title">
-      <div class="food-section-heading">
-        <div>
-          <p class="food-eyebrow">Comer fora</p>
-          <h2 id="food-restaurants-title">Restaurantes</h2>
-        </div>
-      </div>
+    <details class="food-restaurants card" id="food-restaurants">
+      <summary id="food-restaurants-title">Comer fora · sugestões de restaurantes</summary>
       <section aria-labelledby="food-poke-house-title">
         <h3 id="food-poke-house-title">Poke House</h3>
         <div class="food-restaurant-options">
@@ -307,7 +306,7 @@
           </article>
         </div>
       </section>
-    </section>
+    </details>
   </main>
 
   <dialog id="food-settings-dialog" class="food-dialog" aria-labelledby="food-settings-title">
@@ -318,7 +317,7 @@
       <label>Calorias totais por dia
         <input id="food-settings-calories" name="dailyCalories" type="number" min="800" max="7000" step="10" inputmode="numeric" required>
       </label>
-      <p class="food-dialog-note">As metas de todas as refeições são recalculadas automaticamente.</p>
+      <p class="food-dialog-note">Recalcula as refeições ainda planeadas. As refeições marcadas como consumidas mantêm a porção.</p>
       <button type="submit" class="primary">Guardar meta</button>
     </form>
   </dialog>
@@ -363,10 +362,13 @@
           <input type="number" name="recipeFiber" min="0" max="100" step="0.1" inputmode="decimal" placeholder="Opcional">
         </label>
       </div>
+      <label>Preparação
+        <textarea name="recipeInstructions" rows="4" maxlength="4000" placeholder="Um passo por linha."></textarea>
+      </label>
       <label>Notas
         <textarea name="recipeNotes" rows="3" maxlength="1200" placeholder="Preparação, marcas, substituições ou observações."></textarea>
       </label>
-      <p class="food-dialog-note">Valores introduzidos manualmente ficam marcados como não verificados até serem confirmados pelos rótulos.</p>
+      <p class="food-dialog-note">Confirma os valores nos rótulos. Alterar ingredientes ou nutrientes passa a receita a porção fixa e retira variantes antigas, para evitar cálculos desatualizados.</p>
       <button type="submit" class="primary">Guardar receita</button>
     </form>
   </dialog>

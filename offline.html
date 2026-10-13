@@ -9,14 +9,16 @@
       font-family: system-ui, sans-serif;
       text-align: center;
       padding: 40px;
-      background: #f7f7f7;
-      color: #333;
+      background: var(--surface-raised, #f7f7f7);
+      color: var(--text, #333);
     }
-    h1 { color: #24466F; }
+    h1 { color: var(--accent, #24466F); }
     p { margin-top: 1rem; }
   </style>
+  <meta name="theme-color" content="#101722">
+  <link rel="stylesheet" href="./css/theme-dark.css" media="screen">
 </head>
-<body>
+<body data-theme="dark">
   <h1>Sem ligação à Internet</h1>
   <p>Por favor, verifica a tua ligação. Assim que voltares a estar online, a app atualizará automaticamente.</p>
 </body>

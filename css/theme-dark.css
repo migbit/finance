@@ -1,5 +1,5 @@
-/* Shared, opt-in theme. Load after the base/mobile styles and add
-   data-theme="dark" to <body>. Page layouts belong in their own stylesheet. */
+/* Shared application theme. Load after page styles, with media="screen",
+   and add data-theme="dark" to <body>. Layouts stay in page stylesheets. */
 body[data-theme="dark"] {
   color-scheme: dark;
   --background: #101722;
@@ -26,6 +26,12 @@ body[data-theme="dark"] {
   --bad: #fda4af;
   --positive-bg: #183b32;
   --negative-bg: #432b38;
+  --warning: #f5ce83;
+  --warning-bg: #423822;
+  --info-bg: #203953;
+  --purple: #d5b5f5;
+  --purple-bg: #362d49;
+  --link: var(--accent);
   --selected-bg: #334b66;
   --selected-border: #6c88a8;
   --selected-text: #fff;
@@ -33,6 +39,96 @@ body[data-theme="dark"] {
   --shadow-2: 0 18px 48px #0006;
   background: var(--background);
   color: var(--text);
+}
+
+/* Map the specialist pages onto the same palette without changing layout. */
+body[data-theme="dark"] {
+  --food-ink: var(--text);
+  --food-green: #246a4a;
+  --food-green-dark: #174b35;
+  --food-green-soft: var(--positive-bg);
+  --food-lime: #bde38c;
+  --food-cream: var(--surface-raised);
+  --food-line: var(--border);
+  --food-link: #9dd8ad;
+  --fin-ink: var(--text);
+  --fin-muted: var(--text-dim);
+  --fin-line: var(--border);
+  --fin-panel: var(--surface);
+  --fin-bg: var(--background);
+  --fin-primary-soft: var(--info-bg);
+  --fin-income: var(--ok);
+  --fin-income-soft: var(--positive-bg);
+  --fin-expense: var(--bad);
+  --fin-expense-soft: var(--negative-bg);
+  --fin-pending: var(--warning);
+  --fin-pending-soft: var(--warning-bg);
+  --fin-rejected: var(--bad);
+  --fin-rejected-soft: var(--negative-bg);
+  --fin-shadow: none;
+  --fin-link: var(--secondary);
+  --finance-ink: var(--text);
+  --finance-green-soft: var(--positive-bg);
+  --finance-blue: var(--accent);
+  --finance-blue-soft: var(--info-bg);
+  --finance-gold: var(--warning);
+  --finance-gold-soft: var(--warning-bg);
+  --finance-red: var(--bad);
+  --finance-red-soft: var(--negative-bg);
+  --finance-line: var(--border);
+  --finance-link: var(--ok);
+  --school-ink: var(--text);
+  --school-muted: var(--text-dim);
+  --school-green: #45694e;
+  --school-green-dark: #a5c9ac;
+  --school-cream: var(--surface);
+  --school-sand: var(--surface-raised);
+  --school-peach: var(--warning-bg);
+  --school-line: var(--border);
+  --school-shadow: none;
+}
+
+body[data-theme="dark"] :is(dialog, .modal-content) {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+body[data-theme="dark"] :is(input, textarea)::placeholder { color: var(--muted); opacity: 1; }
+body[data-theme="dark"] :is(input[type="checkbox"], input[type="radio"], progress) { accent-color: var(--accent); }
+body[data-theme="dark"] :is(.school-skip-link, .school-mobile-count, .financas-skip-link) {
+  background: var(--primary);
+  color: #fff;
+}
+body[data-theme="dark"] :is(.food-hero, .finance-admin-hero, .school-hero, .schedule-hero) {
+  background: linear-gradient(135deg, var(--surface-raised), var(--surface));
+  border-color: var(--border);
+  box-shadow: none;
+}
+body[data-theme="dark"] .dca-summary-featured {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+body[data-theme="dark"] .calendar-head button { background: var(--primary); }
+body[data-theme="dark"] .btn-save-qty { background: var(--primary); }
+body[data-theme="dark"] .food-form-intro > span { background: var(--positive-bg); }
+body[data-theme="dark"] :is(.school-card-subject, #school-detail-subject) {
+  color: color-mix(in srgb, var(--subject-color) 45%, var(--text));
+}
+/* Keep each timetable category distinct on the dark surface. */
+body[data-theme="dark"] .schedule-blue { background: #243d5b; }
+body[data-theme="dark"] .schedule-rose { background: #512f42; }
+body[data-theme="dark"] .schedule-sand { background: #484022; }
+body[data-theme="dark"] .schedule-peach { background: #513827; }
+body[data-theme="dark"] .schedule-green { background: #294530; }
+body[data-theme="dark"] .schedule-lilac { background: #413252; }
+body[data-theme="dark"] .schedule-aqua { background: #214645; }
+body[data-theme="dark"] .schedule-contemporary { background: #42491e; }
+body[data-theme="dark"] .schedule-technique { background: #59372f; }
+body[data-theme="dark"] .schedule-music { background: #20464e; }
+body[data-theme="dark"] .segmented button.active {
+  background: var(--selected-bg);
+  color: var(--selected-text);
+  border-color: var(--selected-border);
 }
 
 body[data-theme="dark"] :is(h1, h2, h3, h4, h5) { color: var(--text); }
@@ -97,34 +193,6 @@ body[data-theme="dark"] th { background: var(--th-bg); color: var(--text-dim); }
 body[data-theme="dark"] tbody tr:nth-child(even) { background: var(--tr-alt); }
 body[data-theme="dark"] tbody tr:hover { background: var(--tr-hover); }
 
-/* Navigation is shared by all pages. Keep these rules alongside the theme. */
-body[data-theme="dark"] > header,
-body[data-theme="dark"] #nav-menu,
-body[data-theme="dark"] #nav-menu .nav-links .nav-group .nav-dropdown {
-  background: var(--card);
-  border-color: var(--border);
-  color: var(--text);
-  box-shadow: none;
-}
-body[data-theme="dark"] #nav-menu .nav-links .nav-link,
-body[data-theme="dark"] #nav-menu .nav-links .nav-group .nav-dropdown a,
-body[data-theme="dark"] #nav-menu .login-block a,
-body[data-theme="dark"] #menu-icon {
-  background: transparent;
-  color: var(--text-dim);
-  border-color: var(--border);
-  box-shadow: none;
-}
-body[data-theme="dark"] #nav-menu .nav-links .nav-link {
-  font-size: .8rem;
-  padding: .5rem .7rem;
-}
-body[data-theme="dark"] #nav-menu .nav-links .nav-link:hover,
-body[data-theme="dark"] #nav-menu .nav-links .nav-group .nav-dropdown a:hover,
-body[data-theme="dark"] #nav-menu .nav-links .nav-group .nav-dropdown a.active {
-  background: var(--surface-raised);
-  color: var(--text);
-}
 body[data-theme="dark"] .module-loading::after { background: #101722b3; }
 body[data-theme="dark"] .skeleton {
   background: linear-gradient(90deg, var(--surface) 25%, var(--surface-raised) 50%, var(--surface) 75%);

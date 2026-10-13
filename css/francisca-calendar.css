@@ -11,10 +11,9 @@
 }
 
 body[data-page="francisca-calendario"] {
-  background:
-    radial-gradient(circle at 10% 10%, rgba(241, 217, 201, 0.42), transparent 27rem),
-    radial-gradient(circle at 95% 35%, rgba(192, 207, 184, 0.35), transparent 30rem),
-    #f8f7f4;
+  background: radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--warning-bg, rgba(241, 217, 201, 0.42)) 42%, transparent), transparent 27rem),
+    radial-gradient(circle at 95% 35%, color-mix(in srgb, var(--positive-bg, rgba(192, 207, 184, 0.35)) 35%, transparent), transparent 30rem),
+    var(--surface-raised, #f8f7f4);
   color: var(--school-ink);
 }
 
@@ -25,7 +24,7 @@ body[data-page="francisca-calendario"] {
   z-index: 3000;
   padding: .75rem 1rem;
   border-radius: 0 0 10px 10px;
-  background: var(--school-ink);
+  background: var(--primary, var(--school-ink));
   color: white;
 }
 
@@ -57,7 +56,7 @@ body[data-page="francisca-calendario"] {
   overflow: hidden;
   border: 1px solid rgba(112, 130, 102, 0.18);
   border-radius: 24px;
-  background: linear-gradient(135deg, rgba(255, 250, 244, 0.98), rgba(243, 238, 232, 0.94));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface, rgba(255, 250, 244, 0.98)) 98%, transparent), color-mix(in srgb, var(--surface-raised, rgba(243, 238, 232, 0.94)) 94%, transparent));
   box-shadow: var(--school-shadow);
 }
 
@@ -94,7 +93,7 @@ body[data-page="francisca-calendario"] {
   min-height: 44px;
   border: 1px solid var(--school-line);
   border-radius: 12px;
-  background: white;
+  background: var(--surface, white);
   color: var(--school-ink);
   font: inherit;
   font-weight: 700;
@@ -134,10 +133,10 @@ body[data-page="francisca-calendario"] {
   gap: 1rem;
   margin-top: 1rem;
   padding: .85rem 1rem;
-  border: 1px solid #ead7a1;
+  border: 1px solid var(--border, #ead7a1);
   border-radius: 14px;
-  background: #fff9e9;
-  color: #654f20;
+  background: var(--warning-bg, #fff9e9);
+  color: var(--warning, #654f20);
 }
 
 .school-status[hidden] { display: none; }
@@ -147,9 +146,9 @@ body[data-page="francisca-calendario"] {
 .school-calendar-section,
 .school-past-section {
   margin-top: 1.15rem;
-  border: 1px solid rgba(228, 222, 214, .9);
+  border: 1px solid var(--border, rgba(228, 222, 214, .9));
   border-radius: 21px;
-  background: rgba(255, 255, 255, .9);
+  background: color-mix(in srgb, var(--surface, rgba(255, 255, 255, .9)) 90%, transparent);
   box-shadow: var(--school-shadow);
 }
 
@@ -182,7 +181,7 @@ body[data-page="francisca-calendario"] {
   min-height: 44px;
   border: 1px solid var(--school-line);
   border-radius: 11px;
-  background: white;
+  background: var(--surface, white);
   color: var(--school-ink);
   font: inherit;
 }
@@ -208,8 +207,8 @@ body[data-page="francisca-calendario"] {
   border: 1px solid var(--school-line);
   border-top: 4px solid var(--subject-color);
   border-radius: 16px;
-  background: white;
-  background: linear-gradient(160deg, white, color-mix(in srgb, var(--subject-color) 5%, white));
+  background: var(--surface, white);
+  background: linear-gradient(160deg, var(--surface, white), color-mix(in srgb, var(--subject-color) 5%, var(--surface, white)));
   color: var(--school-ink);
   text-align: left;
   cursor: pointer;
@@ -269,9 +268,9 @@ body[data-page="francisca-calendario"] {
 .school-test-card--next .school-card-countdown { grid-column: 2; grid-row: 2 / span 2; align-self: end; margin: 0; padding: 0; font-size: clamp(1.75rem, 3vw, 2.35rem); }
 .school-test-card--next .school-card-message { grid-column: 2; grid-row: 4; align-self: start; }
 
-.school-test-card[data-urgency="today"] { background: linear-gradient(150deg, #fff5dc, #fff); border-color: #d99a43; border-top-color: #d99a43; }
-.school-test-card[data-urgency="very-close"] { background: linear-gradient(150deg, #fff1e9, #fff); }
-.school-test-card[data-urgency="attention"] { background: linear-gradient(150deg, #fff8ea, #fff); }
+.school-test-card[data-urgency="today"] { background: linear-gradient(150deg, var(--warning-bg, #fff5dc), var(--surface, #fff)); border-color: #d99a43; border-top-color: #d99a43; }
+.school-test-card[data-urgency="very-close"] { background: linear-gradient(150deg, var(--warning-bg, #fff1e9), var(--surface, #fff)); }
+.school-test-card[data-urgency="attention"] { background: linear-gradient(150deg, var(--surface-raised, #fff8ea), var(--surface, #fff)); }
 
 .school-empty {
   grid-column: 1 / -1;
@@ -280,7 +279,7 @@ body[data-page="francisca-calendario"] {
   gap: .4rem;
   min-height: 168px;
   padding: 1.5rem 1rem;
-  border: 1px dashed #cec6bc;
+  border: 1px dashed var(--border, #cec6bc);
   border-radius: 18px;
   background: var(--school-cream);
   text-align: center;
@@ -307,11 +306,11 @@ body[data-page="francisca-calendario"] {
   padding: .75rem 1rem;
   border: 1px solid var(--school-line);
   border-radius: 14px;
-  background: #faf8f4;
+  background: var(--surface-raised, #faf8f4);
 }
 
 .school-summary dl { display: flex; gap: .55rem; }
-.school-summary dl > div { min-width: 90px; padding-left: .65rem; border-left: 1px solid #d7cfc5; }
+.school-summary dl > div { min-width: 90px; padding-left: .65rem; border-left: 1px solid var(--border, #d7cfc5); }
 .school-summary dd { font-size: 1.12rem; font-weight: 800; }
 .school-summary dt { max-width: 115px; color: var(--school-muted); font-size: .68rem; line-height: 1.25; }
 
@@ -335,17 +334,17 @@ body[data-page="francisca-calendario"] {
   border: 0;
   border-top: 1px solid var(--school-line);
   border-right: 1px solid var(--school-line);
-  background: white;
+  background: var(--surface, white);
   color: var(--school-ink);
   text-align: left;
 }
 
 .school-day:nth-child(7n) { border-right: 0; }
-.school-day:not(.is-current-month) { background: #fbfaf8; color: #aaa49c; }
+.school-day:not(.is-current-month) { background: var(--surface, #fbfaf8); color: var(--text-dim, #aaa49c); }
 .school-day.has-tests { cursor: pointer; }
-.school-day.has-tests { background: linear-gradient(145deg, #fff, #fcfbf8); }
+.school-day.has-tests { background: linear-gradient(145deg, var(--surface, #fff), var(--surface, #fcfbf8)); }
 @media (hover: hover) and (pointer: fine) {
-  .school-day.has-tests:hover { background: #f8f6f0; }
+  .school-day.has-tests:hover { background: var(--surface-raised, #f8f6f0); }
 }
 .school-day-number { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; font-size: .76rem; font-weight: 700; }
 .school-day.is-today .school-day-number { background: var(--school-green); color: white; }
@@ -362,8 +361,8 @@ body[data-page="francisca-calendario"] {
   padding: .24rem .35rem;
   border: 0;
   border-radius: 7px;
-  background: white;
-  background: color-mix(in srgb, var(--subject-color) 13%, white);
+  background: var(--surface, white);
+  background: color-mix(in srgb, var(--subject-color) 13%, var(--surface, white));
   color: var(--school-ink);
   font: inherit;
   font-size: .64rem;
@@ -400,7 +399,7 @@ body[data-page="francisca-calendario"] {
 .school-past-section summary { display: flex; min-height: 64px; align-items: center; justify-content: space-between; padding: 1rem 1.5rem; font-weight: 800; cursor: pointer; }
 .school-count { display: grid; min-width: 30px; height: 30px; place-items: center; border-radius: 999px; background: var(--school-sand); font-size: .75rem; }
 .school-past-list { display: grid; gap: .6rem; padding: 0 1.5rem 1.5rem; }
-.school-past-item { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: .8rem; width: 100%; min-height: 58px; height: auto; padding: .75rem; border: 1px solid var(--school-line); border-radius: 12px; background: white; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.school-past-item { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; align-items: center; gap: .8rem; width: 100%; min-height: 58px; height: auto; padding: .75rem; border: 1px solid var(--school-line); border-radius: 12px; background: var(--surface, white); color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .school-past-item i { width: 9px; height: 32px; border-radius: 8px; background: var(--subject-color); }
 .school-past-item strong { display: block; font-size: .85rem; }
 .school-past-item small { color: var(--school-muted); }
@@ -428,8 +427,8 @@ body[data-page="francisca-calendario"] {
 .school-icon-button { width: 44px; flex: 0 0 auto; padding: 0; font-size: 1.45rem; }
 .school-dialog label { display: grid; gap: .35rem; font-size: .8rem; font-weight: 700; }
 .school-dialog :is(input, select, textarea) { padding: .7rem .8rem; resize: vertical; }
-.school-past-warning { margin: -.4rem 0 0; padding: .6rem .75rem; border-radius: 10px; background: #fff2d7; color: #725724; font-size: .78rem; }
-.school-form-error { padding: .65rem .75rem; border-radius: 10px; background: #ffebeb; color: #8d2e2e; font-size: .82rem; }
+.school-past-warning { margin: -.4rem 0 0; padding: .6rem .75rem; border-radius: 10px; background: var(--warning-bg, #fff2d7); color: var(--warning, #725724); font-size: .78rem; }
+.school-form-error { padding: .65rem .75rem; border-radius: 10px; background: var(--surface-raised, #ffebeb); color: var(--bad, #8d2e2e); font-size: .82rem; }
 .school-dialog-actions { display: flex; justify-content: flex-end; gap: .65rem; margin-top: .25rem; }
 .school-dialog-actions button { padding: .65rem 1rem; }
 .school-dialog form .school-dialog-actions {
@@ -439,17 +438,17 @@ body[data-page="francisca-calendario"] {
   margin: .15rem -1.35rem -1.35rem;
   padding: .8rem 1.35rem max(.8rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--school-line);
-  background: rgba(255, 250, 244, .96);
+  background: color-mix(in srgb, var(--surface, rgba(255, 250, 244, .96)) 96%, transparent);
   backdrop-filter: blur(8px);
 }
-.school-dialog-actions .school-danger { margin-right: auto; border-color: #deb7b2; background: #fff5f3; color: #9b3b32; }
+.school-dialog-actions .school-danger { margin-right: auto; border-color: var(--border, #deb7b2); background: var(--surface, #fff5f3); color: var(--bad, #9b3b32); }
 .school-detail-date { color: var(--school-muted); }
 .school-detail-countdown { font-size: 1.6rem; font-weight: 800; }
-.school-detail-notes { padding: .9rem; border-radius: 12px; background: white; white-space: pre-wrap; }
+.school-detail-notes { padding: .9rem; border-radius: 12px; background: var(--surface, white); white-space: pre-wrap; }
 .school-detail-notes:empty { display: none; }
 .school-detail-meta { color: var(--school-muted); font-size: .7rem; }
 .school-day-tests { display: grid; gap: .65rem; }
-.school-day-test { width: 100%; min-height: 58px; height: auto; padding: .8rem .9rem; border: 1px solid var(--school-line); border-left: 5px solid var(--subject-color); border-radius: 12px; background: white; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.school-day-test { width: 100%; min-height: 58px; height: auto; padding: .8rem .9rem; border: 1px solid var(--school-line); border-left: 5px solid var(--subject-color); border-radius: 12px; background: var(--surface, white); color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .school-day-test strong,
 .school-day-test span { display: block; }
 .school-day-test span { margin-top: .2rem; color: var(--school-muted); font-size: .78rem; }
@@ -513,7 +512,7 @@ body[data-page="francisca-calendario"] {
   .school-day-events { display: none; }
   .school-mobile-dots { display: flex; min-height: 15px; flex-wrap: wrap; align-items: center; gap: 3px; padding: .1rem .2rem; }
   .school-mobile-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--subject-color); }
-  .school-mobile-count { display: grid; min-width: 15px; height: 15px; place-items: center; margin-left: 1px; border-radius: 999px; background: var(--school-ink); color: white; font-size: .54rem; font-weight: 800; line-height: 1; }
+  .school-mobile-count { display: grid; min-width: 15px; height: 15px; place-items: center; margin-left: 1px; border-radius: 999px; background: var(--primary, var(--school-ink)); color: white; font-size: .54rem; font-weight: 800; line-height: 1; }
   .school-legend { display: none; }
   .school-past-section summary { padding: .9rem 1rem; }
   .school-past-list { padding: 0 1rem 1rem; }

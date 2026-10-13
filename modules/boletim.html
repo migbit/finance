@@ -11,7 +11,9 @@
   <meta name="referrer" content="no-referrer">
   <style>
     .public-checkin [hidden] { display: none !important; }
+    /* Keep the public guest form light, including on devices in dark mode. */
     body.public-checkin {
+      color-scheme: light;
       --primary: #1d4ed8;
       min-height: 100vh;
       background: #f8f9fb;
@@ -331,7 +333,7 @@
     }
   </style>
 </head>
-<body class="public-checkin">
+<body class="public-checkin" data-theme="light">
   <main>
     <section class="checkin-shell">
       <div class="language-field">

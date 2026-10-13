@@ -1,48 +1,48 @@
-body[data-page="francisca-horario"] { background: #f8f7f4; color: #28332c; }
+body[data-page="francisca-horario"] { background: var(--surface-raised, #f8f7f4); color: var(--text, #28332c); }
 .schedule-page { width: min(1240px, calc(100% - 2rem)); margin: 0 auto; padding: calc(var(--header-h, 70px) + 1.5rem) 0 3rem; }
-.schedule-page h1, .schedule-page h2, .schedule-page h3 { margin: 0; padding: 0; text-align: left; color: #28332c; }
+.schedule-page h1, .schedule-page h2, .schedule-page h3 { margin: 0; padding: 0; text-align: left; color: var(--text, #28332c); }
 .schedule-page h1 { font-size: clamp(2.2rem, 5vw, 3.2rem); }
 .schedule-page h2 { font-size: 1.35rem; }
 .schedule-page h3 { font-size: 1.05rem; }
-.schedule-hero { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 2rem; border: 1px solid #e4ded6; border-radius: 24px; background: linear-gradient(120deg, #fffaf4, #e9eee3); }
+.schedule-hero { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 2rem; border: 1px solid var(--border, #e4ded6); border-radius: 24px; background: linear-gradient(120deg, var(--surface, #fffaf4), var(--surface-raised, #e9eee3)); }
 .schedule-hero p:last-child { margin-bottom: 0; }
-.schedule-eyebrow { margin: 0 0 .5rem; color: #53634b; font-weight: 700; }
-.schedule-page button, .schedule-page select { min-height: 44px; padding: .6rem .85rem; border: 1px solid #a6b39c; border-radius: 10px; background: #fffaf4; color: #28332c; font: inherit; }
+.schedule-eyebrow { margin: 0 0 .5rem; color: var(--text-dim, #53634b); font-weight: 700; }
+.schedule-page button, .schedule-page select { min-height: 44px; padding: .6rem .85rem; border: 1px solid var(--border, #a6b39c); border-radius: 10px; background: var(--surface, #fffaf4); color: var(--text, #28332c); font: inherit; }
 .schedule-page button { cursor: pointer; }
 .schedule-page :focus-visible { outline: 3px solid #53634b; outline-offset: 3px; }
 .schedule-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .schedule-heading label { display: flex; align-items: center; gap: .75rem; font-size: .9rem; }
 .schedule-day-section, .schedule-week-section { margin-top: 2rem; }
 .schedule-day-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-.schedule-day-card { padding: 1.2rem; background: #fff; border: 1px solid #e4ded6; border-radius: 18px; }
+.schedule-day-card { padding: 1.2rem; background: var(--surface, #fff); border: 1px solid var(--border, #e4ded6); border-radius: 18px; }
 .schedule-day-list { display: grid; gap: .5rem; list-style: none; padding: 0; margin: 0; }
-.schedule-lesson { display: flex; flex-direction: column; justify-content: center; gap: .4rem; height: 100%; min-height: 62px; padding: .75rem; border-radius: 10px; color: #28332c; box-sizing: border-box; }
+.schedule-lesson { display: flex; flex-direction: column; justify-content: center; gap: .4rem; height: 100%; min-height: 62px; padding: .75rem; border-radius: 10px; color: var(--text, #28332c); box-sizing: border-box; }
 .schedule-lesson strong { font-size: .9rem; line-height: 1.3; }
 .schedule-label-short { display: none; text-decoration: none; }
 .schedule-time { display: block; white-space: nowrap; font-size: .8rem; font-variant-numeric: tabular-nums; }
 .schedule-day-list .schedule-lesson { flex-direction: row-reverse; justify-content: flex-end; align-items: center; gap: 1rem; min-height: 52px; }
 .schedule-day-list .schedule-time { min-width: 104px; }
-.schedule-blue { background: #e4edf9; }
-.schedule-rose { background: #f6e4ec; }
-.schedule-sand { background: #f7efcd; }
-.schedule-peach { background: #f8e4d5; }
-.schedule-green { background: #e4efdf; }
-.schedule-lilac { background: #eee6f6; }
-.schedule-aqua { background: #def0ee; }
-.schedule-classical-3 { background: #f2b4bf; }
-.schedule-classical-2 { background: #e1c5f2; }
-.schedule-calm { background: #e1e4e8; }
-.schedule-creative { background: #bce4ad; }
-.schedule-physical { background: #accded; }
-.schedule-contemporary { background: #e3ed9c; }
-.schedule-technique { background: #ffb5a3; }
-.schedule-music { background: #b1dfe5; }
-.schedule-table-wrap { overflow-x: auto; margin-top: 1rem; border: 1px solid #e4ded6; border-radius: 16px; background: #fff; }
+.schedule-blue { background: var(--surface-raised, #e4edf9); }
+.schedule-rose { background: var(--surface-raised, #f6e4ec); }
+.schedule-sand { background: var(--warning-bg, #f7efcd); }
+.schedule-peach { background: var(--warning-bg, #f8e4d5); }
+.schedule-green { background: var(--surface-raised, #e4efdf); }
+.schedule-lilac { background: var(--surface-raised, #eee6f6); }
+.schedule-aqua { background: var(--surface-raised, #def0ee); }
+.schedule-classical-3 { background: var(--negative-bg, #f2b4bf); }
+.schedule-classical-2 { background: var(--purple-bg, #e1c5f2); }
+.schedule-calm { background: var(--surface-raised, #e1e4e8); }
+.schedule-creative { background: var(--positive-bg, #bce4ad); }
+.schedule-physical { background: var(--info-bg, #accded); }
+.schedule-contemporary { background: var(--positive-bg, #e3ed9c); }
+.schedule-technique { background: var(--negative-bg, #ffb5a3); }
+.schedule-music { background: var(--info-bg, #b1dfe5); }
+.schedule-table-wrap { overflow-x: auto; margin-top: 1rem; border: 1px solid var(--border, #e4ded6); border-radius: 16px; background: var(--surface, #fff); }
 .schedule-page .schedule-table { width: 100%; min-width: 850px; table-layout: fixed; border-collapse: separate; border-spacing: 0; margin: 0; }
-.schedule-table th, .schedule-table td { padding: .35rem; border: 0; border-bottom: 1px solid #efede9; vertical-align: middle; text-align: center; }
-.schedule-table thead th { padding: 1rem .3rem; background: #fffaf4; color: #28332c; font-size: .85rem; }
+.schedule-table th, .schedule-table td { padding: .35rem; border: 0; border-bottom: 1px solid var(--border, #efede9); vertical-align: middle; text-align: center; }
+.schedule-table thead th { padding: 1rem .3rem; background: var(--surface, #fffaf4); color: var(--text, #28332c); font-size: .85rem; }
 .schedule-table th:first-child { width: 130px; }
-.schedule-table .schedule-slot { position: sticky; left: 0; background: #fffaf4; color: #53634b; font-size: .8rem; font-variant-numeric: tabular-nums; z-index: 1; }
+.schedule-table .schedule-slot { position: sticky; left: 0; background: var(--surface, #fffaf4); color: var(--text-dim, #53634b); font-size: .8rem; font-variant-numeric: tabular-nums; z-index: 1; }
 .schedule-table .schedule-lesson { min-height: 78px; }
 @media screen {
   .schedule-table td[rowspan]:not([rowspan="1"]) { position: relative; }
@@ -52,8 +52,8 @@ body[data-page="francisca-horario"] { background: #f8f7f4; color: #28332c; }
     height: auto;
   }
 }
-.schedule-empty, .schedule-muted { color: #637067; }
-.schedule-scroll-hint { display: none; color: #637067; font-size: .85rem; }
+.schedule-empty, .schedule-muted { color: var(--text-dim, #637067); }
+.schedule-scroll-hint { display: none; color: var(--text-dim, #637067); font-size: .85rem; }
 .schedule-skip { position: fixed; top: -100px; left: 1rem; z-index: 3000; padding: 1rem; background: #28332c; color: #fff; }
 .schedule-skip:focus { top: 0; }
 @media screen and (max-width: 900px) {

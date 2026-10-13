@@ -150,3 +150,6 @@ details[open] > .gym-details-summary::after { content: '−'; }
   border-left: 3px solid var(--accent, #6ea8fe);
   line-height: 1.5;
 }
+.gym-warmup [hidden] { display: none !important; }
+.gym-warmup-guidance { margin: .6rem 0; line-height: 1.45; }
+.gym-warmup-help { color: var(--text-dim); font-size: .8rem; line-height: 1.4; }

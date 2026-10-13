@@ -429,7 +429,7 @@ function openDetails(id) {
   if (!test) return;
   const days = daysUntil(test.testDate);
   elements.detailSubject.textContent = test.subject;
-  elements.detailSubject.style.color = subjectColor(test.subject);
+  elements.detailSubject.style.setProperty('--subject-color', subjectColor(test.subject));
   elements.detailTitle.textContent = test.description || 'Teste';
   elements.detailDate.textContent = formatDateLong(test.testDate);
   elements.detailCountdown.textContent = countdownLabel(days);

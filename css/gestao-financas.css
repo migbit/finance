@@ -9,7 +9,7 @@ body[data-page="gestao-financas"] {
   --finance-red: #b33b49;
   --finance-red-soft: #fff0f1;
   --finance-line: #dfe8e4;
-  background: #f4f8f6;
+  background: var(--surface-raised, #f4f8f6);
 }
 
 body[data-page="gestao-financas"] main.family-finance-admin {
@@ -27,9 +27,8 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   padding: clamp(1.4rem, 3vw, 2.25rem);
   border: 1px solid rgba(35, 123, 97, 0.14);
   border-radius: 24px;
-  background:
-    radial-gradient(circle at 92% 5%, rgba(255, 213, 120, 0.42), transparent 27%),
-    linear-gradient(135deg, #f0fbf5, #ffffff 58%, #f7fbff);
+  background: radial-gradient(circle at 92% 5%, color-mix(in srgb, var(--warning-bg, rgba(255, 213, 120, 0.42)) 42%, transparent), transparent 27%),
+    linear-gradient(135deg, var(--surface-raised, #f0fbf5), var(--surface, #ffffff) 58%, var(--surface, #f7fbff));
   box-shadow: 0 18px 45px rgba(23, 74, 58, 0.09);
 }
 
@@ -50,12 +49,12 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 .finance-admin-hero p:not(.finance-admin-eyebrow) {
   max-width: 680px;
   margin: 0.6rem 0 0;
-  color: #527067;
+  color: var(--text-dim, #527067);
 }
 
 .finance-admin-eyebrow {
   margin: 0 0 0.35rem;
-  color: var(--finance-green);
+  color: var(--finance-link, var(--finance-green));
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -85,7 +84,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   gap: 0.65rem;
   min-height: 38px;
   margin: 0 0 1rem;
-  color: #62766f;
+  color: var(--text-dim, #62766f);
   font-size: 0.86rem;
 }
 
@@ -102,14 +101,14 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 
 .finance-status-pill {
   padding: 0.32rem 0.65rem;
-  background: #edf1ef;
-  color: #53645f;
+  background: var(--surface-raised, #edf1ef);
+  color: var(--text-dim, #53645f);
 }
 
 .finance-status-pill.is-success,
 .finance-request-status.is-approved {
   background: var(--finance-green-soft);
-  color: var(--finance-green);
+  color: var(--finance-link, var(--finance-green));
 }
 
 .finance-status-pill.is-warning,
@@ -119,8 +118,8 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 }
 
 .finance-request-status.is-correction {
-  background: #fff0d9;
-  color: #8b5510;
+  background: var(--warning-bg, #fff0d9);
+  color: var(--warning, #8b5510);
 }
 
 .finance-status-pill.is-error,
@@ -130,8 +129,8 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 }
 
 .finance-request-status.is-cancelled {
-  background: #edf0f5;
-  color: #69717d;
+  background: var(--surface-raised, #edf0f5);
+  color: var(--text-dim, #69717d);
 }
 
 .finance-family-summary {
@@ -148,7 +147,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   padding: 1.35rem;
   border: 1px solid var(--finance-line);
   border-radius: 20px;
-  background: #fff;
+  background: var(--surface, #fff);
   box-shadow: 0 10px 30px rgba(24, 52, 45, 0.07);
 }
 
@@ -183,7 +182,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 }
 
 .finance-summary-heading span {
-  color: #76847f;
+  color: var(--text-dim, #76847f);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -204,7 +203,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 
 .finance-summary-projected {
   margin: 0.75rem 0 0;
-  color: #60736c;
+  color: var(--text-dim, #60736c);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -213,7 +212,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   min-width: 0;
   padding: 0.7rem;
   border-radius: 12px;
-  background: #f6f9f8;
+  background: var(--surface, #f6f9f8);
 }
 
 .finance-summary-metric span,
@@ -224,16 +223,16 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 }
 
 .finance-summary-metric.is-debt {
-  border-color: #efc2b3;
-  background: #fff3ef;
+  border-color: var(--border, #efc2b3);
+  background: var(--surface-raised, #fff3ef);
 }
 
 .finance-summary-metric.is-debt strong {
-  color: #9a3e2a;
+  color: var(--bad, #9a3e2a);
 }
 
 .finance-summary-metric span {
-  color: #70827c;
+  color: var(--text-dim, #70827c);
   font-size: 0.7rem;
   font-weight: 700;
 }
@@ -249,7 +248,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   overflow: hidden;
   border: 1px solid var(--finance-line);
   border-radius: 22px;
-  background: #fff;
+  background: var(--surface, #fff);
   box-shadow: 0 14px 36px rgba(24, 52, 45, 0.07);
 }
 
@@ -269,14 +268,14 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   border: 0;
   border-radius: 12px 12px 0 0;
   background: transparent;
-  color: #65746f;
+  color: var(--text-dim, #65746f);
   box-shadow: none;
 }
 
 .finance-admin-tab:hover,
 .finance-admin-tab.is-active {
   background: var(--finance-green-soft);
-  color: var(--finance-green);
+  color: var(--finance-link, var(--finance-green));
   box-shadow: none;
 }
 
@@ -296,14 +295,14 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   gap: 0.75rem;
   padding: 1rem;
   border-bottom: 1px solid var(--finance-line);
-  background: #fbfdfc;
+  background: var(--surface, #fbfdfc);
 }
 
 .finance-admin-filters label,
 .finance-form-grid label,
 .finance-reject-dialog label {
   margin: 0;
-  color: #536b63;
+  color: var(--text-dim, #536b63);
   font-weight: 700;
 }
 
@@ -342,7 +341,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 
 .finance-panel-heading p {
   margin: 0.25rem 0 0;
-  color: #6a7b75;
+  color: var(--text-dim, #6a7b75);
   font-size: 0.86rem;
 }
 
@@ -357,10 +356,10 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   grid-template-columns: auto 1fr auto;
   gap: 0.85rem;
   padding: 1rem;
-  border: 1px solid #eadfc0;
+  border: 1px solid var(--border, #eadfc0);
   border-left: 5px solid #d59a2a;
   border-radius: 16px;
-  background: #fffdf7;
+  background: var(--surface, #fffdf7);
 }
 
 .finance-request-icon {
@@ -391,12 +390,12 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 .finance-request-meta,
 .finance-request-note {
   margin: 0.25rem 0 0;
-  color: #687a74;
+  color: var(--text-dim, #687a74);
   font-size: 0.82rem;
 }
 
 .finance-request-note {
-  color: #40564f;
+  color: var(--text-dim, #40564f);
 }
 
 .finance-request-side {
@@ -435,23 +434,23 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 
 .finance-danger-button {
   background: var(--finance-red-soft);
-  border-color: #f1c7cc;
+  border-color: var(--border, #f1c7cc);
   color: var(--finance-red);
 }
 
 .finance-correction-button {
-  background: #fff7e8;
-  border-color: #e6c77e;
-  color: #805310;
+  background: var(--warning-bg, #fff7e8);
+  border-color: var(--border, #e6c77e);
+  color: var(--warning, #805310);
 }
 
 .finance-table-action {
   min-height: 32px;
   height: auto;
   padding: 0.25rem 0.55rem;
-  background: #fff;
+  background: var(--surface, #fff);
   border-color: var(--finance-line);
-  color: #63766f;
+  color: var(--text-dim, #63766f);
   font-size: 0.74rem;
 }
 
@@ -471,14 +470,14 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 .finance-table-wrap th,
 .finance-table-wrap td {
   padding: 0.8rem;
-  border-bottom: 1px solid #edf2ef;
+  border-bottom: 1px solid var(--border, #edf2ef);
   text-align: left;
   vertical-align: top;
 }
 
 .finance-table-wrap th {
-  background: #f5f9f7;
-  color: #62736d;
+  background: var(--surface-raised, #f5f9f7);
+  color: var(--text-dim, #62736d);
   font-size: 0.72rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -494,7 +493,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 }
 
 .finance-money-positive {
-  color: var(--finance-green);
+  color: var(--finance-link, var(--finance-green));
   font-weight: 800;
 }
 
@@ -524,7 +523,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   border: 1px solid var(--finance-line);
   border-radius: 16px;
   padding: 1rem;
-  background: #fbfdfc;
+  background: var(--surface, #fbfdfc);
 }
 
 .finance-monthly-heading {
@@ -540,7 +539,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 }
 
 .finance-monthly-heading span {
-  color: #70827c;
+  color: var(--text-dim, #70827c);
   font-size: 0.76rem;
   text-transform: capitalize;
 }
@@ -555,11 +554,11 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 .finance-monthly-metrics > div {
   padding: 0.65rem;
   border-radius: 11px;
-  background: #fff;
+  background: var(--surface, #fff);
 }
 
 .finance-monthly-metrics dt {
-  color: #70827c;
+  color: var(--text-dim, #70827c);
   font-size: 0.68rem;
   font-weight: 700;
 }
@@ -573,7 +572,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 .finance-monthly-insights {
   margin: 0.9rem 0 0;
   padding-left: 1.2rem;
-  color: #62736d;
+  color: var(--text-dim, #62736d);
   font-size: 0.8rem;
 }
 
@@ -581,7 +580,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   padding: 1rem;
   border: 1px solid var(--finance-line);
   border-radius: 16px;
-  background: #fbfdfc;
+  background: var(--surface, #fbfdfc);
 }
 
 .finance-investment-card h3,
@@ -604,7 +603,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 .finance-exposure-total {
   display: block;
   margin-top: 0.25rem;
-  color: #60746c;
+  color: var(--text-dim, #60746c);
   font-size: 0.82rem;
 }
 
@@ -614,7 +613,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   height: 16px;
   margin: 0.8rem 0 0.5rem;
   border-radius: 999px;
-  background: #e9efec;
+  background: var(--surface-raised, #e9efec);
 }
 
 .finance-exposure-segment {
@@ -630,7 +629,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
-  color: #63766f;
+  color: var(--text-dim, #63766f);
   font-size: 0.76rem;
 }
 
@@ -658,8 +657,8 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   gap: 0.65rem;
   padding: 0.7rem;
   border-radius: 12px;
-  background: #fff;
-  color: #526760;
+  background: var(--surface, #fff);
+  color: var(--text-dim, #526760);
   font-size: 0.78rem;
 }
 
@@ -687,14 +686,14 @@ body[data-page="gestao-financas"] main.family-finance-admin {
 .finance-error-state {
   grid-column: 1 / -1;
   padding: 2.25rem 1rem;
-  border: 1px dashed #d6e0dc;
+  border: 1px dashed var(--border, #d6e0dc);
   border-radius: 14px;
-  color: #6a7d76;
+  color: var(--text-dim, #6a7d76);
   text-align: center;
 }
 
 .finance-error-state {
-  border-color: #efc8cc;
+  border-color: var(--border, #efc8cc);
   background: var(--finance-red-soft);
   color: var(--finance-red);
 }
@@ -704,7 +703,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   width: 100%;
   height: 125px;
   border-radius: 12px;
-  background: linear-gradient(90deg, #edf2ef 25%, #f7f9f8 50%, #edf2ef 75%);
+  background: linear-gradient(90deg, var(--surface-raised, #edf2ef) 25%, var(--surface, #f7f9f8) 50%, var(--surface-raised, #edf2ef) 75%);
   background-size: 200% 100%;
   animation: finance-skeleton 1.3s infinite;
 }
@@ -722,7 +721,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   overflow: auto;
   border: 0;
   border-radius: 20px;
-  background: #fff;
+  background: var(--surface, #fff);
   color: var(--finance-ink);
   box-shadow: 0 30px 80px rgba(18, 43, 36, 0.28);
 }
@@ -759,7 +758,7 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   padding: 0.75rem;
   border-radius: 12px;
   background: var(--finance-green-soft);
-  color: #42685c;
+  color: var(--text-dim, #42685c);
   font-size: 0.84rem;
 }
 
@@ -787,12 +786,12 @@ body[data-page="gestao-financas"] main.family-finance-admin {
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: #fff;
+  background: var(--surface, #fff);
 }
 
 .finance-money-input span {
   padding: 0 0.65rem;
-  color: #6c7d77;
+  color: var(--text-dim, #6c7d77);
   font-weight: 800;
 }
 

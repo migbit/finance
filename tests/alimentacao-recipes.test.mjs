@@ -10,7 +10,8 @@ const {
   DEFAULT_SNACKS,
   getBreakfastProteinTarget,
   mergeBreakfastCatalog,
-  mergeRecipeCatalog
+  mergeRecipeCatalog,
+  updateRecipeDetails
 } = module;
 
 test('existem exatamente quatro pequenos-almoços completos e repetíveis', () => {
@@ -44,19 +45,19 @@ test('calcula os totais acordados das quatro receitas', () => {
   assert.deepEqual(
     DEFAULT_BREAKFASTS.map(({ calories, protein, carbs, fat, fiber }) => ({ calories, protein, carbs, fat, fiber })),
     [
-      { calories: 530, protein: 36.2, carbs: 68.8, fat: 10.1, fiber: 13.1 },
+      { calories: 526, protein: 36.1, carbs: 68.6, fat: 9.8, fiber: 13.1 },
       { calories: 541, protein: 38.1, carbs: 56, fat: 16.2, fiber: 12.7 },
-      { calories: 449, protein: 36.9, carbs: 64.5, fat: 4.9, fiber: 3.5 },
-      { calories: 511, protein: 26.5, carbs: 83.9, fat: 6.7, fiber: 5.6 }
+      { calories: 445, protein: 36.8, carbs: 64.4, fat: 4.6, fiber: 3.5 },
+      { calories: 506, protein: 26.3, carbs: 83.8, fat: 6.4, fiber: 5.6 }
     ]
   );
 });
 
-test('inclui as quatro refeições principais com os totais definidos', () => {
-  assert.equal(DEFAULT_MAIN_MEALS.length, 4);
+test('inclui oito refeições principais e conserva as quatro bases originais', () => {
+  assert.equal(DEFAULT_MAIN_MEALS.length, 8);
   assert.ok(DEFAULT_MAIN_MEALS.every(recipe => recipe.meal === 'main'));
   assert.deepEqual(
-    DEFAULT_MAIN_MEALS.map(({ calories, protein, carbs, fat, fiber }) => ({ calories, protein, carbs, fat, fiber })),
+    DEFAULT_MAIN_MEALS.slice(0, 4).map(({ calories, protein, carbs, fat, fiber }) => ({ calories, protein, carbs, fat, fiber })),
     [
       { calories: 650, protein: 43, carbs: 56, fat: 25.3, fiber: 16.4 },
       { calories: 653, protein: 46.9, carbs: 69.7, fat: 20, fiber: 11.6 },
@@ -76,12 +77,12 @@ test('inclui cinco lanches com doses-base e variantes calculáveis', () => {
       { calories: 328, protein: 23.8, carbs: 45.5, fat: 6, fiber: 6.5 },
       { calories: 310, protein: 31, carbs: 37.6, fat: 4.2, fiber: 4.5 },
       { calories: 315, protein: 25.8, carbs: 52.8, fat: 1.6, fiber: 5.6 },
-      { calories: 277, protein: 29.9, carbs: 31.1, fat: 4, fiber: 5.5 }
+      { calories: 269, protein: 29.6, carbs: 31.1, fat: 3.5, fiber: 5.5 }
     ]
   );
   assert.deepEqual(
     DEFAULT_SNACKS.map(recipe => recipe.variants.map(variant => variant.calories)),
-    [[], [320], [374], [345], [307]]
+    [[], [320], [272, 374], [345], [299]]
   );
   assert.doesNotMatch(DEFAULT_SNACKS[0].ingredients, /banana/i);
   assert.equal(DEFAULT_SNACKS[0].variants.length, 0);
@@ -93,10 +94,10 @@ test('inclui cinco lanches com doses-base e variantes calculáveis', () => {
       label: 'Com chocolate ✓',
       name: 'Bolo de caneca proteico com chocolate preto',
       description: 'Acrescenta 5 g de chocolate preto picado por cima.',
-      calories: 307,
-      protein: 29.9,
+      calories: 299,
+      protein: 29.6,
       carbs: 34.9,
-      fat: 6.3,
+      fat: 5.8,
       fiber: 5.5
     }
   );
@@ -113,7 +114,7 @@ test('a massa de lentilhas usa mozzarella suave e identifica claramente o peso s
 test('a migração acrescenta refeições principais e lanches sem perder receitas pessoais', () => {
   const custom = { id: 'custom-main', meal: 'main', name: 'Receita pessoal', source: 'manual' };
   const merged = mergeRecipeCatalog([...DEFAULT_BREAKFASTS, custom]);
-  assert.equal(merged.length, 14);
+  assert.equal(merged.length, 18);
   assert.ok(DEFAULT_MAIN_MEALS.every(recipe => merged.some(item => item.id === recipe.id)));
   assert.ok(DEFAULT_SNACKS.every(recipe => merged.some(item => item.id === recipe.id)));
   assert.equal(merged.at(-1).id, custom.id);
@@ -135,7 +136,7 @@ test('atualiza receitas de catálogo antigas e remove as opções substituídas'
   const merged = mergeBreakfastCatalog([staleCatalogRecipe, staleManualRecipe, retiredEggRecipe, retiredTofuRecipe]);
   assert.equal(merged.length, 4);
   assert.equal(merged[1].name, DEFAULT_BREAKFASTS[1].name);
-  assert.equal(merged[2].name, DEFAULT_BREAKFASTS[2].name);
+  assert.equal(merged[2].name, staleManualRecipe.name);
   assert.ok(merged.every(recipe => recipe.id !== retiredEggRecipe.id));
   assert.ok(merged.every(recipe => recipe.id !== retiredTofuRecipe.id));
 });
@@ -147,4 +148,35 @@ test('calcula o intervalo prático de proteína a partir do peso', () => {
     perMealLow: 22,
     perMealHigh: 34
   });
+});
+
+test('as novas refeições têm ingredientes, preparação, proveniência e totais coerentes', () => {
+  for (const recipe of DEFAULT_MAIN_MEALS.slice(4)) {
+    assert.ok(recipe.instructions.length >= 3);
+    assert.ok(recipe.evidenceNote.length > 30);
+    assert.ok(recipe.calories >= 500 && recipe.calories <= 800);
+    assert.ok(recipe.protein >= 25 && recipe.protein <= 55);
+    const energy = recipe.components.reduce((sum, item) => sum + item.calories, 0);
+    assert.equal(recipe.calories, Math.round(energy));
+    assert.doesNotMatch(recipe.ingredients, /whey|skyr|pepino|beterraba/i);
+  }
+});
+
+test('renomear ou editar preparação conserva cálculos e metadados', () => {
+  const base = DEFAULT_MAIN_MEALS[0];
+  const edited = updateRecipeDetails(base, { name: 'Tofu pessoal', instructions: ['Preparar na air fryer.'] });
+  assert.deepEqual(edited.calorieAdjustment, base.calorieAdjustment);
+  assert.deepEqual(edited.components, base.components);
+  assert.deepEqual(edited.instructions, ['Preparar na air fryer.']);
+  assert.equal(mergeRecipeCatalog([edited]).find(item => item.id === base.id).name, 'Tofu pessoal');
+});
+
+test('alterar composição conserva preparação e invalida cálculos antigos', () => {
+  const base = DEFAULT_MAIN_MEALS[0];
+  const edited = updateRecipeDetails(base, { calories: 700 });
+  assert.deepEqual(edited.instructions, base.instructions);
+  assert.equal(edited.calorieAdjustment, undefined);
+  assert.equal(edited.components, undefined);
+  assert.deepEqual(edited.variants, []);
+  assert.equal(edited.calories, 700);
 });

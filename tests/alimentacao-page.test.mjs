@@ -48,7 +48,7 @@ test('a página não recupera a antiga secção separada para dias de endurance'
 
 test('o ajuste de uma refeição distingue claramente a receita base da meta atual', () => {
   assert.match(script, /Receita base:/);
-  assert.match(script, /Para a meta atual desta refeição/);
-  assert.match(script, /a app ajusta apenas a massa/);
+  assert.doesNotMatch(script, /a app ajusta apenas a massa/);
+  assert.match(script, /adjusted.adjustmentLabel/);
   assert.match(script, /os restantes ingredientes mantêm a dose base/);
 });

@@ -1411,10 +1411,10 @@ class CryptoPortfolioApp {
         datasets: [{
           data: values,
           backgroundColor: colors,
-          borderColor: '#ffffff',
+          borderColor: getComputedStyle(document.body).getPropertyValue('--surface').trim(),
           borderWidth: 2,
           hoverBorderWidth: 4,
-          hoverBorderColor: '#ffffff',
+          hoverBorderColor: getComputedStyle(document.body).getPropertyValue('--text').trim(),
           hoverOffset: 8
         }]
       },
@@ -1472,7 +1472,7 @@ class CryptoPortfolioApp {
       chart.data.datasets[0].data = values;
       chart.data.datasets[0].backgroundColor = colors;
       chart.data.datasets[0].hoverBorderWidth = 4;
-      chart.data.datasets[0].hoverBorderColor = '#ffffff';
+      chart.data.datasets[0].hoverBorderColor = getComputedStyle(document.body).getPropertyValue('--text').trim();
       chart.data.datasets[0].hoverOffset = 8;
       chart.options.plugins = chart.options.plugins || {};
       chart.options.plugins.legend = {
@@ -1506,7 +1506,7 @@ class CryptoPortfolioApp {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.font = '14px helvetica';
-      ctx.fillStyle = '#6b7280';
+      ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--text-dim').trim();
       ctx.textAlign = 'center';
       ctx.fillText('Sem dados de 2025', canvas.width / 2, canvas.height / 2);
       return;
@@ -1529,14 +1529,14 @@ class CryptoPortfolioApp {
         datasets: [{
           label: 'Total (EUR)',
           data: dataEUR,
-          borderColor: '#526D82',
+          borderColor: getComputedStyle(document.body).getPropertyValue('--accent').trim(),
           backgroundColor: 'rgba(82, 109, 130, 0.1)',
           borderWidth: 3,
           fill: true,
           tension: 0.4,
           pointRadius: 4,
           pointHoverRadius: 6,
-          pointBackgroundColor: '#526D82'
+          pointBackgroundColor: getComputedStyle(document.body).getPropertyValue('--accent').trim()
         }]
       },
       options: {
@@ -1777,12 +1777,12 @@ class CryptoPortfolioApp {
       tbody.innerHTML = `
         <tr role="row">
           <td role="cell" colspan="12" style="text-align: center; padding: 48px 24px;">
-            <div style="color: #9ca3af; margin-bottom: 16px;">
+            <div style="color: var(--text-dim, #9ca3af); margin-bottom: 16px;">
               <svg style="width: 64px; height: 64px; margin: 0 auto 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
               </svg>
-              <div style="font-size: 1.1rem; font-weight: 600; color: #6b7280; margin-bottom: 8px;">Sem ativos no portfólio</div>
-              <div style="font-size: 0.9rem; color: #9ca3af;">Clique em "+ Adicionar" para começar</div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-dim, #6b7280); margin-bottom: 8px;">Sem ativos no portfólio</div>
+              <div style="font-size: 0.9rem; color: var(--text-dim, #9ca3af);">Clique em "+ Adicionar" para começar</div>
             </div>
           </td>
         </tr>
@@ -2369,7 +2369,7 @@ class CryptoPortfolioApp {
     const investments = this.state.investments.get(key) || [];
 
     if (investments.length === 0) {
-      list.innerHTML = '<p style="color: #6b7280; font-size: 0.9rem; padding: 12px; text-align: center;">Nenhum investimento registrado</p>';
+      list.innerHTML = '<p style="color: var(--text-dim, #6b7280); font-size: 0.9rem; padding: 12px; text-align: center;">Nenhum investimento registrado</p>';
       return;
     }
 
@@ -2382,10 +2382,10 @@ class CryptoPortfolioApp {
       const date = new Date(inv.date).toLocaleDateString('pt-PT');
       
       return `
-        <div style="border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; background: white; display: flex; justify-content: space-between; align-items: center;">
+        <div style="border: 1px solid var(--border, #e5e7eb); border-radius: 6px; padding: 10px; background: var(--surface, white); display: flex; justify-content: space-between; align-items: center;">
           <div>
             <div style="font-weight: 600;">${displayAmount}</div>
-            <div style="font-size: 0.85rem; color: #6b7280;">${date}</div>
+            <div style="font-size: 0.85rem; color: var(--text-dim, #6b7280);">${date}</div>
           </div>
           <button class="btn btn-del-inv" data-inv-id="${this.escape(inv.id)}" style="padding: 4px 8px; font-size: 0.85rem;">Remover</button>
         </div>

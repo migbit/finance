@@ -1,0 +1,61 @@
+body[data-page="tmt"] main { max-width: 1320px; margin-inline: auto; padding: calc(var(--header-h, 64px) + 24px) 24px 24px; }
+body[data-page="tmt"] main > h2 { text-align: left; margin: 0 0 24px; }
+body[data-page="tmt"] .tmt-toolbar {
+  display: flex; flex-wrap: wrap; align-items: end; gap: 16px;
+  padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface);
+}
+body[data-page="tmt"] .tmt-toolbar label { display: grid; gap: 8px; font-weight: 600; margin: 0; }
+body[data-page="tmt"] .tmt-toolbar select { width: auto; min-height: 44px; margin: 0; padding: 8px 12px; }
+body[data-page="tmt"] #tmt-periodo { margin: 0 0 10px auto; color: var(--text-dim); font-size: .9rem; }
+body[data-page="tmt"] .tmt-copy-hint { color: var(--text-dim); font-size: .85rem; margin: 14px 0 24px; }
+body[data-page="tmt"] #tmt-status:empty { display: none; }
+body[data-page="tmt"] [hidden] { display: none !important; }
+body[data-page="tmt"] .report-section { margin: 0 0 24px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+body[data-page="tmt"] .viz-card { margin: 0; padding: 20px; border: 1px solid var(--border); border-radius: 14px; }
+body[data-page="tmt"] .viz-card h3 { text-align: left; margin: 0 0 16px; font-size: 1.15rem; }
+body[data-page="tmt"] .table-wrap { min-width: 0; max-width: 100%; }
+body[data-page="tmt"] .tmt-table,
+body[data-page="tmt"] .detalhes-table { width: 100%; border-collapse: collapse; margin: 0; }
+body[data-page="tmt"] .tmt-table > thead > tr > th,
+body[data-page="tmt"] .tmt-table > tbody > tr > td { padding: 12px 8px; text-align: center; white-space: nowrap; }
+body[data-page="tmt"] .tmt-table > tbody > tr > td { font-variant-numeric: tabular-nums; }
+body[data-page="tmt"] .tmt-value {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: auto; min-width: 48px; min-height: 44px; padding: 8px 12px; margin: 0;
+  border: 1px solid transparent; border-radius: 8px; background: transparent;
+  color: var(--text); box-shadow: none; font: inherit; font-weight: 650;
+  font-variant-numeric: tabular-nums; cursor: copy; transition: background .15s;
+}
+body[data-page="tmt"] .tmt-table > tbody > tr:not(.tmt-details-row) .tmt-value { font-size: 1.25rem; }
+body[data-page="tmt"] .tmt-total .tmt-value { color: var(--accent); background: var(--info-bg, var(--th-bg)); }
+body[data-page="tmt"] .tmt-value:hover,
+body[data-page="tmt"] .tmt-value:focus-visible { background: var(--selected-bg, var(--th-bg)); border-color: var(--accent); }
+body[data-page="tmt"] .tmt-value.is-copied { color: var(--ok); border-color: var(--ok); }
+body[data-page="tmt"] .toggle-antigos { margin: 16px 0 0; }
+body[data-page="tmt"] .bloco-antigos { margin-top: 16px; }
+body[data-page="tmt"] .btn-detalhes,
+body[data-page="tmt"] .toggle-antigos { min-height: 44px; white-space: nowrap; }
+body[data-page="tmt"] .tmt-table > tbody > .tmt-details-row > td { padding: 16px 8px; background: var(--background); }
+body[data-page="tmt"] .detalhes-table th,
+body[data-page="tmt"] .detalhes-table td { padding: 8px; text-align: center; }
+body[data-page="tmt"] .tmt-empty { color: var(--text-dim); }
+body[data-page="tmt"] .tmt-acoes { display: grid; justify-items: center; gap: 8px; }
+body[data-page="tmt"] .tmt-entrega { display: grid; justify-items: center; gap: 4px; font-size: .78rem; color: var(--text-dim); }
+body[data-page="tmt"] .tmt-entrega-estado.is-entregue { color: var(--ok); font-weight: 600; }
+body[data-page="tmt"] .tmt-entrega button { min-height: 44px; margin: 0; padding: 8px 12px; font-size: .8rem; white-space: nowrap; }
+body[data-page="tmt"] .tmt-entrega-erro { max-width: 190px; white-space: normal; color: var(--bad); }
+body[data-page="tmt"] .tmt-copy-status:not(:empty) {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 1100;
+  width: max-content; max-width: calc(100vw - 32px); margin: 0; padding: 12px 20px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface-raised, var(--surface));
+  color: var(--text); box-shadow: var(--shadow-2); pointer-events: none;
+}
+@media (max-width: 700px) {
+  body[data-page="tmt"] main { padding: calc(var(--header-h, 64px) + 16px) 12px 16px; }
+  body[data-page="tmt"] main > h2 { font-size: 1.35rem; }
+  body[data-page="tmt"] .viz-card { padding: 16px 10px; }
+  body[data-page="tmt"] .tmt-toolbar { gap: 12px; padding: 16px; }
+  body[data-page="tmt"] .tmt-toolbar label { flex: 1 1 auto; }
+  body[data-page="tmt"] .tmt-toolbar select { max-width: 100%; }
+  body[data-page="tmt"] #tmt-periodo { flex-basis: 100%; margin: 0; }
+}

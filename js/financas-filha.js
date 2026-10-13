@@ -525,7 +525,7 @@ function renderChart(key, items) {
     datasets: [{
       data: items.map(item => item.amountCents / 100),
       backgroundColor: items.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]),
-      borderColor: '#ffffff',
+      borderColor: getComputedStyle(document.body).getPropertyValue('--fin-panel').trim(),
       borderWidth: isSimpleProfile ? 0 : 3,
       borderRadius: isSimpleProfile ? 8 : 0
     }]
@@ -546,7 +546,7 @@ function renderChart(key, items) {
     options.scales = {
       x: {
         beginAtZero: true,
-        grid: { color: '#edf0f5' },
+        grid: { color: getComputedStyle(document.body).getPropertyValue('--fin-line').trim() },
         ticks: { callback: value => `${value} €` }
       },
       y: { grid: { display: false } }

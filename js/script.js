@@ -1,3 +1,5 @@
+import { mountNavigation } from './navigation.js';
+
 // A APP – script.js (adapted from main app)
 /*
   Key changes vs main app:
@@ -26,7 +28,7 @@ const accessStyle = document.createElement('style');
 accessStyle.textContent = `
   html.app-access-pending body main { visibility: hidden; }
   .access-message { max-width: 680px; margin: 4rem auto; padding: 1.5rem; text-align: center; }
-  .access-readonly-banner { margin: 0 0 1rem; padding: .75rem 1rem; border-radius: 10px; background: #fff4ce; color: #5f4700; }
+  .access-readonly-banner { margin: 0 0 1rem; padding: .75rem 1rem; border-radius: 10px; background: var(--warning-bg, #fff4ce); color: var(--warning, #5f4700); }
 `;
 document.head.appendChild(accessStyle);
 
@@ -152,14 +154,6 @@ const ACTIVE_KEY_MATCHERS = [
   { key: 'ginasio', patterns: ['ginasio'] }
 ];
 
-function resolveHref(slug, isModulePage) {
-  if (/^https?:\/\//.test(slug)) return slug;
-  if (isModulePage) {
-    return slug.replace(/^modules\//, '');
-  }
-  return slug;
-}
-
 function detectActiveKey() {
   const path = window.location.pathname.toLowerCase();
   const match = ACTIVE_KEY_MATCHERS.find(entry =>
@@ -171,69 +165,12 @@ function detectActiveKey() {
 }
 
 function buildGlobalNav(user = currentUser) {
-  const body = document.body;
-  if (!body) return;
-
-  const existingMenu = document.getElementById('menu-icon');
-  if (existingMenu) existingMenu.remove();
-  const existingNav = document.getElementById('nav-menu');
-  if (existingNav) {
-    const existingHeader = existingNav.closest('header');
-    if (existingHeader) existingHeader.remove();
-  }
-
-  const header = document.createElement('header');
-  header.innerHTML = `
-    <button id="menu-icon" aria-label="Abrir menu" class="menu-icon">☰</button>
-    <nav id="nav-menu">
-      <div id="login-section" class="login-block">
-        <a href="#" id="login-btn" class="login-visible">🔐 Login</a>
-        <span id="user-info" class="user-visible" style="display:none;">
-          <a href="#" id="user-name">👤 Username</a>
-        </span>
-      </div>
-      <div class="nav-links"></div>
-    </nav>
-  `;
-
-  body.prepend(header);
-
-  const isModulePage = window.location.pathname.includes('/modules/');
-  const activeKey = detectActiveKey();
-  const linksWrap = header.querySelector('.nav-links');
-
-  filterNavigation(NAV_GROUPS, user?.uid).forEach(group => {
-    const groupEl = document.createElement('div');
-    groupEl.className = 'nav-group';
-    groupEl.setAttribute('data-nav-group', '');
-
-    const trigger = document.createElement('button');
-    trigger.className = 'nav-link nav-link--trigger';
-    trigger.setAttribute('data-nav-toggle', '');
-    trigger.setAttribute('aria-haspopup', 'true');
-    trigger.setAttribute('aria-expanded', 'false');
-    trigger.textContent = group.label;
-
-    const dropdown = document.createElement('div');
-    dropdown.className = 'nav-dropdown';
-    dropdown.setAttribute('role', 'menu');
-
-    group.links.forEach(link => {
-      const anchor = document.createElement('a');
-      anchor.href = resolveHref(link.slug, isModulePage);
-      anchor.textContent = link.label;
-      anchor.setAttribute('role', 'menuitem');
-      if (link.key === activeKey) {
-        anchor.classList.add('active');
-      }
-      dropdown.appendChild(anchor);
-    });
-
-    groupEl.append(trigger, dropdown);
-    linksWrap.appendChild(groupEl);
+  if (!document.body) return;
+  const header = mountNavigation({
+    groups: filterNavigation(NAV_GROUPS, user?.uid),
+    activeKey: detectActiveKey(),
+    isModulePage: window.location.pathname.includes('/modules/')
   });
-
-  setupNavInteractions(header);
   bindAuthControls(header);
   atualizarInterface(user);
 }
@@ -342,63 +279,9 @@ export function getCurrentPageAccess() {
 
 function initNavWhenReady() {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', buildGlobalNav);
+    document.addEventListener('DOMContentLoaded', () => buildGlobalNav());
   } else {
     buildGlobalNav();
-  }
-}
-
-function setupNavInteractions(header) {
-  const menuBtn = header.querySelector('#menu-icon');
-  const nav = header.querySelector('#nav-menu');
-  const groups = Array.from(header.querySelectorAll('[data-nav-group]'));
-
-  const closeGroups = () => {
-    groups.forEach(group => {
-      group.classList.remove('is-open');
-      const trigger = group.querySelector('[data-nav-toggle]');
-      if (trigger) trigger.setAttribute('aria-expanded', 'false');
-    });
-  };
-
-  if (menuBtn) {
-    menuBtn.addEventListener('click', () => {
-      header.classList.toggle('active');
-      document.body.classList.toggle('nav-open', header.classList.contains('active'));
-    });
-  }
-
-  groups.forEach(group => {
-    const trigger = group.querySelector('[data-nav-toggle]');
-    if (!trigger) return;
-    trigger.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const isOpen = group.classList.contains('is-open');
-      closeGroups();
-      if (!isOpen) {
-        group.classList.add('is-open');
-        trigger.setAttribute('aria-expanded', 'true');
-      }
-    });
-  });
-
-  document.addEventListener('click', (event) => {
-    if (!event.target.closest('[data-nav-group]')) {
-      closeGroups();
-    }
-  });
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeGroups();
-  });
-
-  if (nav) {
-    nav.addEventListener('click', (event) => {
-      if (event.target.closest('a')) {
-        header.classList.remove('active');
-        document.body.classList.remove('nav-open');
-      }
-    });
   }
 }
 
@@ -473,20 +356,6 @@ function logout() {
 
 // DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-  // Mobile menu + active link
-  const menuIcon = document.getElementById('menu-icon');
-  const navMenu  = document.getElementById('nav-menu');
-  if (menuIcon && navMenu) {
-    menuIcon.addEventListener('click', () => navMenu.classList.toggle('active'));
-  }
-  const here = location.pathname.replace(/\/+/g,'/');
-  document.querySelectorAll('nav a[href]').forEach(a => {
-    try {
-      const href = new URL(a.getAttribute('href'), location.origin).pathname;
-      if (href === here) a.classList.add('active');
-    } catch(e){ /* ignore */ }
-  });
-
   bindAuthControls();
 
   // Auth state

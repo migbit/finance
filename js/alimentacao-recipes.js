@@ -35,6 +35,11 @@ function productPortion(label, quantity, nutrition) {
   };
 }
 
+// One reference for powdered whey throughout Miguel's catalogue (per 30 g).
+function wheyPortion(label, grams) {
+  return productPortion(label, grams, { calories: 104 / 0.3, protein: 23 / 0.3, carbs: 5, fat: 0.7 / 0.3, fiber: 0 });
+}
+
 function buildRecipe(recipe) {
   const totals = totalNutrition(recipe.components);
   return Object.freeze({
@@ -79,7 +84,7 @@ export const MIGUEL_PROFILE_DEFAULTS = Object.freeze({
   favoriteFoods: 'Aceita skyr/quark, aveia, tofu, leguminosas, chia/linhaça, frutos secos, bebida de soja e cereais integrais.',
   dislikedFoods: 'Queijos de sabor forte, pepino e beterraba.',
   breadDetails: 'Sugestão-base: Pema integral de centeio (200 kcal, 5 g proteína e 11 g fibra/100 g) ou equivalente com farinha integral como primeiro ingrediente.',
-  wheyDetails: 'ESN Designer Whey Apple Strudel: 115 kcal e 23,4 g proteína/30 g. Consumo habitual referido: 2 × 30 g/dia.',
+  wheyDetails: 'Referência: Evowhey, 104 kcal e 23 g proteína/30 g. Contabilizar apenas as doses escolhidas; confirmar o rótulo ao mudar de produto.',
   almondDrinkDetails: 'Substituir preferencialmente por bebida de soja sem açúcar fortificada; confirmar sempre o rótulo.',
   fruitDetails: 'Fruta sazonal, sobretudo pera, maçã, melancia, melão, laranja e nectarina.',
   fortifiedDrink: 'calcium_b12_d',
@@ -89,6 +94,7 @@ export const MIGUEL_PROFILE_DEFAULTS = Object.freeze({
   lunchExternal: false,
   selectedDinnerId: '',
   snacks: [],
+  consumedMeals: {},
   mealCalories: { breakfast: 0, lunch: 0, dinner: 0, snacks: 0 },
   planDate: '',
   updatedAt: '2026-08-20T00:00:00.000Z'
@@ -109,7 +115,7 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       { label: '50 g de flocos de aveia integrais', calories: 187, protein: 5.3, carbs: 30.5, fat: 3.4, fiber: 5 },
       productPortion('150 g de skyr natural sem açúcar', 150, PRODUCT_NUTRITION.skyr),
       productPortion('100 ml de bebida de soja sem açúcar fortificada', 100, PRODUCT_NUTRITION.soyDrink),
-      { label: '10 g de whey', calories: 38.3, protein: 7.8, carbs: 0.6, fat: 0.5, fiber: 0 },
+      wheyPortion('10 g de Evowhey', 10),
       { label: '10 g de linhaça moída', calories: 53, protein: 1.8, carbs: 0.3, fat: 4.2, fiber: 2.7 },
       { label: '80 a 100 g de banana madura', calories: 80, protein: 1, carbs: 20.5, fat: 0.3, fiber: 2.3 },
       { label: '1 c. de chá de fermento', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
@@ -170,7 +176,7 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       productPortion('50 g de Rice Cream sem sabor', 50, PRODUCT_NUTRITION.riceCream),
       productPortion('250 ml de bebida de soja sem açúcar fortificada', 250, PRODUCT_NUTRITION.soyDrink),
       productPortion('150 g de skyr natural', 150, PRODUCT_NUTRITION.skyr),
-      { label: '10 g de whey, baunilha ou outro sabor que combine', calories: 38.3, protein: 7.8, carbs: 0.6, fat: 0.5, fiber: 0 },
+      wheyPortion('10 g de Evowhey, num sabor que combine', 10),
       { label: '150 g de fruta, por exemplo banana, frutos vermelhos, maçã ou pêssego', calories: 64, protein: 0.6, carbs: 15.6, fat: 0.2, fiber: 3.5 },
       { label: 'Canela a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
       { label: '5 a 10 g de amêndoas ou nozes picadas (opcional)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
@@ -202,7 +208,7 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       { label: '25 a 30 g de compota ou mel', calories: 61.6, protein: 0.1, carbs: 15.1, fat: 0, fiber: 0.1 },
       { label: '1 banana média (≈120 g)', calories: 107, protein: 1.3, carbs: 27.4, fat: 0.4, fiber: 3.1 },
       productPortion('200 ml de bebida de soja sem açúcar fortificada', 200, PRODUCT_NUTRITION.soyDrink),
-      { label: '10 a 15 g de whey', calories: 57.5, protein: 11.7, carbs: 0.9, fat: 0.7, fiber: 0 },
+      wheyPortion('15 g de Evowhey', 15),
       { label: 'Café, se fizer parte da rotina', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
       { label: '300 a 500 ml de água', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
     ],
@@ -213,7 +219,7 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       'Misturar a whey na bebida de soja.',
       'Acompanhar com água e o café habitual, se aplicável.'
     ],
-    highlights: ['≈83 g de hidratos', '≈27 g de proteína', 'Menos gordura e fibra', 'Preparação em 5 min', 'Uso pré-exercício'],
+    highlights: ['≈84 g de hidratos', '≈26 g de proteína', 'Menos gordura e fibra', 'Preparação em 5 min', 'Uso pré-exercício'],
     cautions: ['O total apresentado usa 27,5 g de compota e 15 g de whey.', 'Com mel, acrescentar aproximadamente 22 kcal e 7–8 g de hidratos.', 'É uma opção específica para treinar pouco depois; não substitui o pequeno-almoço base nos restantes dias.'],
     evidenceNote: 'Bebida de soja e whey usam os rótulos registados; pão branco/mistura, compota e banana usam valores médios. Confirmar o pão e a compota comprados.'
   })
@@ -252,6 +258,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
     calorieAdjustment: {
       label: 'arroz integral pronto',
       baseQuantity: 125,
+      minQuantity: 75, maxQuantity: 250, step: 25,
       unit: 'g',
       calories: 210,
       protein: 4.5,
@@ -293,6 +300,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
     calorieAdjustment: {
       label: 'batata',
       baseQuantity: 300,
+      minQuantity: 200, maxQuantity: 400, step: 25,
       unit: 'g',
       calories: 257,
       protein: 6,
@@ -336,6 +344,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
     calorieAdjustment: {
       label: 'massa de lentilhas vermelhas (peso em seco)',
       baseQuantity: 90,
+      minQuantity: 60, maxQuantity: 120, step: 5,
       unit: 'g',
       calories: 308.7,
       protein: 23.9,
@@ -377,6 +386,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
     calorieAdjustment: {
       label: 'quinoa pronta',
       baseQuantity: 125,
+      minQuantity: 75, maxQuantity: 250, step: 25,
       unit: 'g',
       calories: 183.8,
       protein: 5.9,
@@ -384,7 +394,86 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       fat: 3.9,
       fiber: 3.8
     },
-    scaleHint: 'Ajustar sobretudo quinoa e feijão; manter o abacate e o molho próximos da dose base.'
+    scaleHint: 'Ajustar apenas a quinoa; manter o feijão, o abacate e o molho na dose base.'
+  }),
+  buildRecipe({
+    id: 'main-soy-bolognese', meal: 'main',
+    name: 'Bolonhesa de soja com massa integral', shortName: 'Bolonhesa de soja',
+    description: 'Molho de tomate e soja texturizada para preparar várias doses e servir com massa integral.',
+    quality: 'high', qualityLabel: 'Para várias doses', rank: 5, prepTime: '25 min', batchFriendly: true,
+    components: [
+      { label: '85 g de massa integral, peso em seco', calories: 294.95, protein: 11.05, carbs: 54.4, fat: 2.125, fiber: 6.8 },
+      { label: '50 g de soja texturizada fina, peso em seco', calories: 160, protein: 25.5, carbs: 9, fat: 0.5, fiber: 8 },
+      { label: '200 g de passata de tomate', calories: 70, protein: 3, carbs: 11, fat: 0.4, fiber: 3 },
+      { label: '200 g de cogumelos, cenoura e cebola', calories: 60, protein: 4, carbs: 6, fat: 0.6, fiber: 4 },
+      { label: '10 g de azeite', calories: 90, protein: 0, carbs: 0, fat: 10, fiber: 0 },
+      { label: 'Alho, orégãos, pimenta e água a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: ['Hidratar a soja conforme a embalagem e escorrer bem.', 'Saltear os legumes no azeite, juntar a soja e o tomate e deixar apurar.', 'Cozer a massa e servir com o molho. Para várias doses, multiplicar todos os ingredientes pelo número de porções.'],
+    highlights: ['Sem lacticínios', 'Congelar o molho', 'Massa integral'],
+    cautions: ['Pesar massa e soja antes de hidratar ou cozer.'],
+    evidenceNote: 'Estimativa por dose. Massa: rótulo Barilla Integral (347 kcal/100 g); soja e legumes: valores médios, a confirmar na embalagem utilizada.',
+    calorieAdjustment: { label: 'massa integral (peso em seco)', baseQuantity: 85, unit: 'g', calories: 294.95, protein: 11.05, carbs: 54.4, fat: 2.125, fiber: 6.8, minQuantity: 60, maxQuantity: 120, step: 5 },
+    scaleHint: 'Manter o molho na dose base.'
+  }),
+  buildRecipe({
+    id: 'main-chickpea-tofu-curry', meal: 'main',
+    name: 'Caril de grão, tofu e espinafres com arroz', shortName: 'Caril de grão e tofu',
+    description: 'Uma refeição de tacho com tomate e especiarias, sem depender de molhos de iogurte.',
+    quality: 'high', qualityLabel: 'Refeição de tacho', rank: 6, prepTime: '25 min', batchFriendly: true,
+    components: [
+      { label: '100 g de tofu firme', calories: 143, protein: 16, carbs: 0, fat: 8.5, fiber: 1.7 },
+      { label: '120 g de grão cozido e escorrido', calories: 144, protein: 8, carbs: 19, fat: 2.5, fiber: 6 },
+      { label: '125 g de arroz integral pronto a comer', calories: 210, protein: 4.5, carbs: 37.5, fat: 2.5, fiber: 4.8 },
+      { label: '200 g de passata de tomate', calories: 70, protein: 3, carbs: 11, fat: 0.4, fiber: 3 },
+      { label: '200 g de espinafres, cebola e pimento', calories: 60, protein: 4, carbs: 6, fat: 0.6, fiber: 4 },
+      { label: '5 g de azeite', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
+      { label: 'Caril em pó, cominhos, alho, gengibre e água a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: ['Saltear a cebola e o pimento no azeite com as especiarias.', 'Juntar tomate, tofu em cubos, grão e um pouco de água. Deixar apurar e acrescentar os espinafres.', 'Aquecer o arroz e servir. Dividir o caril em doses se preparares várias refeições.'],
+    highlights: ['Sem lacticínios', 'Para várias doses', 'Grão + tofu'],
+    cautions: ['O total não inclui leite de coco. Escorrer e passar o grão por água.'],
+    evidenceNote: 'Arroz: referência Cigala já registada no catálogo; tofu, grão e hortícolas: valores médios. Confirmar os rótulos.',
+    calorieAdjustment: { label: 'arroz integral pronto', baseQuantity: 125, unit: 'g', calories: 210, protein: 4.5, carbs: 37.5, fat: 2.5, fiber: 4.8, minQuantity: 75, maxQuantity: 250, step: 25 },
+    scaleHint: 'Manter o caril na dose base.'
+  }),
+  buildRecipe({
+    id: 'main-black-eyed-bean-salad', meal: 'main',
+    name: 'Salada de feijão-frade, ovo e pão integral', shortName: 'Feijão-frade e ovo',
+    description: 'Uma refeição fria para levar, com legumes crocantes e tempero de limão.',
+    quality: 'high', qualityLabel: 'Para levar', rank: 7, prepTime: '15 min', batchFriendly: true,
+    components: [
+      { label: '200 g de feijão-frade cozido e escorrido', calories: 220, protein: 15, carbs: 32, fat: 1, fiber: 12 },
+      { label: '2 ovos', calories: 144, protein: 12.6, carbs: 0.8, fat: 9.6, fiber: 0 },
+      { label: '60 g de pão integral', calories: 158, protein: 5, carbs: 30, fat: 2.2, fiber: 4.5 },
+      { label: '250 g de tomate, pimento, cenoura e folhas verdes', calories: 65, protein: 4, carbs: 10, fat: 0.8, fiber: 5 },
+      { label: '5 g de azeite', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
+      { label: 'Limão, salsa e pimenta a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: ['Cozer os ovos, arrefecer e cortar.', 'Passar o feijão por água e misturar com os legumes e os ovos.', 'Temperar com azeite, limão e salsa. Levar o pão à parte.'],
+    highlights: ['Refeição fria', 'Sem whey', 'Para levar'],
+    cautions: ['Manter a salada refrigerada até consumir, incluindo durante o transporte.'],
+    evidenceNote: 'Estimativa com valores médios; confirmar pão e feijão na embalagem. O feijão é pesado depois de escorrido.',
+    calorieAdjustment: { label: 'pão integral', baseQuantity: 60, unit: 'g', calories: 158, protein: 5, carbs: 30, fat: 2.2, fiber: 4.5, minQuantity: 40, maxQuantity: 100, step: 10 },
+    scaleHint: 'Manter o feijão, os ovos e os legumes na dose base.'
+  }),
+  buildRecipe({
+    id: 'main-tofu-hummus-wrap', meal: 'main',
+    name: 'Wraps de húmus, tofu e legumes', shortName: 'Wraps de húmus e tofu',
+    description: 'Dois wraps pequenos para variar o formato e aproveitar tofu já preparado.',
+    quality: 'high', qualityLabel: 'Rápido', rank: 8, prepTime: '15 min', batchFriendly: false,
+    components: [
+      { label: '2 tortilhas integrais pequenas (80 g no total)', calories: 240, protein: 7.2, carbs: 40, fat: 5.6, fiber: 4.8 },
+      { label: '150 g de tofu firme', calories: 214.5, protein: 24, carbs: 0, fat: 12.8, fiber: 2.6 },
+      { label: '50 g de húmus', calories: 120, protein: 3.5, carbs: 7, fat: 8, fiber: 3 },
+      { label: '200 g de alface, tomate, cenoura e pimento', calories: 52, protein: 3.2, carbs: 8, fat: 0.6, fiber: 4 },
+      { label: 'Limão, paprika e pimenta a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    ],
+    instructions: ['Temperar o tofu e dourar numa frigideira antiaderente ou air fryer, sem acrescentar óleo.', 'Aquecer as tortilhas e barrar com o húmus.', 'Distribuir tofu e legumes, enrolar e servir. Se levares para fora, manter refrigerado.'],
+    highlights: ['Sem lacticínios', 'Aproveita tofu preparado', 'Porção fixa'],
+    cautions: ['Pesar as tortilhas: o tamanho varia muito entre marcas. O total não inclui óleo adicional.'],
+    evidenceNote: 'Estimativa com valores médios de tortilha integral, húmus, tofu e hortícolas. Ajustar aos rótulos dos produtos utilizados.',
+    scaleHint: 'Manter os dois wraps pequenos; se necessário, escolher um complemento à parte.'
   })
 ]);
 
@@ -401,7 +490,7 @@ export const DEFAULT_SNACKS = Object.freeze([
     prepTime: '1 min',
     batchFriendly: false,
     components: [
-      { label: '30 g de Evowhey', calories: 104, protein: 23, carbs: 1.5, fat: 0.7, fiber: 0 },
+      wheyPortion('30 g de Evowhey', 30),
       { label: '300 a 400 ml de água', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
     ],
     instructions: ['Colocar a Evowhey e a água num shaker.', 'Agitar e beber.'],
@@ -424,7 +513,7 @@ export const DEFAULT_SNACKS = Object.freeze([
     batchFriendly: true,
     components: [
       productPortion('200 g de iogurte grego natural', 200, PRODUCT_NUTRITION.greekYogurt),
-      { label: '12,5 g de Evowhey', calories: 43.3, protein: 9.6, carbs: 0.6, fat: 0.3, fiber: 0 },
+      wheyPortion('12,5 g de Evowhey', 12.5),
       { label: '30 g de cereais integrais sem açúcar adicionado', calories: 111, protein: 3, carbs: 21.5, fat: 1.5, fiber: 3 },
       { label: '150 g de fruta sazonal', calories: 64, protein: 0.6, carbs: 15.6, fat: 0.2, fiber: 3.5 },
       { label: 'Canela (opcional)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
@@ -470,6 +559,12 @@ export const DEFAULT_SNACKS = Object.freeze([
     evidenceNote: 'O batido usa os valores que forneceste: 152 kcal e 26 g de proteína; o pão integral de 60 g usa valores médios.',
     addLabel: 'Adicionar',
     variants: [
+      {
+        id: 'savory-hummus', label: 'Pão, húmus e tomate',
+        name: 'Pão integral com húmus e tomate',
+        description: '60 g de pão integral, 40 g de húmus e 100 g de tomate. Sem batido. Valores médios; confirmar o húmus no rótulo.',
+        calories: 272, protein: 8.7, carbs: 38.3, fat: 8.8, fiber: 8.1
+      },
       {
         id: 'with-fruit',
         label: 'Com fruta',
@@ -531,7 +626,7 @@ export const DEFAULT_SNACKS = Object.freeze([
     prepTime: '4 min',
     batchFriendly: false,
     components: [
-      { label: '20 g de whey', calories: 77, protein: 15.6, carbs: 1, fat: 1, fiber: 0 },
+      wheyPortion('20 g de Evowhey', 20),
       { label: '25 g de farinha de aveia ou flocos de aveia triturados', calories: 88, protein: 3, carbs: 14.5, fat: 1.7, fiber: 2.5 },
       productPortion('80 g de skyr natural', 80, PRODUCT_NUTRITION.skyr),
       { label: '50 g de banana madura esmagada', calories: 43, protein: 0.5, carbs: 11, fat: 0.1, fiber: 1.3 },
@@ -550,7 +645,7 @@ export const DEFAULT_SNACKS = Object.freeze([
       'Verificar o centro e, se ainda estiver demasiado líquido, acrescentar 10 segundos de cada vez.',
       'Deixar repousar 1 minuto antes de comer.'
     ],
-    highlights: ['≈30 g de proteína', '≈277 kcal', 'Micro-ondas', 'Pronto em 4 min'],
+    highlights: ['≈30 g de proteína', 'Micro-ondas', 'Pronto em 4 min'],
     cautions: ['Não cozinhar demasiado: 10–15 segundos podem fazer a diferença entre um bolo húmido e uma textura seca.'],
     evidenceNote: 'Skyr e bebida de soja usam os rótulos registados; a bebida é calculada com uma porção de referência de 35 ml.',
     addLabel: 'Sem chocolate',
@@ -560,10 +655,10 @@ export const DEFAULT_SNACKS = Object.freeze([
         label: 'Com chocolate ✓',
         name: 'Bolo de caneca proteico com chocolate preto',
         description: 'Acrescenta 5 g de chocolate preto picado por cima.',
-        calories: 307,
-        protein: 29.9,
+        calories: 299,
+        protein: 29.6,
         carbs: 34.9,
-        fat: 6.3,
+        fat: 5.8,
         fiber: 5.5
       }
     ]
@@ -579,7 +674,7 @@ export function mergeBreakfastCatalog(storedRecipes = []) {
   const byId = new Map(stored.map(recipe => [recipe.id, recipe]));
   const defaults = DEFAULT_BREAKFASTS.map(recipe => {
     const saved = byId.get(recipe.id);
-    return saved?.source === 'manual' && saved.catalogVersion === recipe.catalogVersion
+    return saved?.source === 'manual'
       ? saved
       : recipe;
   });
@@ -596,7 +691,7 @@ export function mergeRecipeCatalog(storedRecipes = []) {
   const byId = new Map(stored.map(recipe => [recipe.id, recipe]));
   const mergedDefaults = defaults.map(recipe => {
     const saved = byId.get(recipe.id);
-    return saved?.source === 'manual' && saved.catalogVersion === recipe.catalogVersion
+    return saved?.source === 'manual'
       ? saved
       : recipe;
   });
@@ -613,4 +708,23 @@ export function getBreakfastProteinTarget(weightKg) {
     perMealLow: Math.round(weight * 0.3),
     perMealHigh: Math.round(weight * 0.45)
   };
+}
+
+export function updateRecipeDetails(existing = {}, changes = {}) {
+  const compositionChanged = ['ingredients', 'calories', 'protein', 'carbs', 'fat', 'fiber']
+    .some(key => Object.hasOwn(changes, key) && changes[key] !== existing[key]);
+  const recipe = { ...existing, ...changes, source: 'manual' };
+  if (changes.name && changes.name !== existing.name) recipe.shortName = changes.name;
+  if (compositionChanged) {
+    // Old component/variant calculations are no longer reliable after a composition edit.
+    delete recipe.calorieAdjustment;
+    delete recipe.components;
+    recipe.variants = [];
+    recipe.highlights = [];
+    recipe.scaleHint = 'Usar a porção introduzida; rever os valores ao alterar ingredientes.';
+    recipe.quality = 'pending';
+    recipe.qualityLabel = 'Composição a rever';
+    recipe.evidenceNote = 'Valores introduzidos manualmente; confirmar nos rótulos.';
+  }
+  return recipe;
 }

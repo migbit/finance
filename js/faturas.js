@@ -38,6 +38,32 @@ let currentIndex = -1;
 let loadedFaturas = [];
 let toastStack;
 let channelNumberRequest = 0;
+let isSaving = false;
+let cleanFormValues = new Map();
+let reportRequest = 0;
+
+function formValues() {
+  return new Map(Array.from(faturaForm.querySelectorAll('input, select, textarea'))
+    .map(field => [field.id, field.value]));
+}
+
+function markFormClean() {
+  cleanFormValues = formValues();
+}
+
+function hasUnsavedChanges() {
+  return Array.from(formValues()).some(([id, value]) => cleanFormValues.get(id) !== value);
+}
+
+function canReplaceForm() {
+  return !isSaving && (!hasUnsavedChanges() || confirm('Existem alterações por guardar. Pretende descartá-las?'));
+}
+
+window.addEventListener('beforeunload', event => {
+  if (!isSaving && !hasUnsavedChanges()) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
 
 const CHANNEL_CONFIG = Object.freeze({
   AIRBNB: { prefix: 'M', firstNumber: 1, padding: 0 },
@@ -58,6 +84,24 @@ const REQUIRED_AIRBNB_FIELD_IDS = new Set([
   'valor-operador',
   'valor-tmt'
 ]);
+
+// Sugestões para novas faturas; cada reserva conserva o seu próprio valor.
+const DEFAULT_CLEANING_FEES = Object.freeze({ '123': 70, '1248': 80 });
+
+function preencherTaxaLimpeza() {
+  if (editarIdInput.value) return;
+  const field = document.getElementById('taxa-limpeza');
+  if (!field || field.value !== '') return;
+  const apartamento = document.getElementById('apartamento')?.value;
+  field.value = DEFAULT_CLEANING_FEES[apartamento] ?? '';
+}
+
+function diffNoites(ci, co) {
+  if (!ci || !co) return null;
+  const ms = new Date(co) - new Date(ci);
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  return Math.round(ms / (1000 * 60 * 60 * 24));
+}
 
 const getToastStack = () => {
   if (toastStack && document.body.contains(toastStack)) return toastStack;
@@ -123,17 +167,17 @@ const formatInvoiceNumber = (channel, number) => {
 async function getNextInvoiceNumber(channel) {
   const normalizedChannel = normalizeChannel(channel);
   const config = CHANNEL_CONFIG[normalizedChannel];
-  const q = query(collection(db, 'faturas'), orderBy('timestamp', 'desc'));
-  const snap = await getDocs(q);
+  const snap = await getDocs(collection(db, 'faturas'));
+  let highestNumber = config.firstNumber - 1;
 
   for (const invoiceDoc of snap.docs) {
     const parsed = parseInvoiceNumber(invoiceDoc.data()?.numeroFatura || '');
     if (parsed.prefix === config.prefix && Number.isFinite(parsed.number)) {
-      return formatInvoiceNumber(normalizedChannel, parsed.number + 1);
+      highestNumber = Math.max(highestNumber, parsed.number);
     }
   }
 
-  return formatInvoiceNumber(normalizedChannel, config.firstNumber);
+  return formatInvoiceNumber(normalizedChannel, highestNumber + 1);
 }
 
 function setAirbnbOnlyFieldsEnabled(isAirbnb) {
@@ -159,7 +203,7 @@ function setAirbnbOnlyFieldsEnabled(isAirbnb) {
   });
 }
 
-async function applyChannelSelection({ updateNumber = false } = {}) {
+async function applyChannelSelection({ updateNumber = false, defaultNumber = false } = {}) {
   const channelSelect = document.getElementById('canal');
   const channel = normalizeChannel(channelSelect?.value);
   if (channelSelect) channelSelect.value = channel;
@@ -169,12 +213,17 @@ async function applyChannelSelection({ updateNumber = false } = {}) {
 
   if (!updateNumber) return;
   const requestId = ++channelNumberRequest;
+  const numberInput = document.getElementById('numero-fatura');
+  if (numberInput && !defaultNumber) numberInput.value = '';
+  const previousNumber = numberInput?.value;
   const nextNumber = await getNextInvoiceNumber(channel);
   if (requestId !== channelNumberRequest) return;
   if (normalizeChannel(channelSelect?.value) !== channel) return;
 
-  const numberInput = document.getElementById('numero-fatura');
-  if (numberInput) numberInput.value = nextNumber;
+  if (numberInput && numberInput.value === previousNumber) {
+    numberInput.value = nextNumber;
+    if (defaultNumber) cleanFormValues.set(numberInput.id, nextNumber);
+  }
 }
 
 const sortInvoicesForNav = (items) => {
@@ -210,8 +259,8 @@ const updateNavigator = () => {
   if (!navWrap) return;
   const hasSelection = currentIndex >= 0 && currentIndex < loadedFaturas.length;
   navWrap.style.display = hasSelection ? 'inline-flex' : 'none';
-  if (prevBtn) prevBtn.disabled = !hasSelection || currentIndex <= 0;
-  if (nextBtn) nextBtn.disabled = !hasSelection || currentIndex >= loadedFaturas.length - 1;
+  if (prevBtn) prevBtn.disabled = isSaving || !hasSelection || currentIndex <= 0;
+  if (nextBtn) nextBtn.disabled = isSaving || !hasSelection || currentIndex >= loadedFaturas.length - 1;
 };
 
 const setCurrentIndexById = (id) => {
@@ -229,7 +278,7 @@ const navigateInvoice = (delta) => {
   if (targetIndex < 0 || targetIndex >= loadedFaturas.length) return;
   const target = loadedFaturas[targetIndex];
   if (target) {
-    entrarEmModoEdicao(target, { skipScroll: true });
+    return entrarEmModoEdicao(target, { skipScroll: true }).catch(reportEditError);
   }
 };
 
@@ -239,6 +288,7 @@ if (nextBtn) nextBtn.addEventListener('click', () => navigateInvoice(1));
 // Ativa modo edição e preenche todos os campos
 async function entrarEmModoEdicao(f, options = {}) {
   const { skipScroll = false } = options;
+  if (!canReplaceForm()) return;
   channelNumberRequest += 1;
   
   // Ensure loadedFaturas is populated for navigation
@@ -288,9 +338,7 @@ async function entrarEmModoEdicao(f, options = {}) {
   // 2ª linha (inclui Taxa Limpeza — NOVO)
   setNum('taxa-airbnb', Number(f.taxaAirbnb));
   setNum('valor-transferencia', Number(f.valorTransferencia));
-  const apt = String(f.apartamento || '');
-  const defaultTaxa = apt.includes('1248') ? 65 : apt.includes('123') ? 60 : '';
-  setNum('taxa-limpeza', (f.taxaLimpeza != null && f.taxaLimpeza !== '') ? Number(f.taxaLimpeza) : defaultTaxa);
+  setNum('taxa-limpeza', (f.taxaLimpeza != null && f.taxaLimpeza !== '') ? Number(f.taxaLimpeza) : '');
 
 
   // 3ª linha
@@ -312,6 +360,7 @@ async function entrarEmModoEdicao(f, options = {}) {
 
   await applyChannelSelection();
   calcAndSetPrecoMedioNoite();
+  markFormClean();
 
   // Foco inicial
   const first = document.getElementById('apartamento');
@@ -321,17 +370,30 @@ async function entrarEmModoEdicao(f, options = {}) {
   if (!skipScroll && wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function sairDoModoEdicao() {
+async function sairDoModoEdicao({ closeForm = false } = {}) {
+  channelNumberRequest += 1;
   if (editarIdInput) editarIdInput.value = '';
   if (submitBtn) submitBtn.textContent = 'Guardar';
   if (cancelarEdicaoBtn) cancelarEdicaoBtn.style.display = 'none';
   faturaForm.reset();
   setCurrentIndexById(null);
-  definirValoresPadrao(); // mantém o teu comportamento atual do “próximo nº”
+  if (closeForm) {
+    document.getElementById('fatura-form-wrap')?.classList.add('hidden');
+    const toggleBtn = document.getElementById('toggle-fatura-form');
+    if (toggleBtn) toggleBtn.textContent = 'Mostrar';
+  }
+  await definirValoresPadrao();
 }
 
 if (cancelarEdicaoBtn) {
-  cancelarEdicaoBtn.addEventListener('click', sairDoModoEdicao);
+  cancelarEdicaoBtn.addEventListener('click', () => {
+    if (canReplaceForm()) return sairDoModoEdicao({ closeForm: true });
+  });
+}
+
+function calcularPrecoMedioNoite(transferencia, taxa, noites) {
+  if (!Number.isInteger(noites) || noites <= 0) return null;
+  return Number(((Number(transferencia || 0) + Number(taxa || 0)) / noites).toFixed(2));
 }
 
 function calcAndSetPrecoMedioNoite() {
@@ -342,25 +404,18 @@ function calcAndSetPrecoMedioNoite() {
   const out = document.getElementById('preco-medio-noite');
   if (!out) return;
 
-  if (Number.isInteger(noites) && noites > 0) {
-    const val = (vTransf + vTaxa) / noites;
-    out.value = val.toFixed(2);
-  } else {
-    out.value = ''; // sem noites, limpamos
-  }
+  const value = calcularPrecoMedioNoite(vTransf, vTaxa, noites);
+  out.value = value === null ? '' : value.toFixed(2);
 }
 
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', async () => {
-  await definirValoresPadrao();
-  await carregarTodosRelatorios();
-  await abrirFaturaPedida();
-
+  document.getElementById('apartamento')?.addEventListener('change', preencherTaxaLimpeza);
   const channelSelect = document.getElementById('canal');
   if (channelSelect) {
     channelSelect.addEventListener('change', () => {
-      applyChannelSelection({ updateNumber: true }).catch((error) => {
+      applyChannelSelection({ updateNumber: !editarIdInput.value }).catch((error) => {
         console.error('Erro ao calcular o próximo número de fatura:', error);
         showToast('Não foi possível calcular o próximo número de fatura.', 'error');
       });
@@ -376,14 +431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const co = document.getElementById('checkout')?.value;
       const out = document.getElementById('noites');
       if (!out) return;
-      if (ci && co) {
-        const d1 = new Date(ci);
-        const d2 = new Date(co);
-        const n = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
-        out.value = (Number.isFinite(n) && n >= 0) ? n : '';
-      } else {
-        out.value = '';
-      }
+      out.value = diffNoites(ci, co) ?? '';
       calcAndSetPrecoMedioNoite();
     });
   });
@@ -409,7 +457,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Toggle abrir/fechar formulário de fatura
   const formBtn  = document.getElementById('toggle-fatura-form');
   const formWrap = document.getElementById('fatura-form-wrap');
-  const form     = document.getElementById('fatura-form');
   if (formBtn && formWrap) {
     formBtn.addEventListener('click', () => {
       formWrap.classList.toggle('hidden');
@@ -419,17 +466,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // Fechar formulário ao cancelar edição (limpa e repõe texto do botão)
-  const cancelarBtn = document.getElementById('cancelar-edicao');
-  if (cancelarBtn && formBtn && formWrap && form) {
-    cancelarBtn.addEventListener('click', () => {
-      form.reset(); // limpa todos os inputs
-      document.getElementById('fatura-id-edicao').value = ''; // limpa id de edição
-      formWrap.classList.add('hidden');
-      formBtn.textContent = 'Mostrar';
-      cancelarBtn.style.display = 'none'; // esconde o botão de cancelar
-    });
-  }
+  const [, reportsLoaded] = await Promise.all([definirValoresPadrao(), carregarTodosRelatorios()]);
+  if (reportsLoaded) await abrirFaturaPedida();
 });
 
 
@@ -446,19 +484,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       field.disabled = false;
       delete field.dataset.airbnbValue;
     });
-    await applyChannelSelection({ updateNumber: true });
+    document.getElementById('numero-fatura').value = '';
+    const numberRequest = applyChannelSelection({ updateNumber: true, defaultNumber: true });
 
-    // Taxa de limpeza por defeito (KISS)
-    const aptSel = document.getElementById("apartamento")?.value || "";
-    const taxaDef = aptSel === "1248" ? 65 : aptSel === "123" ? 60 : "";
-    const taxaInp = document.getElementById("taxa-limpeza");
-    if (taxaInp && (taxaInp.value === "" || taxaInp.value == null)) taxaInp.value = taxaDef;
+    preencherTaxaLimpeza();
+    markFormClean();
+    try {
+      await numberRequest;
+    } catch (error) {
+      console.error('Erro ao calcular o próximo número de fatura:', error);
+      showToast('Não foi possível sugerir o próximo número. Preencha o número da fatura manualmente.', 'error');
+    }
   }
 
 
 // Event Listeners
 faturaForm.addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (isSaving) return;
 
 // --- NOVO: ler datas / noites / preço / hóspedes ---
 const getVal = (id) => (document.getElementById(id)?.value ?? '');
@@ -473,23 +516,36 @@ const checkIn      = getVal('checkin')       || null;  // "YYYY-MM-DD" ou null
 const checkOut     = getVal('checkout')      || null;
 const dataReserva  = getVal('data-reserva')  || null;
 
-// calcular nº de noites se input estiver vazio
-function diffNoites(ci, co) {
-  if (!ci || !co) return null;
-  const d1 = new Date(ci); const d2 = new Date(co);
-  const ms = d2 - d1; if (Number.isNaN(ms) || ms < 0) return null;
-  return Math.round(ms / (1000*60*60*24));
+if (checkIn && checkOut && checkOut < checkIn) {
+  showToast('O check-out não pode ser anterior ao check-in. Corrija as datas antes de guardar.', 'error');
+  document.getElementById('checkout').focus();
+  return;
 }
-let noitesInp = parseIntSafe('noites', null);
-if (noitesInp === null) noitesInp = diffNoites(checkIn, checkOut);
 
-const precoMedioNoite = parseFloatSafe('preco-medio-noite', null);
+// Preencher noites em falta; confirmar ajustes manuais que diferem das datas.
+const noitesDatas = diffNoites(checkIn, checkOut);
+let noitesInp = parseIntSafe('noites', null);
+if (noitesInp === null) noitesInp = noitesDatas;
+if (noitesDatas !== null && noitesInp !== noitesDatas) {
+  const manterNoites = confirm(`As datas correspondem a ${noitesDatas} noite(s), mas indicou ${noitesInp}. Pretende manter as ${noitesInp} noite(s) e guardar?`);
+  if (!manterNoites) {
+    document.getElementById('noites').focus();
+    return;
+  }
+}
 
 const hospedesAdultos  = parseIntSafe('adultos',  0);
 const hospedesCriancas = parseIntSafe('criancas', 0);
 const hospedesBebes    = parseIntSafe('bebes',    0);
 const canal             = normalizeChannel(getVal('canal'), getVal('numero-fatura'));
 const contabilizaTmt    = canal === 'AIRBNB';
+const precoMedioNoite = calcularPrecoMedioNoite(
+  parseFloatSafe('valor-transferencia', 0),
+  contabilizaTmt ? parseFloatSafe('taxa-airbnb', 0) : 0,
+  noitesInp
+);
+document.getElementById('noites').value = noitesInp ?? '';
+document.getElementById('preco-medio-noite').value = precoMedioNoite === null ? '' : precoMedioNoite.toFixed(2);
 
 const formData = {
   apartamento: document.getElementById('apartamento').value,
@@ -497,7 +553,7 @@ const formData = {
   tipo: contabilizaTmt ? null : 'reserva',
   ano: parseInt(document.getElementById('ano').value),
   mes: parseInt(document.getElementById('mes').value),
-  numeroFatura: document.getElementById('numero-fatura').value,
+  numeroFatura: document.getElementById('numero-fatura').value.trim(),
   taxaAirbnb: contabilizaTmt ? parseFloat(document.getElementById('taxa-airbnb').value) : 0,
   valorTransferencia: parseFloat(document.getElementById('valor-transferencia').value),
   valorOperador: contabilizaTmt ? parseFloat(document.getElementById('valor-operador').value) : 0,
@@ -520,42 +576,93 @@ const formData = {
 
 
   const editId = editarIdInput ? editarIdInput.value : '';
+  isSaving = true;
+  faturaForm.inert = true;
+  const enabledControls = Array.from(faturaForm.querySelectorAll('button'))
+    .filter(control => !control.disabled);
+  enabledControls.forEach(control => { control.disabled = true; });
+  if (submitBtn) submitBtn.textContent = 'A guardar…';
+  channelNumberRequest += 1;
 
   try {
-    let stayInEditMode = false;
-    let editTargetId = null;
+    // Verificar também registos antigos sem timestamp e excluir a própria fatura em edição.
+    const existing = await getDocs(collection(db, 'faturas'));
+    const number = parseInvoiceNumber(formData.numeroFatura);
+    const duplicate = existing.docs.some(invoice => {
+      if (invoice.id === editId) return false;
+      const otherNumber = String(invoice.data().numeroFatura || '').trim();
+      const parsed = parseInvoiceNumber(otherNumber);
+      return otherNumber.toUpperCase() === formData.numeroFatura.toUpperCase()
+        || (Number.isFinite(number.number) && parsed.prefix === number.prefix && parsed.number === number.number);
+    });
+    if (duplicate) {
+      showToast('Já existe uma fatura com este número. Verifique o número antes de guardar.', 'error');
+      return;
+    }
 
     if (editId) {
       // não atualizar o timestamp numa edição
       const { timestamp, ...dataSemTimestamp } = formData;
       await updateDoc(doc(db, "faturas", editId), dataSemTimestamp);
       showToast('Fatura atualizada com sucesso!');
-      stayInEditMode = true;
-      editTargetId = editId;
+      markFormClean();
     } else {
       await addDoc(collection(db, "faturas"), formData);
-      showToast('Fatura registrada com sucesso!');
-      faturaForm.reset();
-      definirValoresPadrao();
+      showToast('Fatura registada com sucesso!');
+      await sairDoModoEdicao();
     }
 
     await carregarTodosRelatorios();
-
-    if (stayInEditMode && editTargetId) {
-      const updated = loadedFaturas.find((f) => f.id === editTargetId);
-      if (updated) await entrarEmModoEdicao(updated, { skipScroll: true });
-    }
   } catch (error) {
     console.error("Erro ao gravar fatura:", error);
     showToast('Ocorreu um erro ao gravar a fatura.', 'error');
+  } finally {
+    enabledControls.forEach(control => { control.disabled = false; });
+    faturaForm.inert = false;
+    isSaving = false;
+    if (submitBtn) submitBtn.textContent = editarIdInput.value ? 'Atualizar' : 'Guardar';
+    updateNavigator();
   }
 });
 
+function showReportStatus(message, retry = false) {
+  let status = document.getElementById('faturas-report-status');
+  if (!status) {
+    status = document.createElement('div');
+    status.id = 'faturas-report-status';
+    status.setAttribute('role', 'status');
+    relatorioFaturacaoDiv.before(status);
+  }
+  status.textContent = message;
+  status.hidden = !message;
+  if (retry) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = 'Tentar novamente';
+    button.addEventListener('click', () => carregarTodosRelatorios());
+    status.appendChild(document.createTextNode(' '));
+    status.appendChild(button);
+  }
+}
+
 async function carregarTodosRelatorios() {
-  const firebaseFaturas = await carregarFaturas();
-  loadedFaturas = sortInvoicesForNav(firebaseFaturas);
-  updateNavigator();
-  gerarRelatorioFaturacao(firebaseFaturas);
+  const requestId = ++reportRequest;
+  showReportStatus('A carregar faturas…');
+  try {
+    const firebaseFaturas = await carregarFaturas();
+    if (requestId !== reportRequest) return false;
+    loadedFaturas = sortInvoicesForNav(firebaseFaturas);
+    setCurrentIndexById(editarIdInput.value);
+    gerarRelatorioFaturacao(firebaseFaturas);
+    showReportStatus('');
+    return true;
+  } catch (error) {
+    console.error('Erro ao carregar faturas:', error);
+    if (requestId === reportRequest) {
+      showReportStatus('Não foi possível carregar as faturas. Os dados apresentados podem estar desatualizados.', true);
+    }
+    return false;
+  }
 }
 
 async function abrirFaturaPedida() {
@@ -585,7 +692,7 @@ async function carregarFaturas() {
         });
     } catch (error) {
         console.error("Erro ao carregar faturas:", error);
-        return [];
+        throw error;
     }
 }
 
@@ -594,6 +701,12 @@ function gerarRelatorioFaturacao(faturas) {
     const arr = showPrevFaturaYears
       ? faturas
       : faturas.filter(f => f.ano === currentYear);
+    if (!arr.length) {
+      relatorioFaturacaoDiv.textContent = showPrevFaturaYears
+        ? 'Não existem faturas registadas.'
+        : `Não existem faturas registadas em ${currentYear}. Pode consultar os anos anteriores.`;
+      return;
+    }
     const faturasAgrupadas = agruparPorAnoMes(arr);
     let html = '<table><thead><tr><th>Ano</th><th>Mês</th><th>Fatura Nº</th><th>Valor Transferência</th><th>Taxa AirBnB</th><th>Total Fatura</th><th>Ações</th></tr></thead><tbody>';
 
@@ -698,6 +811,7 @@ function euroInt(v) {
 
 // garantir que o campo fica preenchido se noites > 0
 calcAndSetPrecoMedioNoite();
+markFormClean();
 
 
 // Funções de Detalhes e Exportação
@@ -707,11 +821,16 @@ window.mostrarDetalhesFaturacao = function(key, button) {
 }
 
 // Editar: preenche o formulário e ativa modo edição
-window.editarFatura = function (btn) {
+function reportEditError(error) {
+  console.error('Falha a abrir fatura para edição:', error);
+  showToast('Não foi possível abrir esta fatura para edição.', 'error');
+}
+
+window.editarFatura = async function (btn) {
   try {
     const raw = btn.dataset.fatura || '{}';
     const f = JSON.parse(raw.replace(/&quot;/g, '"'));
-    entrarEmModoEdicao(f);
+    await entrarEmModoEdicao(f);
   } catch (e) {
     console.error('Falha a ler dados da fatura para edição:', e);
     showToast('Não foi possível abrir esta fatura para edição.', 'error');
@@ -720,6 +839,7 @@ window.editarFatura = function (btn) {
 
 // Apagar: remove doc do Firestore e recarrega relatórios
 window.apagarFatura = async function(btn) {
+  if (!canReplaceForm()) return;
   const id  = btn.dataset.id;
   const num = btn.dataset.num || '';
   if (!id) return;
@@ -730,8 +850,8 @@ window.apagarFatura = async function(btn) {
   try {
     await deleteDoc(doc(db, 'faturas', id));
     showToast('Fatura apagada.');
-    sairDoModoEdicao();
-    carregarTodosRelatorios();
+    await sairDoModoEdicao();
+    await carregarTodosRelatorios();
   } catch (err) {
     console.error('Erro ao apagar fatura:', err);
     showToast('Não foi possível apagar a fatura.', 'error');
@@ -840,7 +960,7 @@ function gerarHTMLDetalhesFaturacao(detalhes) {
         <td>${(typeof d.noites === 'number') ? d.noites : '—'}</td>
         <td>${
           (typeof d.noites === 'number' && d.noites > 0)
-           ? euroInt((Number(d.valorTransferencia || 0) + Number(d.taxaAirbnb || 0)) / d.noites)
+           ? euroInt(calcularPrecoMedioNoite(d.valorTransferencia, d.taxaAirbnb, d.noites))
            : '—'
         }</td>
         <td>${taxaLimpeza != null ? euroInt(taxaLimpeza) : '—'}</td>

@@ -10,7 +10,7 @@
   <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
   <link rel="manifest" href="../manifest.json">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#101722">
   <style>
     body[data-page="cleaning-hours"] main {
       width: 100%; max-width: 1120px; margin: 0 auto; padding: 24px;
@@ -25,19 +25,19 @@
     .field label { font-weight: 600; font-size: .9rem; color: var(--text-dim); }
     .field input, .field select {
       width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--border);
-      border-radius: var(--radius-sm); background: #fff; color: var(--text); font: inherit;
+      border-radius: var(--radius-sm); background: var(--surface, #fff); color: var(--text); font: inherit;
     }
     .filters-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: end; }
     #manual-hours-form { grid-template-columns: 1.2fr .8fr 1fr auto; }
     #manual-hours-form .btn { min-height: 44px; }
     .entry-shortcuts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: .85rem; color: var(--text-dim); }
-    #entry-feedback { color: #166534; margin-left: auto; }
+    #entry-feedback { color: var(--ok, #166534); margin-left: auto; }
     .hours-filters { margin: 16px 0 20px; padding: 12px 0 0; border: 0; border-top: 1px solid var(--border); min-width: 0; }
     .hours-filters legend { padding-right: 10px; font-size: .85rem; color: var(--text-dim); }
     .hours-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 22px; }
     .kpi-card { padding: 14px; border-radius: var(--radius-sm); background: var(--p4); font-size: .85rem; }
     .kpi-card strong { display: block; font-size: 1.6rem; margin-top: 6px; font-variant-numeric: tabular-nums; }
-    .kpi-card:last-child { background: #e9f7ef; color: #166534; }
+    .kpi-card:last-child { background: var(--surface-raised, #e9f7ef); color: var(--ok, #166534); }
     .table-wrap { overflow-x: auto; }
     .table-wrap table { width: 100%; border-collapse: collapse; }
     .table-wrap th, .table-wrap td { padding: 12px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
@@ -58,8 +58,8 @@
     }
     .empty-state { text-align: center; color: var(--text-dim); padding: 24px; }
     .sync-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 14px; font-size: .8rem; }
-    .sync-pill { color: #166534; }
-    .sync-pill.is-warning { color: #9a3412; font-weight: 600; }
+    .sync-pill { color: var(--ok, #166534); }
+    .sync-pill.is-warning { color: var(--bad, #9a3412); font-weight: 600; }
     .sync-pill.is-neutral, .sync-meta { color: var(--text-dim); }
     .calendar-builder-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .calendar-builder-head h4 { margin: 0 !important; }
@@ -68,7 +68,7 @@
     .calendar-share-link a { font-size: .9rem; }
     .calendar-status { color: var(--text-dim); font-size: .9rem; margin-top: 12px; }
     .calendar-status:empty { display: none; }
-    .calendar-status.is-error { color: #991b1b; }
+    .calendar-status.is-error { color: var(--bad, #991b1b); }
     .calendar-preview { margin-top: 16px; text-align: center; }
     .calendar-preview img { width: min(100%, 720px); height: auto; display: block; margin: auto; }
     .calendar-preview small { display: block; margin-top: 8px; color: var(--text-dim); }
@@ -82,8 +82,9 @@
       #entry-feedback { width: 100%; margin-left: 0; }
     }
   </style>
+  <link rel="stylesheet" href="../css/theme-dark.css" media="screen">
 </head>
-<body id="cleaning-hours-page" data-page="cleaning-hours">
+<body id="cleaning-hours-page" data-page="cleaning-hours" data-theme="dark">
   <button id="menu-icon" aria-label="Open menu">☰</button>
 
   <header>

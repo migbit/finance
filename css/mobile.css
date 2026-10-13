@@ -4,13 +4,11 @@
 
 /* ---------- CSS Variables for consistency ---------- */
 :root {
-  --mobile-sidebar-width: 280px;
   --mobile-header-height: 60px;
   --mobile-padding: 16px;
   --mobile-font-base: 16px;
   --mobile-line-height: 1.6;
   --touch-target-min: 44px;
-  --mobile-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --mobile-border-radius: 12px;
 }
 
@@ -22,192 +20,11 @@
     -webkit-text-size-adjust: 100%;
   }
 
-  /* Header shell */
-  body > header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: var(--mobile-header-height);
-    z-index: 1000;
-    pointer-events: auto;
-  }
-  body > header #menu-icon,
-  body > header .menu-icon,
-  body > header #nav-menu {
-    pointer-events: auto;
-  }
-
-  /* Off-canvas sidebar */
-  #nav-menu {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: var(--mobile-sidebar-width) !important;
-    height: 100vh;
-    transform: translateX(-100%);
-    transition: transform var(--mobile-transition);
-    overscroll-behavior: contain;
-    background: #fff;
-    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.2);
-    pointer-events: auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-  }
-
-  body > header.active #nav-menu,
-  body.nav-open #nav-menu {
-    transform: translateX(0);
-  }
-
-  body > header.active::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: -1;
-    pointer-events: auto;
-  }
-
-  /* Hamburger menu button - visible on mobile */
-  #menu-icon,
-  .menu-icon {
-    display: flex;
-    position: fixed;
-    top: 8px;
-    right: 12px;
-    width: var(--touch-target-min);
-    height: var(--touch-target-min);
-    align-items: center;
-    justify-content: center;
-    z-index: 500;
-    border: 0;
-    background: #e8e8e8;
-    color: #333;
-    font-size: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  #menu-icon:active,
-  #menu-icon:hover {
-    transform: scale(0.95);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  }
-
   /* Main content spacing */
   main {
     margin-left: 0;
     max-width: 100%;
     padding: calc(var(--mobile-header-height) + 20px) var(--mobile-padding) var(--mobile-padding);
-  }
-
-  /* Navigation scroll area */
-  #nav-menu {
-    max-height: calc(100vh - 80px);
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-    padding: 8px 0;
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  /* Mobile nav menu styling */
-  #nav-menu .nav-links {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    margin-top: 0;
-  }
-
-  #nav-menu .nav-group {
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-  }
-
-  #nav-menu .nav-link {
-    display: block;
-    width: 100%;
-    padding: 14px var(--mobile-padding);
-    font-size: 0.95rem;
-    border: none;
-    background: transparent;
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.2s ease;
-  }
-
-  #nav-menu .nav-link:hover,
-  #nav-menu .nav-link:focus {
-    background: rgba(102, 126, 234, 0.08);
-  }
-
-  #nav-menu .nav-link.active {
-    background: rgba(102, 126, 234, 0.12);
-    font-weight: 600;
-  }
-
-  #nav-menu .nav-dropdown {
-    display: none;
-    background: rgba(0, 0, 0, 0.02);
-    flex-direction: column;
-    gap: 0;
-  }
-
-  #nav-menu .nav-group.is-open .nav-dropdown {
-    display: flex;
-  }
-
-  #nav-menu .nav-dropdown a {
-    display: block;
-    padding: 12px var(--mobile-padding);
-    padding-left: calc(var(--mobile-padding) * 2);
-    font-size: 0.9rem;
-    color: rgba(0, 0, 0, 0.7);
-    text-decoration: none;
-    transition: background 0.2s ease;
-  }
-
-  #nav-menu .nav-dropdown a:hover {
-    background: rgba(102, 126, 234, 0.1);
-    color: #333;
-  }
-
-  #nav-menu .nav-dropdown a.active {
-    color: #667eea;
-    font-weight: 600;
-    background: rgba(102, 126, 234, 0.08);
-  }
-
-  /* Login section styling */
-  #login-section {
-    padding: 8px var(--mobile-padding);
-    border-bottom: 2px solid rgba(0, 0, 0, 0.08);
-    margin-bottom: 0.5rem;
-  }
-
-  #login-section a {
-    display: block;
-    padding: 10px 12px;
-    text-align: center;
-    font-weight: 600;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-  }
-
-  #login-section #login-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff;
-  }
-
-  #login-section #login-btn:hover {
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   }
 
   /* Center page meta (timestamp) */
@@ -262,7 +79,7 @@
     font-size: 16px; /* Prevent zoom */
     padding: 12px;
     border-radius: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border, #ddd);
   }
 }
 
@@ -293,7 +110,6 @@
 /* ---------- Mobile phones (≤768px) ---------- */
 @media (max-width: 768px) {
   :root {
-    --mobile-sidebar-width: 260px;
     --mobile-padding: 12px;
   }
 
@@ -383,7 +199,7 @@
   .viz-card .table-wrap thead th {
     position: sticky;
     top: 0;
-    background: #fff;
+    background: var(--surface, #fff);
     z-index: 2;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   }
@@ -779,7 +595,7 @@
     position: sticky;
     top: calc(var(--mobile-header-height) + 8px);
     z-index: 900;
-    background: #fff;
+    background: var(--surface, #fff);
     border-bottom: 1px solid var(--border);
   }
 
@@ -832,7 +648,7 @@
     position: sticky;
     top: calc(var(--mobile-header-height) + 8px); /* below the ☰ */
     z-index: 900;
-    background: #fff;
+    background: var(--surface, #fff);
     padding-top: 8px;
     margin-top: -8px; /* cancels the added padding so layout doesn’t jump */
   }
@@ -879,7 +695,7 @@
     flex-direction: column;
     gap: 6px;
     padding: 6px 0;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border, #eee);
   }
 
   /* First line: item text + quantity (right side) */
@@ -927,10 +743,10 @@
   }
 
   /* Soft color cues */
-  #compras-form .item-controles .btn-aumentar { background: #d9f2dc; }     /* + */
-  #compras-form .item-controles .btn-diminuir { background: #f8d7da; }     /* - */
-  #compras-form .item-controles .btn-zero     { background: #fff3cd; }     /* 0 */
-  #compras-form .item-controles .btn-local-c.active { background: #cce5ff; } /* C */
+  #compras-form .item-controles .btn-aumentar { background: var(--positive-bg, #d9f2dc); }     /* + */
+  #compras-form .item-controles .btn-diminuir { background: var(--negative-bg, #f8d7da); }     /* - */
+  #compras-form .item-controles .btn-zero     { background: var(--warning-bg, #fff3cd); }     /* 0 */
+  #compras-form .item-controles .btn-local-c.active { background: var(--info-bg, #cce5ff); } /* C */
 }
 
 /* Tiny phones refine */
@@ -943,14 +759,14 @@
 }
 
 #compras-form .item-compra.item-comprado {
-  background: #fff8c2;
+  background: var(--warning-bg, #fff8c2);
   border-radius: 8px;
   transition: background-color 0.2s ease;
 }
 
 #compras-form .item-compra.item-comprado .item-nome,
 #compras-form .item-compra.item-comprado .item-nome-custom {
-  color: #333;
+  color: var(--text, #333);
   font-weight: 600;
 }
 
@@ -1006,12 +822,12 @@
   body[data-page="analisev4"] .faturacao-v4-table thead th:first-child,
   body[data-page="analisev4"] .reservas-v4-table thead th:first-child {
     z-index: 4;
-    background: #f8fafc;
+    background: var(--surface, #f8fafc);
   }
 
   body[data-page="analisev4"] .faturacao-v4-total-row td:first-child,
   body[data-page="analisev4"] .reservas-v4-total-row td:first-child {
-    background: #f8fafc !important;
+    background: var(--surface, #f8fafc) !important;
   }
 
   body[data-page="analisev4"] .qualidade-v4-alert {

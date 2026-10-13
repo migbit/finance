@@ -171,7 +171,8 @@ test('as kcal reais de um almoço recalculam a refeição seguinte sem inventar 
   });
   assert.equal(plan.lunchResolved, true);
   assert.equal(plan.adjustedLunch.calories, 900);
-  assert.equal(plan.adjustedLunch.protein, 0);
+  assert.equal(plan.adjustedLunch.protein, null);
+  assert.ok(plan.partialNutrients.includes('protein'));
   assert.equal(plan.dinnerCalories, 725);
   assert.equal(plan.reservedSnackCalories, 241);
   assert.equal(plan.plannedCalories, 2400);
@@ -240,4 +241,50 @@ test('não cria porções inválidas quando as kcal registadas já excedem a met
   assert.equal(plan.lunchCalories, 0);
   assert.equal(plan.dinnerCalories, 0);
   assert.equal(plan.closesCalorieTarget, false);
+});
+
+test('uma refeição consumida mantém porção e macros após lanches, nova meta e edição da receita', () => {
+  const first = calculateDailyPlan({ targetCalories: 2400, breakfast, lunch, dinner, practicalPortions: true });
+  const consumedMeals = { lunch: JSON.parse(JSON.stringify(first.adjustedLunch)) };
+  const next = calculateDailyPlan({ targetCalories: 2100, breakfast, lunch: { ...lunch, calories: 999 }, dinner,
+    snacks: [{ calories: 350, protein: 20, carbs: 30, fat: 8, fiber: 4 }], consumedMeals, practicalPortions: true });
+  assert.deepEqual(next.adjustedLunch, first.adjustedLunch);
+  assert.equal(next.lunchCalories, first.adjustedLunch.calories);
+  assert.equal(next.consumedCalories, first.adjustedLunch.calories);
+  assert.deepEqual(applyDailyPlanDate({ planDate: '2026-10-11', consumedMeals }, '2026-10-12').profile.consumedMeals, {});
+});
+
+test('porções práticas arredondam e limitam o ingrediente sem inventar calorias', () => {
+  const meal = { ...lunch, calorieAdjustment: {
+    label: 'arroz', unit: 'g', baseQuantity: 125, calories: 210, protein: 4.5, carbs: 37.5, fat: 2.5, fiber: 4.8,
+    minQuantity: 75, maxQuantity: 250, step: 25
+  } };
+  const large = adjustMealToCalories(meal, 1400, { practicalPortions: true });
+  assert.equal(large.adjustedQuantity, 250);
+  assert.equal(large.calories, 860);
+  assert.equal(large.protein, 47.5);
+  assert.equal(large.calorieGap, 540);
+  const small = adjustMealToCalories(meal, 100, { practicalPortions: true });
+  assert.equal(small.adjustedQuantity, 75);
+  assert.equal(small.calories, 566);
+  assert.equal(small.calorieGap, -466);
+  const normal = adjustMealToCalories(meal, 740, { practicalPortions: true });
+  assert.equal(normal.adjustedQuantity, 175);
+  assert.equal(normal.calories, 734);
+});
+
+test('uma porção fixa conserva macros em falta e o plano identifica os totais parciais', () => {
+  const plan = calculateDailyPlan({ targetCalories: 2400, lunch: { ...lunch, protein: null }, practicalPortions: true });
+  assert.equal(plan.adjustedLunch.protein, null);
+  assert.deepEqual(plan.partialNutrients, ['protein']);
+  assert.equal(plan.adjustedLunch.calories, lunch.calories);
+});
+
+test('refeições consumidas continuam contabilizadas mesmo quando ultrapassam uma nova meta', () => {
+  const consumedMeals = { breakfast, lunch, dinner };
+  const plan = calculateDailyPlan({ targetCalories: 800, consumedMeals, practicalPortions: true });
+  assert.equal(plan.confirmedCalories, breakfast.calories + lunch.calories + dinner.calories);
+  assert.ok(plan.caloriesRemaining < 0);
+  assert.equal(plan.closesCalorieTarget, false);
+  assert.deepEqual(plan.adjustedLunch, lunch);
 });

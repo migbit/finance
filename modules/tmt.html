@@ -9,8 +9,11 @@
   <link rel="stylesheet" href="../css/mobile.css">
   <link rel="icon" href="favicon.ico" type="image/x-icon" />
   <link rel="manifest" href="../manifest.json">
+  <meta name="theme-color" content="#101722">
+  <link rel="stylesheet" href="../css/theme-dark.css" media="screen">
+  <link rel="stylesheet" href="../css/tmt.css?v=20261012-2">
 </head>
-<body>
+<body data-theme="dark" data-page="tmt">
           <!-- Hamburger icon (always visible on mobile) -->
           <button id="menu-icon" aria-label="Open menu">☰</button>
   <header>
@@ -51,14 +54,29 @@
 
 <main>
   <h2 class="center">Relatório Trimestral da Taxa Municipal Turística</h2>
+  <div class="tmt-toolbar" aria-label="Período do relatório">
+    <label for="tmt-ano">Ano <select id="tmt-ano" disabled></select></label>
+    <label for="tmt-trimestre">Trimestre
+      <select id="tmt-trimestre" disabled>
+        <option value="1">1.º · janeiro a março</option>
+        <option value="2">2.º · abril a junho</option>
+        <option value="3">3.º · julho a setembro</option>
+        <option value="4">4.º · outubro a dezembro</option>
+        <option value="0">Todos os trimestres</option>
+      </select>
+    </label>
+    <p id="tmt-periodo" aria-live="polite"></p>
+  </div>
+  <p class="tmt-copy-hint">Clique num valor para o copiar.</p>
+  <p id="tmt-status" role="status">A carregar registos…</p>
+  <button id="tmt-retry" type="button" hidden>Tentar novamente</button>
+  <p id="tmt-copy-status" role="status" class="tmt-copy-status"></p>
 
   <!-- Apt 123 -->
   <section class="report-section">
     <div class="viz-card">
       <h3 class="center">Apartamento 123 - T.M.T</h3>
-      <div class="table-wrap">
-        <div id="tmt-123"></div>
-      </div>
+      <div id="tmt-123" aria-busy="true"></div>
     </div>
   </section>
 
@@ -66,9 +84,7 @@
   <section class="report-section">
     <div class="viz-card">
       <h3 class="center">Apartamento 1248 - T.M.T</h3>
-      <div class="table-wrap">
-        <div id="tmt-1248"></div>
-      </div>
+      <div id="tmt-1248" aria-busy="true"></div>
     </div>
   </section>
 
@@ -76,6 +92,6 @@
 
 
   <script type="module" src="../js/script.js"></script>
-  <script type="module" src="../js/tmt.js?v=20261001"></script>
+  <script type="module" src="../js/tmt.js?v=20261012-2"></script>
 </body>
 </html>

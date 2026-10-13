@@ -10,7 +10,7 @@
   <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="../icons/icon-192-v2.png">
   <link rel="manifest" href="../manifest.json">
-  <meta name="theme-color" content="#000000">
+  <meta name="theme-color" content="#101722">
   <style>
 		    body[data-page="datas"] main {
 		      width: 100%;
@@ -253,7 +253,7 @@
 	      top: 0;
 	      z-index: 1000;
 	      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	      background: #fff;
+	      background: var(--surface, #fff);
 	      border-bottom: 2px solid var(--border);
 	    }
 
@@ -557,9 +557,10 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="../css/theme-dark.css" media="screen">
 </head>
 
-<body data-page="datas">
+<body data-page="datas" data-theme="dark">
   <button id="menu-icon" aria-label="Open menu">☰</button>
 
   <header>
