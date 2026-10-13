@@ -27,6 +27,7 @@ export function mountNavigation({ groups, activeKey, isModulePage }) {
       </nav>
     </div>`;
   const linksWrap = header.querySelector('.nav-links');
+  const sharedActivePage = groups.filter(group => group.links.some(link => link.key === activeKey)).length > 1;
   for (const group of groups) {
     const groupEl = document.createElement('div');
     groupEl.className = 'nav-group';
@@ -49,7 +50,7 @@ export function mountNavigation({ groups, activeKey, isModulePage }) {
       if (link.key === activeKey) {
         anchor.classList.add('active');
         anchor.setAttribute('aria-current', 'page');
-        header.querySelector('.nav-location').textContent = `${group.label} / ${link.label}`;
+        header.querySelector('.nav-location').textContent = sharedActivePage ? link.label : `${group.label} / ${link.label}`;
       }
       dropdown.append(anchor);
     }

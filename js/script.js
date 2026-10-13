@@ -15,7 +15,6 @@ import { mountNavigation } from './navigation.js';
 // -------------------------------------------
 
 import {
-  FILIPA_UID,
   filterNavigation,
   findModuleGroup,
   getModuleAccess,
@@ -104,8 +103,7 @@ const NAV_GROUPS = [
         label: '🧾 Gestão Finanças',
         key: 'gestao-financas',
         slug: 'modules/gestao-financas.html',
-        module: true,
-        onlyUids: [FILIPA_UID]
+        module: true
       }
     ]
   },
@@ -119,8 +117,7 @@ const NAV_GROUPS = [
         label: '🧾 Gestão Finanças',
         key: 'gestao-financas',
         slug: 'modules/gestao-financas.html',
-        module: true,
-        excludeUids: [FILIPA_UID]
+        module: true
       }
     ]
   }

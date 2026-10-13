@@ -205,7 +205,7 @@ function renderBoletimRows(boletins) {
         <td>${escapeHtml(item.guestName || 'Sem nome')}
           <select data-action="property" data-id="${escapeAttr(item.id)}" aria-label="Apartamento de ${escapeAttr(item.guestName || 'reserva')}">
             <option value="">Associar apartamento</option>
-            ${Object.entries(PROPERTIES).map(([id, property]) => `<option value="${id}" ${item.propertyId === id ? 'selected' : ''}>${property.names.pt}</option>`).join('')}
+            ${Object.keys(PROPERTIES).map((id) => `<option value="${id}" ${item.propertyId === id ? 'selected' : ''}>${id}</option>`).join('')}
           </select>
         </td>
         <td>${escapeHtml(formatStay(item.checkinDate, item.checkoutDate))}${!item.checkinDate || !item.checkoutDate ? '<br><small>Datas individuais em «Ver dados»</small>' : ''}</td>

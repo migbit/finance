@@ -76,10 +76,11 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      min-width: 120px;
+      max-width: 100%;
     }
 
     .sent-toggle input {
+      flex-shrink: 0;
       width: 18px;
       height: 18px;
       accent-color: var(--ok);
@@ -94,46 +95,63 @@
       color: var(--bad);
     }
 
-    .boletins-table td {
+    .boletins-table > tbody > tr > td {
       vertical-align: middle;
+      overflow-wrap: anywhere;
     }
 
     .boletins-table {
-      min-width: 1180px;
-      table-layout: auto;
+      width: 100%;
+      min-width: 1080px;
+      table-layout: fixed;
     }
 
-    .boletins-table th:nth-child(1),
-    .boletins-table td:nth-child(1) {
-      min-width: 120px;
+    .boletins-table > thead > tr > th,
+    .boletins-table > tbody > tr > td {
+      padding: 12px 8px;
+    }
+
+    .boletins-table > thead > tr > th:nth-child(1) { width: 15%; }
+    .boletins-table > thead > tr > th:nth-child(2) { width: 11%; }
+    .boletins-table > thead > tr > th:nth-child(3) { width: 10%; }
+    .boletins-table > thead > tr > th:nth-child(4) { width: 11%; }
+    .boletins-table > thead > tr > th:nth-child(5) { width: 10%; }
+    .boletins-table > thead > tr > th:nth-child(6) { width: 11%; }
+    .boletins-table > thead > tr > th:nth-child(7) { width: 10%; }
+    .boletins-table > thead > tr > th:nth-child(8) { width: 15%; }
+    .boletins-table > thead > tr > th:nth-child(9) { width: 7%; }
+
+    .boletins-table > thead > tr > th:first-child,
+    .boletins-table > tbody > tr > td:first-child {
       text-align: left;
     }
 
-    .boletins-table th:nth-child(2),
-    .boletins-table td:nth-child(2),
-    .boletins-table th:nth-child(3),
-    .boletins-table td:nth-child(3) {
-      min-width: 130px;
+    body[data-page="boletins"] .boletins-table button {
+      height: auto;
+      min-height: 40px;
+      max-width: 100%;
+      padding: 8px;
+      font-size: 0.875rem;
+      line-height: 1.35;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
-    .boletins-table th:nth-child(4),
-    .boletins-table td:nth-child(4) {
-      min-width: 140px;
+    .boletins-table button + button,
+    .boletins-table .mono-link + button {
+      margin-top: 6px;
     }
 
-    .boletins-table th:nth-child(6),
-    .boletins-table td:nth-child(6) {
-      min-width: 150px;
+    .boletins-table select[data-action="property"] {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      margin-top: 6px;
     }
 
-    .boletins-table th:nth-child(8),
-    .boletins-table td:nth-child(8) {
-      min-width: 240px;
-    }
-
-    .boletins-table th:nth-child(9),
-    .boletins-table td:nth-child(9) {
-      min-width: 100px;
+    .boletins-table .status-badge {
+      max-width: 100%;
+      white-space: normal;
     }
 
     .guest-details-table {
@@ -289,8 +307,8 @@
             <label for="boletim-property">Apartamento</label>
             <select id="boletim-property" required>
               <option value="">Escolher apartamento</option>
-              <option value="123">Apartamento 4 quartos - Porto</option>
-              <option value="1248">Apartamento 4 quartos (2) - Porto</option>
+              <option value="123">123</option>
+              <option value="1248">1248</option>
             </select>
           </div>
           <div class="field">
