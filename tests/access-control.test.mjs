@@ -39,6 +39,17 @@ test('autoriza futuros itens dentro do grupo Filipa', () => {
   assert.equal(getModuleAccess(FILIPA_UID, 'filipa-futuro', 'filipa', 0), 'write');
 });
 
+test('Filipa consulta e altera o ginásio de Miguel, sem abrir os restantes módulos privados', () => {
+  const groups = [{ key: 'miguel', links: [{ key: 'ginasio' }, { key: 'analisev4' }] }];
+  assert.equal(getModuleAccess(FILIPA_UID, 'ginasio', 'miguel', 0), 'write');
+  assert.equal(getModuleAccess(FILIPA_UID, 'filipa-ginasio', 'filipa', 0), 'write');
+  assert.deepEqual(filterNavigation(groups, FILIPA_UID, 0)[0].links, [{ key: 'ginasio' }]);
+  assert.equal(findModuleGroup(groups, 'ginasio', FILIPA_UID, 0), 'miguel');
+  for (const uid of [null, FRANCISCA_UID, LEONOR_UID]) {
+    assert.equal(getModuleAccess(uid, 'ginasio', 'miguel', 0), 'none');
+  }
+});
+
 test('a Filipa gere finanças e consulta os dois espaços das filhas', () => {
   assert.equal(getModuleAccess(FILIPA_UID, 'gestao-financas', 'filipa', 0), 'write');
   assert.equal(getModuleAccess(FILIPA_UID, 'francisca-financas', 'francisca', 0), 'write');

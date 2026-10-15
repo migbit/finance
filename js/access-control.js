@@ -8,6 +8,7 @@ export const INVESTMENTS_RELEASE_AT_MS = Date.UTC(2027, 11, 21, 0, 0, 0);
 const FILIPA_BASE_MODULES = new Set([
   'diversos',
   'filipa-ginasio',
+  'ginasio',
   'filipa-alimentacao',
   'alimentacao'
 ]);

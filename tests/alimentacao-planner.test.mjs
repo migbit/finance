@@ -8,6 +8,7 @@ const {
   applyDailyPlanDate,
   adjustMealToCalories,
   calculateDailyPlan,
+  calculateRecordedPlan,
   getLocalDateKey,
   getMaximumSnackCalories,
   rebalanceMealCalories,
@@ -287,4 +288,38 @@ test('refeições consumidas continuam contabilizadas mesmo quando ultrapassam u
   assert.ok(plan.caloriesRemaining < 0);
   assert.equal(plan.closesCalorieTarget, false);
   assert.deepEqual(plan.adjustedLunch, lunch);
+});
+
+
+test('registo independente nunca redimensiona porções, mesmo acima de uma antiga meta', () => {
+  const original = structuredClone({ breakfast, lunch, dinner });
+  const plan = calculateRecordedPlan(original);
+  const withExtras = calculateRecordedPlan({ ...original, targetCalories: 2400, snacks: [{ calories: 1000, protein: 10, carbs: 50, fat: 30, fiber: 2 }] });
+  assert.deepEqual(withExtras.meals, plan.meals);
+  assert.equal(withExtras.selectedNutrition.calories, 2804);
+  assert.equal(withExtras.selectedNutrition.protein, 137.7);
+  assert.deepEqual(original, { breakfast, lunch, dinner });
+  assert.equal(withExtras.caloriesRemaining, undefined);
+  assert.deepEqual(calculateRecordedPlan().selectedNutrition, { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+  assert.equal(calculateRecordedPlan({ dinner }).meals.lunch, null);
+  assert.deepEqual(calculateRecordedPlan({ dinner }).meals.dinner, dinner);
+});
+
+test('kcal manuais substituem a escolha, preservam macros desconhecidos e não alteram outras refeições', () => {
+  const plan = calculateRecordedPlan({ breakfast, lunch, dinner, mealCalories: { lunch: 900, snacks: 100 }, snacks: [{ calories: 200, protein: 20 }] });
+  assert.deepEqual(plan.meals.dinner, dinner);
+  assert.equal(plan.meals.lunch.calories, 900);
+  assert.equal(plan.meals.lunch.protein, null);
+  assert.equal(plan.snackTotals.calories, 100);
+  assert.equal(plan.selectedNutrition.calories, 2154);
+  assert.deepEqual(plan.partialNutrients, ['protein', 'carbs', 'fat', 'fiber']);
+});
+
+test('porções consumidas anteriores prevalecem sobre catálogo e registos manuais', () => {
+  const consumed = { ...lunch, calories: 810, protein: 46.4, adjustedQuantity: 225 };
+  const plan = calculateRecordedPlan({ lunch, consumedMeals: { lunch: consumed }, mealCalories: { lunch: 500 } });
+  assert.deepEqual(plan.meals.lunch, consumed);
+  assert.equal(plan.selectedNutrition.calories, 810);
+  const partial = calculateRecordedPlan({ consumedMeals: { dinner: { name: 'Fora', calories: 600, protein: null } } });
+  assert.ok(partial.partialNutrients.includes('protein'));
 });

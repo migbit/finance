@@ -40,20 +40,44 @@ function wheyPortion(label, grams) {
   return productPortion(label, grams, { calories: 104 / 0.3, protein: 23 / 0.3, carbs: 5, fat: 0.7 / 0.3, fiber: 0 });
 }
 
-function buildRecipe(recipe) {
-  const totals = totalNutrition(recipe.components);
-  return Object.freeze({
-    ...recipe,
-    catalogVersion: 7,
-    ingredients: recipe.components.map(component => component.label).join('\n'),
+function portionNutrition(components) {
+  const totals = totalNutrition(components);
+  return {
+    components,
+    ingredients: components.map(component => component.label).join('\n'),
     calories: Math.round(totals.calories),
     protein: round(totals.protein),
     carbs: round(totals.carbs),
     fat: round(totals.fat),
-    fiber: round(totals.fiber),
+    fiber: round(totals.fiber)
+  };
+}
+
+function resizedComponent(component, factor, label) {
+  return { label, ...Object.fromEntries(['calories', 'protein', 'carbs', 'fat', 'fiber']
+    .map(field => [field, component[field] * factor])) };
+}
+
+function buildRecipe(recipe) {
+  return Object.freeze({
+    ...recipe,
+    ...portionNutrition(recipe.components),
+    catalogVersion: 8,
+    variants: (recipe.variants || []).map(variant => ({
+      ...variant,
+      ...(typeof variant.components === 'function' ? portionNutrition(variant.components(recipe.components)) : {})
+    })),
     source: 'curated',
     meal: recipe.meal || 'breakfast'
   });
+}
+
+export function resolveRecipeVariant(recipe, variantId = 'base') {
+  if (!recipe) return null;
+  const variant = recipe.variants?.find(item => item.id === variantId);
+  if (!variant) return { ...recipe, variantId: 'base' };
+  return { ...recipe, ...variant, id: recipe.id, variantId: variant.id,
+    shortName: variant.name || recipe.shortName, highlights: variant.highlights || [] };
 }
 
 export const MIGUEL_PROFILE_DEFAULTS = Object.freeze({
@@ -89,6 +113,7 @@ export const MIGUEL_PROFILE_DEFAULTS = Object.freeze({
   fruitDetails: 'Fruta sazonal, sobretudo pera, maçã, melancia, melão, laranja e nectarina.',
   fortifiedDrink: 'calcium_b12_d',
   selectedBreakfastId: '',
+  selectedBreakfastVariantId: 'base',
   breakfastSkipped: false,
   selectedLunchId: '',
   lunchExternal: false,
@@ -176,7 +201,6 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       productPortion('50 g de Rice Cream sem sabor', 50, PRODUCT_NUTRITION.riceCream),
       productPortion('250 ml de bebida de soja sem açúcar fortificada', 250, PRODUCT_NUTRITION.soyDrink),
       productPortion('150 g de skyr natural', 150, PRODUCT_NUTRITION.skyr),
-      wheyPortion('10 g de Evowhey, num sabor que combine', 10),
       { label: '150 g de fruta, por exemplo banana, frutos vermelhos, maçã ou pêssego', calories: 64, protein: 0.6, carbs: 15.6, fat: 0.2, fiber: 3.5 },
       { label: 'Canela a gosto', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 },
       { label: '5 a 10 g de amêndoas ou nozes picadas (opcional)', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
@@ -185,13 +209,21 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
       'Aquecer a bebida de soja.',
       'Juntar gradualmente o creme de arroz, mexendo até engrossar.',
       'Retirar do lume e deixar arrefecer ligeiramente.',
-      'Misturar a whey.',
       'Servir com o skyr, a fruta e a canela.',
       'Para mais textura e saciedade, juntar 5 a 10 g de frutos secos.'
     ],
-    highlights: ['≈37 g de proteína', 'Digestão relativamente fácil', 'Cereal diferente da aveia', 'Doce e quente', 'Boa para dias de treino'],
-    cautions: ['O total apresentado não inclui os frutos secos opcionais.', 'Adicionar 5 g acrescenta cerca de 30 kcal; 10 g acrescenta aproximadamente 55–60 kcal.', 'Deixar arrefecer ligeiramente antes de juntar a whey ajuda a misturá-la sem formar grumos.'],
-    evidenceNote: 'Rice Cream, bebida de soja, skyr e whey usam os rótulos registados; a fruta usa valores médios.'
+    highlights: ['≈29 g de proteína', 'Digestão relativamente fácil', 'Cereal diferente da aveia', 'Doce e quente', 'Boa para dias de treino'],
+    cautions: ['O total apresentado não inclui os frutos secos opcionais.', 'Adicionar 5 g acrescenta cerca de 30 kcal; 10 g acrescenta aproximadamente 55–60 kcal.', 'A whey é opcional: escolhe a variante para contar os 10 g adicionais.'],
+    evidenceNote: 'Rice Cream, bebida de soja e skyr usam os rótulos registados; a fruta usa valores médios.',
+    baseLabel: 'Sem whey',
+    variants: [{
+      id: 'with-whey', label: 'Com 10 g de whey',
+      name: 'Creme de arroz com skyr, fruta e 10 g de whey',
+      description: 'A mesma porção, com 10 g de Evowhey. Escolhe conforme a tua alimentação do dia.',
+      components: base => [...base, wheyPortion('10 g de Evowhey', 10)],
+      instructions: ['Aquecer a bebida de soja.', 'Juntar gradualmente o creme de arroz, mexendo até engrossar.', 'Retirar do lume e deixar arrefecer ligeiramente antes de misturar os 10 g de whey.', 'Servir com o skyr, a fruta e a canela.'],
+      highlights: ['≈37 g de proteína', '10 g de whey incluídos']
+    }]
   }),
   buildRecipe({
     id: 'breakfast-quick-pre-workout',
@@ -221,7 +253,22 @@ export const DEFAULT_BREAKFASTS = Object.freeze([
     ],
     highlights: ['≈84 g de hidratos', '≈26 g de proteína', 'Menos gordura e fibra', 'Preparação em 5 min', 'Uso pré-exercício'],
     cautions: ['O total apresentado usa 27,5 g de compota e 15 g de whey.', 'Com mel, acrescentar aproximadamente 22 kcal e 7–8 g de hidratos.', 'É uma opção específica para treinar pouco depois; não substitui o pequeno-almoço base nos restantes dias.'],
-    evidenceNote: 'Bebida de soja e whey usam os rótulos registados; pão branco/mistura, compota e banana usam valores médios. Confirmar o pão e a compota comprados.'
+    evidenceNote: 'Bebida de soja e whey usam os rótulos registados; pão branco/mistura, compota e banana usam valores médios. Confirmar o pão e a compota comprados.',
+    baseLabel: 'Completa · com whey',
+    variants: [{
+      id: 'small', label: 'Menor · sem whey',
+      name: 'Pré-exercício rápido · porção menor',
+      description: 'Uma opção menor para ajustar à duração do exercício, à fome e à tolerância antes de treinar.',
+      components: base => [
+        resizedComponent(base[0], 60 / 80, '60 g de pão branco ou de mistura'),
+        resizedComponent(base[1], 15 / 27.5, '15 g de compota'),
+        resizedComponent(base[2], 100 / 120, '100 g de banana'),
+        base[3], base[5], base[6]
+      ],
+      instructions: ['Tostar ligeiramente o pão e barrar com a compota.', 'Comer a banana e acompanhar com a bebida de soja.', 'Beber água e o café habitual, se aplicável.'],
+      cautions: ['Usa compota para os valores apresentados. Mel ou outros produtos alteram os totais.', 'Escolher a porção de acordo com o exercício e a tolerância digestiva; não é obrigatório comer imediatamente antes de treinar.'],
+      highlights: ['≈62 g de hidratos', '≈13 g de proteína', 'Sem whey']
+    }]
   })
 ]);
 
@@ -281,7 +328,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
     batchFriendly: true,
     components: [
       { label: '2 ovos', calories: 144, protein: 12.6, carbs: 0.8, fat: 9.6, fiber: 0 },
-      productPortion('150 g de claras', 150, PRODUCT_NUTRITION.eggWhites),
+      productPortion('100 g de claras', 100, PRODUCT_NUTRITION.eggWhites),
       { label: '300 g de batata', calories: 257, protein: 6, carbs: 57, fat: 0.3, fiber: 6.6 },
       { label: '250 g de espinafres, cogumelos, cebola, tomate ou pimento', calories: 65, protein: 4, carbs: 10, fat: 0.8, fiber: 5 },
       productPortion('30 g de mozzarella ralada', 30, PRODUCT_NUTRITION.gratedMozzarella),
@@ -294,7 +341,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       'Misturar os ovos, as claras, os legumes e a mozzarella ralada.',
       'Cozinhar como frittata numa frigideira, no forno ou na air fryer e servir com a batata.'
     ],
-    highlights: ['≈47 g de proteína', '≈12 g de fibra', 'Aproveita os ovos', 'Mozzarella ralada', 'Excelente de véspera'],
+    highlights: ['≈41 g de proteína', '≈12 g de fibra', 'Aproveita os ovos', 'Mozzarella ralada', 'Excelente de véspera'],
     cautions: ['Preparar completamente na véspera e aquecer durante poucos minutos.'],
     evidenceNote: 'Claras e mozzarella ralada usam os rótulos registados; ovos, batata e hortícolas usam valores médios.',
     calorieAdjustment: {
@@ -308,7 +355,7 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       fat: 0.3,
       fiber: 6.6
     },
-    scaleHint: 'Manter os ovos e as claras; ajustar sobretudo batata e legumes para aproximar a meta calórica.'
+    scaleHint: 'Uma porção com 2 ovos, 100 g de claras e 300 g de batata.'
   }),
   buildRecipe({
     id: 'main-red-lentil-pasta',
@@ -323,11 +370,11 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
     prepTime: '25 min',
     batchFriendly: true,
     components: [
-      { label: '90 g de massa de lentilhas vermelhas, peso em seco', calories: 308.7, protein: 23.9, carbs: 47.1, fat: 1.3, fiber: 5.8 },
+      { label: '80 g de massa de lentilhas vermelhas, peso em seco', calories: 274.4, protein: 23.9 * 8 / 9, carbs: 47.1 * 8 / 9, fat: 1.3 * 8 / 9, fiber: 5.8 * 8 / 9 },
       { label: '200 g de passata ou polpa de tomate sem açúcar adicionado', calories: 70, protein: 3, carbs: 11, fat: 0.4, fiber: 3 },
       { label: '200 g de cogumelos com espinafres ou courgette', calories: 60, protein: 4, carbs: 6, fat: 0.6, fiber: 4 },
-      productPortion('150 g de skyr natural', 150, PRODUCT_NUTRITION.skyr),
-      productPortion('18 g de mozzarella ralada', 18, PRODUCT_NUTRITION.gratedMozzarella),
+      productPortion('100 g de skyr natural', 100, PRODUCT_NUTRITION.skyr),
+      productPortion('20 g de mozzarella ralada', 20, PRODUCT_NUTRITION.gratedMozzarella),
       { label: '5 g de azeite virgem extra', calories: 45, protein: 0, carbs: 0, fat: 5, fiber: 0 },
       { label: 'Alho, manjericão, orégãos e pimenta', calories: 5.8, protein: 0.4, carbs: 1.2, fat: 0, fiber: 0.3 }
     ],
@@ -338,28 +385,28 @@ export const DEFAULT_MAIN_MEALS = Object.freeze([
       'Aquecer a massa com o molho e misturar o skyr apenas no final, fora do lume ou com lume muito baixo.',
       'Finalizar com a mozzarella ralada e deixar derreter.'
     ],
-    highlights: ['≈52 g de proteína', '≈13 g de fibra', 'Pouca gordura', 'Inclui leguminosas', 'Boa pós-força'],
-    cautions: ['Não ferver o skyr para evitar separar o creme.', 'A massa Dalla Costa é pesada em seco; 90 g cozinhados terão um peso bastante superior.'],
+    highlights: ['≈45 g de proteína', '≈12 g de fibra', 'Pouca gordura', 'Inclui leguminosas', 'Boa pós-força'],
+    cautions: ['Não ferver o skyr para evitar separar o creme.', 'A massa Dalla Costa é pesada em seco; 80 g cozinhados terão um peso bastante superior.'],
     evidenceNote: 'Massa Dalla Costa, skyr e mozzarella ralada usam os rótulos registados; restantes ingredientes usam valores médios.',
     calorieAdjustment: {
       label: 'massa de lentilhas vermelhas (peso em seco)',
-      baseQuantity: 90,
+      baseQuantity: 80,
       minQuantity: 60, maxQuantity: 120, step: 5,
       unit: 'g',
-      calories: 308.7,
-      protein: 23.9,
-      carbs: 47.1,
-      fat: 1.3,
-      fiber: 5.8
+      calories: 274.4,
+      protein: 23.9 * 8 / 9,
+      carbs: 47.1 * 8 / 9,
+      fat: 1.3 * 8 / 9,
+      fiber: 5.8 * 8 / 9
     },
-    scaleHint: 'Se o aumento face aos 90 g for grande, não precisas de o concentrar todo na massa: podes completar com pão integral ou fruta.'
+    scaleHint: 'Uma porção com 80 g de massa seca, 100 g de skyr e 20 g de mozzarella.'
   }),
   buildRecipe({
     id: 'main-mexican-quinoa-beans',
     meal: 'main',
     name: 'Bowl mexicano de quinoa, feijão e molho de skyr',
     shortName: 'Bowl de quinoa e feijão',
-    description: 'A opção mais rica em fibra e mais diferente da rotação, particularmente útil depois de um pequeno-almoço com pouca fibra.',
+    description: 'Quinoa, feijão, abacate e molho de skyr para variar as fontes de proteína e os sabores.',
     quality: 'very_high',
     qualityLabel: 'Qualidade muito alta',
     rank: 4,
@@ -481,11 +528,11 @@ export const DEFAULT_SNACKS = Object.freeze([
   buildRecipe({
     id: 'snack-post-workout-shake',
     meal: 'snack',
-    name: 'Shake pós-treino',
-    shortName: 'Shake pós-treino',
-    description: 'Recuperação rápida e prática: só Evowhey e água quando a refeição seguinte está próxima.',
+    name: 'Shake de whey (opcional)',
+    shortName: 'Shake de whey',
+    description: 'Evowhey e água, uma opção prática se precisares de complementar a proteína da alimentação.',
     quality: 'purpose',
-    qualityLabel: 'Pós-treino',
+    qualityLabel: 'Opcional',
     rank: 1,
     prepTime: '1 min',
     batchFriendly: false,
@@ -494,8 +541,8 @@ export const DEFAULT_SNACKS = Object.freeze([
       { label: '300 a 400 ml de água', calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
     ],
     instructions: ['Colocar a Evowhey e a água num shaker.', 'Agitar e beber.'],
-    highlights: ['23 g de proteína', 'Muito rápido', 'Baixa gordura', 'Pós-treino'],
-    cautions: ['Preparar o pó no shaker e juntar a água no final do treino.', 'Não precisa de leite, banana, aveia ou manteiga de amendoim para cumprir o objetivo deste lanche.'],
+    highlights: ['23 g de proteína', 'Muito rápido', 'Baixa gordura', 'Opcional'],
+    cautions: ['Usar se for conveniente para completar a alimentação; não é obrigatório depois de cada treino.', 'Não precisa de leite, banana, aveia ou manteiga de amendoim para cumprir o objetivo deste lanche.'],
     evidenceNote: 'A dose-base usa os valores fornecidos para a tua Evowhey: 104 kcal e 23 g de proteína/30 g. Confirmar quando mudares de sabor ou embalagem.',
     addLabel: 'Só whey',
     variants: []
@@ -520,15 +567,26 @@ export const DEFAULT_SNACKS = Object.freeze([
     ],
     instructions: ['Misturar o iogurte com a whey.', 'Guardar no frigorífico e cortar a fruta na véspera, se for conveniente.', 'Juntar os cereais apenas no momento de comer para continuarem crocantes.'],
     highlights: ['≈24 g de proteína', 'Fruta + cereal integral', 'Preparável de véspera', 'Whey moderada'],
-    cautions: ['Preferir cereais integrais simples e sem açúcar adicionado na maioria dos dias.', 'Se já tiveres bebido o shake pós-treino, o programa destaca a variante com 250 g de skyr e sem whey.'],
+    cautions: ['Preferir cereais integrais simples e sem açúcar adicionado na maioria dos dias.', 'Podes escolher uma das porções com skyr e sem whey, conforme a fome e o resto da alimentação.'],
     evidenceNote: 'Iogurte grego e Evowhey usam os rótulos registados; cereais e fruta usam valores médios.',
     addLabel: 'Com 12,5 g whey',
     variants: [
       {
+        id: 'small-without-whey', label: 'Menor · sem whey',
+        name: 'Taça menor de skyr, fruta e cereais',
+        description: '170 g de skyr, 150 g de fruta e 25 g de cereais. Sem whey.',
+        components: base => [
+          productPortion('170 g de skyr natural', 170, PRODUCT_NUTRITION.skyr),
+          resizedComponent(base[2], 25 / 30, '25 g de cereais integrais sem açúcar adicionado'),
+          base[3], base[4]
+        ],
+        instructions: ['Colocar o skyr e a fruta numa taça.', 'Juntar os cereais apenas no momento de comer.']
+      },
+      {
         id: 'without-whey',
         label: 'Sem whey',
         name: 'Taça de skyr, fruta e cereais sem whey',
-        description: 'Usa 250 g de skyr, sendo especialmente útil quando o shake já foi consumido.',
+        description: 'Substitui o iogurte e a whey por 250 g de skyr; mantém 30 g de cereais e 150 g de fruta.',
         calories: 320,
         protein: 31.1,
         carbs: 46.4,
@@ -599,8 +657,17 @@ export const DEFAULT_SNACKS = Object.freeze([
     highlights: ['≈26 g de proteína', 'Sem whey', '≈53 g de hidratos', 'Preparável de véspera'],
     cautions: ['O total base usa 200 g de skyr e 25 g de cereais.', 'A variante com chocolate usa 5 g de chocolate preto; 10 g acrescentariam aproximadamente mais 30 kcal.'],
     evidenceNote: 'Skyr usa o rótulo registado; banana, cereais integrais e chocolate usam valores médios.',
-    addLabel: 'Adicionar',
+    addLabel: 'Porção habitual',
     variants: [
+      {
+        id: 'small', label: 'Porção menor',
+        name: 'Skyr, banana e cereais · porção menor',
+        description: '150 g de skyr, 120 g de banana e 20 g de cereais.',
+        components: base => [
+          productPortion('150 g de skyr natural', 150, PRODUCT_NUTRITION.skyr),
+          base[1], resizedComponent(base[2], 20 / 25, '20 g de cereais integrais sem açúcar adicionado'), base[3]
+        ]
+      },
       {
         id: 'with-dark-chocolate',
         label: 'Com chocolate',

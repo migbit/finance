@@ -166,6 +166,19 @@ service cloud.firestore {
     }
 
     // Áreas explicitamente autorizadas à Filipa.
+    // Ginásio de Miguel: consulta e edição partilhadas com a Filipa.
+    // Lista fechada para não abrir outras coleções ou futuros módulos.
+    match /{gymCollection}/{documentId} {
+      allow read, write: if isFilipa() && gymCollection in [
+        'ginasio_treinos',
+        'ginasio_resumos',
+        'ginasio_pesos',
+        'ginasio_reps_recomendadas',
+        'ginasio_aquecimentos',
+        'ginasio_maquinas_custom'
+      ];
+    }
+
     match /obras_checklists/{document=**} {
       allow read, write: if signedIn() && !isFamilyChild();
     }

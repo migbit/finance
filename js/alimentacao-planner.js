@@ -29,6 +29,7 @@ export function applyDailyPlanDate(profile = {}, dateKey = getLocalDateKey()) {
       ...profile,
       planDate: currentDateKey,
       selectedBreakfastId: '',
+      selectedBreakfastVariantId: 'base',
       breakfastSkipped: false,
       selectedLunchId: '',
       lunchExternal: false,
@@ -48,6 +49,29 @@ export function sumNutrition(items = []) {
     });
     return total;
   }, { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 });
+}
+
+// Miguel records explicit portions. Missing meals never reserve energy or resize others.
+export function calculateRecordedPlan({ breakfast = null, lunch = null, dinner = null,
+  snacks = [], mealCalories = {}, consumedMeals = {} } = {}) {
+  const consumed = normalizeConsumedMeals(consumedMeals);
+  const manualItem = (stage, name) => finite(mealCalories[stage]) > 0
+    ? { name, calories: Math.round(finite(mealCalories[stage])), protein: null, carbs: null, fat: null, fiber: null }
+    : null;
+  const meals = {
+    breakfast: consumed.breakfast || manualItem('breakfast', 'Pequeno-almoço registado') || breakfast,
+    lunch: consumed.lunch || manualItem('lunch', 'Almoço registado') || lunch,
+    dinner: consumed.dinner || manualItem('dinner', 'Jantar registado') || dinner
+  };
+  const manualSnacks = manualItem('snacks', 'Lanches registados');
+  const recordedSnacks = manualSnacks ? [manualSnacks] : snacks;
+  const items = [...Object.values(meals), ...recordedSnacks].filter(Boolean);
+  return {
+    meals,
+    selectedNutrition: sumNutrition(items),
+    partialNutrients: NUTRITION_FIELDS.slice(1).filter(field => items.some(item => !Number.isFinite(item[field]))),
+    snackTotals: sumNutrition(recordedSnacks)
+  };
 }
 
 export function rebalanceMealCalories(totalCalories, baseTargets = {}, fixedCalories = {}) {

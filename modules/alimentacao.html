@@ -25,10 +25,9 @@
       <div class="food-profile-state" data-state="complete">
         <span aria-hidden="true"></span>
         <div>
-          <strong id="food-profile-target">Base diária · 2 400 kcal</strong>
+          <strong id="food-profile-target">Porções de referência</strong>
           <small id="food-save-state">Guardado neste dispositivo</small>
         </div>
-        <button type="button" class="food-settings-button" data-food-settings-open aria-label="Alterar meta diária">⚙ Meta diária</button>
       </div>
     </section>
 
@@ -78,12 +77,7 @@
             </form>
           </details>
 
-          <div class="food-breakfast-targets" aria-label="Metas usadas nas receitas">
-            <div><span>Alvo-base diário</span><strong id="food-recipes-daily-target">2 400 kcal</strong></div>
-            <div><span>Pequeno-almoço</span><strong id="food-recipes-breakfast-target">≈ 600 kcal</strong></div>
-            <div><span>Proteína diária</span><strong id="food-recipes-protein-target">≈ 120–150 g</strong></div>
-            <div><span>Whey de referência</span><strong>Evowhey · contar apenas as doses escolhidas</strong></div>
-          </div>
+          <p class="food-method-note">Escolhe a porção conforme a fome, o treino e o resto da alimentação. As quantidades das outras refeições mantêm-se.</p>
 
           <div class="food-recipe-grid" id="food-recipe-grid"></div>
         </section>
@@ -96,36 +90,13 @@
             </div>
           </div>
 
-          <div id="food-energy-result">
-            <div class="food-energy-grid">
-              <article class="food-energy-primary"><span>Alvo diário</span><strong id="food-energy-target">—</strong><small id="food-energy-range">—</small></article>
-              <article><span>Pequeno-almoço</span><strong id="food-breakfast-target">—</strong><small>alvo atual</small></article>
-              <article><span>Almoço</span><strong id="food-lunch-target">—</strong><small>provisório</small></article>
-              <article><span>Jantar</span><strong id="food-dinner-target">—</strong><small>provisório</small></article>
-              <article><span>Lanche</span><strong id="food-snacks-target">—</strong><small>provisório</small></article>
-            </div>
-            <p id="food-energy-note" class="food-method-note"></p>
-          </div>
-
-          <div id="food-breakfast-selection" class="food-breakfast-selection" hidden>
-            <span aria-hidden="true">✓</span>
-            <div>
-              <small id="food-selected-breakfast-label">Pequeno-almoço escolhido</small>
-              <strong id="food-selected-breakfast-name">—</strong>
-              <p id="food-selected-breakfast-balance">—</p>
-            </div>
-            <button type="button" id="food-clear-breakfast">Alterar escolha</button>
-          </div>
-
           <section id="food-lunch-stage" class="food-meal-stage" aria-labelledby="food-lunch-title" hidden>
             <div class="food-meal-stage-heading">
               <div>
-                <p class="food-eyebrow">Recomendação seguinte</p>
+                <p class="food-eyebrow">Porção de referência</p>
                 <h3 id="food-lunch-title">Escolher almoço</h3>
-                <p id="food-lunch-context" hidden></p>
               </div>
               <div class="food-stage-heading-actions">
-                <strong id="food-lunch-calorie-target">≈ 840 kcal</strong>
                 <button type="button" data-food-add-recipe="main">+ Criar receita</button>
               </div>
             </div>
@@ -146,9 +117,7 @@
               <div>
                 <p class="food-eyebrow">Escolha independente</p>
                 <h3 id="food-dinner-title">Escolher jantar</h3>
-                <p id="food-dinner-context" hidden></p>
               </div>
-              <strong id="food-dinner-calorie-target">≈ 720 kcal</strong>
               <button type="button" data-food-add-recipe="main">+ Criar receita</button>
             </div>
             <details class="food-meal-calorie-entry">
@@ -186,10 +155,10 @@
             <div id="food-snack-preset-grid" class="food-snack-preset-grid" aria-label="Lanches guardados"></div>
 
             <details class="food-custom-snack-entry">
-              <summary>Adicionar outro lanche</summary>
+              <summary>Adicionar lanche ou extra</summary>
               <form id="food-snack-form" class="food-snack-form">
                 <label>Nome
-                  <input type="text" name="snackName" maxlength="100" required placeholder="Ex.: skyr com fruta">
+                  <input type="text" name="snackName" maxlength="100" required placeholder="Ex.: fruta, chocolate ou outro extra">
                 </label>
                 <label>Energia
                   <input type="number" name="snackCalories" min="1" max="1000" step="1" inputmode="numeric" required placeholder="kcal">
@@ -213,41 +182,22 @@
             <div id="food-snack-list" class="food-snack-list"></div>
           </section>
 
-          <section id="food-day-balance" class="food-day-balance" aria-labelledby="food-day-balance-title" hidden>
-            <div class="food-day-balance-heading">
-              <div>
-                <p class="food-eyebrow">Balanço diário</p>
-                <h3 id="food-day-balance-title">Fechar as 2 400 kcal</h3>
-              </div>
-              <strong id="food-day-balance-value">—</strong>
-            </div>
-            <div class="food-day-progress" role="progressbar" aria-label="Progresso calórico diário" aria-valuemin="0" aria-valuemax="2400" aria-valuenow="0">
-              <span id="food-day-progress-bar"></span>
-            </div>
-            <div class="food-day-balance-grid">
-              <div><span>Confirmado</span><strong id="food-day-confirmed">—</strong></div>
-              <div><span>Reservas</span><strong id="food-day-reserved">—</strong></div>
-              <div><span>Meta</span><strong id="food-day-target">2 400 kcal</strong></div>
-            </div>
-            <p id="food-day-balance-note"></p>
-          </section>
         </section>
       </div>
 
       <aside class="food-side-column" aria-label="Resumo de macronutrientes">
         <section class="food-summary-card card">
           <p class="food-eyebrow">Resumo</p>
-          <h2 id="food-macro-summary-title">Totais selecionados</h2>
-          <p id="food-summary-remaining" class="food-summary-remaining" aria-live="polite"></p>
+          <h2 id="food-macro-summary-title" aria-live="polite">Total das refeições registadas</h2>
           <div class="food-summary-macros">
-            <div><span>Escolhido / meta</span><strong id="food-summary-calories">—</strong></div>
+            <div><span>Energia registada</span><strong id="food-summary-calories">—</strong></div>
             <div><span>Proteína</span><strong id="food-summary-protein">—</strong></div>
             <div><span>Hidratos</span><strong id="food-summary-carbs">—</strong></div>
             <div><span>Gordura</span><strong id="food-summary-fat">—</strong></div>
           </div>
           <p id="food-summary-note" class="food-method-note"></p>
           <div id="food-consumed-meals"></div>
-          <p class="food-method-note">Marca “Já comi” para fixar a porção. Só as refeições ainda planeadas são ajustadas.</p>
+          <p class="food-method-note">Marca “Já comi” para guardar a porção consumida. O total é um registo parcial do dia, não um saldo para gastar.</p>
         </section>
       </aside>
     </section>
@@ -309,19 +259,6 @@
     </details>
   </main>
 
-  <dialog id="food-settings-dialog" class="food-dialog" aria-labelledby="food-settings-title">
-    <form id="food-settings-form" class="food-dialog-shell">
-      <button type="button" class="food-dialog-close" data-close-dialog aria-label="Fechar">×</button>
-      <p class="food-eyebrow">Configuração</p>
-      <h2 id="food-settings-title">Meta diária</h2>
-      <label>Calorias totais por dia
-        <input id="food-settings-calories" name="dailyCalories" type="number" min="800" max="7000" step="10" inputmode="numeric" required>
-      </label>
-      <p class="food-dialog-note">Recalcula as refeições ainda planeadas. As refeições marcadas como consumidas mantêm a porção.</p>
-      <button type="submit" class="primary">Guardar meta</button>
-    </form>
-  </dialog>
-
   <dialog id="food-recipe-dialog" class="food-dialog" aria-labelledby="food-recipe-dialog-title">
     <form id="food-recipe-form" class="food-dialog-shell">
       <button type="button" class="food-dialog-close" data-close-dialog aria-label="Fechar">×</button>
@@ -368,7 +305,7 @@
       <label>Notas
         <textarea name="recipeNotes" rows="3" maxlength="1200" placeholder="Preparação, marcas, substituições ou observações."></textarea>
       </label>
-      <p class="food-dialog-note">Confirma os valores nos rótulos. Alterar ingredientes ou nutrientes passa a receita a porção fixa e retira variantes antigas, para evitar cálculos desatualizados.</p>
+      <p class="food-dialog-note">Confirma os valores nos rótulos. Alterar ingredientes ou nutrientes retira variantes antigas, para evitar cálculos desatualizados.</p>
       <button type="submit" class="primary">Guardar receita</button>
     </form>
   </dialog>

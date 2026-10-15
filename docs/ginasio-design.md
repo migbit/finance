@@ -1,5 +1,20 @@
 # Ginásio — interface partilhada
 
+## Acesso partilhado com a Filipa — 14/10/2026
+
+A Filipa pode consultar e alterar a página Ginásio no menu Miguel após a
+publicação. O módulo `ginasio` está autorizado no controlo de acesso e as regras
+Firestore concedem à sua conta leitura/escrita nos documentos das seis coleções:
+`ginasio_treinos`, `ginasio_resumos`, `ginasio_pesos`,
+`ginasio_reps_recomendadas`, `ginasio_aquecimentos` e `ginasio_maquinas_custom`.
+A sua página continua a usar os dados próprios em `/users/{FILIPA_UID}`.
+
+Validação: `node --test tests/access-control.test.mjs` e testes de integração
+`tests/ginasio-access.test.mjs` num emulador Firestore em `127.0.0.1:8187`,
+projeto fictício `demo-ginasio-access`. Definir `FIRESTORE_EMULATOR_HOST` antes
+de executar estes últimos. Cobrem listagem, leitura, criação, alteração,
+remoção e a manutenção das restrições para crianças, visitantes e dados alheios.
+
 Atualização de 11/10/2026 para `ginasio.html` e `filipa-ginasio.html`.
 
 - As duas páginas carregam `theme-dark.css`, o mesmo tema da Análise, e
