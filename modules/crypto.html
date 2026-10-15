@@ -469,10 +469,13 @@
       <div class="viz-card">
         <div class="toolbar">
           <button id="btn-add" class="btn" aria-label="Adicionar novo ativo">+ Adicionar</button>
-          <button id="btn-pdf" class="btn" aria-label="Exportar portfólio para PDF">Exportar PDF</button>
+          <button id="btn-pdf" class="btn" aria-label="Exportar carteira completa para PDF">Exportar PDF</button>
+          <button id="btn-pdf-save-as" class="btn" aria-label="Guardar carteira completa em PDF numa pasta">Guardar PDF em…</button>
           <button id="btn-eur" class="btn btn-toggle active" aria-pressed="true" aria-label="Mostrar valores em EUR">EUR</button>
           <button id="btn-usd" class="btn btn-toggle" aria-pressed="false" aria-label="Mostrar valores em USD">USD</button>
         </div>
+
+        <p class="text-muted">O PDF inclui todas as posições, mesmo as inferiores a $5.</p>
 
         <div class="table-wrap">
           <table id="crypto-table" role="table" aria-label="Portfólio de criptomoedas">

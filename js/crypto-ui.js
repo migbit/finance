@@ -3149,15 +3149,68 @@ class CryptoPortfolioApp {
     }
   }
   setupPdf(){
-    const btn = DOM.$('#btn-pdf');
-    if (!btn) return;
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      this.exportToPdf();
-    });
+    for (const [selector, chooseLocation] of [['#btn-pdf', false], ['#btn-pdf-save-as', true]]) {
+      DOM.$(selector)?.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.exportToPdf({ chooseLocation });
+      });
+    }
   }
 
-  exportToPdf(){
+  async exportToPdf({ chooseLocation = false } = {}){
+    if (this._pdfExportInProgress) return;
+    this._pdfExportInProgress = true;
+    const buttons = ['#btn-pdf', '#btn-pdf-save-as']
+      .map(selector => DOM.$(selector)).filter(Boolean);
+    const disabledStates = buttons.map(button => button.disabled);
+    buttons.forEach(button => { button.disabled = true; });
+    try {
+      const result = this.createPortfolioPdf();
+      if (!result) return;
+      const { doc, filename } = result;
+      if (chooseLocation && typeof window.showSaveFilePicker === 'function') {
+        const blob = doc.output('blob');
+        const handle = await window.showSaveFilePicker({
+          id: 'crypto-portfolio-pdf',
+          suggestedName: filename,
+          types: [{ description: 'Documento PDF', accept: { 'application/pdf': ['.pdf'] } }]
+        });
+        let writable;
+        try {
+          writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+        } catch (error) {
+          if (writable) {
+            try { await writable.abort(); } catch (_) { /* Preserve the original error. */ }
+          }
+          throw error;
+        }
+        ToastService.success('PDF guardado com sucesso.');
+      } else {
+        await doc.save(filename, { returnPromise: true });
+        ToastService.info(chooseLocation
+          ? 'Este navegador usa o download habitual. Escolha a pasta nas opções de download.'
+          : 'Download do PDF iniciado.');
+      }
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        ToastService.info('Exportação cancelada.');
+      } else {
+        console.error('Erro ao exportar PDF', error);
+        ToastService.error('Não foi possível guardar o PDF. Tente novamente ou use Exportar PDF.');
+      }
+    } finally {
+      buttons.forEach((button, index) => { button.disabled = disabledStates[index]; });
+      this._pdfExportInProgress = false;
+    }
+  }
+
+  createPortfolioPdf(){
+    if (!this.initialized) {
+      ToastService.error('Aguarde o carregamento da carteira antes de exportar.');
+      return;
+    }
     if (!window.jspdf){ 
       ToastService.error('PDF library not loaded.');
       return; 
@@ -3173,7 +3226,8 @@ class CryptoPortfolioApp {
     doc.setFontSize(18);
     doc.text(title, pageWidth/2, 40, { align:'center' });
 
-    const rows = this.state.visibleRows;
+    // Export the same portfolio used by the totals, regardless of the display filter.
+    const rows = this.state.currentRows;
     if (!rows.length){ 
       ToastService.error('Sem dados para exportar.');
       return; 
@@ -3319,9 +3373,11 @@ class CryptoPortfolioApp {
 
     doc.setTextColor(0, 0, 0);
 
-    const filename = `Crypto_Portfolio_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}.pdf`;
-    doc.save(filename);
-    ToastService.success('PDF exportado com sucesso');
+    const pad = (value, size = 2) => String(value).padStart(size, '0');
+    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const time = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}-${pad(now.getMilliseconds(), 3)}`;
+    const filename = `Crypto_Portfolio_${date}_${time}.pdf`;
+    return { doc, filename };
   }
 
   showError(msg){
