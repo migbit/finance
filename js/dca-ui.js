@@ -32,9 +32,9 @@ export function renderTable(rows, wrapElement) {
     const theadHTML = `
       <thead><tr>
         <th>Mês</th>
-        <th class="num">Programado</th>
+        <th class="num">Compras / plano</th>
         <th class="num">Reforços</th>
-        <th class="num">Investido acum.</th>
+        <th class="num">Custo detido / plano</th>
         <th class="num total-block">Valor ETFs</th>
         <th class="num res-total-block">Resultado</th>
         <th class="num swda-block">VWCE atual</th>
@@ -65,11 +65,11 @@ export function renderTable(rows, wrapElement) {
       const clsSWDA = r.resSWDA != null ? (r.resSWDA >= 0 ? 'pos' : 'neg') : '';
       const clsAGGH = r.resAGGH != null ? (r.resAGGH >= 0 ? 'pos' : 'neg') : '';
 
-      const saveBtn = r.isClosed
+      const saveBtn = r.isClosed || r.brokerVerified
         ? '<span class="dca-locked" title="Mês fechado; exige correção histórica explícita">🔒</span>'
         : `<button class="btn btn-edit btn-save" type="button" title="Guardar registo" aria-label="Guardar registo">✓</button>`;
 
-      const inputDisabled = r.isClosed ? 'disabled' : '';
+      const inputDisabled = r.isClosed || r.brokerVerified ? 'disabled' : '';
 
       // Month cell with live indicator and estimation warning
       let monthCell = `${pad(r.m)}/${String(r.y).slice(-2)}`;
@@ -82,6 +82,7 @@ export function renderTable(rows, wrapElement) {
       if (r.snapshotSource === 'automatic') {
         monthCell += ' <span class="dca-auto-badge" title="Mês fechado automaticamente pelo servidor">Auto</span>';
       }
+      if (r.brokerVerified) monthCell += ' <small title="Movimentos importados; valorizações antigas por validar">CSV</small>';
       const legacyExtraBadge = r.legacyExtraUsed > 0
         ? ` <small class="dca-legacy-extra" title="Inclui ${toEUR(r.legacyExtraUsed)} registados pelo sistema antigo">+ legado</small>`
         : '';
@@ -625,13 +626,13 @@ export function updateAdvancedMetrics(metrics) {
 
   const simpleEl = document.getElementById('simple-return');
   if (simpleEl) {
-    simpleEl.textContent = `${metrics.simpleReturn.toFixed(2)}%`;
+    simpleEl.textContent = metrics.simpleReturn == null ? '—' : `${metrics.simpleReturn.toFixed(2)}%`;
     simpleEl.classList.toggle('pos', metrics.simpleReturn >= 0);
     simpleEl.classList.toggle('neg', metrics.simpleReturn < 0);
   }
-  document.getElementById('twr-value').textContent = `${metrics.timeWeightedReturn.toFixed(2)}%`;
-  document.getElementById('mwr-value').textContent = `${metrics.moneyWeightedReturn.toFixed(2)}%`;
-  document.getElementById('annualized-return').textContent = `${metrics.annualizedReturn.toFixed(2)}%`;
+  document.getElementById('twr-value').textContent = metrics.timeWeightedReturn == null ? '—' : `${metrics.timeWeightedReturn.toFixed(2)}%`;
+  document.getElementById('mwr-value').textContent = metrics.moneyWeightedReturn == null ? '—' : `${metrics.moneyWeightedReturn.toFixed(2)}%`;
+  document.getElementById('annualized-return').textContent = metrics.annualizedReturn == null ? '—' : `${metrics.annualizedReturn.toFixed(2)}%`;
 }
 
 // ---------- Rebalancing Display ----------
