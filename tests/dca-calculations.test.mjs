@@ -20,8 +20,7 @@ const coreSource = (await readFile(new URL('../js/dca-core.js', import.meta.url)
 const coreURL = moduleURL(coreSource);
 const { DEFAULTS, monthsBetween, START_YM } = await import(coreURL);
 const calculationsSource = (await readFile(new URL('../js/dca-calculations.js', import.meta.url), 'utf8'))
-  .replace('./dca-core.js', coreURL)
-  .replace('./dca-broker.js', moduleURL(await readFile(new URL('../js/dca-broker.js', import.meta.url), 'utf8')));
+  .replace('./dca-core.js', coreURL);
 const { buildModel, calculateKPIs, calculateProgress, prepareChartData } = await import(moduleURL(calculationsSource));
 
 const docs = () => monthsBetween(START_YM, { y: 2026, m: 12 })

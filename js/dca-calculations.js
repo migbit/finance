@@ -1,4 +1,3 @@
-import { applyBrokerRows, brokerXirr } from './dca-broker.js';
 // js/dca-calculations.js - Calculation logic for DCA
 
 import {
@@ -177,7 +176,7 @@ export function buildModel(docs, params, liveData = null, reinforcements = [], c
       closedAt: d.closed_at || null
     });
   }
-  return applyBrokerRows(rows, liveData?.brokerLedger);
+  return rows;
 }
 
 // ---------- KPI Calculations ----------
@@ -472,17 +471,6 @@ export function calculateAssetAllocation(rows) {
 
 // ---------- Advanced Performance Metrics ----------
 export function calculateAdvancedMetrics(rows, params, liveData = null) {
-  if (liveData?.brokerLedger) {
-    const ledger = liveData.brokerLedger;
-    const value = liveTotalValue(liveData);
-    return {
-      simpleReturn: value != null && ledger.heldCost > 0 ? (value / ledger.heldCost - 1) * 100 : null,
-      timeWeightedReturn: null, annualizedReturn: null,
-      moneyWeightedReturn: value == null ? null : brokerXirr(ledger, value, new Date().toLocaleDateString('en-CA', {timeZone:'Europe/Lisbon'})),
-      historyDays: 0
-    };
-  }
-
   if (!rows || rows.length === 0) return null;
 
   const etfRows = rows.map(row => ({ ...row, totalNow: row.etfTotalNow }));

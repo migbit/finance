@@ -1,4 +1,3 @@
-import { loadBrokerLedger, initBrokerImport } from './dca-broker-ui.js';
 // js/dca-main.js - Main initialization and event binding
 
 import {
@@ -65,7 +64,6 @@ const state = {
   reinforcements: [],
   juroMovements: [],
   closures: [],
-  brokerLedger: null,
   reinforcementOperationId: null,
   reconciliation: null,
 
@@ -195,7 +193,7 @@ function updateJuroDisplay() {
 
   // Calculate total accumulated juro from table
   const obsRoot = document.getElementById('dca-table-wrap');
-  const totalJuro = state.brokerLedger?.interest ?? somaJuroTabelaDCA(obsRoot, { excludeCurrentMonth: true });
+  const totalJuro = somaJuroTabelaDCA(obsRoot, { excludeCurrentMonth: true });
   if (acumDisplay) {
     acumDisplay.textContent = totalJuro.toLocaleString('pt-PT', {
       minimumFractionDigits: 2,
@@ -418,10 +416,6 @@ function renderJuroMovements() {
 function renderReinforcementsHistory() {
   const root = document.getElementById('reinforcements-history');
   if (!root) return;
-  if (state.brokerLedger) {
-    root.innerHTML = '<p class="muted">Histórico de compras e vendas conferido no CSV acima. Os reforços manuais anteriores foram preservados e não são somados novamente.</p>';
-    return;
-  }
   if (!state.reinforcements.length) {
     root.innerHTML = '<p class="muted">Ainda não existem reforços.</p>';
     return;
@@ -1026,7 +1020,6 @@ async function boot(skipParamUI = false) {
       loadRecentJuroMovements(),
       loadMonthlyClosures()
     ]);
-    state.brokerLedger = await loadBrokerLedger();
     renderReinforcementsHistory();
     renderJuroMovements();
 
@@ -1034,14 +1027,6 @@ async function boot(skipParamUI = false) {
 
     // NEW: Load live data
     state.liveData = await loadLiveData();
-    state.liveData.brokerLedger = state.brokerLedger;
-    if (state.brokerLedger) {
-      state.liveData.shares = {
-        vwce: state.brokerLedger.positions.IE00BK5BQT80?.shares || 0,
-        aggh: state.brokerLedger.positions.IE00BDBRDM35?.shares || 0
-      };
-      state.liveData.saldo = state.brokerLedger.balance;
-    }
     updateJuroDisplay();
 
     if (state.accessMode !== 'read') {
@@ -1100,7 +1085,7 @@ async function boot(skipParamUI = false) {
     // Calculate and update KPIs
     const kpis = calculateKPIs(rows, state.liveData);
     const obsRoot = document.getElementById('dca-table-wrap');
-    const totalInterest = state.brokerLedger?.interest ?? somaJuroTabelaDCA(obsRoot, { excludeCurrentMonth: true });
+    const totalInterest = somaJuroTabelaDCA(obsRoot, { excludeCurrentMonth: true });
     updateKPIs(kpis, totalInterest);
     updateOverview();
 
@@ -1206,7 +1191,6 @@ async function initializeDcaPage() {
   state.accessMode = access.mode;
   bindGlobalButtons();
   bindDcaFeatures();
-  initBrokerImport({ readOnly: state.accessMode === 'read', onChange: () => { window.location.reload(); } });
   await initJuroModule();
   initializeChartControls();
   await initEtfQuotes({ readOnly: state.accessMode === 'read' });

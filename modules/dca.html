@@ -112,7 +112,7 @@
               <label class="etf-qty-field">
                 <span>Quantidade</span>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                  <input type="number" step="0.0000000001" min="0" id="etf-vwce-qty" placeholder="0.0000" />
+                  <input type="number" step="0.0001" min="0" id="etf-vwce-qty" placeholder="0.0000" />
                   <button type="button" class="btn-save-qty" data-etf="vwce">Guardar</button>
                 </div>
               </label>
@@ -144,7 +144,7 @@
               <label class="etf-qty-field">
                 <span>Quantidade</span>
                 <div style="display: flex; gap: 8px; align-items: center;">
-                  <input type="number" step="0.0000000001" min="0" id="etf-aggh-qty" placeholder="0.0000" />
+                  <input type="number" step="0.0001" min="0" id="etf-aggh-qty" placeholder="0.0000" />
                   <button type="button" class="btn-save-qty" data-etf="aggh">Guardar</button>
                 </div>
               </label>
@@ -286,7 +286,7 @@
         <!-- Advanced Performance Metrics -->
         <div class="metrics-grid" style="margin-top: 1.5rem;">
           <div class="metric-item">
-            <div class="metric-label" title="Resultado não realizado dividido pelo custo das posições detidas">Rentabilidade simples</div>
+            <div class="metric-label" title="Resultado atual dividido pelo total investido">Rentabilidade simples</div>
             <div class="metric-value" id="simple-return">-</div>
           </div>
           <div class="metric-item">
@@ -294,7 +294,7 @@
             <div class="metric-value" id="twr-value">-</div>
           </div>
           <div class="metric-item">
-            <div class="metric-label" title="Com CSV: retorno anual dos ETFs com compras, vendas e encargos nas datas efetivas; exclui juros do saldo">MWR anual (XIRR)</div>
+            <div class="metric-label" title="Retorno anual considerando o montante e a data de cada contribuição">MWR anual (XIRR)</div>
             <div class="metric-value" id="mwr-value">-</div>
           </div>
           <div class="metric-item">
