@@ -1,7 +1,7 @@
 import { whenAccessResolved } from './script.js';
 import { FRANCISCA_SUBJECTS } from './francisca-calendar-core.js';
-import { QUESTIONS, TOPICS } from './francisca-estudar-data.js';
-import { grade, shuffle, selectQuestions, reinforcement, readState, recordAttempt, localDateKey, normalizeTask } from './francisca-estudar-core.js';
+import { QUESTIONS, TOPICS, TOPIC_HINTS } from './francisca-estudar-data.js';
+import { grade, shuffle, selectQuestions, reinforcement, readState, recordAttempt, localDateKey, normalizeTask, formatAnswer, parseNumber } from './francisca-estudar-core.js';
 
 const $=id=>document.getElementById(id);
 const byId=new Map(QUESTIONS.map(q=>[q.id,q]));
@@ -88,9 +88,18 @@ function answerInputs(form,q,answers=[]) {
         label.append(input,node('span','study-choice-letter',String.fromCharCode(65+j)),node('span','',option));fieldset.append(label);
       });fields.append(fieldset);
     } else {
-      const label=node('label','study-number-label');label.append(node('span','',field.label));
-      const wrap=node('span','study-input-wrap');const input=node('input');input.name=`answer-${i}`;input.type='text';input.inputMode='decimal';input.autocomplete='off';input.value=answers[i]??'';input.setAttribute('aria-label',`${field.label}${field.suffix?' em '+field.suffix:''}`);
-      wrap.append(input);if(field.suffix)wrap.append(node('span','',field.suffix));label.append(wrap);fields.append(label);
+      const group=node('div','study-number-label');const label=node('label','',field.label);const inputId=`study-answer-${i}`;label.htmlFor=inputId;group.append(label);
+      const supportsPower=field.type==='power';
+      const wrap=node('span','study-input-wrap');const input=node('input');input.id=inputId;input.name=`answer-${i}`;input.type='text';input.inputMode=supportsPower?'text':'decimal';input.autocomplete='off';input.value=answers[i]??'';input.setAttribute('aria-label',`${field.label}${field.suffix?' em '+field.suffix:''}`);
+      wrap.append(input);if(field.suffix)wrap.append(node('span','',field.suffix));
+      if(supportsPower) {
+        const insert=button('xʸ',()=>{
+          if(input.disabled)return;
+          input.setRangeText('^',input.selectionStart??input.value.length,input.selectionEnd??input.value.length,'end');input.focus();input.dispatchEvent(new Event('input',{bubbles:true}));
+        });insert.className='study-insert-power';insert.setAttribute('aria-label',`Inserir expoente em ${field.label}`);insert.title='Inserir ^ entre a base e o expoente';wrap.append(insert);
+        const hint=node('small','study-muted','Escreve a potência completa: 2^3 ou 2³.');hint.id=`study-answer-hint-${i}`;input.setAttribute('aria-describedby',hint.id);group.append(wrap,hint);
+      } else group.append(wrap);
+      fields.append(group);
     }
   });form.append(fields);
 }
@@ -113,6 +122,15 @@ function renderSession() {
   if(q.chart)pane.append(chartNode(q.chart));
   if(q.table)pane.append(tableNode(q.table));
   if(q.build)pane.append(buildChart(q,s.answers[s.index]));
+  if(!test&&!s.feedback) {
+    const hint=node('div','study-hint');
+    const revealed=Boolean(s.hints?.[s.index]);
+    const hintText=node('p','',TOPIC_HINTS[q.topic]);hintText.hidden=!revealed;hintText.id='study-hint-text';hintText.setAttribute('role','status');
+    const reveal=button(revealed?'Pista aberta':'Preciso de uma pista',()=>{
+      s.hints??={};s.hints[s.index]=true;save();hintText.hidden=false;reveal.disabled=true;reveal.textContent='Pista aberta';reveal.setAttribute('aria-expanded','true');
+    });reveal.disabled=revealed;reveal.setAttribute('aria-expanded',String(revealed));reveal.setAttribute('aria-controls',hintText.id);
+    hint.append(reveal,node('small','study-muted','Com pista, o acerto conta como feito com ajuda.'),hintText);pane.append(hint);
+  }
   const scratch=node('details','study-scratch');scratch.append(node('summary','','O meu raciocínio (rascunho)'));
   const scratchLabel=node('label','','Escreve os passos ou faz as contas no papel. Este rascunho não recebe nota.');const area=node('textarea');area.rows=3;area.value=s.notes?.[s.index]||'';area.maxLength=2000;area.addEventListener('input',()=>{s.notes??={};s.notes[s.index]=area.value;save();});scratchLabel.append(area);scratch.append(scratchLabel);pane.append(scratch);
   const form=node('form');form.id='study-answer-form';answerInputs(form,q,s.answers[s.index]);
@@ -129,7 +147,7 @@ function renderSession() {
   form.append(controls);form.addEventListener('submit',event=>{event.preventDefault();if(!test&&!s.feedback)checkAnswer(form,q);});pane.append(form);
   let feedbackTitle=null;
   if(s.feedback) {
-    form.querySelectorAll('input').forEach(n=>n.disabled=true);
+    form.querySelectorAll('input,.study-insert-power').forEach(n=>n.disabled=true);
     const feedback=feedbackNode(q,s.feedback);feedbackTitle=feedback.querySelector('h4');pane.append(feedback);
     pane.append(button(s.feedback.correct?'Continuar':s.mode==='game'?'Já li · tentar um novo desafio':'Já li a explicação · continuar',advance,true));
   }
@@ -138,10 +156,11 @@ function renderSession() {
 
 function checkAnswer(form,q) {
   const s=state.active;const answers=values(form,q);const result=grade(q,answers);
-  if(!result.valid) { $('answer-message').textContent='Preenche todas as respostas. Nos números, usa apenas o valor (podes usar vírgula decimal).';return; }
-  const assisted=Boolean(s.queue[s.index].repair);
+  if(!result.valid) { $('answer-message').textContent=answerError(q);return; }
+  const repair=Boolean(s.queue[s.index].repair),hinted=Boolean(s.hints?.[s.index]);
+  const assisted=repair||hinted;
   s.answers[s.index]=answers;s.feedback={correct:result.correct,parts:result.parts};
-  s.attempts.push({id:q.id,answers,correct:result.correct,assisted});
+  s.attempts.push({id:q.id,answers,correct:result.correct,assisted,repair,hinted});
   state.progress=recordAttempt(state.progress,q.id,result.correct,assisted);
   if(s.mode==='game'&&result.correct)s.keys=(s.keys||0)+1;
   save();renderSession();
@@ -161,7 +180,7 @@ function advance() {
 }
 function confirmTest() {
   const s=state.active;const missing=s.queue.findIndex((item,i)=>!grade(byId.get(item.id),s.answers[i]).valid);
-  if(missing>=0) {s.index=missing;save();renderSession();$('answer-message').textContent='Falta completar esta pergunta antes de entregar o teste.';return;}
+  if(missing>=0) {s.index=missing;save();renderSession();$('answer-message').textContent=answerError(currentQuestion());return;}
   const pane=$('study-session');pane.replaceChildren();
   const title=node('h2','','Entregar o teste?');title.id='session-title';pane.append(title,node('p','','Respondeste às 12 perguntas. Depois de entregar, vais ver a classificação e a resolução de cada exercício.'),button('Voltar e rever respostas',renderSession),button('Entregar e ver correção',()=>{
     s.attempts=s.queue.map((item,i)=>{
@@ -170,22 +189,25 @@ function confirmTest() {
   },true));focusHeading(title);
 }
 function finishSession() {
-  const s=state.active;const first=s.attempts.filter(a=>!a.assisted);const correct=first.filter(a=>a.correct).length;
+  const s=state.active;const first=s.attempts.filter(a=>a.repair===false||!a.assisted);const correct=first.filter(a=>a.correct&&!a.assisted).length;
   const report={date:Date.now(),mode:s.mode,correct,total:first.length,attempts:s.attempts,minutes:Math.max(1,Math.round((Date.now()-s.startedAt)/60000))};
   state.history.unshift(report);state.history=state.history.slice(0,20);state.active=null;save();showReport(report);
 }
 function showReport(report) {
   openSession();const pane=$('study-session');pane.replaceChildren();
   const title=node('h2','',report.mode==='game'?'Missão cumprida!':'Sessão terminada');title.id='session-title';
-  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','study-result',`${report.correct} / ${report.total} à primeira${report.mode==='test'?` · ${Math.round(report.correct/report.total*100)}%`:''}`));
+  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','study-result',`${report.correct} / ${report.total} sem ajuda${report.mode==='test'?` · ${Math.round(report.correct/report.total*100)}%`:''}`));
   pane.append(node('p','',report.mode==='test'?'Cada pergunta vale o mesmo. Confere os passos abaixo, mesmo nas que acertaste.':'Os acertos depois de uma explicação ficam separados dos acertos sem ajuda. Continua a praticar os temas que ainda precisam de atenção.'));
+  const helped=report.attempts.filter(a=>a.correct&&a.assisted).length;
+  if(helped)pane.append(node('p','study-recommendation',`Conseguiste resolver ${helped} ${helped===1?'desafio':'desafios'} com ajuda. Já deste um passo! Noutro dia, volta a tentar sem a pista nem a explicação.`));
+  pane.append(node('p','study-muted','Antes de terminar, escolhe uma pergunta e explica em voz alta como chegaste à resposta. Volta a praticar noutro dia.'));
   const failedTopics=[...new Set(report.attempts.filter(a=>!a.correct).map(a=>byId.get(a.id)?.topic))].filter(Boolean);
   if(failedTopics.length)pane.append(node('p','study-recommendation','Na próxima sessão: '+failedTopics.map(id=>TOPICS.find(t=>t.id===id).title).join(' · ')));
   const controls=node('div','study-controls');controls.append(button('Voltar ao estudo',home,true));if(failedTopics.length)controls.append(button('Praticar dificuldades',()=>requestStart('review','all')));pane.append(controls);
   report.attempts.forEach((a,i)=>{
     const q=byId.get(a.id);if(!q)return;
     const details=node('details','study-correction');details.open=!a.correct;
-    details.append(node('summary','',`${i+1}. ${a.correct?'Certo':'A rever'}${a.assisted?' · após explicação':''} · ${TOPICS.find(t=>t.id===q.topic).title}`),node('h3','',q.prompt));
+    details.append(node('summary','',`${i+1}. ${a.correct?'Certo':'A rever'}${a.hinted?' · com pista':a.assisted?' · após explicação':''} · ${TOPICS.find(t=>t.id===q.topic).title}`),node('h3','',q.prompt));
     if(q.chart)details.append(chartNode(q.chart));if(q.table)details.append(tableNode(q.table));
     details.append(node('p','',`Respondeste: ${(a.answers||[]).join(' · ')}`),feedbackNode(q,grade(q,a.answers)));pane.append(details);
   });focusHeading(title);
@@ -194,9 +216,9 @@ function showReport(report) {
 function feedbackNode(q,result) {
   const panel=node('div',`study-feedback ${result.correct?'is-correct':'is-wrong'}`);panel.setAttribute('role','status');
   panel.append(node('h4','',result.correct?'Certo! Confirma o raciocínio.':'Ainda não. Vamos por partes.'));
-  const answers=q.fields.map(f=>`${f.label||'Resposta'}: ${f.answer}${f.suffix?' '+f.suffix:''}`);
+  const answers=q.fields.map(f=>`${f.label||'Resposta'}: ${formatAnswer(f)}${f.suffix?' '+f.suffix:''}`);
   panel.append(node('p','study-solution',answers.join(' · ')));
-  if(result.parts?.length>1)panel.append(node('p','',result.parts.map((p,i)=>`${q.fields[i].label}: ${p.correct?'certo':'a rever'}`).join(' · ')));
+  if(result.parts?.length>1)panel.append(node('p','',result.parts.map((p,i)=>`${q.fields[i].label||'Escolha'}: ${p.correct?'certo':'a rever'}`).join(' · ')));
   const steps=node('ol');q.steps.forEach(step=>steps.append(node('li','',step)));panel.append(steps);return panel;
 }
 
@@ -227,6 +249,7 @@ function chartNode(chart) {
     const cell=550/chart.labels.length;
     chart.values.forEach((v,i)=>{const hist=chart.type==='histogram';const grouped=Boolean(chart.second);const width=hist?cell:cell*(grouped?.3:.55);const x=55+i*cell+(hist?0:cell*.2);svg.append(svgNode('rect',{x,y:232-v/max*190,width,height:v/max*190,fill:grouped?colors[0]:colors[i%4],stroke:hist?'#182231':'none','stroke-width':2}),svgNode('text',{x:55+(i+.5)*cell,y:256,'text-anchor':'middle',fill:'currentColor','font-size':13},chart.labels[i]));if(grouped)svg.append(svgNode('rect',{x:x+width+3,y:232-chart.second[i]/max*190,width,height:chart.second[i]/max*190,fill:colors[1]}));});
     if(chart.second)chart.series.forEach((name,i)=>svg.append(svgNode('rect',{x:300+i*140,y:6,width:12,height:12,fill:colors[i]}),svgNode('text',{x:319+i*140,y:17,fill:'currentColor','font-size':13},name)));
+    if(chart.axisLabel)svg.append(svgNode('text',{x:335,y:282,'text-anchor':'middle',fill:'currentColor','font-size':14},chart.axisLabel));
   }
   figure.append(svg);
   const details=node('details');details.append(node('summary','','Ver os dados em tabela'),tableNode({headers:chart.second?['Categoria',...chart.series.map(s=>`${s} (${chart.unit})`)]:['Categoria / classe',chart.unit],rows:chart.labels.map((l,i)=>chart.second?[l,chart.values[i],chart.second[i]]:[l,chart.values[i]])}));figure.append(details);return figure;
@@ -239,11 +262,18 @@ function buildChart(q,answers=[]) {
   for(let value=0;value<=q.build.max;value+=step){const tick=node('span','',String(value));tick.style.top=`${155*(1-value/q.build.max)}px`;axis.append(tick);}
   const grid=node('div','study-build');grid.id='study-build';
   q.build.labels.forEach((label,i)=>{const col=node('div');const rail=node('div','study-build-rail');const pixels=155*step/q.build.max;rail.style.background=`repeating-linear-gradient(to top,transparent,transparent ${pixels-1}px,#394b6340 ${pixels-1}px,#394b6340 ${pixels}px)`;const fill=node('div','study-build-fill');fill.dataset.bar=i;rail.append(fill);col.append(rail,node('span','',label));grid.append(col);});
-  frame.append(axis,grid);wrap.append(frame,node('p','study-muted',`Escala vertical: 0 a ${q.build.max} ${q.build.unit}. As barras mostram os valores que escreves; são corrigidas quando verificares.`));
+  frame.append(axis,grid);wrap.append(frame,node('p','study-muted',`${q.build.axisLabel?`Eixo horizontal: ${q.build.axisLabel}. `:''}Escala vertical: 0 a ${q.build.max} ${q.build.unit}. As barras mostram os valores que escreves; são corrigidas quando verificares.`));
   queueMicrotask(()=>updateBuild(q,answers));return wrap;
 }
 function updateBuild(q,answers=[]) {
-  $('study-build')?.querySelectorAll('[data-bar]').forEach((n,i)=>{const v=Number(String(answers[i]||0).replace(',','.').replace('%',''));n.style.height=`${Math.min(100,Math.max(0,Number.isFinite(v)?v/q.build.max*100:0))}%`;n.title=`${q.build.labels[i]}: ${answers[i]||0} ${q.build.unit}`;});
+  $('study-build')?.querySelectorAll('[data-bar]').forEach((n,i)=>{const v=parseNumber(answers[i],q.fields[i].suffix)??0;n.style.height=`${Math.min(100,Math.max(0,v/q.build.max*100))}%`;n.title=`${q.build.labels[i]}: ${answers[i]||0} ${q.build.unit}`;});
+}
+
+function answerError(q) {
+  if(q.fields.some(f=>f.options))return q.fields.every(f=>f.options)?'Escolhe uma resposta antes de verificar.':'Escolhe uma opção e completa o resultado numérico. Podes usar vírgula decimal.';
+  return q.fields.some(f=>f.type==='power')
+    ? 'Completa todas as respostas. No campo da potência, escreve a base e o expoente: por exemplo, 2^3 ou 2³.'
+    : 'Completa todas as respostas com o resultado numérico. Podes usar vírgula decimal.';
 }
 
 function renderPlan() {
@@ -263,7 +293,7 @@ function renderHistory() {
   if(!state.history.length){$('study-history').append(node('p','study-muted','A tua primeira sessão começa aqui. Não precisas de acertar em tudo para aprender.'));return;}
   state.history.slice(0,8).forEach(report=>{
     const card=node('div','study-history-row');const date=new Intl.DateTimeFormat('pt-PT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Lisbon'}).format(new Date(report.date));
-    card.append(node('span','',`${date} · ${studyLabel} · ${modeNames[report.mode]||'Sessão'}`),node('strong','',`${report.correct}/${report.total} à primeira`),button('Ver correção',()=>showReport(report)));$('study-history').append(card);
+    card.append(node('span','',`${date} · ${studyLabel} · ${modeNames[report.mode]||'Sessão'}`),node('strong','',`${report.correct}/${report.total} sem ajuda`),button('Ver correção',()=>showReport(report)));$('study-history').append(card);
   });
 }
 

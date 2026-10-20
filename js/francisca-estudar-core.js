@@ -9,10 +9,36 @@ export function parseNumber(raw, suffix = '') {
   return Number.isFinite(value) ? value : null;
 }
 
+// Apenas uma potência literal; nunca executar código nem expressões arbitrárias.
+export function parsePower(raw) {
+  const text=String(raw ?? '').trim();
+  const decimal='(?:\\d+(?:[.,]\\d+)?|[.,]\\d+)';
+  let match=text.match(new RegExp(`^(${decimal})\\s*(?:\\^|\\*\\*)\\s*(\\d+)$`));
+  if(!match) {
+    const superscript=text.match(new RegExp(`^(${decimal})\\s*([⁰¹²³⁴⁵⁶⁷⁸⁹]+)$`));
+    if(superscript)match=[superscript[0],superscript[1],[...superscript[2]].map(d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'.indexOf(d)).join('')];
+  }
+  if(!match)return null;
+  const base=parseNumber(match[1]), exponent=Number(match[2]);
+  if(base===null || !Number.isSafeInteger(exponent) || exponent>1000 || (base===0&&exponent===0))return null;
+  const value=base**exponent;
+  return Number.isFinite(value)&&!(base>0&&value===0)?{base,exponent,value}:null;
+}
+
+export function formatAnswer(field) {
+  return field.type==='power'
+    ? `${field.base}${String(field.exponent).replace(/\d/g,d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[Number(d)])}`
+    : String(field.answer).replace('.',',');
+}
+
 export function grade(question, answers) {
   if(!Array.isArray(answers) || answers.length !== question.fields.length) return { valid:false, correct:false, parts:[] };
   const parts=question.fields.map((field,i)=>{
     if(field.options) return { valid:field.options.includes(answers[i]), correct:answers[i] === field.answer };
+    if(field.type==='power') {
+      const power=parsePower(answers[i]);
+      return { valid:power!==null, correct:power!==null&&power.base===field.base&&power.exponent===field.exponent };
+    }
     const value=parseNumber(answers[i],field.suffix);
     return { valid:value !== null, correct:value !== null && Math.abs(value-field.answer)<1e-9 };
   });
@@ -26,7 +52,11 @@ export function shuffle(items, random = Math.random) {
 }
 
 export function selectQuestions(mode, topic='all', progress={}, random=Math.random) {
-  if(mode==='test') return shuffle(TOPICS.flatMap(t=>shuffle(QUESTIONS.filter(q=>q.topic===t.id),random).slice(0,2)),random);
+  if(mode==='test') return shuffle(TOPICS.flatMap(t=>{
+    const pool=shuffle(QUESTIONS.filter(q=>q.topic===t.id),random);
+    // Dois tipos de tarefa por tema: evitar um teste só de cálculos repetidos.
+    return [pool[0],pool.find(q=>q.skill!==pool[0].skill)||pool[1]];
+  }),random);
   let pool=QUESTIONS.filter(q=>topic==='all'||q.topic===topic);
   if(mode==='review') pool=pool.filter(q=>progress[q.id]?.lastCorrect===false);
   const ranked=shuffle(pool,random).sort((a,b)=>Number(progress[a.id]?.lastCorrect===true)-Number(progress[b.id]?.lastCorrect===true));
@@ -44,7 +74,7 @@ export function reinforcement(question, usedIds=[], random=Math.random) {
   return shuffle(sameSkill.length?sameSkill:alternatives,random)[0] || question;
 }
 
-export function emptyState() { return { version:1, progress:{}, history:[], plan:[], active:null }; }
+export function emptyState() { return { version:1, answerFormat:2, progress:{}, history:[], plan:[], active:null }; }
 export function readState(raw) {
   try {
     const data=JSON.parse(raw);
@@ -52,8 +82,21 @@ export function readState(raw) {
     const ids=new Set(QUESTIONS.map(q=>q.id));
     const progress=Object.fromEntries(Object.entries(data.progress).filter(([id,v])=>ids.has(id)&&v&&typeof v==='object'));
     const active=data.active;
+    // A versão anterior guardava só o expoente nestes quatro campos.
+    // Converter uma única vez, preservando testes em curso e correções antigas.
+    if(data.answerFormat!==2) {
+      const migrate=(id,answers)=>{
+        const question=QUESTIONS.find(q=>q.id===id);
+        if(!question||!Array.isArray(answers))return;
+        question.fields.forEach((field,i)=>{
+          if(field.type==='power'&&/^\d+$/.test(String(answers[i]??'')))answers[i]=`${field.base}^${answers[i]}`;
+        });
+      };
+      if(Array.isArray(active?.queue))active.queue.forEach((item,i)=>migrate(item?.id,active.answers?.[i]));
+      for(const session of [active,...data.history])if(Array.isArray(session?.attempts))session.attempts.forEach(a=>migrate(a?.id,a?.answers));
+    }
     const validActive=active && ['train','game','test','review'].includes(active.mode) && Array.isArray(active.queue) && active.queue.length>0 && active.queue.length<1000 && active.queue.every(item=>item&&ids.has(item.id)) && Number.isInteger(active.index) && active.index>=0 && active.index<active.queue.length && active.answers && typeof active.answers==='object' && Array.isArray(active.attempts) && Number.isFinite(active.startedAt) && Number.isFinite(active.goal);
-    return { version:1, progress, history:data.history.filter(h=>h&&typeof h==='object'&&Number.isFinite(h.date)).slice(0,20), plan:data.plan.filter(p=>p&&typeof p.id==='string'&&typeof p.task==='string'&&typeof p.subject==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(p.date)&&Number.isFinite(p.minutes)), active:validActive?active:null };
+    return { version:1, answerFormat:2, progress, history:data.history.filter(h=>h&&typeof h==='object'&&Number.isFinite(h.date)).slice(0,20), plan:data.plan.filter(p=>p&&typeof p.id==='string'&&typeof p.task==='string'&&typeof p.subject==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(p.date)&&Number.isFinite(p.minutes)), active:validActive?active:null };
   } catch { return emptyState(); }
 }
 

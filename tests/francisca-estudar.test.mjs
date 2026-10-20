@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { QUESTIONS,TOPICS } from '../js/francisca-estudar-data.js';
-import { parseNumber,grade,selectQuestions,reinforcement,recordAttempt,readState,emptyState,localDateKey,normalizeTask } from '../js/francisca-estudar-core.js';
+import { parseNumber,parsePower,formatAnswer,grade,selectQuestions,reinforcement,recordAttempt,readState,emptyState,localDateKey,normalizeTask } from '../js/francisca-estudar-core.js';
 import { FRANCISCA_SUBJECTS } from '../js/francisca-calendar-core.js';
 import { getModuleAccess,filterNavigation,FRANCISCA_UID,FILIPA_UID,LEONOR_UID } from '../js/access-control.js';
 
@@ -9,7 +9,7 @@ test('cada teste cobre os seis temas, sem repetir perguntas; todos os temas têm
   assert.equal(new Set(QUESTIONS.map(q=>q.id)).size,QUESTIONS.length);
   for(let i=0;i<100;i++) {
     const exam=selectQuestions('test');assert.equal(exam.length,12);assert.equal(new Set(exam.map(q=>q.id)).size,12);
-    for(const topic of TOPICS) {assert.equal(exam.filter(q=>q.topic===topic.id).length,2);assert.ok(QUESTIONS.filter(q=>q.topic===topic.id).length>=8);}
+    for(const topic of TOPICS) {assert.equal(exam.filter(q=>q.topic===topic.id).length,2);assert.equal(new Set(exam.filter(q=>q.topic===topic.id).map(q=>q.skill)).size,2);assert.ok(QUESTIONS.filter(q=>q.topic===topic.id).length>=8);}
     assert.equal(new Set(selectQuestions('train').map(q=>q.topic)).size,6);
   }
 });
@@ -31,10 +31,54 @@ test('resultados revistos independentemente: potências, prioridade e contexto',
   assert.equal(grade(lookup('perímetro'),['32']).correct,true);
   assert.equal(grade(lookup('Pontos')||lookup('Num jogo'),['38','35']).correct,true);
   assert.equal(grade(lookup('Cada mesa leva 3'),['27']).correct,true);
-  assert.equal(grade(lookup('3² + (5 − 2)² + 7'),['25','2']).correct,true);
-  assert.equal(grade(lookup('18 − 2³ − 1'),['9','2']).correct,true);
-  assert.equal(grade(lookup('2² × (3² − 5)'),['16','4']).correct,true);
+  assert.equal(grade(lookup('3² + (5 − 2)² + 7'),['25','5^2']).correct,true);
+  assert.equal(grade(lookup('18 − 2³ − 1'),['9','3²']).correct,true);
+  assert.equal(grade(lookup('2² × (3² − 5)'),['16','2⁴']).correct,true);
   assert.equal(grade(lookup('quantos alunos de cada turma')||lookup('O gráfico usa percentagens'),['10','9']).correct,true);
+});
+
+test('potências podem ser escritas com ^, ** ou expoentes elevados, sem executar expressões',()=>{
+  for(const text of ['2^3','2 ** 3','2³',' 2 ^ 3 '])assert.deepEqual(parsePower(text),{base:2,exponent:3,value:8});
+  assert.deepEqual(parsePower('0,5²'),{base:.5,exponent:2,value:.25});
+  assert.equal(parsePower('2¹⁰').value,1024);
+  for(const text of ['','2','2^','^3','2^3+1','2^(1+2)','Math.pow(2,3)','2^3^2','2^-3','2^1.5','2^9999','0^0','<script>','2e3^2'])assert.equal(parsePower(text),null,text);
+  // «Calcula» exige efetuar a conta: copiar a potência do enunciado não basta.
+  assert.equal(grade(QUESTIONS.find(q=>q.id==='powers-1'),['3⁴']).valid,false);
+  assert.equal(grade(QUESTIONS.find(q=>q.id==='powers-1'),['81']).correct,true);
+});
+
+test('auditoria das 80 perguntas: todas aceitam a resposta prevista e as seis que pedem potência aceitam a forma completa',()=>{
+  assert.equal(QUESTIONS.length,80);
+  for(const q of QUESTIONS)assert.equal(grade(q,q.fields.map(f=>String(f.answer))).correct,true,q.id);
+  const powerQuestions=QUESTIONS.filter(q=>q.fields.some(f=>f.type==='power'));
+  assert.equal(powerQuestions.length,6);
+  for(const q of powerQuestions) {
+    const canonical=q.fields.map(f=>String(f.answer));
+    const superscripts=q.fields.map(formatAnswer);
+    assert.equal(grade(q,canonical).correct,true,q.id);
+    assert.equal(grade(q,superscripts).correct,true,q.id);
+    const i=q.fields.findIndex(f=>f.type==='power');
+    const incomplete=[...canonical];incomplete[i]=String(q.fields[i].exponent);
+    assert.equal(grade(q,incomplete).valid,false,q.id);
+    const wrongBase=[...canonical];wrongBase[i]=`${q.fields[i].base+1}^${q.fields[i].exponent}`;
+    assert.equal(grade(q,wrongBase).valid,true,q.id);
+    assert.equal(grade(q,wrongBase).correct,false,q.id);
+  }
+});
+
+test('sessões antigas conservam as respostas quando o campo passa de expoente para potência',()=>{
+  const q=QUESTIONS.find(q=>q.skill==='power-result');
+  const state=emptyState();delete state.answerFormat;
+  state.active={mode:'test',queue:[{id:q.id}],index:0,answers:{0:['25','2']},attempts:[],startedAt:1,goal:1};
+  state.history=[{date:1,attempts:[{id:q.id,answers:['25','2'],correct:true}]}];
+  const migrated=readState(JSON.stringify(state));
+  assert.deepEqual(migrated.active.answers[0],['25','5^2']);
+  assert.deepEqual(migrated.history[0].attempts[0].answers,['25','5^2']);
+  assert.equal(migrated.answerFormat,2);
+  migrated.active.answers[0][1]='2';
+  const current=readState(JSON.stringify(migrated));
+  assert.equal(current.active.answers[0][1],'2');
+  assert.equal(grade(q,current.active.answers[0]).valid,false);
 });
 test('classes e histogramas respeitam os limites e os totais',()=>{
   const leaves=QUESTIONS.filter(q=>q.topic==='classes'&&q.skill==='count');
