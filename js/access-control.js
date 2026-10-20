@@ -26,7 +26,8 @@ const FAMILY_FINANCE_MODULES = new Set([
 
 const FAMILY_SHARED_MODULES = new Set([
   'francisca-calendario',
-  'francisca-horario'
+  'francisca-horario',
+  'francisca-estudar'
 ]);
 
 const CHILD_PROFILE_BY_UID = new Map([

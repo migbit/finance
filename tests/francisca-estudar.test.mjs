@@ -1,0 +1,74 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { QUESTIONS,TOPICS } from '../js/francisca-estudar-data.js';
+import { parseNumber,grade,selectQuestions,reinforcement,recordAttempt,readState,emptyState,localDateKey,normalizeTask } from '../js/francisca-estudar-core.js';
+import { FRANCISCA_SUBJECTS } from '../js/francisca-calendar-core.js';
+import { getModuleAccess,filterNavigation,FRANCISCA_UID,FILIPA_UID,LEONOR_UID } from '../js/access-control.js';
+
+test('cada teste cobre os seis temas, sem repetir perguntas; todos os temas têm material de treino',()=>{
+  assert.equal(new Set(QUESTIONS.map(q=>q.id)).size,QUESTIONS.length);
+  for(let i=0;i<100;i++) {
+    const exam=selectQuestions('test');assert.equal(exam.length,12);assert.equal(new Set(exam.map(q=>q.id)).size,12);
+    for(const topic of TOPICS) {assert.equal(exam.filter(q=>q.topic===topic.id).length,2);assert.ok(QUESTIONS.filter(q=>q.topic===topic.id).length>=8);}
+    assert.equal(new Set(selectQuestions('train').map(q=>q.topic)).size,6);
+  }
+});
+test('a validação aceita vírgula e percentagem, recusa campos vazios, texto parcial e expressões',()=>{
+  assert.equal(parseNumber(' 12,5 '),12.5);assert.equal(parseNumber('28 %','%'),28);
+  for(const text of ['', '   ','2+3','28 alunos','28%','Infinity','12,4.5','0x10']) assert.equal(parseNumber(text),null);
+  const q=QUESTIONS.find(q=>q.id==='classes-8');
+  assert.equal(grade(q,['24','40','36']).correct,true);
+  assert.equal(grade(q,['24','40','35']).correct,false);
+  assert.equal(grade(q,['24','40','']).valid,false);
+  assert.equal(grade(q,['24']).valid,false);
+});
+test('resultados revistos independentemente: potências, prioridade e contexto',()=>{
+  const lookup=prompt=>QUESTIONS.find(q=>q.prompt.includes(prompt));
+  assert.equal(grade(lookup('Calcula 3⁴'),['81']).correct,true);
+  assert.equal(grade(lookup('Calcula 3⁴'),['12']).correct,false);
+  assert.equal(grade(lookup('18 ÷ 3 × 2'),['12']).correct,true);
+  assert.equal(grade(lookup('20 − 6 + 2'),['16']).correct,true);
+  assert.equal(grade(lookup('perímetro'),['32']).correct,true);
+  assert.equal(grade(lookup('Pontos')||lookup('Num jogo'),['38','35']).correct,true);
+  assert.equal(grade(lookup('Cada mesa leva 3'),['27']).correct,true);
+  assert.equal(grade(lookup('3² + (5 − 2)² + 7'),['25','2']).correct,true);
+  assert.equal(grade(lookup('18 − 2³ − 1'),['9','2']).correct,true);
+  assert.equal(grade(lookup('2² × (3² − 5)'),['16','4']).correct,true);
+  assert.equal(grade(lookup('quantos alunos de cada turma')||lookup('O gráfico usa percentagens'),['10','9']).correct,true);
+});
+test('classes e histogramas respeitam os limites e os totais',()=>{
+  const leaves=QUESTIONS.filter(q=>q.topic==='classes'&&q.skill==='count');
+  assert.deepEqual(leaves.map(q=>q.fields[0].answer),[3,4,5,5]);
+  const builds=QUESTIONS.filter(q=>q.build);
+  assert.deepEqual(builds[0].fields.map(f=>f.answer),[2,4,3,1]);
+  assert.deepEqual(builds[2].fields.map(f=>f.answer),[3,3,4]);
+  for(const q of builds)assert.equal(q.fields.reduce((sum,f)=>sum+f.answer,0),q.build.unit==='%'?100:10);
+  const boundary=QUESTIONS.find(q=>q.skill==='boundary');assert.equal(grade(boundary,['140 a < 150']).correct,true);
+});
+test('a recuperação propõe outra pergunta; a revisão limita-se às dificuldades',()=>{
+  const q=QUESTIONS[0];const next=reinforcement(q,[q.id]);assert.notEqual(next.id,q.id);assert.equal(next.skill,q.skill);
+  const progress={[q.id]:{lastCorrect:false},[QUESTIONS[1].id]:{lastCorrect:true}};
+  assert.deepEqual(selectQuestions('review','all',progress).map(q=>q.id),[q.id]);
+  assert.equal(selectQuestions('review','all',{}).length,0);
+});
+test('acertar após ajuda não aumenta os acertos independentes',()=>{
+  let progress=recordAttempt({},'powers-1',false);
+  progress=recordAttempt(progress,'powers-1',true,true);
+  assert.equal(progress['powers-1'].attempts,2);assert.equal(progress['powers-1'].independent,0);
+  progress=recordAttempt(progress,'powers-1',true,false);assert.equal(progress['powers-1'].independent,1);
+});
+test('estado danificado e sessões antigas inválidas não bloqueiam a página',()=>{
+  for(const raw of ['broken','null','{}','{"version":1,"progress":[],"plan":[],"history":[]}'])assert.deepEqual(readState(raw),emptyState());
+  const state=emptyState();state.active={mode:'test',queue:[{id:'missing'}],index:0};assert.equal(readState(JSON.stringify(state)).active,null);
+  state.plan=[{id:'x',subject:'Matemática',task:'Rever',date:'2026-10-20',minutes:15,done:false}];assert.equal(readState(JSON.stringify(state)).plan[0].task,'Rever');
+});
+test('plano valida datas reais e durações; o dia usa Lisboa na mudança de UTC',()=>{
+  assert.equal(localDateKey(new Date('2026-10-20T23:30:00Z')),'2026-10-21');
+  const task=normalizeTask('Matemática','2026-10-21',' Potências ',15,FRANCISCA_SUBJECTS);assert.equal(task.task,'Potências');
+  for(const [date,minutes] of [['2026-02-30',15],['2026-10-21',0],['2026-10-21',12]])assert.throws(()=>normalizeTask('Matemática',date,'Rever',minutes,FRANCISCA_SUBJECTS));
+});
+test('Estudar integra os acessos da família e exige sessão iniciada',()=>{
+  const groups=[{key:'francisca',links:[{key:'francisca-estudar'}]}];
+  for(const uid of [FRANCISCA_UID,FILIPA_UID,LEONOR_UID,'parent']) {assert.equal(getModuleAccess(uid,'francisca-estudar','francisca'),'write');assert.equal(filterNavigation(groups,uid)[0].links[0].key,'francisca-estudar');}
+  assert.equal(getModuleAccess(null,'francisca-estudar','francisca'),'none');
+});

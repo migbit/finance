@@ -1,6 +1,6 @@
 /* A APP – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v78`;
+const CACHE = `${CACHE_PREFIX}v80`;
 
 const CORE = [
   './',
@@ -35,6 +35,9 @@ const CORE = [
   './js/francisca-calendar.js',
   './js/francisca-horario.js',
   './js/francisca-horario-data.js',
+  './js/francisca-estudar.js',
+  './js/francisca-estudar-core.js',
+  './js/francisca-estudar-data.js',
   './modules/ginasio.html',
   './modules/alimentacao.html',
   './modules/filipa-ginasio.html',
@@ -44,11 +47,13 @@ const CORE = [
   './modules/gestao-financas.html',
   './modules/francisca-calendario.html',
   './modules/francisca-horario.html',
+  './modules/francisca-estudar.html',
   './css/alimentacao.css',
   './css/financas.css',
   './css/gestao-financas.css',
   './css/francisca-calendar.css',
   './css/francisca-horario.css',
+  './css/francisca-estudar.css',
   './manifest.json',
   './icons/icon-192-v2.png',
   './icons/icon-512-v2.png'

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#101722">
+  <title>Estudar · Francisca · 6.º ano</title>
+  <link rel="stylesheet" href="../css/styles.pcolor.css">
+  <link rel="stylesheet" href="../css/mobile.css">
+  <link rel="stylesheet" href="../css/theme-dark.css" media="screen">
+  <link rel="stylesheet" href="../css/francisca-estudar.css">
+  <link rel="icon" href="../favicon.ico" sizes="any">
+  <link rel="manifest" href="../manifest.json">
+</head>
+<body data-page="francisca-estudar" data-child="francisca" data-theme="dark">
+  <a class="study-skip" href="#study-content">Saltar para o estudo</a>
+  <main id="study-content" class="study-page" aria-busy="true">
+    <header class="study-hero">
+      <div><p class="study-eyebrow">FRANCISCA / 6.º ANO</p><h1>Estudar<span>.</span></h1><p>Um pouco de cada vez. Até conseguires sozinha.</p></div>
+      <div class="study-hero-symbol" aria-hidden="true">a<sup>2</sup><span>+</span>b<sup>2</sup></div>
+    </header>
+    <p id="study-storage" class="study-muted">O progresso e o plano ficam guardados neste navegador, na tua conta. Não são sincronizados entre dispositivos.</p>
+    <div id="study-dashboard">
+      <section class="study-section" aria-labelledby="subjects-title">
+        <div class="study-heading"><h2 id="subjects-title">As tuas disciplinas</h2><a href="francisca-calendario.html">Ver calendário de testes ↗</a></div>
+        <div id="study-subjects" class="study-subjects"></div>
+        <p id="study-subject-note" class="study-muted" role="status"></p>
+      </section>
+      <section id="study-maths" class="study-section" aria-labelledby="maths-title">
+        <div class="study-heading"><h2 id="maths-title">Matemática</h2></div>
+        <section class="study-test" aria-labelledby="study-test-title">
+        <div class="study-heading"><h3 id="study-test-title">1.º Teste</h3><span class="study-pill">Potências + Dados</span></div>
+        <p>Exercícios originais baseados nas 11 páginas do teu PDF. Usa papel e lápis: escreve as contas antes de responder.</p>
+        <div id="study-stats" class="study-stats"></div>
+        <div class="study-modes">
+          <article class="study-mode"><span class="study-mode-number">01 / APRENDER</span><h3>Treinar com ajuda</h3><p>6 perguntas. Se falhares, explicamos com calma e damos-te uma pergunta semelhante.</p><button type="button" data-start="train" class="study-primary">Começar treino</button></article>
+          <article class="study-mode"><span class="study-mode-number">02 / DESAFIAR</span><h3>Missão: 5 chaves</h3><p>Abre 5 portas com as tuas respostas. Uma resposta errada traz uma explicação e um novo desafio.</p><button type="button" data-start="game">Entrar na missão</button></article>
+          <article class="study-mode"><span class="study-mode-number">03 / PREPARAR</span><h3>Como num teste</h3><p>12 perguntas, 2 por tema. Podes rever as respostas. A correção aparece só quando entregares.</p><button type="button" data-start="test">Fazer teste · ~30 min</button></article>
+        </div>
+        <div class="study-toolbar"><label for="study-topic">Tema do treino e da missão<select id="study-topic"><option value="all">Todos os temas</option></select></label><button id="study-review" type="button">Rever dificuldades</button><button id="study-resume" type="button" hidden>Retomar sessão</button></div>
+        <div id="study-topics" class="study-topic-grid"></div>
+        <details class="study-source"><summary>Matéria do PDF e como funciona a avaliação</summary><p>Potências, linguagem matemática e expressões: páginas 8–11 do livro (páginas 8–11 do PDF). Gráficos de barras e circulares: páginas 102–105 do livro (1–4 do PDF). Classes, frequências e histogramas: páginas 107–109 do livro (5–7 do PDF; a página 107 foi identificada pela sequência).</p><p>As perguntas usam números e situações novos para praticares o raciocínio. A percentagem do teste conta respostas totalmente certas, com o mesmo peso por pergunta; não substitui uma avaliação da professora. O treino distingue o primeiro acerto das respostas feitas depois de veres uma explicação.</p></details>
+      </section>
+      </section>
+      <section class="study-section study-plan" aria-labelledby="plan-title">
+        <div class="study-heading"><div><p class="study-eyebrow">UM PLANO QUE CABE NO DIA</p><h2 id="plan-title">Organizar o estudo</h2></div><a href="francisca-horario.html">Consultar horário ↗</a></div>
+        <p>Experimenta 15 minutos: 5 para recordar, 8 para resolver e 2 para rever um erro. Faz uma pausa antes de continuar.</p>
+        <form id="study-plan-form" class="study-plan-form"><label>Disciplina<select id="plan-subject" required></select></label><label>Dia<input id="plan-date" type="date" required></label><label class="study-plan-task">O que vou estudar<input id="plan-task" maxlength="160" placeholder="Ex.: resolver expressões com parênteses" required></label><label>Minutos<input id="plan-minutes" type="number" min="5" max="120" step="5" value="15" required></label><button type="submit" class="study-primary">Adicionar</button></form>
+        <p id="plan-status" role="status"></p><ul id="study-plan-list" class="study-plan-list"></ul>
+      </section>
+      <section class="study-section" aria-labelledby="history-title"><h2 id="history-title">As últimas sessões</h2><div id="study-history"></div></section>
+    </div>
+    <section id="study-session" class="study-session" hidden aria-labelledby="session-title"></section>
+  </main>
+  <noscript>Ativa o JavaScript e inicia sessão para estudar.</noscript>
+  <script type="module" src="../js/script.js"></script>
+  <script type="module" src="../js/francisca-estudar.js"></script>
+</body>
+</html>
