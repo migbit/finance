@@ -1,18 +1,42 @@
 import { whenAccessResolved } from './script.js';
 import { FRANCISCA_SUBJECTS } from './francisca-calendar-core.js';
-import { QUESTIONS, TOPICS, TOPIC_HINTS } from './francisca-estudar-data.js';
+import { COURSES,MATHS_COURSE } from './francisca-estudar-courses.js';
 import { grade, shuffle, selectQuestions, reinforcement, readState, recordAttempt, localDateKey, normalizeTask, formatAnswer, parseNumber } from './francisca-estudar-core.js';
 
 const $=id=>document.getElementById(id);
-const byId=new Map(QUESTIONS.map(q=>[q.id,q]));
+let course=MATHS_COURSE,QUESTIONS=course.questions,TOPICS=course.topics,TOPIC_HINTS=course.hints;
+let byId=new Map(QUESTIONS.map(q=>[q.id,q]));
 const modeNames={train:'Treino com ajuda',game:'Missão: 5 chaves',test:'Como num teste',review:'Rever dificuldades'};
-const studyLabel='Matemática · 1.º Teste';
-let state, storageKey, selectedSubject='Matemática';
+let studyLabel='Matemática · 1.º Teste';
+let state, storageKey, planState, selectedSubject='Matemática';
+const states={},storageKeys={};
 function node(tag,className,text) { const n=document.createElement(tag); if(className)n.className=className; if(text!==undefined)n.textContent=text; return n; }
 function button(text,handler,primary=false) { const n=node('button',primary?'study-primary':'',text);n.type='button';n.addEventListener('click',handler);return n; }
 function save() {
   try { localStorage.setItem(storageKey,JSON.stringify(state)); }
   catch { $('study-storage').textContent='Não foi possível guardar neste navegador. Mantém esta página aberta para não perderes o progresso e o plano.'; $('study-storage').setAttribute('role','alert'); }
+}
+function savePlan() {
+  try { localStorage.setItem(storageKeys.maths,JSON.stringify(planState)); }
+  catch { $('study-storage').textContent='Não foi possível guardar o plano neste navegador.'; }
+}
+function chooseSubject(subject) {
+  selectedSubject=subject;
+  for(const child of $('study-subjects').children)child.setAttribute('aria-pressed',String(child.dataset.subject===subject));
+  const next=COURSES.find(c=>c.subject===subject);
+  $('study-maths').hidden=!next;
+  $('study-subject-note').textContent=next?'':'Ainda não há material de estudo de '+subject+'. Já podes organizar esta disciplina no plano.';
+  $('plan-subject').value=subject;
+  if(!next)return;
+  course=next;QUESTIONS=course.questions;TOPICS=course.topics;TOPIC_HINTS=course.hints;byId=new Map(QUESTIONS.map(q=>[q.id,q]));
+  state=states[course.id];storageKey=storageKeys[course.id];studyLabel=course.subject+' · 1.º Teste';
+  $('maths-title').textContent=course.subject;$('study-course-badge').textContent=course.badge;$('study-course-intro').textContent=course.intro;
+  $('study-test-description').textContent=course.testDescription;$('study-test-button').textContent=course.testButton;$('study-course-sources').textContent=course.sources;
+  $('study-english-method').hidden=!course.writing;
+  $('plan-task').placeholder=course.writing?'Ex.: rever have got e escrever 5 frases':'Ex.: resolver expressões com parênteses';
+  document.querySelector('.study-hero-symbol').textContent=course.writing?'Hello!':'a² + b²';
+  $('study-topic').replaceChildren(new Option('Todos os temas','all'));TOPICS.forEach(t=>$('study-topic').append(new Option(t.title,t.id)));
+  renderDashboard();
 }
 function focusHeading(n) { n.tabIndex=-1; n.focus({preventScroll:true}); n.scrollIntoView({block:'start',behavior:'instant'}); }
 function openSession() { $('study-dashboard').hidden=true;$('study-session').hidden=false; }
@@ -47,19 +71,12 @@ function renderDashboard() {
 function renderSubjects() {
   const icons=['∑','Aa','⌛','✎','❧','En','◎','♧','✧','♫'];
   FRANCISCA_SUBJECTS.forEach((subject,i)=>{
-    const b=button('',()=>{
-      selectedSubject=subject;
-      for(const child of $('study-subjects').children)child.setAttribute('aria-pressed',String(child.dataset.subject===subject));
-      $('study-maths').hidden=subject!=='Matemática';
-      $('study-subject-note').textContent=subject==='Matemática'?'':'Ainda não há material de estudo de '+subject+'. Já podes organizar esta disciplina no plano. Os exercícios serão acrescentados quando houver páginas do livro.';
-      $('plan-subject').value=subject;
-    });
+    const b=button('',()=>chooseSubject(subject));
     b.dataset.subject=subject;b.setAttribute('aria-pressed',String(subject===selectedSubject));
-    b.append(node('span','study-subject-icon',icons[i]),node('strong','',subject),node('small','',i===0?'1.º Teste disponível':'Aguarda material'));
+    b.append(node('span','study-subject-icon',icons[i]),node('strong','',subject),node('small','',COURSES.some(c=>c.subject===subject)?'1.º Teste disponível':'Aguarda material'));
     $('study-subjects').append(b);
     $('plan-subject').append(new Option(subject,subject));
   });
-  TOPICS.forEach(t=>$('study-topic').append(new Option(t.title,t.id)));
 }
 
 function requestStart(mode,topic=$('study-topic').value) {
@@ -71,14 +88,31 @@ function requestStart(mode,topic=$('study-topic').value) {
   start(mode,topic);
 }
 function start(mode,topic) {
-  const qs=selectQuestions(mode,mode==='review'?'all':topic,state.progress);
+  const qs=selectQuestions(mode,mode==='review'?'all':topic,state.progress,Math.random,course);
   if(!qs.length)return;
   state.active={mode,queue:qs.map(q=>({id:q.id,repair:false})),index:0,answers:{},attempts:[],startedAt:Date.now(),goal:qs.length,keys:0,feedback:null};save();renderSession();
 }
 function answerInputs(form,q,answers=[]) {
   const fields=node('div','study-answer-fields');
   q.fields.forEach((field,i)=>{
-    if(field.options) {
+    if(field.type==='order') {
+      const group=node('fieldset','study-word-game');group.append(node('legend','',field.label),node('p','study-muted','Toca nas palavras pela ordem certa. Usa «Desfazer» para corrigir.'));
+      const input=node('input');input.type='hidden';input.name=`answer-${i}`;input.value=answers[i]||'';
+      const assembled=node('p','study-assembled');assembled.setAttribute('aria-live','polite');
+      const bank=node('div','study-word-bank');bank.lang='en-GB';const selected=[];
+      let seed=[...q.id].reduce((n,c)=>n+c.charCodeAt(0),i+1);
+      const tokens=shuffle(field.words,()=>{seed=(seed*9301+49297)%233280;return seed/233280;});
+      let remaining=String(answers[i]||'').replace(/[.?!]$/,'').split(' ').filter(Boolean);
+      const buttons=tokens.map((word,index)=>{const b=button(word,()=>{selected.push(index);draw();});return b;});
+      for(const word of remaining){const index=tokens.findIndex((token,index)=>token===word&&!selected.includes(index));if(index>=0)selected.push(index);}
+      function draw(notify=true) {
+        input.value=selected.map(index=>tokens[index]).join(' ');assembled.textContent=input.value||'A tua frase aparece aqui.';
+        buttons.forEach((b,index)=>b.disabled=selected.includes(index)||Boolean(state.active?.feedback));
+        if(notify)input.dispatchEvent(new Event('input',{bubbles:true}));
+      }
+      buttons.forEach(b=>bank.append(b));draw(false);
+      group.append(assembled,bank,button('Desfazer',()=>{selected.pop();draw();}),button('Limpar frase',()=>{selected.length=0;draw();}),input);fields.append(group);
+    } else if(field.options) {
       const fieldset=node('fieldset','study-choices');fieldset.append(node('legend','',field.label||'Escolhe uma resposta'));
       // A ordem fica estável ao regressar à pergunta e não denuncia a opção correta.
       const seed=[...q.id].reduce((n,c)=>n+c.charCodeAt(0),0);
@@ -89,8 +123,9 @@ function answerInputs(form,q,answers=[]) {
       });fields.append(fieldset);
     } else {
       const group=node('div','study-number-label');const label=node('label','',field.label);const inputId=`study-answer-${i}`;label.htmlFor=inputId;group.append(label);
-      const supportsPower=field.type==='power';
-      const wrap=node('span','study-input-wrap');const input=node('input');input.id=inputId;input.name=`answer-${i}`;input.type='text';input.inputMode=supportsPower?'text':'decimal';input.autocomplete='off';input.value=answers[i]??'';input.setAttribute('aria-label',`${field.label}${field.suffix?' em '+field.suffix:''}`);
+      const supportsPower=field.type==='power',english=field.type==='text';
+      const wrap=node('span','study-input-wrap');const input=node('input');input.id=inputId;input.name=`answer-${i}`;input.type='text';input.inputMode=supportsPower||english?'text':'decimal';input.autocomplete='off';input.value=answers[i]??'';input.setAttribute('aria-label',`${field.label}${field.suffix?' em '+field.suffix:''}`);
+      if(english){input.lang='en-GB';input.spellcheck=false;input.maxLength=500;input.setAttribute('autocapitalize','off');group.classList.add('study-text-label');}
       wrap.append(input);if(field.suffix)wrap.append(node('span','',field.suffix));
       if(supportsPower) {
         const insert=button('xʸ',()=>{
@@ -119,6 +154,9 @@ function renderSession() {
   if(test)pane.append(node('p','study-muted','Usa papel e lápis. Podes voltar atrás. Só vais ver as soluções depois de entregar.'));
   if(item.repair)pane.append(node('p','study-pill','Volta a experimentar · aplica o que aprendeste'));
   const question=node('h3','study-question',q.prompt);pane.append(question);
+  if(course.writing)question.lang='en-GB';
+  if(q.passage)pane.append(passageNode(q.passage));
+  if(q.clock)pane.append(clockNode(q.clock));
   if(q.chart)pane.append(chartNode(q.chart));
   if(q.table)pane.append(tableNode(q.table));
   if(q.build)pane.append(buildChart(q,s.answers[s.index]));
@@ -132,7 +170,7 @@ function renderSession() {
     hint.append(reveal,node('small','study-muted','Com pista, o acerto conta como feito com ajuda.'),hintText);pane.append(hint);
   }
   const scratch=node('details','study-scratch');scratch.append(node('summary','','O meu raciocínio (rascunho)'));
-  const scratchLabel=node('label','','Escreve os passos ou faz as contas no papel. Este rascunho não recebe nota.');const area=node('textarea');area.rows=3;area.value=s.notes?.[s.index]||'';area.maxLength=2000;area.addEventListener('input',()=>{s.notes??={};s.notes[s.index]=area.value;save();});scratchLabel.append(area);scratch.append(scratchLabel);pane.append(scratch);
+  const scratchLabel=node('label','',course.writing?'Aponta a regra ou as palavras que te ajudaram. Este rascunho não recebe nota.':'Escreve os passos ou faz as contas no papel. Este rascunho não recebe nota.');const area=node('textarea');area.rows=3;area.value=s.notes?.[s.index]||'';area.maxLength=2000;area.addEventListener('input',()=>{s.notes??={};s.notes[s.index]=area.value;save();});scratchLabel.append(area);scratch.append(scratchLabel);pane.append(scratch);
   const form=node('form');form.id='study-answer-form';answerInputs(form,q,s.answers[s.index]);
   const message=node('p');message.id='answer-message';message.setAttribute('role','alert');form.append(message);
   form.addEventListener('input',()=>{s.answers[s.index]=values(form,q);save();if(q.build)updateBuild(q,s.answers[s.index]);});
@@ -144,10 +182,11 @@ function renderSession() {
   } else if(!s.feedback) {
     const submit=node('button','study-primary','Verificar resposta');submit.type='submit';controls.append(submit);
   }
+  if(test&&course.writing&&s.index===s.queue.length-1)form.append(writingEditor(s,'writing',false));
   form.append(controls);form.addEventListener('submit',event=>{event.preventDefault();if(!test&&!s.feedback)checkAnswer(form,q);});pane.append(form);
   let feedbackTitle=null;
   if(s.feedback) {
-    form.querySelectorAll('input,.study-insert-power').forEach(n=>n.disabled=true);
+    form.querySelectorAll('input,button').forEach(n=>n.disabled=true);
     const feedback=feedbackNode(q,s.feedback);feedbackTitle=feedback.querySelector('h4');pane.append(feedback);
     pane.append(button(s.feedback.correct?'Continuar':s.mode==='game'?'Já li · tentar um novo desafio':'Já li a explicação · continuar',advance,true));
   }
@@ -168,7 +207,7 @@ function checkAnswer(form,q) {
 function advance() {
   const s=state.active;const q=currentQuestion();const correct=s.feedback.correct;
   if(!correct) {
-    const next=reinforcement(q,s.queue.map(item=>item.id));
+    const next=reinforcement(q,s.queue.map(item=>item.id),Math.random,QUESTIONS);
     const newItem={id:next.id,repair:true};
     if(s.mode==='game')s.queue.splice(s.index+1,0,newItem);
     else if(!s.queue[s.index].repair)s.queue.push(newItem);
@@ -181,8 +220,9 @@ function advance() {
 function confirmTest() {
   const s=state.active;const missing=s.queue.findIndex((item,i)=>!grade(byId.get(item.id),s.answers[i]).valid);
   if(missing>=0) {s.index=missing;save();renderSession();$('answer-message').textContent=answerError(currentQuestion());return;}
+  if(course.writing&&!s.writing?.trim()){s.index=s.queue.length-1;save();renderSession();$('answer-message').textContent='Falta a composição. Escreve o teu texto antes de entregar; a revisão da escrita será feita por grelha.';$('study-writing-text').focus();return;}
   const pane=$('study-session');pane.replaceChildren();
-  const title=node('h2','','Entregar o teste?');title.id='session-title';pane.append(title,node('p','','Respondeste às 12 perguntas. Depois de entregar, vais ver a classificação e a resolução de cada exercício.'),button('Voltar e rever respostas',renderSession),button('Entregar e ver correção',()=>{
+  const title=node('h2','','Entregar o teste?');title.id='session-title';pane.append(title,node('p','',`Respondeste aos ${s.queue.length} exercícios${course.writing?' e escreveste a composição':''}. Depois de entregar, vais ver a correção${course.writing?' e a grelha para rever a escrita':''}.`),button('Voltar e rever respostas',renderSession),button('Entregar e ver correção',()=>{
     s.attempts=s.queue.map((item,i)=>{
       const q=byId.get(item.id);const answers=s.answers[i];const {correct}=grade(q,answers);state.progress=recordAttempt(state.progress,q.id,correct);return {id:q.id,answers,correct,assisted:false};
     });finishSession();
@@ -190,7 +230,7 @@ function confirmTest() {
 }
 function finishSession() {
   const s=state.active;const first=s.attempts.filter(a=>a.repair===false||!a.assisted);const correct=first.filter(a=>a.correct&&!a.assisted).length;
-  const report={date:Date.now(),mode:s.mode,correct,total:first.length,attempts:s.attempts,minutes:Math.max(1,Math.round((Date.now()-s.startedAt)/60000))};
+  const report={date:Date.now(),mode:s.mode,correct,total:first.length,attempts:s.attempts,minutes:Math.max(1,Math.round((Date.now()-s.startedAt)/60000)),...(s.writing?{writing:s.writing}:{})};
   state.history.unshift(report);state.history=state.history.slice(0,20);state.active=null;save();showReport(report);
 }
 function showReport(report) {
@@ -198,6 +238,7 @@ function showReport(report) {
   const title=node('h2','',report.mode==='game'?'Missão cumprida!':'Sessão terminada');title.id='session-title';
   pane.append(node('p','study-eyebrow',studyLabel),title,node('p','study-result',`${report.correct} / ${report.total} sem ajuda${report.mode==='test'?` · ${Math.round(report.correct/report.total*100)}%`:''}`));
   pane.append(node('p','',report.mode==='test'?'Cada pergunta vale o mesmo. Confere os passos abaixo, mesmo nas que acertaste.':'Os acertos depois de uma explicação ficam separados dos acertos sem ajuda. Continua a praticar os temas que ainda precisam de atenção.'));
+  if(report.writing)pane.append(node('p','study-recommendation','Esta percentagem refere-se apenas aos 20 exercícios de correção automática. A composição fica por rever com a grelha abaixo e não está incluída na nota.'));
   const helped=report.attempts.filter(a=>a.correct&&a.assisted).length;
   if(helped)pane.append(node('p','study-recommendation',`Conseguiste resolver ${helped} ${helped===1?'desafio':'desafios'} com ajuda. Já deste um passo! Noutro dia, volta a tentar sem a pista nem a explicação.`));
   pane.append(node('p','study-muted','Antes de terminar, escolhe uma pergunta e explica em voz alta como chegaste à resposta. Volta a praticar noutro dia.'));
@@ -209,8 +250,10 @@ function showReport(report) {
     const details=node('details','study-correction');details.open=!a.correct;
     details.append(node('summary','',`${i+1}. ${a.correct?'Certo':'A rever'}${a.hinted?' · com pista':a.assisted?' · após explicação':''} · ${TOPICS.find(t=>t.id===q.topic).title}`),node('h3','',q.prompt));
     if(q.chart)details.append(chartNode(q.chart));if(q.table)details.append(tableNode(q.table));
+    if(q.passage)details.append(passageNode(q.passage));if(q.clock)details.append(clockNode(q.clock));
     details.append(node('p','',`Respondeste: ${(a.answers||[]).join(' · ')}`),feedbackNode(q,grade(q,a.answers)));pane.append(details);
   });focusHeading(title);
+  if(report.writing){const writing=node('section','study-writing');writing.append(node('h3','','A tua composição · revisão por grelha'),node('p','study-written-text',report.writing));appendWritingGuide(writing);pane.append(writing);}
 }
 
 function feedbackNode(q,result) {
@@ -220,6 +263,42 @@ function feedbackNode(q,result) {
   panel.append(node('p','study-solution',answers.join(' · ')));
   if(result.parts?.length>1)panel.append(node('p','',result.parts.map((p,i)=>`${q.fields[i].label||'Escolha'}: ${p.correct?'certo':'a rever'}`).join(' · ')));
   const steps=node('ol');q.steps.forEach(step=>steps.append(node('li','',step)));panel.append(steps);return panel;
+}
+
+function passageNode(passage) {
+  const panel=node('section','study-reading');panel.lang='en-GB';panel.setAttribute('aria-label','Reading text');
+  panel.append(node('h4','',passage.title));passage.paragraphs.forEach(text=>panel.append(node('p','',text)));return panel;
+}
+function clockNode({hour,minute}) {
+  const figure=node('figure','study-clock');figure.append(node('figcaption','','Read the clock'));
+  const svg=svgNode('svg',{viewBox:'0 0 240 240',role:'img','aria-label':`Clock: ${hour}:${String(minute).padStart(2,'0')}`});
+  svg.append(svgNode('circle',{cx:120,cy:120,r:108,fill:'#182231',stroke:'#a3dbc5','stroke-width':4}));
+  for(let n=1;n<=12;n++){const angle=n*Math.PI/6-Math.PI/2;svg.append(svgNode('text',{x:120+88*Math.cos(angle),y:126+88*Math.sin(angle),'text-anchor':'middle',fill:'#f0f4fa','font-size':18},n));}
+  for(const [angle,length,width,color] of [[(hour%12+minute/60)*Math.PI/6,53,7,'#a3dbc5'],[minute*Math.PI/30,76,4,'#8cb9fa']])
+    svg.append(svgNode('line',{x1:120,y1:120,x2:120+length*Math.sin(angle),y2:120-length*Math.cos(angle),stroke:color,'stroke-width':width,'stroke-linecap':'round'}));
+  svg.append(svgNode('circle',{cx:120,cy:120,r:5,fill:'#f0f4fa'}));figure.append(svg);return figure;
+}
+function appendWritingGuide(panel) {
+  const guide=node('div');guide.append(node('h4','','Revê o teu texto'));
+  course.writing.checklist.forEach(item=>{const label=node('label','study-writing-check');const check=node('input');check.type='checkbox';label.append(check,document.createTextNode(item));guide.append(label);});
+  const details=node('details');details.append(node('summary','','Ver um exemplo depois de tentar'));
+  const model=node('p','study-example',course.writing.model);model.lang='en-GB';details.append(model,node('p','study-muted','Este é um exemplo possível. Compara a estrutura e as regras; mantém as tuas próprias ideias. A grelha não verifica automaticamente a gramática nem dá nota à composição.'));
+  panel.append(guide,details);
+}
+function writingEditor(owner,key,withGuide) {
+  const panel=node('section','study-writing');panel.append(node('h3','','Writing · '+course.writing.title));
+  const prompt=node('p','',course.writing.prompt);prompt.lang='en-GB';panel.append(prompt);
+  const plan=node('ol');course.writing.plan.forEach(item=>plan.append(node('li','',item)));panel.append(plan);
+  const label=node('label','','O teu texto em inglês');label.htmlFor='study-writing-text';const area=node('textarea');area.id='study-writing-text';area.rows=8;area.lang='en-GB';area.spellcheck=false;area.maxLength=3000;area.value=owner[key]||'';
+  const count=node('p','study-muted');count.setAttribute('aria-live','polite');
+  const update=()=>{count.textContent=`${area.value.trim()?area.value.trim().split(/\s+/).length:0} palavras · objetivo: 40–60. O texto fica guardado neste navegador.`;};update();
+  area.addEventListener('input',()=>{owner[key]=area.value;save();update();});panel.append(label,area,count);
+  if(withGuide)appendWritingGuide(panel);else panel.append(node('p','study-muted','Escreve o teu próprio texto. A grelha e o exemplo só aparecem depois de entregar. A escrita fica fora da percentagem automática.'));
+  return panel;
+}
+function writingWorkshop() {
+  openSession();const pane=$('study-session');pane.replaceChildren();const title=node('h2','','Oficina de escrita');title.id='session-title';
+  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','','Faz um plano, escreve sem copiar e revê. No fim, lê o teu texto em voz alta: consegues perceber cada frase que escreveste?'),writingEditor(state,'writingDraft',true),button('Guardar e voltar ao estudo',home,true));focusHeading(title);
 }
 
 function tableNode(data) {
@@ -270,6 +349,8 @@ function updateBuild(q,answers=[]) {
 }
 
 function answerError(q) {
+  if(q.fields.some(f=>f.type==='order'))return 'Usa todas as palavras para construir a frase. Podes desfazer e tentar outra ordem.';
+  if(q.fields.some(f=>f.type==='text'))return 'Completa todas as respostas em inglês. Nas lacunas, escreve só a parte em falta; nas transformações, escreve a frase completa.';
   if(q.fields.some(f=>f.options))return q.fields.every(f=>f.options)?'Escolhe uma resposta antes de verificar.':'Escolhe uma opção e completa o resultado numérico. Podes usar vírgula decimal.';
   return q.fields.some(f=>f.type==='power')
     ? 'Completa todas as respostas. No campo da potência, escreve a base e o expoente: por exemplo, 2^3 ou 2³.'
@@ -278,14 +359,14 @@ function answerError(q) {
 
 function renderPlan() {
   const list=$('study-plan-list');list.replaceChildren();
-  const sorted=[...state.plan].sort((a,b)=>a.date.localeCompare(b.date)||a.subject.localeCompare(b.subject));
+  const sorted=[...planState.plan].sort((a,b)=>a.date.localeCompare(b.date)||a.subject.localeCompare(b.subject));
   if(!sorted.length) { list.append(node('li','study-muted','Ainda não há tarefas. Escolhe um dia e uma pequena meta.'));return; }
   const today=localDateKey();
   sorted.forEach(task=>{
-    const item=node('li',task.done?'is-done':'');const label=node('label');const check=node('input');check.type='checkbox';check.checked=Boolean(task.done);check.setAttribute('aria-label',`Concluir: ${task.task}`);check.addEventListener('change',()=>{task.done=check.checked;save();renderPlan();});
+    const item=node('li',task.done?'is-done':'');const label=node('label');const check=node('input');check.type='checkbox';check.checked=Boolean(task.done);check.setAttribute('aria-label',`Concluir: ${task.task}`);check.addEventListener('change',()=>{task.done=check.checked;savePlan();renderPlan();});
     const content=node('span');const date=new Intl.DateTimeFormat('pt-PT',{day:'numeric',month:'short',timeZone:'Europe/Lisbon'}).format(new Date(`${task.date}T12:00:00Z`));
     content.append(node('strong','',task.task),node('small','',`${date} · ${task.subject} · ${task.minutes} min${!task.done&&task.date<today?' · Por fazer':''}`));label.append(check,content);
-    item.append(label,button('Remover',()=>{state.plan=state.plan.filter(t=>t.id!==task.id);save();renderPlan();}));list.append(item);
+    item.append(label,button('Remover',()=>{planState.plan=planState.plan.filter(t=>t.id!==task.id);savePlan();renderPlan();}));list.append(item);
   });
 }
 function renderHistory() {
@@ -300,17 +381,21 @@ function renderHistory() {
 // Também gravar uma mensagem clara se o armazenamento estiver bloqueado na leitura.
 const access=await whenAccessResolved();
 if(access.user&&access.mode!=='none') {
-  storageKey=`francisca-study-v1:${access.user.uid}`;
-  let raw=null;try{raw=localStorage.getItem(storageKey);}catch{$('study-storage').textContent='O armazenamento deste navegador está bloqueado. O plano e o progresso só duram enquanto esta página estiver aberta.';}
-  state=readState(raw);renderSubjects();renderDashboard();
+  for(const c of COURSES){
+    storageKeys[c.id]=`francisca-study-v1:${access.user.uid}${c.id==='maths'?'':':english-test-1'}`;
+    let raw=null;try{raw=localStorage.getItem(storageKeys[c.id]);}catch{$('study-storage').textContent='O armazenamento deste navegador está bloqueado. O plano e o progresso só duram enquanto esta página estiver aberta.';}
+    states[c.id]=readState(raw,c.questions);
+  }
+  planState=states.maths;renderSubjects();chooseSubject('Matemática');
   $('plan-date').value=localDateKey();
   document.querySelectorAll('[data-start]').forEach(b=>b.addEventListener('click',()=>requestStart(b.dataset.start)));
   $('study-review').addEventListener('click',()=>requestStart('review','all'));
   $('study-resume').addEventListener('click',renderSession);
+  $('study-writing-button').addEventListener('click',writingWorkshop);
   $('study-plan-form').addEventListener('submit',event=>{
     event.preventDefault();try {
       const task=normalizeTask($('plan-subject').value,$('plan-date').value,$('plan-task').value,$('plan-minutes').value,FRANCISCA_SUBJECTS);
-      state.plan.push({...task,id:crypto.randomUUID()});save();renderPlan();$('plan-task').value='';$('plan-status').textContent='Tarefa acrescentada ao teu plano.';
+      planState.plan.push({...task,id:crypto.randomUUID()});savePlan();renderPlan();$('plan-task').value='';$('plan-status').textContent='Tarefa acrescentada ao teu plano.';
     }catch(error){$('plan-status').textContent=error.message;}
   });
   $('study-content').setAttribute('aria-busy','false');

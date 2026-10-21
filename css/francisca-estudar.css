@@ -107,6 +107,18 @@ body[data-page="francisca-estudar"] { background:var(--background,#101722);color
 .study-scratch { margin:1rem 0; }
 .study-hint { margin:1rem 0;padding:1rem;border:1px solid var(--border);border-radius:12px;background:var(--surface-raised); }
 .study-hint small { display:block;margin-top:.5rem; }
+.study-page .study-text-label .study-input-wrap { width:100%;max-width:none; }
+.study-page .study-text-label { max-width:none;flex-basis:100%; }
+.study-reading,.study-writing { margin:1.25rem 0;padding:1.1rem;border:1px solid var(--border);border-radius:12px;background:var(--surface-raised); }
+.study-reading p,.study-written-text { line-height:1.9;white-space:pre-wrap; }
+.study-writing textarea { display:block;margin-top:.5rem;resize:vertical; }
+.study-writing-check { display:flex;gap:.7rem;align-items:flex-start;margin:.8rem 0;font-size:.87rem; }
+.study-clock { max-width:240px;margin:1rem auto;text-align:center; }
+.study-clock svg { width:100%;height:auto; }
+.study-page .study-word-game { min-width:0;border:0;padding:0; }
+.study-word-bank { display:flex;flex-wrap:wrap;gap:.5rem;margin:1rem 0; }
+.study-assembled { min-height:3.5rem;padding:1rem;background:var(--surface-raised);border:1px dashed #8cb9fa;border-radius:10px; }
+#study-english-method { margin-bottom:1rem; }
 .study-scratch label { display:block;font-size:.85rem;color:var(--text-dim); }
 .study-scratch textarea { display:block;margin-top:.5rem;resize:vertical; }
 .study-chart { margin:1rem 0;padding:1.1rem;background:var(--background);border:1px solid var(--border);border-radius:12px; }
