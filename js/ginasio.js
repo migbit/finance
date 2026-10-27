@@ -4,6 +4,7 @@ import { FILIPA_UID } from './access-control.js';
 import { FILIPA_WORKOUT_TEMPLATES } from './filipa-ginasio-config.js';
 import { buildMiguelPlans, resolveExerciseChoices, usesLegacyPlan, isReviewedMiguelTraining, MIGUEL_PLAN_VERSION, normalTraining, SHORT_SUFFIX } from './miguel-ginasio-plan.js';
 import { warmupAdvice, warmupProfile } from './ginasio-warmup.js';
+import { attendanceDays, attendanceColors, renderAttendance } from './ginasio-attendance.js';
 import {
   collection,
   doc,
@@ -3964,7 +3965,35 @@ function renderSummaries(summaries) {
   });
 }
 
+async function loadAttendance() {
+  const container = document.getElementById('gym-attendance');
+  if (!container) return;
+  const days = attendanceDays();
+  const status = document.getElementById('gym-attendance-status');
+  const shortDate = date => new Date(`${date}T12:00:00`).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
+  document.getElementById('gym-attendance-period').textContent = `${shortDate(days[0].date)} – ${shortDate(days[27].date)}`;
+  const colors = attendanceColors(Object.values(WORKOUT_TEMPLATES).flatMap(plans => Object.keys(plans)).map(normalTraining));
+  try {
+    const snap = await getDocs(query(
+      gymCollection('ginasio_treinos'),
+      where('date', '>=', days[0].date),
+      where('date', '<=', days[27].date)
+    ));
+    const workouts = snap.docs.map(item => {
+      const workout = item.data();
+      return { date: workout.date, treino: normalTraining(workout.treino || '') };
+    });
+    renderAttendance(container, days, workouts, colors);
+    const count = new Set(workouts.map(workout => workout.date)).size;
+    status.textContent = `${count} ${count === 1 ? 'dia de treino' : 'dias de treino'}`;
+  } catch (error) {
+    console.error('Erro ao carregar presenças:', error);
+    status.textContent = 'Não foi possível atualizar as presenças. Tenta novamente em Atualizar nos treinos recentes.';
+  }
+}
+
 async function loadSummaries() {
+  void loadAttendance();
   try {
     const q = query(
       gymCollection('ginasio_treinos'),

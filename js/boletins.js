@@ -166,7 +166,7 @@ function renderBoletins() {
   }
 
   const pending = sortByCheckinDate(state.boletins.filter((item) => !item.sentToAuthorities));
-  const sent = sortByCheckinDate(state.boletins.filter((item) => item.sentToAuthorities));
+  const sent = sortByCheckinDate(state.boletins.filter((item) => item.sentToAuthorities), true);
 
   els.body.innerHTML = pending.length
     ? renderBoletimRows(pending)
@@ -245,10 +245,17 @@ function renderEmptyRow(message) {
   return `<tr><td colspan="${BOLETINS_COLSPAN}" class="empty-state">${escapeHtml(message)}</td></tr>`;
 }
 
-function sortByCheckinDate(boletins) {
+function sortByCheckinDate(boletins, newestFirst = false) {
   return [...boletins].sort((a, b) => {
-    const dateDiff = toDateOnlyMillis(a.checkinDate) - toDateOnlyMillis(b.checkinDate);
-    return dateDiff || toDateOnlyMillis(a.checkoutDate) - toDateOnlyMillis(b.checkoutDate);
+    for (const field of ['checkinDate', 'checkoutDate']) {
+      const dateA = toDateOnlyMillis(a[field]);
+      const dateB = toDateOnlyMillis(b[field]);
+      const dateDiff = dateA - dateB;
+      if (!dateDiff) continue;
+      if (dateA === Number.MAX_SAFE_INTEGER || dateB === Number.MAX_SAFE_INTEGER) return dateDiff;
+      return newestFirst ? -dateDiff : dateDiff;
+    }
+    return 0;
   });
 }
 

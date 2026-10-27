@@ -22,6 +22,22 @@
   <main class="ginasio-page">
     <h2 class="page-title">Ginásio</h2>
 
+    <section class="report-section" aria-labelledby="gym-attendance-title">
+      <div class="viz-card gym-attendance-card">
+        <div>
+          <h3 id="gym-attendance-title">Frequência</h3>
+          <p id="gym-attendance-period" class="gym-machine-meta"></p>
+          <p id="gym-attendance-status" class="gym-machine-meta" role="status">A carregar presenças…</p>
+        </div>
+        <div class="gym-attendance-calendar">
+          <div class="gym-attendance-weekdays" aria-hidden="true">
+            <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span>
+          </div>
+          <div id="gym-attendance" class="gym-attendance-grid" role="group" aria-label="Presenças nas últimas quatro semanas"></div>
+        </div>
+      </div>
+    </section>
+
     <section class="report-section">
       <div class="viz-card">
         <h3>Selecionar treino</h3>
