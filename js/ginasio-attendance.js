@@ -18,13 +18,14 @@ export function attendanceColors(trainings) {
   return new Map([...new Set(trainings)].map((training, index) => [training, COLORS[index % COLORS.length]]));
 }
 
-export function renderAttendance(container, days, workouts, colors) {
+export function renderAttendance(container, days, workouts, colors, onSelect = () => {}) {
   container.replaceChildren();
   const dateFormat = new Intl.DateTimeFormat('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' });
   days.forEach(day => {
     const sessions = workouts.filter(workout => workout.date === day.date);
     const dayColors = [...new Set(sessions.map(workout => colors.get(workout.treino) || COLORS[0]))];
-    const cell = document.createElement('span');
+    const cell = document.createElement('button');
+    cell.type = 'button';
     cell.className = 'gym-attendance-day';
     cell.textContent = String(day.day);
     cell.dataset.future = String(day.future);
@@ -32,8 +33,9 @@ export function renderAttendance(container, days, workouts, colors) {
     if (day.today) cell.setAttribute('aria-current', 'date');
     const label = `${dateFormat.format(new Date(`${day.date}T12:00:00`))}: ${sessions.length ? sessions.map(session => session.treino).join(', ') : day.future ? 'Por realizar' : 'Sem treino'}`;
     cell.title = label;
-    cell.setAttribute('role', 'img');
     cell.setAttribute('aria-label', label);
+    cell.setAttribute('aria-controls', 'gym-attendance-legend');
+    cell.addEventListener('click', () => onSelect({ day, sessions, label }, cell));
     if (dayColors.length === 1) cell.style.background = dayColors[0];
     if (dayColors.length > 1) {
       cell.style.background = `linear-gradient(135deg, ${dayColors.map((color, index) => `${color} ${index * 100 / dayColors.length}% ${(index + 1) * 100 / dayColors.length}%`).join(', ')})`;

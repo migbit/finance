@@ -26,6 +26,10 @@ body[data-theme="dark"] .ginasio-page .page-title {
 .gym-attendance-day[data-present="true"] { color: #101722; font-weight: 700; border-color: transparent; }
 .gym-attendance-day[data-future="true"][data-present="false"] { opacity: .4; }
 .gym-attendance-day[aria-current="date"] { outline: 2px solid var(--text); outline-offset: 2px; }
+.ginasio-page .gym-attendance-day { min-height: 0; padding: 0; cursor: pointer; }
+.ginasio-page .gym-attendance-day:hover { filter: brightness(1.15); }
+.ginasio-page .gym-attendance-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#gym-attendance-legend { line-height: 1.5; }
 .ginasio-page h3 { margin: 0 0 20px; text-align: left; font-size: 1.1rem; }
 .ginasio-page button { min-height: 44px; height: auto; padding: .55rem .85rem; border-color: var(--border); box-shadow: none; }
 .ginasio-page button:hover { background: var(--surface-raised); box-shadow: none; }

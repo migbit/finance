@@ -3965,6 +3965,47 @@ function renderSummaries(summaries) {
   });
 }
 
+const pendingRpmDates = new Set();
+
+function selectAttendanceDay({ day, sessions, label }, cell) {
+  document.getElementById('gym-attendance-legend').textContent = label;
+  if (IS_FILIPA_GYM || sessions.length || pendingRpmDates.has(day.date)) return;
+  pendingRpmDates.add(day.date);
+  showConfirm(`Adicionar o treino RPM no dia ${formatWorkoutDate(day.date)}?`, () => {
+    void saveRpmAttendance(day.date, cell);
+  }, () => pendingRpmDates.delete(day.date), { confirmLabel: 'Adicionar RPM' });
+}
+
+async function saveRpmAttendance(date, cell) {
+  if (IS_FILIPA_GYM) return;
+  cell.disabled = true;
+  try {
+    const session = { date, gym: 'Aula de grupo', treino: 'RPM', machines: {} };
+    const docId = getSessionId(session.gym, session.treino, date);
+    const ref = doc(gymCollection('ginasio_treinos'), docId);
+    const existing = await getDoc(ref);
+    if (!existing.exists()) {
+      const createdAt = Timestamp.now();
+      const batch = writeBatch(db);
+      batch.set(ref, { ...session, createdAt, updatedAt: serverTimestamp() });
+      batch.set(doc(gymCollection('ginasio_resumos'), docId), {
+        date, gym: session.gym, treino: session.treino,
+        summary: buildSummaryText(session), createdAt, updatedAt: serverTimestamp()
+      });
+      await batch.commit();
+    }
+    document.getElementById('gym-attendance-legend').textContent = `${formatWorkoutDate(date)}: RPM`;
+    showToast('Presença em RPM registada.', 'success');
+    await loadSummaries();
+  } catch (error) {
+    console.error('Erro ao registar RPM:', error);
+    showToast('Não foi possível guardar a presença em RPM. Tenta novamente.', 'error');
+  } finally {
+    cell.disabled = false;
+    pendingRpmDates.delete(date);
+  }
+}
+
 async function loadAttendance() {
   const container = document.getElementById('gym-attendance');
   if (!container) return;
@@ -3973,6 +4014,7 @@ async function loadAttendance() {
   const shortDate = date => new Date(`${date}T12:00:00`).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
   document.getElementById('gym-attendance-period').textContent = `${shortDate(days[0].date)} – ${shortDate(days[27].date)}`;
   const colors = attendanceColors(Object.values(WORKOUT_TEMPLATES).flatMap(plans => Object.keys(plans)).map(normalTraining));
+  colors.set('RPM', '#22d3ee');
   try {
     const snap = await getDocs(query(
       gymCollection('ginasio_treinos'),
@@ -3983,7 +4025,7 @@ async function loadAttendance() {
       const workout = item.data();
       return { date: workout.date, treino: normalTraining(workout.treino || '') };
     });
-    renderAttendance(container, days, workouts, colors);
+    renderAttendance(container, days, workouts, colors, selectAttendanceDay);
     const count = new Set(workouts.map(workout => workout.date)).size;
     status.textContent = `${count} ${count === 1 ? 'dia de treino' : 'dias de treino'}`;
   } catch (error) {
