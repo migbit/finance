@@ -155,3 +155,6 @@ body[data-page="francisca-estudar"] { background:var(--background,#101722);color
   .study-plan-form label.study-plan-task { min-width:100%; }.study-plan-form>button { flex:1; }
 }
 @media(prefers-reduced-motion:reduce) { .study-page * { transition:none !important;scroll-behavior:auto !important; } }
+.study-science-diagram{margin:1rem 0;padding:1rem;border:1px solid #394b63;border-radius:16px;background:#182231}
+.study-science-diagram svg{display:block;width:100%;max-width:500px;margin:auto;color:#f0f4fa}
+.study-science-diagram figcaption{font-weight:700;margin-bottom:.7rem}

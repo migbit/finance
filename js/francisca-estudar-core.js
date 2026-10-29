@@ -43,9 +43,10 @@ export function grade(question, answers) {
   const parts=question.fields.map((field,i)=>{
     if(field.options) return { valid:field.options.includes(answers[i]), correct:answers[i] === field.answer };
     if(field.type==='text'||field.type==='order') {
-      const answer=normalizeEnglish(answers[i],field.caseSensitive);
+      const normalize=value=>{const text=normalizeEnglish(value,field.caseSensitive);return field.language==='pt-PT'?text.normalize('NFD').replace(/[\u0300-\u036f]/g,''):text;};
+      const answer=normalize(answers[i]);
       const complete=field.type!=='order'||answer.split(' ').length===field.words.length;
-      return {valid:answer.length>0&&answer.length<=500&&complete,correct:complete&&[field.answer,...(field.accept||[])].some(expected=>answer===normalizeEnglish(expected,field.caseSensitive))};
+      return {valid:answer.length>0&&answer.length<=500&&complete,correct:complete&&[field.answer,...(field.accept||[])].some(expected=>answer===normalize(expected))};
     }
     if(field.type==='power') {
       const power=parsePower(answers[i]);
@@ -65,6 +66,24 @@ export function shuffle(items, random = Math.random) {
 
 export function selectQuestions(mode, topic='all', progress={}, random=Math.random, course={questions:QUESTIONS,topics:TOPICS}) {
   const bank=course.questions,topics=course.topics;
+  if(course.adaptive) {
+    if(mode==='test')return shuffle(topics.flatMap(t=>{
+      const pool=bank.filter(q=>q.topic===t.id);
+      const harder=shuffle(pool.filter(q=>q.level===3),random)[0];
+      const basics=pool.filter(q=>q.level<3&&q.skill!==harder.skill);
+      const preferred=basics.filter(q=>q.format==='true-false'||q.diagram||q.table||q.chart);
+      const basic=shuffle(preferred.length?preferred:basics,random)[0];
+      return [basic,harder];
+    }),random);
+    const status=conceptEvidence(bank,progress);
+    const pool=shuffle(bank.filter(q=>(topic==='all'||q.topic===topic)&&(mode!=='review'||status[q.topic+':'+q.skill].attempted&&!status[q.topic+':'+q.skill].secure)),random);
+    const ranked=pool.sort((a,b)=>{
+      const rank=q=>{const e=status[q.topic+':'+q.skill],p=progress[q.id];return (e.secure?100:0)+(e.wrong?-30:0)+(e.due?-15:0)+(p?.lastCorrect?8:0)+Math.abs(q.level-(e.independentIds&&!e.wrong?3:1))*2;};
+      return rank(a)-rank(b);
+    });
+    const chosen=[];for(const q of ranked){if(chosen.length>=(mode==='game'?5:6))break;if(topic==='all'&&mode!=='review'&&chosen.some(v=>v.topic===q.topic))continue;chosen.push(q);}
+    return chosen;
+  }
   if(mode==='test'&&course.examSlots) {
     const set=shuffle([...new Set(bank.filter(q=>q.readingSet).map(q=>q.readingSet))],random)[0];
     const readingPool=bank.filter(q=>q.readingSet===set);
@@ -91,7 +110,9 @@ export function selectQuestions(mode, topic='all', progress={}, random=Math.rand
 export function reinforcement(question, usedIds=[], random=Math.random, bank=QUESTIONS) {
   const alternatives=bank.filter(q=>q.id!==question.id && q.topic===question.topic && !usedIds.includes(q.id));
   const sameSkill=alternatives.filter(q=>q.skill===question.skill);
-  return shuffle(sameSkill.length?sameSkill:alternatives,random)[0] || question;
+  const candidates=sameSkill.length?sameSkill:alternatives;
+  const easier=question.level?candidates.filter(q=>q.level<=question.level):[];
+  return shuffle(easier.length?easier:candidates,random)[0] || question;
 }
 
 export function emptyState() { return { version:1, answerFormat:2, progress:{}, history:[], plan:[], active:null }; }
@@ -120,9 +141,27 @@ export function readState(raw,bank=QUESTIONS) {
   } catch { return emptyState(); }
 }
 
-export function recordAttempt(progress,id,correct,assisted=false) {
+export function recordAttempt(progress,id,correct,assisted=false,now=Date.now()) {
   const old=progress[id] || { attempts:0, independent:0 };
-  return { ...progress,[id]:{ attempts:(Number(old.attempts)||0)+1, independent:(Number(old.independent)||0)+(correct&&!assisted?1:0), lastCorrect:correct, lastAt:Date.now() } };
+  const days=correct&&!assisted?[...new Set([...(old.independentDays||[]),localDateKey(new Date(now))])].slice(-10):(old.independentDays||[]);
+  return { ...progress,[id]:{ attempts:(Number(old.attempts)||0)+1, independent:(Number(old.independent)||0)+(correct&&!assisted?1:0), independentDays:days,lastCorrect:correct,lastAssisted:assisted,lastAt:now } };
+}
+
+// Evidência observável, não uma inferência de certeza nem deteção de adivinhação.
+export function conceptEvidence(bank,progress,now=Date.now()) {
+  const result={};
+  for(const q of bank){const key=q.topic+':'+q.skill;const e=result[key]??={topic:q.topic,skill:q.skill,attempted:false,independentIds:0,days:new Set(),reasoning:false,lastAt:0,lastWrong:0,lastIndependent:0};const p=progress[q.id];if(!p)continue;
+    e.attempted||=p.attempts>0;e.lastAt=Math.max(e.lastAt,p.lastAt||0);
+    if(p.lastCorrect===false)e.lastWrong=Math.max(e.lastWrong,p.lastAt||0);
+    if(p.lastCorrect&&p.independent>0&&!p.lastAssisted){e.independentIds++;(p.independentDays||[]).forEach(d=>e.days.add(d));e.reasoning||=q.level>=2;e.lastIndependent=Math.max(e.lastIndependent,p.lastAt||0);}
+  }
+  for(const e of Object.values(result)){e.wrong=e.lastWrong>=e.lastIndependent&&e.lastWrong>0;e.secure=e.independentIds>=2&&e.days.size>=2&&e.reasoning&&!e.wrong;e.due=e.attempted&&now-e.lastAt>=86400000;e.days=[...e.days];}
+  return result;
+}
+
+export function scoreTest(attempts,bank) {
+  let earned=0,total=0;for(const a of attempts){const q=bank.find(q=>q.id===a.id);if(!q)continue;const points=q.points||1;total+=points;const parts=grade(q,a.answers).parts;earned+=points*parts.filter(p=>p.correct).length/q.fields.length;}
+  return {earned:Math.round(earned*100)/100,total};
 }
 
 export function localDateKey(date=new Date()) {

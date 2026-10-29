@@ -90,3 +90,43 @@ Compararam-se novamente os exercícios, resumos e explicações com as páginas 
 - A simulação continua mais abrangente do que o modelo de duas páginas do workbook, pois inclui também a matéria das restantes digitalizações indicadas para o teste. Não se conhece a matriz nem a ponderação real da professora. Áudios não fornecidos e composição não são avaliados automaticamente.
 
 Validação da revisão: 50 testes unitários/de conteúdo; regressões de navegador de Inglês (157 perguntas) e Matemática (80 perguntas), incluindo entrega, retoma e largura de 390 px.
+## Ciências Naturais · 1.º Teste (29/10/2026)
+
+Fonte: leitura visual integral das 36 páginas de `C:/ChatGPT/Francisca/Ciencias1teste.pdf`, manual 8–43. Há cortes marginais e alguma curvatura junto à encadernação; os conceitos usados são legíveis. A primeira página não mostra o número, identificado pela sequência. Não foram incorporadas imagens digitalizadas na aplicação.
+
+### Correspondência e objetivos
+
+| PDF | Manual | Conteúdos e competências |
+| --- | --- | --- |
+| 1–4 | 8–11 | Importância da alimentação; alimento/nutriente; simples/composto; natural/processado; seis grupos de nutrientes; interpretar composição |
+| 5–6 | 12–13 | Indicadores de proteínas, cor violeta, hipótese, controlo com água destilada, interpretar observações |
+| 7–8 | 14–15 | Funções plástica, energética, reguladora/protetora; macro/micronutrientes; água e fibras |
+| 9–10 | 16–17 | Dieta mediterrânica, sete grupos, proporções da roda, água, recomendações de vida |
+| 11–12 | 18–19 | Necessidades variáveis, carência/excesso, avitaminoses/hipervitaminoses, alimentação e risco de doença |
+| 13–15 | 20–22 | Ingredientes, alergénios, validade, conservação, informação nutricional; comparar mesma base; descodificador para sólidos/bebidas |
+| 16–18 | 23–25 | Funções dos aditivos; salga, defumação, conserva, frio, calor, vácuo; probióticos, transgénicos e produtos light/zero |
+| 19–20 | 26–27 | Síntese e exercícios de completar, V/F, justificação e identificação de conservação |
+| 21–24 | 28–31 | Necessidade de digestão; tubo digestivo e glândulas anexas, secreções, vesícula biliar, percurso |
+| 25–26 | 32–33 | Ingestão, digestão, absorção, assimilação e expulsão; distinguir destinos |
+| 27–28 | 34–35 | Dentição adulta, tipos/funções, mastigação/insalivação, transformações físicas/químicas, bolo alimentar |
+| 29–30 | 36–37 | Experiência da fragmentação do açúcar, condições controladas, deglutição, epiglote, peristaltismo |
+| 31–32 | 38–39 | Cárdia/piloro, suco gástrico/quimo, duodeno, bílis, sucos pancreático e intestinal |
+| 33–34 | 40–41 | Pregas/vilosidades/vasos, absorção para sangue/linfa, intestino grosso, fezes, reto, defecação e obstipação |
+| 35–36 | 42–43 | Cárie, higiene oral, alimentação, água/fibras, atividade física, evitar tabaco/álcool |
+
+O índice de apoio refere páginas posteriores sobre aves e ruminantes, mas essas páginas não foram fornecidas e não são matéria obrigatória aqui. Os registos experimentais do manual estão por preencher: a tabela usada nos exercícios está explicitamente identificada como experiência fictícia. Não se apresentam previsões como resultados observados. O esquema molecular é um modelo de transformação, sem pretender representar moléculas específicas. A definição dos alimentos processados é tratada sem pressupor que todos contêm aditivos. Não se reproduzem como regras absolutas as simplificações do manual sobre doença/risco; não se ensina que açúcar causa todos os tipos de diabetes ou que alimentação impede qualquer doença. O exemplo de leite pasteurizado sob o título ultrapasteurização não é usado para equiparar os dois tratamentos.
+
+### Implementação
+
+- `js/francisca-estudar-science-data.js`: 91 desafios originais, dez temas com resumos e referências, três níveis (recordar, interpretar, aplicar/justificar). Associação por alíneas, escolha múltipla, V/F com justificação, completar termos, ordenar etapas, leitura de tabelas, roda e três tipos de esquemas SVG originais.
+- Reutiliza `courses`, núcleo de seleção/correção, sessões, missão de cinco chaves, pistas, recuperação, rascunho, plano e histórico existentes. Sem um segundo motor de jogos ou avaliação. Ciência tem chave independente `francisca-study-v1:${uid}:science-test-1`; as chaves anteriores são preservadas.
+- A seleção adaptativa usa conceito (`topic + skill`), dificuldade e evidência de respostas, dando prioridade a erros, conceitos a recordar e perguntas diferentes. Um erro recebe identificação das alíneas, solução e explicação, seguido de outra pergunta do mesmo conceito quando existe. Recuperação e pistas não contam como independentes. Após erro volta a privilegiar tarefas básicas; com acertos independentes dá preferência às de aplicação.
+- Um conceito confirmado exige dois IDs com acerto independente, pelo menos dois dias em Lisboa, uma tarefa de interpretação/raciocínio e ausência de erro mais recente do que o último acerto independente. Isto é uma regra conservadora de evidência observável, não deteção de acaso nem garantia de domínio. A aplicação não avalia semanticamente texto livre. A revisão inclui conceitos tentados ainda não confirmados e retoma perguntas noutra sessão; não agenda notificações.
+- O painel ensina a identificar ideias, fechar o resumo, recordar, usar associações, ler os verbos do enunciado, justificar com dados e explicar/corrigir o erro. Propõe sessões de 10–15 minutos e revisão noutro dia. O rascunho persiste com a sessão e não recebe nota. Termos em português aceitam ausência de acentos; a solução mostra a grafia correta. Inglês mantém as regras anteriores.
+- Simulação: 20 perguntas, duas por cada tema (uma básica/interpretação e uma de aplicação de competência diferente), 5 pontos cada = 100, duração sugerida 45 minutos. Seleção favorece tabelas, esquemas e V/F na parte de interpretação. Sem pistas ou feedback até entregar; navegação e retoma. Alíneas têm partes iguais da cotação; o total é arredondado às centésimas. Nota e percentagem usam os pontos, não só o número de perguntas inteiramente certas. Histórico preserva a cotação. Versões variam mantendo distribuição. Esta distribuição é uma opção pedagógica, não uma matriz atribuída à professora.
+
+### Validação
+
+`node --test tests/francisca-estudar-science.test.mjs tests/francisca-estudar.test.mjs tests/francisca-estudar-content.test.mjs tests/francisca-estudar-english.test.mjs tests/access-control.test.mjs tests/francisca-calendar.test.mjs tests/financas-pages.test.mjs`
+
+54 testes passam. Ciências verifica integridade, soluções e alternativas, gabarito independente de conceitos e dados, 80 versões equilibradas, pontuação total/parcial, progressão por variante/dia, efeito de ajuda/erro e persistência. `tests/francisca-estudar-science.browser.mjs` percorre os 91 desafios, entrega teste com erro e crédito parcial, verifica retoma/recuperação/isolamento e largura de 390 px. As regressões existentes percorrem também os 80 exercícios de Matemática e 157 de Inglês. Capturas locais em `tests/.runtime`, excluídas da publicação. O progresso continua local a este navegador/conta, sem sincronização entre dispositivos.

@@ -1,7 +1,7 @@
 import { whenAccessResolved } from './script.js';
 import { FRANCISCA_SUBJECTS } from './francisca-calendar-core.js';
 import { COURSES,MATHS_COURSE } from './francisca-estudar-courses.js';
-import { grade, shuffle, selectQuestions, reinforcement, readState, recordAttempt, localDateKey, normalizeTask, formatAnswer, parseNumber } from './francisca-estudar-core.js';
+import { grade, shuffle, selectQuestions, reinforcement, readState, recordAttempt, localDateKey, normalizeTask, formatAnswer, parseNumber, conceptEvidence, scoreTest } from './francisca-estudar-core.js';
 
 const $=id=>document.getElementById(id);
 let course=MATHS_COURSE,QUESTIONS=course.questions,TOPICS=course.topics,TOPIC_HINTS=course.hints;
@@ -33,8 +33,9 @@ function chooseSubject(subject) {
   $('maths-title').textContent=course.subject;$('study-course-badge').textContent=course.badge;$('study-course-intro').textContent=course.intro;
   $('study-test-description').textContent=course.testDescription;$('study-test-button').textContent=course.testButton;$('study-course-sources').textContent=course.sources;
   $('study-english-method').hidden=!course.writing;
-  $('plan-task').placeholder=course.writing?'Ex.: rever have got e escrever 5 frases':'Ex.: resolver expressões com parênteses';
-  document.querySelector('.study-hero-symbol').textContent=course.writing?'Hello!':'a² + b²';
+  $('study-science-method').hidden=!course.adaptive;
+  $('plan-task').placeholder=course.adaptive?'Ex.: recordar absorção e explicar um erro':course.writing?'Ex.: rever have got e escrever 5 frases':'Ex.: resolver expressões com parênteses';
+  document.querySelector('.study-hero-symbol').textContent=course.adaptive?'Explora!':course.writing?'Hello!':'a² + b²';
   $('study-topic').replaceChildren(new Option('Todos os temas','all'));TOPICS.forEach(t=>$('study-topic').append(new Option(t.title,t.id)));
   renderDashboard();
 }
@@ -46,7 +47,8 @@ function currentQuestion() { return byId.get(state.active.queue[state.active.ind
 function renderDashboard() {
   const attempted=Object.values(state.progress).filter(p=>p.attempts>0).length;
   const independent=Object.values(state.progress).filter(p=>p.independent>0).length;
-  const difficult=Object.values(state.progress).filter(p=>p.lastCorrect===false).length;
+  const evidence=course.adaptive?conceptEvidence(QUESTIONS,state.progress):null;
+  const difficult=evidence?Object.values(evidence).filter(e=>e.attempted&&!e.secure).length:Object.values(state.progress).filter(p=>p.lastCorrect===false).length;
   $('study-stats').replaceChildren();
   [[`${attempted}/${QUESTIONS.length}`,'perguntas exploradas'],[String(independent),'resolvidas sem ajuda'],[String(difficult),'para voltar a praticar']].forEach(([v,label])=>{
     const card=node('div');card.append(node('strong','',v),node('span','',label));$('study-stats').append(card);
@@ -63,6 +65,10 @@ function renderDashboard() {
     const progress=node('progress');progress.max=qs.length;progress.value=mastered;progress.setAttribute('aria-label',`${topic.title}: ${mastered} de ${qs.length} perguntas resolvidas sem ajuda`);article.append(progress);
     const details=node('details');details.append(node('summary','','Recordar a matéria'));
     const list=node('ol');topic.lesson.forEach(s=>list.append(node('li','',s)));details.append(list,node('p','study-example',topic.example));
+    if(course.adaptive&&topic.id==='cn-orgaos')details.append(diagramNode({kind:'route'}));
+    if(course.adaptive&&topic.id==='cn-absorcao')details.append(diagramNode({kind:'villi'}));
+    if(evidence){const es=Object.values(evidence).filter(e=>e.topic===topic.id);article.append(node('p','study-recommendation',`${es.filter(e=>e.secure).length}/${es.length} conceitos confirmados em perguntas e dias diferentes · ${es.filter(e=>e.due&&!e.secure).length} a recordar hoje`));}
+    if(course.adaptive){details.append(node('p','study-muted','Recordar → explicar → verificar: fecha o resumo, escreve duas ideias e explica um exemplo. Na próxima sessão, tenta sem consultar.'));}
     article.append(details,button('Praticar este tema',()=>requestStart('train',topic.id)));$('study-topics').append(article);
   });
   renderPlan();renderHistory();
@@ -99,7 +105,7 @@ function answerInputs(form,q,answers=[]) {
       const group=node('fieldset','study-word-game');group.append(node('legend','',field.label),node('p','study-muted','Toca nas palavras pela ordem certa. Usa «Desfazer» para corrigir.'));
       const input=node('input');input.type='hidden';input.name=`answer-${i}`;input.value=answers[i]||'';
       const assembled=node('p','study-assembled');assembled.setAttribute('aria-live','polite');
-      const bank=node('div','study-word-bank');bank.lang='en-GB';const selected=[];
+      const bank=node('div','study-word-bank');bank.lang=field.language||'en-GB';const selected=[];
       let seed=[...q.id].reduce((n,c)=>n+c.charCodeAt(0),i+1);
       const tokens=shuffle(field.words,()=>{seed=(seed*9301+49297)%233280;return seed/233280;});
       let remaining=String(answers[i]||'').replace(/[.?!]$/,'').split(' ').filter(Boolean);
@@ -125,7 +131,7 @@ function answerInputs(form,q,answers=[]) {
       const group=node('div','study-number-label');const label=node('label','',field.label);const inputId=`study-answer-${i}`;label.htmlFor=inputId;group.append(label);
       const supportsPower=field.type==='power',english=field.type==='text';
       const wrap=node('span','study-input-wrap');const input=node('input');input.id=inputId;input.name=`answer-${i}`;input.type='text';input.inputMode=supportsPower||english?'text':'decimal';input.autocomplete='off';input.value=answers[i]??'';input.setAttribute('aria-label',`${field.label}${field.suffix?' em '+field.suffix:''}`);
-      if(english){input.lang='en-GB';input.spellcheck=false;input.maxLength=500;input.setAttribute('autocapitalize','off');group.classList.add('study-text-label');}
+      if(english){input.lang=field.language||'en-GB';input.spellcheck=false;input.maxLength=500;input.setAttribute('autocapitalize','off');group.classList.add('study-text-label');}
       wrap.append(input);if(field.suffix)wrap.append(node('span','',field.suffix));
       if(supportsPower) {
         const insert=button('xʸ',()=>{
@@ -155,6 +161,8 @@ function renderSession() {
   if(item.repair)pane.append(node('p','study-pill','Volta a experimentar · aplica o que aprendeste'));
   const question=node('h3','study-question',q.prompt);pane.append(question);
   if(course.writing)question.lang='en-GB';
+  if(q.diagram)pane.append(diagramNode(q.diagram));
+  if(course.adaptive)pane.append(node('p','study-muted',`${q.source} · Nível ${q.level}: ${['','Recordar','Interpretar','Aplicar e justificar'][q.level]}${test?' · '+q.points+' pontos':''}`));
   if(q.passage)pane.append(passageNode(q.passage));
   if(q.clock)pane.append(clockNode(q.clock));
   if(q.chart)pane.append(chartNode(q.chart));
@@ -170,7 +178,7 @@ function renderSession() {
     hint.append(reveal,node('small','study-muted','Com pista, o acerto conta como feito com ajuda.'),hintText);pane.append(hint);
   }
   const scratch=node('details','study-scratch');scratch.append(node('summary','','O meu raciocínio (rascunho)'));
-  const scratchLabel=node('label','',course.writing?'Aponta a regra ou as palavras que te ajudaram. Este rascunho não recebe nota.':'Escreve os passos ou faz as contas no papel. Este rascunho não recebe nota.');const area=node('textarea');area.rows=3;area.value=s.notes?.[s.index]||'';area.maxLength=2000;area.addEventListener('input',()=>{s.notes??={};s.notes[s.index]=area.value;save();});scratchLabel.append(area);scratch.append(scratchLabel);pane.append(scratch);
+  const scratchLabel=node('label','',(course.writing||course.adaptive)?'Aponta a regra ou as palavras que te ajudaram. Este rascunho não recebe nota.':'Escreve os passos ou faz as contas no papel. Este rascunho não recebe nota.');const area=node('textarea');area.rows=3;area.value=s.notes?.[s.index]||'';area.maxLength=2000;area.addEventListener('input',()=>{s.notes??={};s.notes[s.index]=area.value;save();});scratchLabel.append(area);scratch.append(scratchLabel);pane.append(scratch);
   const form=node('form');form.id='study-answer-form';answerInputs(form,q,s.answers[s.index]);
   const message=node('p');message.id='answer-message';message.setAttribute('role','alert');form.append(message);
   form.addEventListener('input',()=>{s.answers[s.index]=values(form,q);save();if(q.build)updateBuild(q,s.answers[s.index]);});
@@ -201,6 +209,7 @@ function checkAnswer(form,q) {
   s.answers[s.index]=answers;s.feedback={correct:result.correct,parts:result.parts};
   s.attempts.push({id:q.id,answers,correct:result.correct,assisted,repair,hinted});
   state.progress=recordAttempt(state.progress,q.id,result.correct,assisted);
+  if(course.adaptive&&!result.correct)s.lastConceptError=q.topic+':'+q.skill;
   if(s.mode==='game'&&result.correct)s.keys=(s.keys||0)+1;
   save();renderSession();
 }
@@ -230,14 +239,15 @@ function confirmTest() {
 }
 function finishSession() {
   const s=state.active;const first=s.attempts.filter(a=>a.repair===false||!a.assisted);const correct=first.filter(a=>a.correct&&!a.assisted).length;
-  const report={date:Date.now(),mode:s.mode,correct,total:first.length,attempts:s.attempts,minutes:Math.max(1,Math.round((Date.now()-s.startedAt)/60000)),...(s.writing?{writing:s.writing}:{})};
+  const score=course.adaptive&&s.mode==='test'?scoreTest(s.attempts,QUESTIONS):null;
+  const report={...(score?{score}:{}),date:Date.now(),mode:s.mode,correct,total:first.length,attempts:s.attempts,minutes:Math.max(1,Math.round((Date.now()-s.startedAt)/60000)),...(s.writing?{writing:s.writing}:{})};
   state.history.unshift(report);state.history=state.history.slice(0,20);state.active=null;save();showReport(report);
 }
 function showReport(report) {
   openSession();const pane=$('study-session');pane.replaceChildren();
   const title=node('h2','',report.mode==='game'?'Missão cumprida!':'Sessão terminada');title.id='session-title';
-  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','study-result',`${report.correct} / ${report.total} sem ajuda${report.mode==='test'?` · ${Math.round(report.correct/report.total*100)}%`:''}`));
-  pane.append(node('p','',report.mode==='test'?'Cada pergunta vale o mesmo. Confere os passos abaixo, mesmo nas que acertaste.':'Os acertos depois de uma explicação ficam separados dos acertos sem ajuda. Continua a praticar os temas que ainda precisam de atenção.'));
+  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','study-result',report.score?`${report.score.earned} / ${report.score.total} pontos · ${Math.round(report.score.earned/report.score.total*100)}%`:`${report.correct} / ${report.total} sem ajuda${report.mode==='test'?` · ${Math.round(report.correct/report.total*100)}%`:''}`));
+  pane.append(node('p','',report.score?'Cada pergunta vale 5 pontos, repartidos igualmente pelas suas alíneas. Revê também as justificações.':report.mode==='test'?'Cada pergunta vale o mesmo. Confere os passos abaixo, mesmo nas que acertaste.':'Os acertos depois de uma explicação ficam separados dos acertos sem ajuda. Continua a praticar os temas que ainda precisam de atenção.'));
   if(report.writing)pane.append(node('p','study-recommendation','Esta percentagem refere-se apenas aos 20 exercícios de correção automática. A composição fica por rever com a grelha abaixo e não está incluída na nota.'));
   const helped=report.attempts.filter(a=>a.correct&&a.assisted).length;
   if(helped)pane.append(node('p','study-recommendation',`Conseguiste resolver ${helped} ${helped===1?'desafio':'desafios'} com ajuda. Já deste um passo! Noutro dia, volta a tentar sem a pista nem a explicação.`));
@@ -250,6 +260,7 @@ function showReport(report) {
     const details=node('details','study-correction');details.open=!a.correct;
     details.append(node('summary','',`${i+1}. ${a.correct?'Certo':'A rever'}${a.hinted?' · com pista':a.assisted?' · após explicação':''} · ${TOPICS.find(t=>t.id===q.topic).title}`),node('h3','',q.prompt));
     if(q.chart)details.append(chartNode(q.chart));if(q.table)details.append(tableNode(q.table));
+    if(q.diagram)details.append(diagramNode(q.diagram));
     if(q.passage)details.append(passageNode(q.passage));if(q.clock)details.append(clockNode(q.clock));
     details.append(node('p','',`Respondeste: ${(a.answers||[]).join(' · ')}`),feedbackNode(q,grade(q,a.answers)));pane.append(details);
   });focusHeading(title);
@@ -262,7 +273,29 @@ function feedbackNode(q,result) {
   const answers=q.fields.map(f=>`${f.label||'Resposta'}: ${formatAnswer(f)}${f.suffix?' '+f.suffix:''}`);
   panel.append(node('p','study-solution',answers.join(' · ')));
   if(result.parts?.length>1)panel.append(node('p','',result.parts.map((p,i)=>`${q.fields[i].label||'Escolha'}: ${p.correct?'certo':'a rever'}`).join(' · ')));
+  if(course.adaptive&&!result.correct)panel.append(node('p','study-recommendation','Conceito a rever: '+q.skill+'. Lê a explicação, fecha-a e tenta explicar o que muda na tua resposta. Vais receber outro exercício para aplicar a ideia.'));
   const steps=node('ol');q.steps.forEach(step=>steps.append(node('li','',step)));panel.append(steps);return panel;
+}
+
+function diagramNode({kind,chemical}) {
+  const figure=node('figure','study-science-diagram');
+  const caption=kind==='route'?'Percurso funcional simplificado — identifica A e B':kind==='particles'?'Modelo de transformação de substâncias':'Parede intestinal simplificada — observa a superfície';
+  figure.append(node('figcaption','',caption));
+  const svg=svgNode('svg',{viewBox:'0 0 500 370',role:'img','aria-label':kind==='route'?'Boca, faringe, esófago, A, B, intestino grosso e ânus, unidos por setas nesta ordem.':kind==='particles'?(chemical?'A origina B e C.':'A divide-se em pedaços A.'):'Pregas com projeções em forma de dedo. No interior das projeções há vasos sanguíneos e linfáticos.'});
+  if(kind==='route'){
+    ['Boca','Faringe','Esófago','A','B','Intestino grosso','Ânus'].forEach((label,i)=>{
+      const y=8+i*51;svg.append(svgNode('rect',{x:100,y,width:300,height:36,rx:14,fill:'#243c4b',stroke:'#a3dbc5'}),svgNode('text',{x:250,y:y+24,'text-anchor':'middle',fill:'#fff','font-size':19},label));
+      if(i<6)svg.append(svgNode('text',{x:250,y:y+50,'text-anchor':'middle',fill:'#a3dbc5','font-size':19},'↓'));
+    });
+  }else if(kind==='particles'){
+    for(const [x,y,r,label] of [[95,170,55,'A'],[340,130,30,chemical?'B':'A'],[395,220,30,chemical?'C':'A']])svg.append(svgNode('circle',{cx:x,cy:y,r,fill:label==='A'?'#d9a363':label==='B'?'#8cb9fa':'#a3dbc5'}),svgNode('text',{x,y:y+7,'text-anchor':'middle',fill:'#101722','font-size':26},label));
+    svg.append(svgNode('text',{x:210,y:180,fill:'currentColor','font-size':44},'→'),svgNode('text',{x:35,y:325,fill:'currentColor','font-size':18},'Cada letra representa uma substância.'));
+  }else{
+    svg.append(svgNode('path',{d:'M35 285 L35 160 Q35 65 75 65 Q115 65 115 160 L115 230 Q115 245 135 245 Q155 245 155 230 L155 160 Q155 65 195 65 Q235 65 235 160 L235 230 Q235 245 255 245 Q275 245 275 230 L275 160 Q275 65 315 65 Q355 65 355 160 L355 285 Z',fill:'#b88067',stroke:'#f8c899','stroke-width':4}));
+    for(const x of [75,195,315]){svg.append(svgNode('path',{d:`M${x-13} 275 V155 Q${x-13} 105 ${x} 105 Q${x+13} 105 ${x+13} 155 V275`,fill:'none',stroke:'#8cb9fa','stroke-width':5}),svgNode('line',{x1:x,y1:275,x2:x,y2:140,stroke:'#a3dbc5','stroke-width':4}));}
+    svg.append(svgNode('text',{x:25,y:325,fill:'currentColor','font-size':18},'Projeções da parede → maior superfície'),svgNode('text',{x:25,y:352,fill:'currentColor','font-size':16},'Azul: vasos sanguíneos · verde: linfáticos'));
+  }
+  figure.append(svg,node('p','study-muted',kind==='particles'?'Modelo original simplificado; as letras identificam substâncias, não tamanhos reais.':'Esquema original, sem escala; não representa todos os pormenores anatómicos.'));return figure;
 }
 
 function passageNode(passage) {
@@ -311,7 +344,7 @@ function svgNode(tag,attrs={},text) {const n=document.createElementNS(NS,tag);Ob
 function chartNode(chart) {
   const figure=node('figure','study-chart');figure.append(node('figcaption','',chart.title));
   const description=chart.labels.map((l,i)=>chart.second?`${l}: ${chart.series[0]} ${chart.values[i]}${chart.unit}; ${chart.series[1]} ${chart.second[i]}${chart.unit}`:`${l}: ${chart.values[i]} ${chart.unit}`).join('; ');
-  const svg=svgNode('svg',{viewBox:'0 0 640 290',role:'img','aria-label':`${chart.title}. ${description}`});
+  const svg=svgNode('svg',{viewBox:`0 0 640 ${chart.type==='pie'?Math.max(290,chart.labels.length*44+65):290}`,role:'img','aria-label':`${chart.title}. ${description}`});
   const colors=['#8cb9fa','#c6a2eb','#e7b874','#75c8ae'];
   if(chart.type==='pie') {
     let angle=-Math.PI/2;
@@ -350,6 +383,7 @@ function updateBuild(q,answers=[]) {
 
 function answerError(q) {
   if(q.fields.some(f=>f.type==='order'))return 'Usa todas as palavras para construir a frase. Podes desfazer e tentar outra ordem.';
+  if(course.adaptive&&q.fields.some(f=>f.type==='text'))return 'Completa todas as alíneas. Escreve apenas o termo pedido. A correção aceita a ausência de acentos e mostra a grafia correta.';
   if(q.fields.some(f=>f.type==='text'))return 'Completa todas as respostas em inglês. Nas lacunas, escreve só a parte em falta; nas transformações, escreve a frase completa.';
   if(q.fields.some(f=>f.options))return q.fields.every(f=>f.options)?'Escolhe uma resposta antes de verificar.':'Escolhe uma opção e completa o resultado numérico. Podes usar vírgula decimal.';
   return q.fields.some(f=>f.type==='power')
@@ -374,7 +408,7 @@ function renderHistory() {
   if(!state.history.length){$('study-history').append(node('p','study-muted','A tua primeira sessão começa aqui. Não precisas de acertar em tudo para aprender.'));return;}
   state.history.slice(0,8).forEach(report=>{
     const card=node('div','study-history-row');const date=new Intl.DateTimeFormat('pt-PT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Lisbon'}).format(new Date(report.date));
-    card.append(node('span','',`${date} · ${studyLabel} · ${modeNames[report.mode]||'Sessão'}`),node('strong','',`${report.correct}/${report.total} sem ajuda`),button('Ver correção',()=>showReport(report)));$('study-history').append(card);
+    card.append(node('span','',`${date} · ${studyLabel} · ${modeNames[report.mode]||'Sessão'}`),node('strong','',report.score?`${report.score.earned}/${report.score.total} pontos`:`${report.correct}/${report.total} sem ajuda`),button('Ver correção',()=>showReport(report)));$('study-history').append(card);
   });
 }
 
@@ -382,7 +416,7 @@ function renderHistory() {
 const access=await whenAccessResolved();
 if(access.user&&access.mode!=='none') {
   for(const c of COURSES){
-    storageKeys[c.id]=`francisca-study-v1:${access.user.uid}${c.id==='maths'?'':':english-test-1'}`;
+    storageKeys[c.id]=`francisca-study-v1:${access.user.uid}${c.id==='maths'?'':':'+c.id+'-test-1'}`;
     let raw=null;try{raw=localStorage.getItem(storageKeys[c.id]);}catch{$('study-storage').textContent='O armazenamento deste navegador está bloqueado. O plano e o progresso só duram enquanto esta página estiver aberta.';}
     states[c.id]=readState(raw,c.questions);
   }

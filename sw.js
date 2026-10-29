@@ -1,6 +1,6 @@
 /* A APP – Service Worker */
 const CACHE_PREFIX = 'finance-static-';
-const CACHE = `${CACHE_PREFIX}v88`;
+const CACHE = `${CACHE_PREFIX}v89`;
 
 const CORE = [
   './',
@@ -40,6 +40,7 @@ const CORE = [
   './js/francisca-estudar-core.js',
   './js/francisca-estudar-data.js',
   './js/francisca-estudar-courses.js',
+  './js/francisca-estudar-science-data.js',
   './js/francisca-estudar-english-data.js',
   './modules/ginasio.html',
   './modules/alimentacao.html',
