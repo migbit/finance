@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import vm from 'node:vm';
 
 const configSource = await readFile(new URL('../js/filipa-ginasio-config.js', import.meta.url), 'utf8');
 const { FILIPA_WORKOUT_TEMPLATES } = await import(
@@ -8,20 +9,20 @@ const { FILIPA_WORKOUT_TEMPLATES } = await import(
 );
 
 const expectedExercises = [
-  ['Agachamento', 'Leg Press 45º', 'Leg Extension', 'Lunges', 'Máquina de adutores', 'Calf Raises'],
-  ['Lat Pulldown', 'Seated Row', 'Puxada unilateral cruzada', 'Pullover na polia', 'Bicep Curl'],
-  ['Hip Thrust', 'Deadlift com halteres', 'Leg Curl', 'Extensão da anca na polia', 'Abdução da anca na polia', 'Hiperextensão'],
-  ['Chest Press', 'Shoulder Press', 'Pec Fly', 'Lateral Raises', 'Tricep Extension na polia', 'Tricep Press na polia'],
-  ['Bicicleta ou remo', 'Mobilidade + acelerações', 'Kettlebell Swing', 'Push-ups', 'Bicicleta — intervalos', 'Bicicleta / remo / caminhada inclinada']
+  ['Agachamento barra', 'Leg press 45°', 'Walking lunges', 'Leg extension com anca em extensão + sentado parciais no alongamento + encurtamento', 'Adutora'],
+  ['Pull up', 'Lat pulldown', 'Kassam pulldown', 'Pull over bilateral na polia', 'Bíceps inclinado com halteres + parciais no alongamento', 'Bíceps curl na polia'],
+  ['Hip thrust + parciais no encurtamento', 'Seated leg curl + parciais no alongamento', 'RDL com halteres', 'Búlgaro com défice', 'Abdutora de pé', 'Abdutora sentado'],
+  ['Chest press', 'Shoulder press com barra sentado', 'Lateral raise sentado com halteres', 'Overhead tricep extension na polia', 'Triceps pushdown'],
+  ['Passadeira', 'Remos', 'Agachamento com press de ombros']
 ];
 
-test('configura um ginásio, cinco treinos e os 29 exercícios indicados', () => {
+test('configura um ginásio, cinco treinos e os 25 exercícios do plano atualizado', () => {
   assert.deepEqual(Object.keys(FILIPA_WORKOUT_TEMPLATES), ['Solinca Foz']);
 
   const workouts = Object.values(FILIPA_WORKOUT_TEMPLATES['Solinca Foz']);
   assert.equal(workouts.length, 5);
   assert.deepEqual(workouts.map(workout => workout.map(exercise => exercise.name)), expectedExercises);
-  assert.equal(workouts.flat().length, 29);
+  assert.equal(workouts.flat().length, 25);
 });
 
 test('as cargas ficam vazias e os totais de séries correspondem ao plano', () => {
@@ -29,7 +30,7 @@ test('as cargas ficam vazias e os totais de séries correspondem ao plano', () =
   const exercises = workouts.flat();
   assert.deepEqual(
     workouts.map(workout => workout.reduce((total, exercise) => total + exercise.series.length, 0)),
-    [15, 13, 15, 15, 19]
+    [14, 18, 19, 20, 12]
   );
   exercises.forEach(exercise => {
     assert.equal(exercise.initialResistance, null);
@@ -37,38 +38,62 @@ test('as cargas ficam vazias e os totais de séries correspondem ao plano', () =
   });
 });
 
-test('guarda intervalos, RIR progressivo, descansos e notas especiais', () => {
+test('as séries, repetições e RIR de todos os exercícios correspondem ao plano pedido', () => {
   const workouts = Object.values(FILIPA_WORKOUT_TEMPLATES['Solinca Foz']);
-  const squat = workouts[0][0];
-  assert.equal(squat.rules.series[0].reps, '6–10');
-  assert.deepEqual(squat.series.map(series => series.rir), ['2', '1-2', '1']);
-  assert.equal(squat.rules.series[0].rest, '2:00–2:30');
-  assert.equal(squat.rules.restMinSec, 120);
-
-  assert.match(workouts[1][4].note, /RIR 0–1/);
-  assert.match(workouts[2][0].note, /Hip Thrust \+ Deadlift/);
-  assert.match(workouts[3][3].note, /RIR 0–1/);
+  const prescription = [
+    [[3, '8–10', '1-2'], [3, '8–10', '1-2'], [3, '15', '1-2'], [4, '10–12', '1-2'], [1, '50', '1']],
+    [[3, 'máx.', '0'], [4, '8–10', '1-2'], [4, '8–10', '1-2'], [3, '10–12', '1-2'], [2, '10–12', '1-2'], [2, '10–12', '1-2']],
+    [[4, ['15', '12', '10', '8'], '1-2'], [3, '10–12', '1-2'], [3, '8–10', '2-3'], [3, '8–10', '1-2'], [3, '10–12', '1-2'], [3, '10–12', '1-2']],
+    [[4, '10–12', '1-2'], [4, '6–8', '1-2'], [4, '8–10', '?'], [4, '10–12', '1-2'], [4, '10–12', '1-2']],
+    [[4, '800 m', '—'], [4, '500 m', '—'], [4, '20', '?']]
+  ];
+  workouts.forEach((workout, index) => workout.forEach((exercise, exerciseIndex) => {
+    const [count, reps, rir] = prescription[index][exerciseIndex];
+    assert.equal(exercise.series.length, count, exercise.name);
+    assert.deepEqual(exercise.rules.series.map(series => series.reps || series.volume),
+      Array.isArray(reps) ? reps : Array(count).fill(reps), exercise.name);
+    assert.ok(exercise.rules.series.every(series => series.rir === rir), exercise.name);
+    assert.ok(exercise.series.every(series => series.rir === (exercise.completionOnly ? '?' : rir)), exercise.name);
+    assert.equal(exercise.rules.restMinSec, undefined);
+  }));
+  assert.deepEqual(workouts[2][0].series.map(series => series.targetReps), [15, 12, 10, 8]);
 });
 
-test('o treino híbrido mantém blocos, volumes, RPE e duração prevista', () => {
+test('os três supersets mantêm os pares e a ordem indicados', () => {
+  const workouts = Object.values(FILIPA_WORKOUT_TEMPLATES['Solinca Foz']);
+  for (const [workoutIndex, firstIndex] of [[0, 1], [2, 4], [3, 3]]) {
+    const [first, second] = workouts[workoutIndex].slice(firstIndex, firstIndex + 2);
+    assert.match(first.block, /Superset/);
+    assert.equal(first.block, second.block);
+    assert.match(first.note, /Superset:/);
+    assert.match(second.note, /Segundo exercício/);
+  }
+});
+
+test('o treino híbrido regista quatro distâncias por aparelho e quatro séries de 20 repetições', () => {
   const hybrid = FILIPA_WORKOUT_TEMPLATES['Solinca Foz']['Treino híbrido'];
-  assert.deepEqual(hybrid.map(exercise => exercise.block), [
-    '1. Aquecimento',
-    '1. Aquecimento',
-    '2. Força/potência — EMOM',
-    '2. Força/potência — EMOM',
-    '3. Cardio intervalado',
-    '4. Cardio fácil'
-  ]);
-  assert.equal(hybrid[0].completionOnly, true);
-  assert.equal(hybrid[0].rules.series[0].volume, '3 min progressivo');
-  assert.equal(hybrid[0].rules.series[0].rir, 'RPE 3 → 5');
+  for (const [index, volume] of [[0, '800 m'], [1, '500 m']]) {
+    assert.equal(hybrid[index].completionOnly, true);
+    assert.equal(hybrid[index].trackIntensity, false);
+    assert.ok(hybrid[index].series.every(series => series.volumeLabel === volume && series.completionOnly));
+  }
   assert.equal(hybrid[2].series.length, 4);
-  assert.equal(hybrid[2].rules.series[0].rir, '3-4');
-  assert.equal(hybrid[4].series.length, 8);
-  assert.equal(hybrid[4].series[0].volumeLabel, '45 s forte + 75 s fácil');
-  assert.match(hybrid[5].note, /31–35 min/);
-  assert.match(hybrid[5].note, /sem criar fadiga excessiva nas pernas/);
+  assert.ok(hybrid[2].series.every(series => series.targetReps === 20));
+  assert.equal(hybrid[2].completionOnly, undefined);
+});
+
+test('o seletor permite registar as 50 repetições da adutora e recuperar valores superiores', async () => {
+  const gymSource = await readFile(new URL('../js/ginasio.js', import.meta.url), 'utf8');
+  const createRepsSelect = vm.runInNewContext(
+    gymSource.slice(gymSource.indexOf('function createRepsSelect('), gymSource.indexOf('function createCompletionSelect(')) + '\ncreateRepsSelect',
+    { document: { createElement: () => ({ children: [], setAttribute() {}, appendChild(child) { this.children.push(child); } }) } }
+  );
+  const select = createRepsSelect(50, 50);
+  assert.equal(select.children.length, 51);
+  assert.equal(select.children[50].selected, true);
+  assert.equal(createRepsSelect().children.length, 31);
+  assert.equal(createRepsSelect(55, 50).children[55].selected, true);
+  assert.match(gymSource, /option value="0" \$\{rirValue === '0' \? 'selected'/);
 });
 
 test('a página monta a interface partilhada e usa armazenamento isolado', async () => {

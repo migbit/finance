@@ -2098,10 +2098,10 @@ function updateTotalDisplay(row, initialResistance) {
   totalEl.title = `Resistência inicial ${formatWeight(initialResistance)} kg + ${baseLabel} = ${formatWeight(total)} kg`;
 }
 
-function createRepsSelect(value = 0) {
+function createRepsSelect(value = 0, maxReps = 30) {
   const select = document.createElement('select');
   select.setAttribute('data-reps', 'true');
-  for (let i = 0; i <= 30; i += 1) {
+  for (let i = 0; i <= Math.max(maxReps, Number(value) || 0); i += 1) {
     const option = document.createElement('option');
     option.value = String(i);
     option.textContent = i === 0 ? '-' : String(i);
@@ -2387,6 +2387,7 @@ function createSeriesTable(machine, variant, savedMachine) {
       <td data-label="${completionOnly ? 'Conclusão' : 'Reps'}"></td>
       <td data-label="${completionOnly ? 'Intensidade' : 'RIR'}">
         ${completionOnly ? '' : `<select data-rir>
+          ${IS_FILIPA_GYM ? `<option value="0" ${rirValue === '0' ? 'selected' : ''}>0</option>` : ''}
           <option value="falha" ${rirValue === 'falha' ? 'selected' : ''}>falha</option>
           <option value="0-1" ${rirValue === '0-1' ? 'selected' : ''}>0-1</option>
           <option value="?" ${rirValue === '?' ? 'selected' : ''}>?</option>
@@ -2431,7 +2432,7 @@ function createSeriesTable(machine, variant, savedMachine) {
     if (repsCell) {
       const repsSelect = completionOnly
         ? createCompletionSelect(repsValue)
-        : createRepsSelect(repsValue);
+        : createRepsSelect(repsValue, IS_FILIPA_GYM ? Math.max(30, series.targetReps || 0) : 30);
       repsSelect.setAttribute(
         'aria-label',
         completionOnly

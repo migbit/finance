@@ -1,316 +1,129 @@
 function createExercise(id, name, {
-  seriesCount,
-  reps,
-  targetReps,
-  rir = '1-2',
-  rirBySeries = null,
-  rest,
-  restMinSec,
-  block = '',
-  note = ''
+  seriesCount, reps, targetReps, repsBySeries = null, rir = '1-2', block = '', note = ''
 }) {
-  const prescribedRir = rirBySeries || Array.from({ length: seriesCount }, () => rir);
-
   return {
-    id,
-    name,
-    block,
-    initialResistance: null,
+    id, name, block, initialResistance: null,
     series: Array.from({ length: seriesCount }, (_, index) => ({
-      baseWeight: 0,
-      targetReps,
-      rir: prescribedRir[index]
+      baseWeight: 0, targetReps: repsBySeries?.[index] ?? targetReps, rir
     })),
     rules: {
       series: Array.from({ length: seriesCount }, (_, index) => ({
-        reps,
-        rir: prescribedRir[index],
-        rest: index === seriesCount - 1 ? 'fim' : rest
-      })),
-      restMinSec
-    },
-    note
-  };
-}
-
-function createCompletionBlock(id, name, {
-  block,
-  seriesCount = 1,
-  volume,
-  intensity = '—',
-  defaultIntensity = '?',
-  trackIntensity = true,
-  completionLabel = 'bloco',
-  note = ''
-}) {
-  return {
-    id,
-    name,
-    block,
-    completionOnly: true,
-    trackIntensity,
-    completionLabel,
-    initialResistance: null,
-    series: Array.from({ length: seriesCount }, () => ({
-      baseWeight: 0,
-      targetReps: 1,
-      rir: defaultIntensity,
-      completionOnly: true,
-      completionLabel,
-      volumeLabel: volume
-    })),
-    rules: {
-      series: Array.from({ length: seriesCount }, () => ({
-        volume,
-        rir: intensity,
-        rest: 'fim'
+        reps: repsBySeries ? String(repsBySeries[index]) : reps, rir, rest: '—'
       }))
     },
     note
   };
 }
 
-const descendingRir = ['2', '1-2', '1'];
+function createDistanceBlock(id, name, volume) {
+  return {
+    id, name, initialResistance: null, completionOnly: true,
+    trackIntensity: false, completionLabel: 'série',
+    series: Array.from({ length: 4 }, () => ({
+      baseWeight: 0, targetReps: 1, rir: '?', completionOnly: true,
+      completionLabel: 'série', volumeLabel: volume
+    })),
+    rules: { series: Array.from({ length: 4 }, () => ({ volume, rir: '—', rest: '—' })) }
+  };
+}
 
 export const FILIPA_WORKOUT_TEMPLATES = {
   'Solinca Foz': {
-    'Inferiores · Quadríceps, gémeos e adutores': [
-      createExercise('agachamento', 'Agachamento', {
-        seriesCount: 3,
-        reps: '6–10',
-        targetReps: 6,
-        rirBySeries: descendingRir,
-        rest: '2:00–2:30',
-        restMinSec: 120
+    'Inferiores · Quadríceps e adutores': [
+      createExercise('agachamento-barra', 'Agachamento barra', {
+        seriesCount: 3, reps: '8–10', targetReps: 8
       }),
-      createExercise('leg-press-45', 'Leg Press 45º', {
-        seriesCount: 3,
-        reps: '8–12',
-        targetReps: 8,
-        rirBySeries: descendingRir,
-        rest: '2:00',
-        restMinSec: 120
+      createExercise('leg-press-45', 'Leg press 45°', {
+        seriesCount: 3, reps: '8–10', targetReps: 8,
+        block: '2. Superset · Leg press 45° → Walking lunges',
+        note: 'Superset: fazer Leg press 45° e depois Walking lunges. Repetir 3 vezes.'
       }),
-      createExercise('leg-extension', 'Leg Extension', {
-        seriesCount: 2,
-        reps: '10–15',
-        targetReps: 10,
-        rest: '1:15–1:30',
-        restMinSec: 75
+      createExercise('walking-lunges', 'Walking lunges', {
+        seriesCount: 3, reps: '15', targetReps: 15,
+        block: '2. Superset · Leg press 45° → Walking lunges',
+        note: 'Segundo exercício do superset com Leg press 45°.'
       }),
-      createExercise('lunges', 'Lunges', {
-        seriesCount: 2,
-        reps: '8–12 / perna',
-        targetReps: 8,
-        rest: '1:30–2:00',
-        restMinSec: 90
+      createExercise('leg-extension-anca-extensao-parciais', 'Leg extension com anca em extensão + sentado parciais no alongamento + encurtamento', {
+        seriesCount: 4, reps: '10–12', targetReps: 10, block: '3. Leg extension',
+        note: 'Anca em extensão + sentado com parciais no alongamento + encurtamento.'
       }),
-      createExercise('adutores', 'Máquina de adutores', {
-        seriesCount: 2,
-        reps: '12–20',
-        targetReps: 12,
-        rest: '1:00–1:15',
-        restMinSec: 60
-      }),
-      createExercise('calf-raises', 'Calf Raises', {
-        seriesCount: 3,
-        reps: '8–15',
-        targetReps: 8,
-        rest: '1:00–1:30',
-        restMinSec: 60
+      createExercise('adutores', 'Adutora', {
+        seriesCount: 1, reps: '50', targetReps: 50, rir: '1', block: '4. Adutora'
       })
     ],
     'Superiores · Costas e bíceps': [
-      createExercise('lat-pulldown', 'Lat Pulldown', {
-        seriesCount: 3,
-        reps: '8–12',
-        targetReps: 8,
-        rirBySeries: descendingRir,
-        rest: '1:30–2:00',
-        restMinSec: 90
+      createExercise('pull-up', 'Pull up', {
+        seriesCount: 3, reps: 'máx.', targetReps: 0, rir: '0'
       }),
-      createExercise('seated-row', 'Seated Row', {
-        seriesCount: 3,
-        reps: '8–12',
-        targetReps: 8,
-        rirBySeries: descendingRir,
-        rest: '1:30–2:00',
-        restMinSec: 90
+      createExercise('lat-pulldown', 'Lat pulldown', {
+        seriesCount: 4, reps: '8–10', targetReps: 8
       }),
-      createExercise('puxada-unilateral-cruzada', 'Puxada unilateral cruzada', {
-        seriesCount: 2,
-        reps: '10–15 / lado',
-        targetReps: 10,
-        rest: '1:00–1:30',
-        restMinSec: 60,
-        note: 'Executar na polia alta, um lado de cada vez.'
+      createExercise('kassam-pulldown', 'Kassam pulldown', {
+        seriesCount: 4, reps: '8–10', targetReps: 8
       }),
-      createExercise('pullover-polia-barra', 'Pullover na polia', {
-        seriesCount: 2,
-        reps: '10–15',
-        targetReps: 10,
-        rest: '1:00–1:30',
-        restMinSec: 60,
-        note: 'Executar na polia alta com barra, puxando de cima para baixo.'
+      createExercise('pullover-bilateral-polia', 'Pull over bilateral na polia', {
+        seriesCount: 3, reps: '10–12', targetReps: 10
       }),
-      createExercise('bicep-curl', 'Bicep Curl', {
-        seriesCount: 3,
-        reps: '8–15',
-        targetReps: 8,
-        rest: '1:00–1:30',
-        restMinSec: 60,
-        note: 'Na última série pode ocasionalmente chegar a RIR 0–1, desde que a técnica não se deteriore.'
+      createExercise('biceps-inclinado-halteres-parciais', 'Bíceps inclinado com halteres + parciais no alongamento', {
+        seriesCount: 2, reps: '10–12', targetReps: 10,
+        note: 'Acrescentar parciais no alongamento.'
+      }),
+      createExercise('biceps-curl-polia', 'Bíceps curl na polia', {
+        seriesCount: 2, reps: '10–12', targetReps: 10
       })
     ],
     'Inferiores · Posteriores e glúteos': [
-      createExercise('hip-thrust', 'Hip Thrust', {
-        seriesCount: 3,
-        reps: '6–10',
-        targetReps: 6,
-        rirBySeries: descendingRir,
-        rest: '2:00',
-        restMinSec: 120,
-        note: 'Monitorizar a combinação Hip Thrust + Deadlift + extensão da anca + hiperextensão. Depois dos primeiros registos, avaliar se um deles pode ser retirado sem perder resultados.'
+      createExercise('hip-thrust-parciais', 'Hip thrust + parciais no encurtamento', {
+        seriesCount: 4, repsBySeries: [15, 12, 10, 8],
+        note: 'Acrescentar parciais no encurtamento em cada série.'
       }),
-      createExercise('deadlift-halteres', 'Deadlift com halteres', {
-        seriesCount: 3,
-        reps: '6–10',
-        targetReps: 6,
-        rirBySeries: descendingRir,
-        rest: '2:00–2:30',
-        restMinSec: 120
+      createExercise('seated-leg-curl-parciais', 'Seated leg curl + parciais no alongamento', {
+        seriesCount: 3, reps: '10–12', targetReps: 10,
+        note: 'Acrescentar parciais no alongamento.'
       }),
-      createExercise('leg-curl', 'Leg Curl', {
-        seriesCount: 3,
-        reps: '10–15',
-        targetReps: 10,
-        rest: '1:15–1:30',
-        restMinSec: 75
+      createExercise('rdl-halteres', 'RDL com halteres', {
+        seriesCount: 3, reps: '8–10', targetReps: 8, rir: '2-3'
       }),
-      createExercise('extensao-anca-polia', 'Extensão da anca na polia', {
-        seriesCount: 2,
-        reps: '10–15 / perna',
-        targetReps: 10,
-        rest: '1:00–1:15',
-        restMinSec: 60,
-        note: 'Executar com tornozeleira.'
+      createExercise('bulgaro-deficit', 'Búlgaro com défice', {
+        seriesCount: 3, reps: '8–10', targetReps: 8
       }),
-      createExercise('abducao-anca-polia', 'Abdução da anca na polia', {
-        seriesCount: 2,
-        reps: '12–20 / perna',
-        targetReps: 12,
-        rest: '1:00–1:15',
-        restMinSec: 60,
-        note: 'Executar com tornozeleira, logo após a extensão da anca.'
+      createExercise('abdutora-pe', 'Abdutora de pé', {
+        seriesCount: 3, reps: '10–12', targetReps: 10,
+        block: '5. Superset · Abdutora de pé → Abdutora sentado',
+        note: 'Superset: fazer Abdutora de pé e depois Abdutora sentado. Repetir 3 vezes.'
       }),
-      createExercise('hiperextensao', 'Hiperextensão', {
-        seriesCount: 2,
-        reps: '10–15',
-        targetReps: 10,
-        rir: '2',
-        rest: '1:00–1:30',
-        restMinSec: 60
+      createExercise('abdutora-sentado', 'Abdutora sentado', {
+        seriesCount: 3, reps: '10–12', targetReps: 10,
+        block: '5. Superset · Abdutora de pé → Abdutora sentado',
+        note: 'Segundo exercício do superset com Abdutora de pé.'
       })
     ],
     'Superiores · Peitoral, ombros e tríceps': [
-      createExercise('chest-press', 'Chest Press', {
-        seriesCount: 3,
-        reps: '8–12',
-        targetReps: 8,
-        rirBySeries: descendingRir,
-        rest: '1:30–2:00',
-        restMinSec: 90
+      createExercise('chest-press', 'Chest press', {
+        seriesCount: 4, reps: '10–12', targetReps: 10
       }),
-      createExercise('shoulder-press', 'Shoulder Press', {
-        seriesCount: 3,
-        reps: '8–12',
-        targetReps: 8,
-        rirBySeries: descendingRir,
-        rest: '1:30–2:00',
-        restMinSec: 90
+      createExercise('shoulder-press-barra-sentado', 'Shoulder press com barra sentado', {
+        seriesCount: 4, reps: '6–8', targetReps: 6
       }),
-      createExercise('pec-fly', 'Pec Fly', {
-        seriesCount: 2,
-        reps: '10–15',
-        targetReps: 10,
-        rest: '1:00–1:30',
-        restMinSec: 60,
-        note: 'Sentada na máquina, abrir e fechar os braços.'
+      createExercise('lateral-raise-sentado-halteres', 'Lateral raise sentado com halteres', {
+        seriesCount: 4, reps: '8–10', targetReps: 8, rir: '?'
       }),
-      createExercise('lateral-raises', 'Lateral Raises', {
-        seriesCount: 3,
-        reps: '12–20',
-        targetReps: 12,
-        rest: '1:00–1:15',
-        restMinSec: 60,
-        note: 'Na última série pode ocasionalmente chegar a RIR 0–1.'
+      createExercise('overhead-tricep-extension-polia', 'Overhead tricep extension na polia', {
+        seriesCount: 4, reps: '10–12', targetReps: 10,
+        block: '4. Superset · Overhead tricep extension → Triceps pushdown',
+        note: 'Superset: fazer Overhead tricep extension na polia e depois Triceps pushdown. Repetir 4 vezes.'
       }),
-      createExercise('tricep-extension-polia', 'Tricep Extension na polia', {
-        seriesCount: 2,
-        reps: '10–15',
-        targetReps: 10,
-        rest: '1:00–1:15',
-        restMinSec: 60,
-        note: 'Na última série pode ocasionalmente chegar a RIR 0–1.'
-      }),
-      createExercise('tricep-press-polia', 'Tricep Press na polia', {
-        seriesCount: 2,
-        reps: '10–15',
-        targetReps: 10,
-        rest: '1:00–1:15',
-        restMinSec: 60,
-        note: 'Na última série pode ocasionalmente chegar a RIR 0–1.'
+      createExercise('triceps-pushdown', 'Triceps pushdown', {
+        seriesCount: 4, reps: '10–12', targetReps: 10,
+        block: '4. Superset · Overhead tricep extension → Triceps pushdown',
+        note: 'Segundo exercício do superset com Overhead tricep extension na polia.'
       })
     ],
     'Treino híbrido': [
-      createCompletionBlock('hibrido-aquecimento-cardio', 'Bicicleta ou remo', {
-        block: '1. Aquecimento',
-        volume: '3 min progressivo',
-        intensity: 'RPE 3 → 5',
-        defaultIntensity: 'RPE 5',
-        note: 'Duração total prevista: 31–35 min, podendo chegar a 40 min com transições. Objetivo: melhorar a capacidade cardiovascular e o condicionamento sem criar fadiga excessiva nas pernas para a musculação. Aumentar progressivamente a intensidade ao longo dos 3 minutos.'
-      }),
-      createCompletionBlock('hibrido-mobilidade-aceleracoes', 'Mobilidade + acelerações', {
-        block: '1. Aquecimento',
-        volume: '2 min',
-        trackIntensity: false,
-        note: 'Mobilidade dinâmica seguida de acelerações curtas.'
-      }),
-      createExercise('hibrido-kettlebell-swing', 'Kettlebell Swing', {
-        block: '2. Força/potência — EMOM',
-        seriesCount: 4,
-        reps: '8',
-        targetReps: 8,
-        rir: '3-4',
-        rest: '1:00 EMOM',
-        restMinSec: 60,
-        note: 'Alternar com Push-ups no início de cada minuto: 4 rondas de cada exercício.'
-      }),
-      createExercise('hibrido-push-ups', 'Push-ups', {
-        block: '2. Força/potência — EMOM',
-        seriesCount: 4,
-        reps: '6–8',
-        targetReps: 6,
-        rir: '3-4',
-        rest: '1:00 EMOM',
-        restMinSec: 60,
-        note: 'Alternar com Kettlebell Swing no início de cada minuto: 4 rondas de cada exercício.'
-      }),
-      createCompletionBlock('hibrido-cardio-intervalado', 'Bicicleta — intervalos', {
-        block: '3. Cardio intervalado',
-        seriesCount: 8,
-        volume: '45 s forte + 75 s fácil',
-        intensity: 'Forte: RPE ~8/10',
-        defaultIntensity: 'RPE 8',
-        completionLabel: 'intervalo',
-        note: 'Preferir a bicicleta. Completar 8 intervalos, num total de 16 minutos.'
-      }),
-      createCompletionBlock('hibrido-cardio-facil', 'Bicicleta / remo / caminhada inclinada', {
-        block: '4. Cardio fácil',
-        volume: '5–8 min',
-        intensity: 'RPE 3–4/10',
-        defaultIntensity: 'RPE 4',
-        note: 'Ritmo fácil para terminar. Objetivo do treino: melhorar a capacidade cardiovascular e o condicionamento sem criar fadiga excessiva nas pernas para a musculação. Duração total prevista: 31–35 min, podendo chegar a 40 min com transições.'
+      createDistanceBlock('hibrido-passadeira-800m', 'Passadeira', '800 m'),
+      createDistanceBlock('hibrido-remo-500m', 'Remos', '500 m'),
+      createExercise('hibrido-agachamento-press-ombros', 'Agachamento com press de ombros', {
+        seriesCount: 4, reps: '20', targetReps: 20, rir: '?'
       })
     ]
   }
