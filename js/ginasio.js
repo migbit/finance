@@ -3965,22 +3965,50 @@ function renderSummaries(summaries) {
   });
 }
 
-const pendingRpmDates = new Set();
+const ATTENDANCE_ACTIVITIES = {
+  RPM: { label: 'RPM', gym: 'Aula de grupo', color: '#22d3ee' },
+  Bike: { label: 'Bike (estrada)', gym: 'Estrada', color: '#a3e635' },
+  Trail: { label: 'Trail', gym: 'Ar livre', color: '#f472b6' }
+};
+const pendingAttendanceDates = new Set();
 
 function selectAttendanceDay({ day, sessions, label }, cell) {
   document.getElementById('gym-attendance-legend').textContent = label;
-  if (IS_FILIPA_GYM || sessions.length || pendingRpmDates.has(day.date)) return;
-  pendingRpmDates.add(day.date);
-  showConfirm(`Adicionar o treino RPM no dia ${formatWorkoutDate(day.date)}?`, () => {
-    void saveRpmAttendance(day.date, cell);
-  }, () => pendingRpmDates.delete(day.date), { confirmLabel: 'Adicionar RPM' });
+  document.getElementById('gym-attendance-choices')?.remove();
+  if (IS_FILIPA_GYM || sessions.length || pendingAttendanceDates.has(day.date)) return;
+  const choices = document.createElement('div');
+  choices.id = 'gym-attendance-choices';
+  choices.className = 'gym-attendance-choices';
+  choices.setAttribute('role', 'group');
+  choices.setAttribute('aria-label', `Adicionar treino em ${formatWorkoutDate(day.date)}`);
+  Object.entries(ATTENDANCE_ACTIVITIES).forEach(([activity, config]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = config.label;
+    button.addEventListener('click', () => {
+      if (pendingAttendanceDates.has(day.date)) return;
+      pendingAttendanceDates.add(day.date);
+      choices.remove();
+      showConfirm(`Adicionar o treino ${config.label} no dia ${formatWorkoutDate(day.date)}?`, () => {
+        void saveActivityAttendance(day.date, activity, cell);
+      }, () => pendingAttendanceDates.delete(day.date), { confirmLabel: `Adicionar ${activity}` });
+    });
+    choices.appendChild(button);
+  });
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.textContent = 'Cancelar';
+  cancel.addEventListener('click', () => choices.remove());
+  choices.appendChild(cancel);
+  document.getElementById('gym-attendance-legend').after(choices);
 }
 
-async function saveRpmAttendance(date, cell) {
-  if (IS_FILIPA_GYM) return;
+async function saveActivityAttendance(date, activity, cell) {
+  if (IS_FILIPA_GYM || !Object.hasOwn(ATTENDANCE_ACTIVITIES, activity)) return;
+  const config = ATTENDANCE_ACTIVITIES[activity];
   cell.disabled = true;
   try {
-    const session = { date, gym: 'Aula de grupo', treino: 'RPM', machines: {} };
+    const session = { date, gym: config.gym, treino: activity, machines: {} };
     const docId = getSessionId(session.gym, session.treino, date);
     const ref = doc(gymCollection('ginasio_treinos'), docId);
     const existing = await getDoc(ref);
@@ -3994,15 +4022,15 @@ async function saveRpmAttendance(date, cell) {
       });
       await batch.commit();
     }
-    document.getElementById('gym-attendance-legend').textContent = `${formatWorkoutDate(date)}: RPM`;
-    showToast('Presença em RPM registada.', 'success');
+    document.getElementById('gym-attendance-legend').textContent = `${formatWorkoutDate(date)}: ${config.label}`;
+    showToast(`Presença em ${activity} registada.`, 'success');
     await loadSummaries();
   } catch (error) {
-    console.error('Erro ao registar RPM:', error);
-    showToast('Não foi possível guardar a presença em RPM. Tenta novamente.', 'error');
+    console.error(`Erro ao registar ${activity}:`, error);
+    showToast(`Não foi possível guardar a presença em ${activity}. Tenta novamente.`, 'error');
   } finally {
     cell.disabled = false;
-    pendingRpmDates.delete(date);
+    pendingAttendanceDates.delete(date);
   }
 }
 
@@ -4014,7 +4042,7 @@ async function loadAttendance() {
   const shortDate = date => new Date(`${date}T12:00:00`).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
   document.getElementById('gym-attendance-period').textContent = `${shortDate(days[0].date)} – ${shortDate(days[27].date)}`;
   const colors = attendanceColors(Object.values(WORKOUT_TEMPLATES).flatMap(plans => Object.keys(plans)).map(normalTraining));
-  colors.set('RPM', '#22d3ee');
+  Object.entries(ATTENDANCE_ACTIVITIES).forEach(([activity, config]) => colors.set(activity, config.color));
   try {
     const snap = await getDocs(query(
       gymCollection('ginasio_treinos'),

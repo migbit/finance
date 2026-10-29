@@ -8,17 +8,27 @@ const { attendanceDays, attendanceColors, renderAttendance } = await import(
   `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`
 );
 const gymSource = await readFile(new URL('../js/ginasio.js', import.meta.url), 'utf8');
-const rpmSource = gymSource.slice(gymSource.indexOf('const pendingRpmDates ='), gymSource.indexOf('async function loadAttendance()'));
+const activitySource = gymSource.slice(gymSource.indexOf('const ATTENDANCE_ACTIVITIES ='), gymSource.indexOf('async function loadAttendance()'));
 
 function rpmHarness({ filipa = false, exists = false, fail = false } = {}) {
-  const legend = {};
+  let choices = null;
+  const legend = { after(element) { choices = element; } };
   const writes = [];
   const confirmations = [];
   const toasts = [];
   let commits = 0;
   const context = vm.createContext({
     IS_FILIPA_GYM: filipa,
-    document: { getElementById: () => legend },
+    document: {
+      getElementById: id => id === 'gym-attendance-choices' ? choices : legend,
+      createElement: () => ({
+        children: [],
+        setAttribute() {},
+        appendChild(child) { this.children.push(child); },
+        addEventListener(name, callback) { this[name] = callback; },
+        remove() { if (choices === this) choices = null; }
+      })
+    },
     formatWorkoutDate: date => date,
     showConfirm: (...args) => confirmations.push(args),
     showToast: (...args) => toasts.push(args),
@@ -37,25 +47,29 @@ function rpmHarness({ filipa = false, exists = false, fail = false } = {}) {
     loadSummaries: async () => {},
     console: { error: () => {} }
   });
-  vm.runInContext(rpmSource, context);
-  return { context, legend, writes, confirmations, toasts, get commits() { return commits; } };
+  vm.runInContext(activitySource, context);
+  return { context, legend, writes, confirmations, toasts, get choices() { return choices; }, get commits() { return commits; } };
 }
 
-test('RPM pede confirmação apenas num dia vazio de Miguel; cancelar não grava', async () => {
+test('oferece RPM, Bike e Trail apenas num dia vazio de Miguel e só grava após confirmar', async () => {
   const h = rpmHarness();
   const selection = { day: { date: '2026-10-28' }, sessions: [], label: '28 de outubro: Sem treino' };
   const cell = {};
   h.context.selectAttendanceDay(selection, cell);
   assert.equal(h.legend.textContent, selection.label);
+  assert.deepEqual(h.choices.children.map(button => button.textContent), ['RPM', 'Bike (estrada)', 'Trail', 'Cancelar']);
+  assert.equal(h.confirmations.length, 0);
+  h.choices.children[0].click();
   assert.equal(h.confirmations.length, 1);
   assert.equal(h.writes.length, 0);
   h.confirmations[0][2]();
   assert.equal(h.writes.length, 0);
   h.context.selectAttendanceDay(selection, cell);
+  h.choices.children[0].click();
   assert.equal(h.confirmations.length, 2);
   // The confirmation callback invokes the same persistence function tested below.
   let confirmedDate;
-  h.context.saveRpmAttendance = async date => { confirmedDate = date; };
+  h.context.saveActivityAttendance = async date => { confirmedDate = date; };
   h.confirmations[1][1]();
   assert.equal(confirmedDate, selection.day.date);
   h.context.selectAttendanceDay({ ...selection, sessions: [{ treino: 'Pernas' }] }, cell);
@@ -64,29 +78,62 @@ test('RPM pede confirmação apenas num dia vazio de Miguel; cancelar não grava
   filipa.context.selectAttendanceDay(selection, cell);
   assert.equal(filipa.confirmations.length, 0);
   assert.equal(filipa.legend.textContent, selection.label);
-  await filipa.context.saveRpmAttendance(selection.day.date, cell);
+  assert.equal(filipa.choices, null);
+  await filipa.context.saveActivityAttendance(selection.day.date, 'RPM', cell);
   assert.equal(filipa.writes.length, 0);
 });
 
-test('RPM grava treino e resumo no mesmo lote, sem duplicar um registo existente', async () => {
+test('as três atividades gravam treino e resumo no mesmo lote', async () => {
+  for (const activity of ['RPM', 'Bike', 'Trail']) {
   const h = rpmHarness();
   const cell = {};
-  await h.context.saveRpmAttendance('2026-10-28', cell);
+  await h.context.saveActivityAttendance('2026-10-28', activity, cell);
   assert.equal(h.commits, 1);
   assert.equal(h.writes.length, 2);
   assert.equal(h.writes[0].ref.collection, 'ginasio_treinos');
   assert.equal(h.writes[1].ref.collection, 'ginasio_resumos');
-  assert.equal(h.writes[0].data.treino, 'RPM');
+  assert.equal(h.writes[0].data.treino, activity);
   assert.equal(h.writes[0].data.date, '2026-10-28');
   assert.equal(cell.disabled, false);
+  }
+});
+
+test('não duplica registos e permite tentar novamente após falha', async () => {
+  const cell = {};
   const existing = rpmHarness({ exists: true });
-  await existing.context.saveRpmAttendance('2026-10-28', {});
+  await existing.context.saveActivityAttendance('2026-10-28', 'RPM', {});
   assert.equal(existing.writes.length, 0);
   const failed = rpmHarness({ fail: true });
-  await failed.context.saveRpmAttendance('2026-10-28', cell);
+  await failed.context.saveActivityAttendance('2026-10-28', 'Trail', cell);
   assert.equal(failed.commits, 0);
   assert.equal(failed.toasts.at(-1)[1], 'error');
   assert.equal(cell.disabled, false);
+});
+
+test('cancelar a escolha ou tocar num dia preenchido não oferece gravação', () => {
+  const h = rpmHarness();
+  const selection = { day: { date: '2026-10-28' }, sessions: [], label: 'Sem treino' };
+  h.context.selectAttendanceDay(selection, {});
+  h.choices.children[3].click();
+  assert.equal(h.choices, null);
+  assert.equal(h.confirmations.length, 0);
+  h.context.selectAttendanceDay({ ...selection, sessions: [{ treino: 'Bike' }] }, {});
+  assert.equal(h.choices, null);
+  assert.equal(h.writes.length, 0);
+});
+
+test('a escolha Bike e Trail chega à confirmação e à gravação com o tipo correto', () => {
+  for (const [index, activity] of [[1, 'Bike'], [2, 'Trail']]) {
+    const h = rpmHarness();
+    h.context.selectAttendanceDay({ day: { date: '2026-10-28' }, sessions: [], label: '' }, {});
+    let confirmedActivity;
+    h.context.saveActivityAttendance = async (date, type) => { confirmedActivity = type; };
+    h.choices.children[index].click();
+    assert.match(h.confirmations[0][0], new RegExp(activity));
+    assert.equal(confirmedActivity, undefined);
+    h.confirmations[0][1]();
+    assert.equal(confirmedActivity, activity);
+  }
 });
 
 test('mostra quatro semanas de segunda a domingo, incluindo a mudança de hora', () => {

@@ -30,6 +30,7 @@ body[data-theme="dark"] .ginasio-page .page-title {
 .ginasio-page .gym-attendance-day:hover { filter: brightness(1.15); }
 .ginasio-page .gym-attendance-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 #gym-attendance-legend { line-height: 1.5; }
+.gym-attendance-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .ginasio-page h3 { margin: 0 0 20px; text-align: left; font-size: 1.1rem; }
 .ginasio-page button { min-height: 44px; height: auto; padding: .55rem .85rem; border-color: var(--border); box-shadow: none; }
 .ginasio-page button:hover { background: var(--surface-raised); box-shadow: none; }
