@@ -47,8 +47,7 @@ const NAV_GROUPS = [
       { label: '🧳 Taxa Turística', key: 'tmt', slug: 'modules/tmt.html', module: true },
       { label: '📝 Questionário', key: 'questionario', slug: 'modules/questionario.html', module: true },
       { label: '🧹 Horas Limpeza', key: 'cleaning-hours', slug: 'modules/cleaning-hours.html', module: true },
-      { label: '📋 Diversos', key: 'diversos', slug: 'modules/diversos.html', module: true },
-      { label: '🛟 Backup', key: 'settings', slug: 'modules/settings.html', module: true }
+      { label: '📋 Diversos', key: 'diversos', slug: 'modules/diversos.html', module: true }
     ]
   },
   {
@@ -141,7 +140,6 @@ const ACTIVE_KEY_MATCHERS = [
   { key: 'diversos', patterns: ['diversos'] },
   { key: 'questionario', patterns: ['questionario'] },
   { key: 'cleaning-hours', patterns: ['cleaning-hours'] },
-  { key: 'settings', patterns: ['settings'] },
   { key: 'caixa', patterns: ['caixa'] },
   { key: 'iva', patterns: ['iva'] },
   { key: 'pallco', patterns: ['pallco'] },
