@@ -2,7 +2,7 @@
 
 import {
   START_YM, DEFAULTS, TAXA_ANUAL_FIXA,
-  ensureMonthsExist, loadParams, saveParams, loadAllDocs, saveRow,
+  ensureMonthsExist, loadParams, saveParams, loadAllDocs, saveRow, correctMonthlyInterest,
   loadJuroSaldo, saveJuroSaldo,
   ymCompare, getPreviousMonth, ymMin,
   loadShareQuantities,
@@ -84,7 +84,7 @@ function applyDcaReadOnlyUI() {
     '#end-date', '#pct-swda', '#pct-aggh', '#monthly-contribution',
     '#automation-enabled', '#automation-effective-from', '#automation-vwce-amount', '#automation-aggh-amount',
     '#automation-interest-rate',
-    '.swda', '.aggh', '.cash', '.inv-swda-extra', '.inv-aggh-extra'
+    '.swda', '.aggh', '.cash', '.inv-swda-extra', '.inv-aggh-extra', '.btn-correct-interest'
   ];
   document.querySelectorAll(inputs.join(',')).forEach(element => { element.disabled = true; });
 
@@ -403,7 +403,7 @@ function renderJuroMovements() {
   }
   const labels = {
     deposit: 'Depósito', withdrawal: 'Levantamento', dca: 'DCA', reinforcement: 'Reforço',
-    reinforcement_void: 'Anulação de reforço', interest: 'Juro', manual_correction: 'Correção manual', set_balance: 'Correção antiga'
+    reinforcement_void: 'Anulação de reforço', interest: 'Juro', interest_correction: 'Correção de juro', manual_correction: 'Correção manual', set_balance: 'Correção antiga'
   };
   root.innerHTML = state.juroMovements.map(item => `
     <div class="dca-list-row">
@@ -888,7 +888,55 @@ function bindTableSaveHandler() {
   if (wrap.__boundSave) return;
   wrap.__boundSave = true;
 
+  const dialog = document.getElementById('interest-correction-dialog');
+  const form = document.getElementById('interest-correction-form');
+  const amountInput = document.getElementById('interest-correction-amount');
+  let interestRow = null;
+  let savingInterest = false;
+  dialog?.querySelectorAll('[data-close-interest]').forEach(button => {
+    button.addEventListener('click', () => { if (!savingInterest) dialog.close(); });
+  });
+  dialog?.addEventListener('cancel', event => {
+    if (savingInterest) event.preventDefault();
+  });
+  form?.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (state.accessMode === 'read' || savingInterest || !interestRow) return;
+    const saveButton = document.getElementById('btn-save-interest-correction');
+    try {
+      savingInterest = true;
+      saveButton.disabled = true;
+      amountInput.disabled = true;
+      await correctMonthlyInterest(interestRow.id, amountInput.value, interestRow.cash_interest);
+      dialog.close();
+      await boot(true);
+      showToast('Juro corrigido.', 'success');
+    } catch (error) {
+      showFeedback('interest-correction-feedback', error.message || 'Não foi possível corrigir o juro.', 'error', 6000);
+    } finally {
+      savingInterest = false;
+      saveButton.disabled = false;
+      amountInput.disabled = false;
+    }
+  });
+
   wrap.addEventListener('click', async (ev) => {
+    if (state.accessMode === 'read') return;
+    const interestButton = ev.target.closest('.btn-correct-interest');
+    if (interestButton && dialog && amountInput) {
+      const id = interestButton.closest('tr')?.dataset.id;
+      interestRow = state.rows.find(row => row.id === id);
+      if (!interestRow?.isClosed) return;
+      document.getElementById('interest-correction-title').textContent =
+        `Corrigir juro de ${String(interestRow.m).padStart(2, '0')}/${interestRow.y}`;
+      amountInput.value = Number(interestRow.cash_interest || 0).toFixed(2).replace('.', ',');
+      const feedback = document.getElementById('interest-correction-feedback');
+      if (feedback) feedback.textContent = '';
+      dialog.showModal();
+      amountInput.focus();
+      amountInput.select();
+      return;
+    }
     // Handle save button
     const saveBtn = ev.target.closest('.btn-save');
     if (saveBtn) {

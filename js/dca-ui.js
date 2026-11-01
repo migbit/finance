@@ -66,7 +66,7 @@ export function renderTable(rows, wrapElement) {
       const clsAGGH = r.resAGGH != null ? (r.resAGGH >= 0 ? 'pos' : 'neg') : '';
 
       const saveBtn = r.isClosed
-        ? '<span class="dca-locked" title="Mês fechado; exige correção histórica explícita">🔒</span>'
+        ? '<span class="dca-locked" title="Mês fechado; clique no juro para o corrigir">🔒</span>'
         : `<button class="btn btn-edit btn-save" type="button" title="Guardar registo" aria-label="Guardar registo">✓</button>`;
 
       const inputDisabled = r.isClosed ? 'disabled' : '';
@@ -101,7 +101,9 @@ export function renderTable(rows, wrapElement) {
         <td class="num ${clsTotal}">${r.resTotal == null ? '-' : toEUR(r.resTotal)}${fmtPct(r.resTotalPct)}</td>
         <td class="num swda-block"><input class="cell swda" aria-label="Valor atual VWCE" type="number" step="0.01" value="${r.swdaNow ?? ''}" ${inputDisabled} /></td>
         <td class="num aggh-block"><input class="cell aggh" aria-label="Valor atual AGGH" type="number" step="0.01" value="${r.agghNow ?? ''}" ${inputDisabled} /></td>
-        <td class="num"><input class="cell cash" type="number" step="0.01" value="${r.cash_interest ?? ''}" ${inputDisabled} /></td>
+        <td class="num">${r.isClosed
+          ? `<input class="cash" type="hidden" value="${r.cash_interest ?? ''}" /><button class="btn-correct-interest" type="button" title="Corrigir juro de ${pad(r.m)}/${r.y}" aria-label="Corrigir juro de ${pad(r.m)}/${r.y}">${euroFmt(r.cash_interest ?? 0)}</button>`
+          : `<input class="cell cash" aria-label="Juro mensal" type="number" min="0" step="0.01" value="${r.cash_interest ?? ''}" />`}</td>
         <td>${saveBtn}</td>
       `;
       tbody.appendChild(tr);

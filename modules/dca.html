@@ -411,6 +411,16 @@
     </form>
   </dialog>
 
+  <dialog id="interest-correction-dialog" class="dca-dialog" aria-labelledby="interest-correction-title">
+    <form id="interest-correction-form">
+      <div class="dca-dialog-head"><h3 id="interest-correction-title">Corrigir juro</h3><button type="button" class="dca-dialog-close" data-close-interest aria-label="Fechar">×</button></div>
+      <p>Indique o juro real recebido neste mês. Nos meses automáticos, o saldo atual será ajustado pela diferença.</p>
+      <label class="dca-field"><span>Juro recebido (€)</span><input id="interest-correction-amount" type="text" inputmode="decimal" required autocomplete="off" /></label>
+      <div id="interest-correction-feedback" class="form-feedback" role="status" aria-live="polite"></div>
+      <div class="dca-form-actions"><button type="button" data-close-interest>Cancelar</button><button id="btn-save-interest-correction" type="submit" class="primary">Guardar correção</button></div>
+    </form>
+  </dialog>
+
   <script src="../js/dca-financial.js"></script>
   <script src="../js/chart-theme.js"></script>
   <script type="module" src="../js/dca-main.js"></script>

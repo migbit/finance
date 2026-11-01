@@ -1126,6 +1126,17 @@ body[data-page="dca"] .donut-card .donut-canvas canvas {
   color: var(--text-muted);
 }
 
+.table-dca .btn-correct-interest {
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+#interest-correction-dialog { max-width: 440px; }
+
 /* Estimated values indicator - orange/yellow warning tint */
 .table-dca tbody tr.estimated-values {
   background: rgba(245, 158, 11, 0.08) !important;

@@ -173,6 +173,77 @@ export async function saveRow(id, patch) {
   }
 }
 
+// Correct interest without reopening the month or changing ETF snapshots.
+export async function correctMonthlyInterest(id, amount, expectedInterest) {
+  const value = Number(String(amount).trim().replace(',', '.'));
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(id) || String(amount).trim() === ''
+      || !Number.isFinite(value) || value < 0 || !Number.isSafeInteger(Math.round(value * 100))) {
+    throw new Error('Introduza um juro válido e não negativo.');
+  }
+  const corrected = Math.round(value * 100) / 100;
+  const monthRef = doc(COL, id);
+  const closureRef = doc(CLOSURES_COL, id);
+  const interestRef = doc(JURO_MOVEMENTS_COL, `interest_${id}`);
+  const correctionRef = doc(JURO_MOVEMENTS_COL);
+
+  return runTransaction(db, async transaction => {
+    const [monthSnap, closureSnap, balanceSnap, interestSnap] = await Promise.all([
+      transaction.get(monthRef), transaction.get(closureRef),
+      transaction.get(JURO_DOC), transaction.get(interestRef)
+    ]);
+    if (!monthSnap.exists() || monthSnap.data().snapshot_status !== 'closed') {
+      throw new Error('O mês já não está fechado. Recarregue a página.');
+    }
+    const month = monthSnap.data();
+    const previous = Number(month.cash_interest ?? month.juro_earned) || 0;
+    if (Math.round(previous * 100) !== Math.round(Number(expectedInterest || 0) * 100)) {
+      throw new Error('O juro foi alterado entretanto. Recarregue a página antes de corrigir.');
+    }
+    const delta = Math.round((corrected - previous) * 100) / 100;
+    if (!delta) return corrected;
+
+    const stamp = serverTimestamp();
+    const closure = closureSnap.data() || {};
+    // Only automatic closures capitalized this interest in the cash balance.
+    const capitalized = closure.status === 'complete' || interestSnap.exists();
+    transaction.update(monthRef, {
+      cash_interest: corrected,
+      interest_corrected_at: stamp,
+      interest_original: month.interest_original ?? previous
+    });
+    if (closureSnap.exists()) {
+      const patch = { interest: corrected, interestCorrectedAt: stamp };
+      for (const key of ['balanceAfterInterest', 'balanceAfterPurchase']) {
+        if (closure[key] != null) patch[key] = Math.round((Number(closure[key]) + delta) * 100) / 100;
+      }
+      transaction.update(closureRef, patch);
+    }
+    if (interestSnap.exists()) {
+      const movement = interestSnap.data();
+      const patch = { amount: corrected, correctedAt: stamp };
+      if (movement.balanceAfter != null) patch.balanceAfter = Math.round((Number(movement.balanceAfter) + delta) * 100) / 100;
+      transaction.update(interestRef, patch);
+    }
+    if (capitalized) {
+      if (!balanceSnap.exists()) throw new Error('Não foi possível encontrar o saldo atual.');
+      const balance = balanceSnap.data();
+      const saldo = Math.round(((Number(balance.saldo) || 0) + delta) * 100) / 100;
+      if (saldo < 0) throw new Error('A correção deixaria o saldo negativo. Corrija primeiro o saldo atual.');
+      const patch = { saldo, updatedAt: stamp };
+      if (balance.lastClosedMonth === id) patch.lastMonthlyInterest = corrected;
+      transaction.update(JURO_DOC, patch);
+      // Apply the difference today; keep past opening balances and later closures intact.
+      transaction.set(correctionRef, {
+        type: 'interest_correction', month: id,
+        previousInterest: previous, correctedInterest: corrected,
+        amount: delta, balanceAfter: saldo, effectiveAt: new Date(),
+        description: `Correção do juro de ${id}`, createdAt: stamp
+      });
+    }
+    return corrected;
+  });
+}
+
 // ---------- Juro (Interest) Management ----------
 export async function loadJuroSaldo() {
   try {
