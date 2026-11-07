@@ -158,3 +158,9 @@ body[data-page="francisca-estudar"] { background:var(--background,#101722);color
 .study-science-diagram{margin:1rem 0;padding:1rem;border:1px solid #394b63;border-radius:16px;background:#182231}
 .study-science-diagram svg{display:block;width:100%;max-width:500px;margin:auto;color:#f0f4fa}
 .study-science-diagram figcaption{font-weight:700;margin-bottom:.7rem}
+.study-visual-card{margin:1rem 0;padding:1rem;border:1px solid #394b63;border-radius:16px;background:#182231}
+.study-visual-card>summary{font-size:1.1rem;font-weight:700;cursor:pointer;padding:.4rem}
+.study-visual-card img{display:block;width:100%;height:auto;max-width:860px;margin:1rem auto;border-radius:12px}
+.study-visual-card button{margin:.6rem .5rem .6rem 0}
+.study-visual-card a{display:inline-block;margin:.5rem 0}
+.study-visual-content[hidden]{display:none}

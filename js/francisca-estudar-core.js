@@ -45,7 +45,7 @@ export function grade(question, answers) {
     if(field.type==='text'||field.type==='order') {
       const normalize=value=>{const text=normalizeEnglish(value,field.caseSensitive);return field.language==='pt-PT'?text.normalize('NFD').replace(/[\u0300-\u036f]/g,''):text;};
       const answer=normalize(answers[i]);
-      const complete=field.type!=='order'||answer.split(' ').length===field.words.length;
+      const complete=field.type!=='order'||answer.split(' ').length===normalize(field.answer).split(' ').length;
       return {valid:answer.length>0&&answer.length<=500&&complete,correct:complete&&[field.answer,...(field.accept||[])].some(expected=>answer===normalize(expected))};
     }
     if(field.type==='power') {
@@ -82,6 +82,8 @@ export function selectQuestions(mode, topic='all', progress={}, random=Math.rand
       return rank(a)-rank(b);
     });
     const chosen=[];for(const q of ranked){if(chosen.length>=(mode==='game'?5:6))break;if(topic==='all'&&mode!=='review'&&chosen.some(v=>v.topic===q.topic))continue;chosen.push(q);}
+    // Cursos com menos de seis temas: completar a sessão sem repetir IDs.
+    for(const q of ranked){if(chosen.length>=(mode==='game'?5:6))break;if(!chosen.includes(q))chosen.push(q);}
     return chosen;
   }
   if(mode==='test'&&course.examSlots) {

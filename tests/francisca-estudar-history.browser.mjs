@@ -1,0 +1,40 @@
+// Navegador local com conta fictícia; pedidos externos bloqueados.
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {readFile,mkdir} from 'node:fs/promises';
+import {resolve,extname,sep} from 'node:path';
+import {createRequire} from 'node:module';
+import {HISTORY_QUESTIONS as Q} from '../js/francisca-estudar-history-data.js';
+import {HISTORY_COURSE as C} from '../js/francisca-estudar-courses.js';
+import {emptyState,selectQuestions,scoreTest} from '../js/francisca-estudar-core.js';
+const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const root=resolve(import.meta.dirname,'..'),out=resolve(root,'tests/.runtime');await mkdir(out,{recursive:true});
+const uid='history-browser-test',key=`francisca-study-v1:${uid}:history-test-1`;
+const server=createServer(async(req,res)=>{const pathname=new URL(req.url,'http://localhost').pathname;if(pathname==='/js/script.js'){res.setHeader('Content-Type','text/javascript');res.end(`export async function whenAccessResolved(){return {user:{uid:${JSON.stringify(uid)}},mode:'write'};}`);return;}const path=resolve(root,'.'+decodeURIComponent(pathname));if(!path.startsWith(root+sep)){res.writeHead(403).end();return;}try{res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.css':'text/css','.js':'text/javascript'})[extname(path)]||'application/octet-stream');res.end(await readFile(path));}catch{res.writeHead(404).end();}});
+await new Promise(done=>server.listen(0,'127.0.0.1',done));let browser;
+try{
+ browser=await chromium.launch({headless:true,...(process.env.BROWSER_EXECUTABLE?{executablePath:process.env.BROWSER_EXECUTABLE}:{})});const page=await browser.newPage({viewport:{width:390,height:844},reducedMotion:'reduce'});page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());
+ await page.goto(`http://127.0.0.1:${server.address().port}/modules/francisca-estudar.html`);
+ async function history(){await page.locator('[data-subject="História e Geografia de Portugal"]').click();await page.getByRole('heading',{name:'História e Geografia de Portugal',exact:true}).waitFor();}
+ async function seed(mode,qs){const s=emptyState();s.active={mode,queue:qs.map(q=>({id:q.id,repair:false})),index:0,answers:{},attempts:[],startedAt:Date.now(),goal:qs.length,keys:0,feedback:null};await page.evaluate(({key,s})=>localStorage.setItem(key,JSON.stringify(s)),{key,s});await page.reload();await history();await page.getByRole('button',{name:'Retomar sessão',exact:true}).click();}
+ async function fill(q,wrongIndex=-1){for(const [i,f] of q.fields.entries()){const input=page.locator(`#study-answer-form input[name="answer-${i}"]`);if(f.options){const value=i===wrongIndex?f.options.find(v=>v!==f.answer):f.answer;const values=await input.evaluateAll(ns=>ns.map(n=>n.value));await input.nth(values.indexOf(value)).check();}else if(f.type==='order'){for(const word of f.words)await page.locator('.study-word-bank').getByRole('button',{name:word,exact:true,disabled:false}).first().click();}else{assert.equal(await input.getAttribute('lang'),'pt-PT');await input.fill(i===wrongIndex?'errado':f.answer);}}}
+ const overflow=async()=>assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ await history();assert.match(await page.locator('#study-stats').innerText(),/0\/69/);await page.locator('#study-history-method').waitFor();await overflow();await page.screenshot({path:resolve(out,'francisca-history-dashboard-390.png'),fullPage:true});
+ await page.locator('[data-subject="Inglês"]').click();assert.match(await page.locator('#study-stats').innerText(),/0\/157/);await page.locator('[data-subject="Matemática"]').click();assert.match(await page.locator('#study-stats').innerText(),/0\/80/);await history();
+ await page.getByRole('button',{name:'Abrir resumos visuais',exact:true}).click();
+ const cards=page.locator('.study-visual-card');assert.equal(await cards.count(),5);
+ for(let i=0;i<5;i++){
+   const card=cards.nth(i);await card.locator(':scope>summary').click();const img=card.locator('img');await img.evaluate(img=>img.decode());assert.ok(await img.evaluate(img=>img.naturalWidth>500));await overflow();
+   if(i===0)await card.screenshot({path:resolve(out,'francisca-history-visual-390.png')});
+   await card.getByRole('button',{name:'Esconder e recordar',exact:true}).click();assert.equal(await img.isVisible(),false);await card.getByText('Conferir depois de recordar',{exact:true}).click();assert.equal(await card.locator('details[open]').count(),1);
+   await card.getByRole('button',{name:'Voltar a ver o cartaz',exact:true}).click();assert.equal(await img.isVisible(),true);await card.locator(':scope>summary').click();
+ }
+ await page.getByRole('button',{name:'Voltar ao estudo',exact:true}).first().click();
+ const q=Q[0];await seed('train',[q]);await fill(q,0);await page.getByRole('button',{name:'Verificar resposta',exact:true}).click();await page.locator('.study-feedback.is-wrong').waitFor();await page.getByRole('button',{name:'Já li a explicação · continuar',exact:true}).click();let s=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);assert.equal(s.active.queue.length,2);const repair=Q.find(q=>q.id===s.active.queue[1].id);assert.equal(repair.skill,q.skill);await fill(repair);await page.getByRole('button',{name:'Verificar resposta',exact:true}).click();await page.reload();await history();await page.getByRole('button',{name:'Retomar sessão',exact:true}).click();await page.locator('.study-feedback.is-correct').waitFor();await page.getByRole('button',{name:'Continuar',exact:true}).click();s=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);assert.equal(s.progress[repair.id].independent,0);
+ const exam=selectQuestions('test','all',{},Math.random,C);const swap=exam.findIndex(q=>q.fields[0].type!=='order');[exam[0],exam[swap]]=[exam[swap],exam[0]];await seed('test',exam);const attempts=[];
+ for(const [i,q] of exam.entries()){await fill(q,i===0?0:-1);attempts.push({id:q.id,answers:q.fields.map((f,j)=>i===0&&j===0?(f.options?f.options.find(a=>a!==f.answer):'errado'):f.answer)});assert.equal(await page.locator('.study-feedback,.study-hint').count(),0);await overflow();await page.getByRole('button',{name:i===9?'Rever e entregar':'Seguinte',exact:true}).click();}
+ await page.getByRole('button',{name:'Entregar e ver correção',exact:true}).click();const score=scoreTest(attempts,Q);assert.ok((await page.locator('.study-result').innerText()).includes(`${score.earned} / 100 pontos`));await page.getByText('Na próxima sessão:',{exact:false}).waitFor();assert.equal(await page.locator('.study-correction').count(),10);console.log('OK: isolamento, erro/recuperação/retoma e teste de 100 pontos com crédito parcial.');
+ await seed('train',Q);
+ for(const [i,q] of Q.entries()){await fill(q);await page.getByRole('button',{name:'Verificar resposta',exact:true}).click();await page.locator('.study-feedback.is-correct').waitFor();await overflow();if(q.diagram){await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:resolve(out,`francisca-history-${q.diagram.kind}-390.png`),fullPage:true});}await page.getByRole('button',{name:'Continuar',exact:true}).click();if((i+1)%25===0)console.log(`História: ${i+1}/${Q.length}`);}
+ assert.ok((await page.locator('.study-result').innerText()).includes('69 / 69 sem ajuda'));assert.equal(errors.length,0,errors.join('\n'));await page.getByRole('button',{name:'Voltar ao estudo',exact:true}).click();await page.setViewportSize({width:1280,height:900});await page.screenshot({path:resolve(out,'francisca-history-dashboard-1280.png'),fullPage:true});console.log('OK: 69 perguntas, esquemas, associações, V/F e ordenação; sem transbordo a 390 px.');
+}finally{await browser?.close();server.closeAllConnections();await new Promise(done=>server.close(done));}

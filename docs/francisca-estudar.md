@@ -2,7 +2,7 @@
 
 Página: `modules/francisca-estudar.html`, no menu Francisca > Estudar.
 
-Organização: Matemática > 1.º Teste e Inglês > 1.º Teste. Cada disciplina tem matéria, treinos, missão, simulações, progresso e histórico próprios; o plano de estudo é partilhado.
+Organização: Matemática > 1.º Teste e Inglês > 1.º Teste. Ciências Naturais e História e Geografia de Portugal também têm 1.º Teste. Cada disciplina tem matéria, treinos, missão, simulações, progresso e histórico próprios; o plano de estudo é partilhado.
 
 ## Conteúdo inicial
 
@@ -130,3 +130,59 @@ O índice de apoio refere páginas posteriores sobre aves e ruminantes, mas essa
 `node --test tests/francisca-estudar-science.test.mjs tests/francisca-estudar.test.mjs tests/francisca-estudar-content.test.mjs tests/francisca-estudar-english.test.mjs tests/access-control.test.mjs tests/francisca-calendar.test.mjs tests/financas-pages.test.mjs`
 
 54 testes passam. Ciências verifica integridade, soluções e alternativas, gabarito independente de conceitos e dados, 80 versões equilibradas, pontuação total/parcial, progressão por variante/dia, efeito de ajuda/erro e persistência. `tests/francisca-estudar-science.browser.mjs` percorre os 91 desafios, entrega teste com erro e crédito parcial, verifica retoma/recuperação/isolamento e largura de 390 px. As regressões existentes percorrem também os 80 exercícios de Matemática e 157 de Inglês. Capturas locais em `tests/.runtime`, excluídas da publicação. O progresso continua local a este navegador/conta, sem sincronização entre dispositivos.
+## História e Geografia de Portugal · 1.º Teste (07/11/2026)
+
+Fonte: leitura visual integral das dez páginas de `C:/ChatGPT/Francisca/1 teste historia.pdf`. A ordem do ficheiro corresponde ao manual 25–27, 29–35. A página 28, o mapa e o gráfico referidos na página 25 não foram fornecidos. Não se inventam os seus valores. Há cortes e curvatura nas margens, mas a matéria usada é legível. Não se publicam as digitalizações.
+
+| PDF | Manual | Conteúdo |
+| --- | --- | --- |
+| 1 | 25 | Bandeirantes; Minas Gerais/1695; ouro, diamantes, impostos de 20%, colonização, emigração e escravização |
+| 2–3 | 26–27 | Saberes, trabalhos e legado africano; língua, alimentação, música, dança, diversidade e repressão cultural |
+| 4 | 29 | Clero/nobreza/Terceiro Estado; hierarquia, privilégios, burguesia, mobilidade; Inquisição, cristãos-novos, auto da fé |
+| 5–6 | 30–31 | Governo e poderes de D. João V; origem divina como crença histórica; ostentação, cerimónias, invenção de Gusmão/1709 |
+| 7–8 | 32–33 | Barroco e património: Mafra, Biblioteca Joanina/Coimbra, capela-mor de Évora e Aqueduto das Águas Livres/Lisboa; distinguir lenda de evidência |
+| 9–10 | 34–35 | Sucessão em 1750; 1/11/1755; efeitos, socorro e reconstrução; ministro e rei; traçado urbano, gaiola e Praça do Comércio |
+
+69 exercícios originais distribuídos por cinco temas. Reutilizam os campos, explicações, missão, pistas, treino adaptativo, recuperação por conceito, rascunho, plano e histórico existentes. A seleção de treino foi completada para seis perguntas mesmo quando há apenas cinco temas, mantendo IDs únicos. Existem perguntas escritas, associação por alíneas, V/F com justificação, textos de apoio explicitamente identificados como sínteses didáticas, tabela comparativa, cronologia e raciocínio de causa/consequência. Textos portugueses usam o idioma correto; não são apresentados como fontes primárias transcritas. Uma promessa não prova o resultado; uma lenda não prova a causa histórica. Exploração colonial e escravização são tratadas com rigor e sem celebrar violência.
+
+Simulação de 10 perguntas, duas por tema, 10 pontos cada = 100; duração sugerida 40 minutos. Inclui um exercício de recordar/interpretar e um de aplicação de competência diferente em cada tema; versões variam. Sem pistas/correções antes da entrega, crédito proporcional por alínea e correção final. A cotação de História é indicada separadamente da de Ciências (5 pontos por pergunta). A classificação não avalia semanticamente justificações livres no rascunho nem conhece a matriz da professora. Progresso isolado na chave `francisca-study-v1:${uid}:history-test-1`, preservando as restantes disciplinas.
+
+### Resumos visuais com gatinhos e bonequinhos
+
+Cinco cartazes gerados com a ferramenta integrada de imagem (sem CLI), revistos visualmente e guardados em WebP com as dimensões originais:
+
+- `assets/francisca/historia/brasil.webp`: ouro, imposto, trabalho forçado e legado.
+- `assets/francisca/historia/sociedade.webp`: ordens, privilégios, burguesia e perseguição religiosa.
+- `assets/francisca/historia/poder.webp`: três poderes e corte de D. João V.
+- `assets/francisca/historia/patrimonio.webp`: barroco e quatro associações de lugar/função.
+- `assets/francisca/historia/lisboa.webp`: sucessão, catástrofe, socorro e reconstrução.
+
+São ilustrações mnemónicas atuais, com figuras e edifícios simplificados, não retratos fiéis ou documentos históricos. Os gatinhos são guias de memória. Não se usam gatos como pessoas escravizadas nem humor sobre vítimas. Alguns elementos decorativos das figuras são genéricos; não se avalia heráldica nem exatidão arquitetónica com estes desenhos. O cartaz de Lisboa inclui a imagem atual estilizada da praça; não deve ser lido como fotografia de 1755.
+
+A secção abre por «Abrir resumos visuais». Cada cartaz tem imagem ampliável, texto alternativo, versão textual acessível, referência de páginas e botão «Esconder e recordar». Esconder tapa também a versão textual; apresenta um desafio de memória e permite conferir depois. Não atribui domínio por simplesmente abrir ou conferir um cartaz. As imagens carregam de forma diferida e podem ser abertas em tamanho completo; não são descarregadas obrigatoriamente ao abrir o módulo. O teste não mostra os cartazes.
+
+Validação: 59 testes unitários/de conteúdo, incluindo gabarito independente, alternativas, cobertura, conceitos com exercícios de recuperação, 100 versões de teste, 100 pontos, crédito parcial e ficheiros WebP locais. O teste de navegador percorre os 69 exercícios a 390 px, verifica todas as imagens, esconder/recordar, retoma após erro, isolamento de disciplinas e entrega/correção do teste. Regressões das disciplinas anteriores verificadas em separado. Capturas em `tests/.runtime`, fora da publicação.
+
+### Prompts finais das imagens de História
+
+Os cinco prompts seguintes foram enviados à ferramenta integrada `image_gen`; a conversão PNG→WebP foi apenas codificação para uso no projeto, sem alterar a composição.
+
+#### 1. brasil
+
+Use case: infographic-diagram. Create a polished Portuguese school study poster, portrait, age 11, cream background, teal and ochre accents, cute small cat tutor with notebook in lower corner and respectful simple human stick-figure pupils. Topic: Brazil and the Portuguese economy in the 18th century. Exactly these large readable texts in Portuguese: 'BRASIL: OURO E PESSOAS', '1695 — Minas Gerais', 'Bandeirantes: litoral → interior', 'Coroa: imposto de 20% sobre o ouro', 'Ouro → riqueza da Coroa', 'Escravização: trabalho forçado e perda de liberdade', 'Legado africano: saberes, língua, música e alimentação'. Illustrate interior exploration with a symbolic coastal-to-mine arrow, five gold coins with exactly one highlighted as tax, open book and musical instrument symbols. No map with invented borders, no flags, no enslaved cartoon cats, no chains as a game, no celebration of exploitation. Cats are present-day memory guides only. Keep facts separate from mnemonics. Typography takes priority, ample whitespace.
+
+#### 2. sociedade
+
+Use case: infographic-diagram. Create a polished portrait Portuguese school memory poster age 11, cream background, teal and coral, cute cat tutor holding an open notebook, simple respectful human stick figures. EXACT large readable text: 'SOCIEDADE DE ORDENS', 'Clero + Nobreza: grupos privilegiados', 'Terceiro Estado: povo e burguesia', 'Hierarquia ≠ igualdade', 'Burguesia: riqueza do comércio', 'Inquisição: tribunal religioso', 'Cristãos-novos: judeus convertidos ao cristianismo', 'Perseguição religiosa não é tolerância'. Visual organization: three clearly named shelves, clero with book, nobility with symbolic decorative coat, Terceiro Estado with workers and merchant, king icon above shelves with label 'Rei'. Small separate serious panel with closed tribunal door for religious persecution. No violence, executions or humorous treatment of persecution. No implication people deserve unequal rights. Characters are memory aids, not historical documents.
+
+#### 3. poder
+
+Use case: infographic-diagram. Create a polished portrait Portuguese school memory poster age 11. Cream background, teal and gold, cute cat tutor beside three oversized power cards and small human 18th-century stylized figures. Exact large readable Portuguese text: 'D. JOÃO V: MONARQUIA ABSOLUTA', 'Rei concentra os poderes', 'Legislativo: aprovar leis', 'Executivo: governar', 'Judicial: intervir nos tribunais', 'Origem divina: crença usada para justificar o poder', 'Ouro do Brasil → luxo da corte', 'Festas, coches e grandes construções'. Central king figure, three cards linked by arrows from king, coins linked to carriage and ornate building. The divine-origin claim must visibly be labelled as historical belief, not truth. No modern parliament or modern flags. Cat is a friendly current-day narrator, not the king. Short text, strong hierarchy, white space.
+
+#### 4. patrimonio
+
+Use case: infographic-diagram. Create a polished portrait Portuguese school memory poster age 11, cream, teal and gold, cute small cat tutor with a magnifying glass, tiny human pupil stick figures. Exact readable Portuguese labels: 'BARROCO: MOSTRAR GRANDEZA', 'Decoração abundante', 'Talha dourada • mármores • azulejos', 'Mafra: convento + basílica + palácio', 'Biblioteca Joanina: Coimbra', 'Capela-mor: Sé de Évora', 'Aqueduto das Águas Livres: levar água a Lisboa'. Four large simple landmark memory icons: symmetrical convent-palace with paired bell towers and central dome for Mafra, ornate gilded library for Joanina, decorated chapel for Évora, arches carrying water for aqueduct. Do not depict aqueduct as library or identify all four monuments as identical architecture. These are schematic educational illustrations, not faithful photographs. No extra historical facts. Cat as mnemonic helper only, keep labels prominent.
+
+#### 5. lisboa
+
+Use case: infographic-diagram. Create a polished portrait Portuguese school memory poster age 11, cream, teal and muted coral, cute cat tutor with notebook and respectful simple human stick figures planning a city. Exact clear Portuguese text: 'LISBOA: 1755 E RECONSTRUÇÃO', '1750: D. José I sucede a D. João V', '1 de novembro de 1755', 'Terramoto + ondas gigantes + incêndios', 'Marquês de Pombal: organizar o socorro', 'Cuidar • alojar • limpar • vigiar', 'Reconstrução: ruas largas e perpendiculares', 'Prédios semelhantes + gaiola antissísmica', 'Praça do Comércio: estátua de D. José I'. Three sequential calm panels: damaged empty city symbolic, helpers with shelter and water icons, new geometric street plan with perpendicular grid and a small inset timber bracing cage inside building. No casualties, no cute disaster victims, no claim cage prevents all damage, no conflation king and minister. Accurate date and names. Focus on event → response → changes.

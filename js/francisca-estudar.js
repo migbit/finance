@@ -33,8 +33,9 @@ function chooseSubject(subject) {
   $('maths-title').textContent=course.subject;$('study-course-badge').textContent=course.badge;$('study-course-intro').textContent=course.intro;
   $('study-test-description').textContent=course.testDescription;$('study-test-button').textContent=course.testButton;$('study-course-sources').textContent=course.sources;
   $('study-english-method').hidden=!course.writing;
-  $('study-science-method').hidden=!course.adaptive;
-  $('plan-task').placeholder=course.adaptive?'Ex.: recordar absorção e explicar um erro':course.writing?'Ex.: rever have got e escrever 5 frases':'Ex.: resolver expressões com parênteses';
+  $('study-science-method').hidden=!course.adaptive||Boolean(course.visuals);
+  $('study-history-method').hidden=!course.visuals;
+  $('plan-task').placeholder=course.visuals?'Ex.: rever 1755 e explicar duas mudanças':course.adaptive?'Ex.: recordar absorção e explicar um erro':course.writing?'Ex.: rever have got e escrever 5 frases':'Ex.: resolver expressões com parênteses';
   document.querySelector('.study-hero-symbol').textContent=course.adaptive?'Explora!':course.writing?'Hello!':'a² + b²';
   $('study-topic').replaceChildren(new Option('Todos os temas','all'));TOPICS.forEach(t=>$('study-topic').append(new Option(t.title,t.id)));
   renderDashboard();
@@ -247,7 +248,7 @@ function showReport(report) {
   openSession();const pane=$('study-session');pane.replaceChildren();
   const title=node('h2','',report.mode==='game'?'Missão cumprida!':'Sessão terminada');title.id='session-title';
   pane.append(node('p','study-eyebrow',studyLabel),title,node('p','study-result',report.score?`${report.score.earned} / ${report.score.total} pontos · ${Math.round(report.score.earned/report.score.total*100)}%`:`${report.correct} / ${report.total} sem ajuda${report.mode==='test'?` · ${Math.round(report.correct/report.total*100)}%`:''}`));
-  pane.append(node('p','',report.score?'Cada pergunta vale 5 pontos, repartidos igualmente pelas suas alíneas. Revê também as justificações.':report.mode==='test'?'Cada pergunta vale o mesmo. Confere os passos abaixo, mesmo nas que acertaste.':'Os acertos depois de uma explicação ficam separados dos acertos sem ajuda. Continua a praticar os temas que ainda precisam de atenção.'));
+  pane.append(node('p','',report.score?(course.testMarking||'Cada pergunta vale 5 pontos, repartidos igualmente pelas suas alíneas. Revê também as justificações.'):report.mode==='test'?'Cada pergunta vale o mesmo. Confere os passos abaixo, mesmo nas que acertaste.':'Os acertos depois de uma explicação ficam separados dos acertos sem ajuda. Continua a praticar os temas que ainda precisam de atenção.'));
   if(report.writing)pane.append(node('p','study-recommendation','Esta percentagem refere-se apenas aos 20 exercícios de correção automática. A composição fica por rever com a grelha abaixo e não está incluída na nota.'));
   const helped=report.attempts.filter(a=>a.correct&&a.assisted).length;
   if(helped)pane.append(node('p','study-recommendation',`Conseguiste resolver ${helped} ${helped===1?'desafio':'desafios'} com ajuda. Já deste um passo! Noutro dia, volta a tentar sem a pista nem a explicação.`));
@@ -298,8 +299,25 @@ function diagramNode({kind,chemical}) {
   figure.append(svg,node('p','study-muted',kind==='particles'?'Modelo original simplificado; as letras identificam substâncias, não tamanhos reais.':'Esquema original, sem escala; não representa todos os pormenores anatómicos.'));return figure;
 }
 
+function visualSummaries() {
+  openSession();const pane=$('study-session');pane.replaceChildren();
+  const title=node('h2','','Resumos visuais · gatinhos e bonequinhos');title.id='session-title';
+  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','','Escolhe um cartaz, observa e lê. Depois esconde-o, recorda sem olhar e explica a ligação entre duas ideias. Confere só depois. Os desenhos são resumos atuais, não documentos históricos.'),button('Voltar ao estudo',home,true));
+  for(const v of course.visuals||[]){
+    const details=node('details','study-visual-card');details.append(node('summary','',v.title));
+    const content=node('div','study-visual-content');const img=node('img');img.src=v.src;img.alt=v.alt;img.loading='lazy';img.decoding='async';content.append(img);
+    const expand=node('a','','Abrir imagem em tamanho completo ↗');expand.href=v.src;expand.target='_blank';expand.rel='noopener';content.append(expand);
+    const transcription=node('details');transcription.append(node('summary','','Ler as ideias do cartaz em texto'));const list=node('ul');v.facts.forEach(f=>list.append(node('li','',f)));transcription.append(list);content.append(transcription,node('p','study-muted',v.source));
+    const recall=node('p','study-recommendation',v.recall);recall.hidden=true;
+    const answer=node('details');answer.hidden=true;answer.append(node('summary','','Conferir depois de recordar'),node('p','',v.answer));
+    const toggle=button('Esconder e recordar',()=>{content.hidden=!content.hidden;recall.hidden=!content.hidden;answer.hidden=!content.hidden;if(!content.hidden)answer.open=false;toggle.textContent=content.hidden?'Voltar a ver o cartaz':'Esconder e recordar';});
+    details.append(content,toggle,recall,answer,button('Praticar este tema',()=>requestStart('train',v.topic)));pane.append(details);
+  }
+  pane.append(button('Voltar ao estudo',home));focusHeading(title);
+}
+
 function passageNode(passage) {
-  const panel=node('section','study-reading');panel.lang='en-GB';panel.setAttribute('aria-label','Reading text');
+  const panel=node('section','study-reading');panel.lang=passage.language||'en-GB';panel.setAttribute('aria-label',passage.language==='pt-PT'?'Texto de apoio':'Reading text');
   panel.append(node('h4','',passage.title));passage.paragraphs.forEach(text=>panel.append(node('p','',text)));return panel;
 }
 function clockNode({hour,minute}) {
@@ -426,6 +444,7 @@ if(access.user&&access.mode!=='none') {
   $('study-review').addEventListener('click',()=>requestStart('review','all'));
   $('study-resume').addEventListener('click',renderSession);
   $('study-writing-button').addEventListener('click',writingWorkshop);
+  $('study-visual-button').addEventListener('click',visualSummaries);
   $('study-plan-form').addEventListener('submit',event=>{
     event.preventDefault();try {
       const task=normalizeTask($('plan-subject').value,$('plan-date').value,$('plan-task').value,$('plan-minutes').value,FRANCISCA_SUBJECTS);

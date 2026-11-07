@@ -1,4 +1,5 @@
 import {QUESTIONS,TOPICS,TOPIC_HINTS} from './francisca-estudar-data.js';
+import {HISTORY_QUESTIONS,HISTORY_TOPICS,HISTORY_HINTS,HISTORY_VISUALS} from './francisca-estudar-history-data.js';
 import {SCIENCE_QUESTIONS,SCIENCE_TOPICS,SCIENCE_HINTS} from './francisca-estudar-science-data.js';
 import {ENGLISH_QUESTIONS,ENGLISH_TOPICS,ENGLISH_HINTS,ENGLISH_WRITING,ENGLISH_EXAM_SLOTS,ENGLISH_READING_SKILLS} from './francisca-estudar-english-data.js';
 
@@ -18,4 +19,9 @@ export const SCIENCE_COURSE={id:'science',subject:'Ciências Naturais',language:
  badge:'Alimentação + Digestão',intro:'Sessões de 6 desafios: recordar, interpretar e justificar. Um acerto é um começo; confirma o conceito noutra pergunta e noutro dia.',
  testDescription:'20 perguntas · 100 pontos · cerca de 45 minutos. Dois desafios por tema, incluindo aplicação e raciocínio. Sem pistas; correção só no fim.',testButton:'Fazer teste · ~45 min',
  sources:'36 digitalizações, manual 8–43: alimentação e nutrientes, experiências, roda, saúde, rótulos, aditivos e conservação; sistema digestivo humano até saúde oral/digestiva. Aves e ruminantes só figuram no índice: não são avaliados. Esquemas originais simplificados, sem escala. Não se conhece a matriz da professora.'};
-export const COURSES=[MATHS_COURSE,ENGLISH_COURSE,SCIENCE_COURSE];
+export const HISTORY_COURSE={id:'history',subject:'História e Geografia de Portugal',language:'pt-PT',adaptive:true,questions:HISTORY_QUESTIONS,topics:HISTORY_TOPICS,hints:HISTORY_HINTS,visuals:HISTORY_VISUALS,
+ badge:'Portugal no século XVIII',intro:'Liga datas, pessoas, causas e consequências. Treina em sessões curtas e usa os resumos com gatinhos para recordar sem olhar.',
+ testDescription:'10 perguntas · 100 pontos · cerca de 40 minutos. Duas por tema, com fontes didáticas, cronologia e raciocínio. Sem pistas; correção só no fim.',testButton:'Fazer teste · ~40 min',
+ testMarking:'Cada pergunta vale 10 pontos, repartidos igualmente pelas alíneas. A nota automática avalia as respostas dos campos; as justificações livres no rascunho precisam de revisão acompanhada.',
+ sources:'Leitura integral das 10 páginas do PDF: manual 25–27 e 29–35. Brasil, ouro e escravização; legado africano; sociedade e Inquisição; monarquia absoluta; barroco e património; terramoto e reconstrução de Lisboa. A página 28 e o mapa/gráfico referidos na página 25 não foram fornecidos: não se inventam esses dados. As ilustrações com gatinhos são resumos atuais, sem valor de documento histórico. Não se conhece a matriz da professora.'};
+export const COURSES=[MATHS_COURSE,ENGLISH_COURSE,SCIENCE_COURSE,HISTORY_COURSE];
