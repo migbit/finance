@@ -82,6 +82,8 @@ details[open] > .gym-details-summary::after { content: '−'; }
 .gym-series-table :is(input, select) { width: 100%; min-width: 80px; }
 .gym-series-table .gym-straps-input { min-width: 20px; width: 20px; }
 .gym-series-rule { display: block; margin-top: 4px; color: var(--text-dim); font-size: .8rem; }
+.gym-previous-caption { caption-side: top; text-align: left; padding: 0 0 8px; color: var(--text-dim); font-size: .75rem; font-weight: 400; }
+.gym-previous-value { display: block; margin-top: 4px; color: var(--text-dim); font-size: .72rem; font-weight: 400; line-height: 1.4; }
 .gym-total { display: block; margin-top: 4px; color: var(--text-dim); font-size: .78rem; line-height: 1.4; }
 .gym-series-table td[data-total-cell="true"] .gym-total { display: none; }
 .gym-straps-control { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; cursor: pointer; font-size: .85rem; }
@@ -132,6 +134,7 @@ details[open] > .gym-details-summary::after { content: '−'; }
   .gym-machine-header > div:first-child { flex-basis: calc(100% - 30px); }
   .gym-machine-header > .gym-machine-meta { order: 1; width: 100%; }
   .gym-series-table, .gym-series-table tbody { display: block; }
+  .gym-series-table .gym-previous-caption { display: block; }
   .gym-series-table thead { display: none; }
   .gym-series-table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 12px 8px; border-bottom: 1px solid var(--divider); }
   .gym-series-table td { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: auto; min-width: 0; padding: 0; border: 0; text-align: left; }
@@ -168,3 +171,4 @@ details[open] > .gym-details-summary::after { content: '−'; }
 .gym-warmup [hidden] { display: none !important; }
 .gym-warmup-guidance { margin: .6rem 0; line-height: 1.45; }
 .gym-warmup-help { color: var(--text-dim); font-size: .8rem; line-height: 1.4; }
+.gym-warmup-help summary { cursor: pointer; }

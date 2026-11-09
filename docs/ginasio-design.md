@@ -1,5 +1,47 @@
 # Ginásio — interface partilhada
 
+## Menos texto e referência ao treino anterior — 09/11/2026
+
+- O aquecimento deixa de repetir o parágrafo «Preparação já iniciada…».
+  As dicas ficam recolhidas e as sugestões visíveis são mais curtas. As
+  séries iniciadas ou registadas e a lógica do aquecimento mantêm-se.
+- Em Miguel, cada série apresenta o peso base, repetições e RIR realizados
+  no treino anterior, em texto pequeno e discreto sob os campos. A data
+  aparece no topo da tabela; o total com a resistência da máquina fica no
+  título da referência ao peso.
+- O histórico corresponde à última sessão do mesmo treino e ginásio anterior
+  à data selecionada. Só aparecem variantes e séries realmente realizadas
+  nessa sessão. Um treino curto sem histórico próprio usa o normal anterior.
+- Estes valores não preenchem repetições realizadas. Um RIR «?» mantém-se
+  desconhecido ao guardar Miguel, sem copiar o RIR histórico. A página da
+  Filipa conserva o seu comportamento e não recebe estas referências.
+
+Validação: 59 testes de histórico, gravação, plano, frequência, aquecimento,
+Filipa e acessos, com dados simulados; sintaxe e diferenças verificadas.
+A ligação ao navegador continua indisponível, pelo que falta a inspeção visual.
+
+## Verificação de RIR e gravação — 09/11/2026
+
+- Nas novas sessões do plano atual de Miguel, o RIR inicial vem do plano. Um
+  RIR «falha» ou «1» registado na sessão anterior deixa de substituir o RIR
+  inicial previsto. Treinos/rascunhos recuperados conservam os RIR gravados;
+  o comportamento dos registos legados e da Filipa mantém-se.
+- A edição das séries e o botão de gravação ficam bloqueados enquanto a
+  sessão carrega. Uma leitura incompleta mantém o bloqueio e pede para
+  atualizar a página. Respostas antigas de pedidos concorrentes não
+  desbloqueiam nem substituem a sessão mais recente.
+- Durante a gravação, a seleção de ginásio, treino e data fica bloqueada,
+  evitando guardar os dados sob outra seleção. O treino e o resumo continuam
+  no mesmo lote; uma falha não copia um resumo de sucesso.
+- Não foram alterados exercícios, séries, repetições, cargas ou RIR-alvo.
+
+Validação: 51 testes em `ginasio-session`, `miguel-ginasio-plan`,
+`ginasio-attendance`, `ginasio-warmup`, `filipa-ginasio-page` e `access-control`.
+Os novos cenários usam armazenamento simulado, sem escrever no Firebase real.
+A versão publicada coincidiu com o código local antes destas correções.
+Não foi feita inspeção visual nesta revisão, por indisponibilidade da ligação
+ao navegador; esta verificação não confirma alertas com o ecrã bloqueado.
+
 ## Acesso partilhado com a Filipa — 14/10/2026
 
 A Filipa pode consultar e alterar a página Ginásio no menu Miguel após a

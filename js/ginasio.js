@@ -1095,6 +1095,7 @@ const state = {
   lastReps: {},
   lastRir: {},
   lastWeights: {},
+  previousSeries: {},
   recommendedReps: {},
   warmupDefaults: {},
   customMachines: [],
@@ -1124,7 +1125,25 @@ let restAudioContext = null;
 let restCountdownAudio = null;
 let restCountdownAudioUrl = '';
 let loadSessionRequestId = 0;
+let sessionLoadState = 'idle';
+let isSavingSession = false;
 let evolutionSeries = new Map();
+
+function updateSessionAvailability() {
+  const loading = sessionLoadState === 'loading';
+  const blocked = isSavingSession || sessionLoadState !== 'ready';
+  if (saveBtn) {
+    saveBtn.disabled = blocked;
+    saveBtn.textContent = isSavingSession ? 'A guardar…' : loading ? 'A carregar…' : 'Guardar treino';
+  }
+  if (workoutWrap) {
+    workoutWrap.inert = blocked;
+    workoutWrap.setAttribute('aria-busy', String(loading));
+  }
+  if (gymSelect) gymSelect.disabled = isSavingSession;
+  if (trainingSelect) trainingSelect.disabled = isSavingSession || !gymSelect?.value;
+  if (dateInput) dateInput.disabled = isSavingSession;
+}
 
 function formatWeight(value) {
   if (value === null || Number.isNaN(value)) return '';
@@ -1688,6 +1707,12 @@ function getSavedSeries(savedMachine, index) {
     : savedMachine.series[index]) || {};
 }
 
+function getInitialSeriesRir(series, savedSeries, seriesKey) {
+  if (savedSeries.rir != null) return savedSeries.rir;
+  if (!IS_FILIPA_GYM && !usesLegacyPlan(state.session)) return series.rir ?? '?';
+  return state.lastRir[seriesKey] ?? series.rir ?? '?';
+}
+
 function getSavedWarmup(savedMachine, index) {
   if (!Array.isArray(savedMachine?.warmups)) return {};
   return savedMachine.warmups[index] || {};
@@ -1889,9 +1914,9 @@ function renderWarmupBlock(card, machine, variant, savedMachine) {
     guidance.className = 'gym-warmup-guidance';
     guidance.setAttribute('data-warmup-guidance', 'true');
     guidance.setAttribute('aria-live', 'polite');
-    const help = document.createElement('p');
+    const help = document.createElement('details');
     help.className = 'gym-warmup-help';
-    help.textContent = 'Máquina/carga nova ou sensação de frio: usa a preparação completa. Se houver dor, adapta ou interrompe. Quando o peso estiver a zero, define uma carga leve. Não procures fadiga.';
+    help.innerHTML = '<summary>Dicas de aquecimento</summary><p>Máquina ou carga nova: usa o aquecimento completo. Peso a zero: escolhe uma carga leve. Mantém margem; se houver dor, adapta ou interrompe.</p>';
     const override = document.createElement('button');
     override.type = 'button';
     override.setAttribute('data-warmup-override', 'true');
@@ -1970,7 +1995,8 @@ function refreshAdaptiveWarmups() {
     const override = block.querySelector('[data-warmup-override]');
     // Never hide or rewrite anything the user has edited, started or saved.
     if (rows.some(row => row.dataset.touched === 'true' || row.dataset.recorded === 'true' || Number(row.dataset.startedAt))) {
-      guidance.textContent = 'Preparação já iniciada ou registada. Mantém-se o teu registo. Após uma pausa prolongada, reavalia a preparação antes de retomar.';
+      guidance.textContent = '';
+      guidance.hidden = true;
       override.hidden = true;
       return;
     }
@@ -1978,13 +2004,14 @@ function refreshAdaptiveWarmups() {
     const forceFull = block.dataset.forceFull === 'true';
     const mode = forceFull ? 'full' : advice.mode;
     block.dataset.warmupMode = mode;
-    guidance.textContent = forceFull ? 'Preparação completa escolhida por ti. Ajusta a carga e mantém margem confortável.' : advice.reason;
+    guidance.textContent = mode === 'optional' ? 'Aquecimento extra opcional.' : mode === 'specific' ? 'Uma série leve de adaptação.' : '';
+    guidance.hidden = !guidance.textContent;
     rows.forEach((row, index) => { row.hidden = mode === 'optional' || (mode === 'specific' && index !== rows.length - 1); });
     block.querySelector('table').hidden = mode === 'optional';
     block.querySelector('[data-warmup-toggle]').hidden = mode === 'optional';
     block.querySelector('[data-warmup-status]').hidden = mode === 'optional';
     override.hidden = !forceFull && advice.mode === 'full';
-    override.textContent = forceFull ? 'Voltar à sugestão automática' : 'Mostrar aquecimento completo';
+    override.textContent = forceFull ? 'Sugestão automática' : 'Aquecimento completo';
     override.setAttribute('aria-expanded', String(forceFull));
   });
 }
@@ -2304,6 +2331,28 @@ async function persistRecordedWarmupDefaults() {
   await Promise.all(tasks);
 }
 
+function appendPreviousSeriesValues(row, previous) {
+  if (!previous) return;
+  const date = formatWorkoutDate(previous.date);
+  const entries = [
+    ['td:nth-child(2)', typeof previous.baseWeight === 'number' ? `${formatWeight(previous.baseWeight)} kg` : '—'],
+    ['td:nth-child(3)', `${previous.reps} reps`],
+    ['td:nth-child(4)', `RIR ${previous.rir || '?'}`]
+  ];
+  entries.forEach(([selector, value]) => {
+    const cell = row.querySelector(selector);
+    if (!cell) return;
+    const hint = document.createElement('small');
+    hint.className = 'gym-previous-value';
+    hint.textContent = `Ant. ${value}`;
+    hint.title = `${date} · ${previous.treino}`;
+    if (selector === 'td:nth-child(2)' && typeof previous.initialResistance === 'number' && typeof previous.baseWeight === 'number') {
+      hint.title += ` · Total: ${formatWeight(previous.baseWeight + previous.initialResistance)} kg`;
+    }
+    cell.appendChild(hint);
+  });
+}
+
 function createSeriesTable(machine, variant, savedMachine) {
   const initialResistance = variant?.initialResistance ?? machine.initialResistance ?? null;
   const rules = variant?.rules || machine.rules || null;
@@ -2334,6 +2383,17 @@ function createSeriesTable(machine, variant, savedMachine) {
 
   const tbody = table.querySelector('tbody');
 
+  if (!IS_FILIPA_GYM && !completionOnly) {
+    const previous = variant.series.map((_, index) => state.previousSeries?.[getSeriesKey(machine.id, variant?.id, index)]).find(Boolean);
+    if (previous) {
+      const caption = document.createElement('caption');
+      caption.className = 'gym-previous-caption';
+      caption.textContent = `Anterior · ${formatWorkoutDate(previous.date)}`;
+      caption.title = previous.treino;
+      table.prepend(caption);
+    }
+  }
+
   variant.series.forEach((series, index) => {
     const savedSeries = getSavedSeries(savedMachine, index);
     const seriesKey = getSeriesKey(machine.id, variant?.id, index);
@@ -2360,10 +2420,7 @@ function createSeriesTable(machine, variant, savedMachine) {
       ?? series.baseWeight
       ?? 0;
     const repsValue = savedSeries.reps ?? 0;
-    const rirValue = savedSeries.rir
-      ?? state.lastRir[seriesKey]
-      ?? series.rir
-      ?? '?';
+    const rirValue = getInitialSeriesRir(series, savedSeries, seriesKey);
 
     const seriesRule = rules?.series?.[index] || null;
     const ruleText = completionOnly
@@ -2461,6 +2518,7 @@ function createSeriesTable(machine, variant, savedMachine) {
       'aria-label',
       `${machine.name}, série ${index + 1}, usei straps`
     );
+    if (!IS_FILIPA_GYM && !completionOnly) appendPreviousSeriesValues(row, state.previousSeries?.[seriesKey]);
     updateTotalDisplay(row, initialResistance);
     tbody.appendChild(row);
   });
@@ -3028,6 +3086,7 @@ function renderMachine(machine) {
           state.lastReps = history.lastReps;
           state.lastRir = history.lastRir;
           state.lastWeights = history.lastWeights;
+          state.previousSeries = history.previousSeries || {};
         } catch (err) {
           console.error('Erro ao atualizar a variante:', err);
           showToast('Não foi possível atualizar os dados da variante.', 'error');
@@ -3244,6 +3303,8 @@ async function saveCustomMachine() {
 async function loadSession() {
   setStateFromInputs();
   const requestId = ++loadSessionRequestId;
+  sessionLoadState = 'loading';
+  updateSessionAvailability();
   const { gym, treino, date } = state;
   if (!gym) {
     state.session = null;
@@ -3252,11 +3313,14 @@ async function loadSession() {
     state.lastReps = {};
     state.lastRir = {};
     state.lastWeights = {};
+    state.previousSeries = {};
     state.recommendedReps = {};
     state.warmupDefaults = {};
     state.customMachines = [];
     resetWorkoutTiming();
     renderWorkout();
+    sessionLoadState = 'ready';
+    updateSessionAvailability();
     return;
   }
 
@@ -3270,7 +3334,7 @@ async function loadSession() {
       return fallback;
     }
   };
-  const emptyHistory = { lastReps: {}, lastRir: {}, lastWeights: {} };
+  const emptyHistory = { lastReps: {}, lastRir: {}, lastWeights: {}, previousSeries: {} };
   const sessionLoader = async () => {
     if (!treino || !date) return { session: null, createdAt: null };
     const ref = doc(gymCollection('ginasio_treinos'), getSessionId(gym, treino, date));
@@ -3291,14 +3355,14 @@ async function loadSession() {
     loadSafely(() => loadWarmupDefaults(gym), {}, 'Erro ao carregar aquecimentos:'),
     loadSafely(() => loadCustomMachines(gym, treino), [], 'Erro ao carregar máquinas customizadas:'),
     treino
-      ? loadSafely(() => loadLastReps(gym, treino), emptyHistory, 'Erro ao carregar reps:')
+      ? loadSafely(() => loadLastReps(gym, treino, date), emptyHistory, 'Erro ao carregar reps:')
       : emptyHistory,
     loadSafely(sessionLoader, { session: null, createdAt: null }, 'Erro ao carregar treino:')
   ]);
 
   if (requestId !== loadSessionRequestId) return;
   if (loadHadErrors) {
-    showToast('Alguns dados do treino não puderam ser carregados. Confirma a ligação.', 'warning');
+    showToast('Alguns dados do treino não puderam ser carregados. Atualiza a página antes de guardar.', 'warning');
   }
   state.baseWeights = baseWeights;
   state.recommendedReps = recommendedReps;
@@ -3307,6 +3371,7 @@ async function loadSession() {
   state.lastReps = history.lastReps;
   state.lastRir = history.lastRir;
   state.lastWeights = history.lastWeights;
+  state.previousSeries = history.previousSeries || {};
   state.session = remote.session;
   state.createdAt = remote.createdAt;
 
@@ -3321,6 +3386,8 @@ async function loadSession() {
   if (!state.session) resetWorkoutTiming();
   renderWorkout();
   resetAddMachineForm();
+  sessionLoadState = loadHadErrors ? 'error' : 'ready';
+  updateSessionAvailability();
 }
 
 async function loadBaseWeights(gym) {
@@ -3376,8 +3443,8 @@ async function loadCustomMachines(gym, treino) {
   return snap.exists() ? (snap.data().machines || []) : [];
 }
 
-async function loadLastReps(gym, treino) {
-  if (!gym || !treino) return { lastReps: {}, lastRir: {}, lastWeights: {} };
+async function loadLastReps(gym, treino, beforeDate = state.date) {
+  if (!gym || !treino) return { lastReps: {}, lastRir: {}, lastWeights: {}, previousSeries: {} };
   const q = query(
     gymCollection('ginasio_treinos'),
     where('treino', '==', treino)
@@ -3385,21 +3452,29 @@ async function loadLastReps(gym, treino) {
   const snap = await getDocs(q);
   const docs = snap.docs
     .map(docSnap => docSnap.data())
-    .filter(data => data.gym === gym);
+    .filter(data => data.gym === gym && (IS_FILIPA_GYM || !beforeDate || data.date < beforeDate));
   docs.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
   const latest = docs[0];
   if (!latest && !IS_FILIPA_GYM && treino.endsWith(SHORT_SUFFIX)) {
-    return loadLastReps(gym, normalTraining(treino));
+    return loadLastReps(gym, normalTraining(treino), beforeDate);
   }
   const lastReps = {};
   const lastRir = {};
   const lastWeights = {};
+  const previousSeries = {};
   if (latest) {
     const machines = latest?.machines || {};
     Object.entries(machines).forEach(([machineId, machine]) => {
       const variantId = machine?.variantId || '';
       (machine?.series || []).forEach((series, index) => {
         index = Number(series.seriesIndex ?? index);
+        if (!IS_FILIPA_GYM && !(Number(series.reps) > 0)) return;
+        const key = getSeriesKey(machineId, variantId, index);
+        previousSeries[key] = {
+          date: latest.date, treino: latest.treino,
+          baseWeight: series.baseWeight, reps: series.reps, rir: series.rir,
+          initialResistance: machine.initialResistance
+        };
         if (typeof series?.baseWeight === 'number') {
           const key = getSeriesKey(machineId, variantId, index);
           lastWeights[key] = series.baseWeight;
@@ -3415,7 +3490,7 @@ async function loadLastReps(gym, treino) {
       });
     });
   }
-  return { lastReps, lastRir, lastWeights };
+  return { lastReps, lastRir, lastWeights, previousSeries };
 }
 
 function buildSessionFromDom() {
@@ -3479,7 +3554,7 @@ function buildSessionFromDom() {
       const repsInput = parseInt(row.querySelector('[data-reps]')?.value || 0, 10);
       const reps = repsInput > 0 ? repsInput : 0;
       const rirInput = row.querySelector('[data-rir]')?.value || '?';
-      const rir = rirInput === '?' && state.lastRir[seriesKey]
+      const rir = IS_FILIPA_GYM && rirInput === '?' && state.lastRir[seriesKey]
         ? state.lastRir[seriesKey]
         : rirInput;
       const registeredAt = Number(row.dataset.registeredAt || 0) || null;
@@ -3639,7 +3714,7 @@ async function copySavedWorkoutSummary(summary) {
 }
 
 async function saveSession() {
-  if (saveBtn?.disabled) return;
+  if (sessionLoadState !== 'ready' || isSavingSession || saveBtn?.disabled) return;
   setStateFromInputs();
   if (!state.gym || !state.treino || !state.date) {
     showToast('Seleciona o ginásio, o treino e a data antes de gravar.', 'warning');
@@ -3668,12 +3743,9 @@ async function saveSession() {
   console.log('[ginasio] session payload', session);
   const docId = getSessionId(state.gym, state.treino, state.date);
   const ref = doc(gymCollection('ginasio_treinos'), docId);
-  const originalSaveLabel = saveBtn?.textContent || 'Guardar treino';
   document.getElementById('gym-saved-copy')?.remove();
-  if (saveBtn) {
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'A guardar…';
-  }
+  isSavingSession = true;
+  updateSessionAvailability();
 
   try {
     await persistRecordedWarmupDefaults();
@@ -3718,10 +3790,8 @@ async function saveSession() {
     console.error('Erro ao gravar treino:', err);
     showToast('Erro ao gravar treino no Firebase.', 'error');
   } finally {
-    if (saveBtn) {
-      saveBtn.disabled = false;
-      saveBtn.textContent = originalSaveLabel;
-    }
+    isSavingSession = false;
+    updateSessionAvailability();
   }
 }
 
