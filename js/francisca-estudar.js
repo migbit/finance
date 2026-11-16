@@ -32,10 +32,14 @@ function chooseSubject(subject) {
   state=states[course.id];storageKey=storageKeys[course.id];studyLabel=course.subject+' · 1.º Teste';
   $('maths-title').textContent=course.subject;$('study-course-badge').textContent=course.badge;$('study-course-intro').textContent=course.intro;
   $('study-test-description').textContent=course.testDescription;$('study-test-button').textContent=course.testButton;$('study-course-sources').textContent=course.sources;
-  $('study-english-method').hidden=!course.writing;
+  $('study-english-method').hidden=!course.writing||Boolean(course.writing.language);
+  $('study-portuguese-writing').hidden=course.id!=='portuguese';
+  $('study-history-method').querySelector('h3').textContent=course.visualMethodTitle||'Estudar História com imagens · 10–15 minutos';
+  $('study-history-method').querySelector('p').textContent=course.visualMethodText||'Observa um cartaz. Fecha-o e tenta recordar três ideias. Liga uma causa a uma consequência e explica a diferença entre uma lenda e uma prova. Depois resolve seis desafios e revê um erro.';
   $('study-science-method').hidden=!course.adaptive||Boolean(course.visuals);
   $('study-history-method').hidden=!course.visuals;
-  $('plan-task').placeholder=course.visuals?'Ex.: rever 1755 e explicar duas mudanças':course.adaptive?'Ex.: recordar absorção e explicar um erro':course.writing?'Ex.: rever have got e escrever 5 frases':'Ex.: resolver expressões com parênteses';
+  $('study-history-method').querySelectorAll('p')[1].textContent=course.id==='portuguese'?'Os gatinhos ajudam a recordar; confirma cada regra no contexto da frase. Volta às dificuldades noutro dia e revê a escrita com um adulto ou professor.':'Os gatinhos ajudam a recordar; os factos históricos estão nos textos. Volta às dificuldades noutro dia. As explicações livres no rascunho precisam de revisão acompanhada.';
+  $('plan-task').placeholder=course.id==='portuguese'?'Ex.: rever verbos e escrever um diálogo':course.visuals?'Ex.: rever 1755 e explicar duas mudanças':course.adaptive?'Ex.: recordar absorção e explicar um erro':course.writing?'Ex.: rever have got e escrever 5 frases':'Ex.: resolver expressões com parênteses';
   document.querySelector('.study-hero-symbol').textContent=course.adaptive?'Explora!':course.writing?'Hello!':'a² + b²';
   $('study-topic').replaceChildren(new Option('Todos os temas','all'));TOPICS.forEach(t=>$('study-topic').append(new Option(t.title,t.id)));
   renderDashboard();
@@ -161,7 +165,7 @@ function renderSession() {
   if(test)pane.append(node('p','study-muted','Usa papel e lápis. Podes voltar atrás. Só vais ver as soluções depois de entregar.'));
   if(item.repair)pane.append(node('p','study-pill','Volta a experimentar · aplica o que aprendeste'));
   const question=node('h3','study-question',q.prompt);pane.append(question);
-  if(course.writing)question.lang='en-GB';
+  if(course.writing)question.lang=course.writing.language||'en-GB';
   if(q.diagram)pane.append(diagramNode(q.diagram));
   if(course.adaptive)pane.append(node('p','study-muted',`${q.source} · Nível ${q.level}: ${['','Recordar','Interpretar','Aplicar e justificar'][q.level]}${test?' · '+q.points+' pontos':''}`));
   if(q.passage)pane.append(passageNode(q.passage));
@@ -191,7 +195,7 @@ function renderSession() {
   } else if(!s.feedback) {
     const submit=node('button','study-primary','Verificar resposta');submit.type='submit';controls.append(submit);
   }
-  if(test&&course.writing&&s.index===s.queue.length-1)form.append(writingEditor(s,'writing',false));
+  if(test&&course.writing&&s.index===s.queue.length-1){if(course.writingPassage)form.append(passageNode(course.writingPassage));form.append(writingEditor(s,'writing',false));}
   form.append(controls);form.addEventListener('submit',event=>{event.preventDefault();if(!test&&!s.feedback)checkAnswer(form,q);});pane.append(form);
   let feedbackTitle=null;
   if(s.feedback) {
@@ -247,9 +251,9 @@ function finishSession() {
 function showReport(report) {
   openSession();const pane=$('study-session');pane.replaceChildren();
   const title=node('h2','',report.mode==='game'?'Missão cumprida!':'Sessão terminada');title.id='session-title';
-  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','study-result',report.score?`${report.score.earned} / ${report.score.total} pontos · ${Math.round(report.score.earned/report.score.total*100)}%`:`${report.correct} / ${report.total} sem ajuda${report.mode==='test'?` · ${Math.round(report.correct/report.total*100)}%`:''}`));
+  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','study-result',report.score?course.writing?.manualPoints?(Number.isFinite(report.manualScore)?`${Math.round((report.score.earned+report.manualScore)*100)/100} / 100 pontos · revisão acompanhada`:`${report.score.earned} / ${report.score.total} pontos automáticos · escrita por rever`):`${report.score.earned} / ${report.score.total} pontos · ${Math.round(report.score.earned/report.score.total*100)}%`:`${report.correct} / ${report.total} sem ajuda${report.mode==='test'?` · ${Math.round(report.correct/report.total*100)}%`:''}`));
   pane.append(node('p','',report.score?(course.testMarking||'Cada pergunta vale 5 pontos, repartidos igualmente pelas suas alíneas. Revê também as justificações.'):report.mode==='test'?'Cada pergunta vale o mesmo. Confere os passos abaixo, mesmo nas que acertaste.':'Os acertos depois de uma explicação ficam separados dos acertos sem ajuda. Continua a praticar os temas que ainda precisam de atenção.'));
-  if(report.writing)pane.append(node('p','study-recommendation','Esta percentagem refere-se apenas aos 20 exercícios de correção automática. A composição fica por rever com a grelha abaixo e não está incluída na nota.'));
+  if(report.writing)pane.append(node('p','study-recommendation',course.writing?.manualPoints?'A parte automática vale 80 pontos. A escrita vale 20 e exige revisão acompanhada; a nota global só fica completa após essa revisão.':'Esta percentagem refere-se apenas aos 20 exercícios de correção automática. A composição fica por rever com a grelha abaixo e não está incluída na nota.'));
   const helped=report.attempts.filter(a=>a.correct&&a.assisted).length;
   if(helped)pane.append(node('p','study-recommendation',`Conseguiste resolver ${helped} ${helped===1?'desafio':'desafios'} com ajuda. Já deste um passo! Noutro dia, volta a tentar sem a pista nem a explicação.`));
   pane.append(node('p','study-muted','Antes de terminar, escolhe uma pergunta e explica em voz alta como chegaste à resposta. Volta a praticar noutro dia.'));
@@ -265,7 +269,7 @@ function showReport(report) {
     if(q.passage)details.append(passageNode(q.passage));if(q.clock)details.append(clockNode(q.clock));
     details.append(node('p','',`Respondeste: ${(a.answers||[]).join(' · ')}`),feedbackNode(q,grade(q,a.answers)));pane.append(details);
   });focusHeading(title);
-  if(report.writing){const writing=node('section','study-writing');writing.append(node('h3','','A tua composição · revisão por grelha'),node('p','study-written-text',report.writing));appendWritingGuide(writing);pane.append(writing);}
+  if(report.writing){const writing=node('section','study-writing');writing.append(node('h3','','A tua composição · revisão por grelha'),node('p','study-written-text',report.writing));appendWritingGuide(writing);if(course.writing.manualPoints)writing.append(writingMarks(report));pane.append(writing);}
 }
 
 function feedbackNode(q,result) {
@@ -302,7 +306,7 @@ function diagramNode({kind,chemical}) {
 function visualSummaries() {
   openSession();const pane=$('study-session');pane.replaceChildren();
   const title=node('h2','','Resumos visuais · gatinhos e bonequinhos');title.id='session-title';
-  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','','Escolhe um cartaz, observa e lê. Depois esconde-o, recorda sem olhar e explica a ligação entre duas ideias. Confere só depois. Os desenhos são resumos atuais, não documentos históricos.'),button('Voltar ao estudo',home,true));
+  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','','Escolhe um cartaz, observa e lê. Depois esconde-o, recorda sem olhar e explica a ligação entre duas ideias. Confere só depois. Os desenhos são ajudas de memória; consulta também as explicações e aplica as regras a novos exemplos.'),button('Voltar ao estudo',home,true));
   for(const v of course.visuals||[]){
     const details=node('details','study-visual-card');details.append(node('summary','',v.title));
     const content=node('div','study-visual-content');const img=node('img');img.src=v.src;img.alt=v.alt;img.loading='lazy';img.decoding='async';content.append(img);
@@ -333,23 +337,30 @@ function appendWritingGuide(panel) {
   const guide=node('div');guide.append(node('h4','','Revê o teu texto'));
   course.writing.checklist.forEach(item=>{const label=node('label','study-writing-check');const check=node('input');check.type='checkbox';label.append(check,document.createTextNode(item));guide.append(label);});
   const details=node('details');details.append(node('summary','','Ver um exemplo depois de tentar'));
-  const model=node('p','study-example',course.writing.model);model.lang='en-GB';details.append(model,node('p','study-muted','Este é um exemplo possível. Compara a estrutura e as regras; mantém as tuas próprias ideias. A grelha não verifica automaticamente a gramática nem dá nota à composição.'));
+  const model=node('p','study-example',course.writing.model);model.lang=course.writing.language||'en-GB';details.append(model,node('p','study-muted','Este é um exemplo possível. Compara a estrutura e as regras; mantém as tuas próprias ideias. A grelha não verifica automaticamente a gramática nem dá nota à composição.'));
   panel.append(guide,details);
 }
+function writingMarks(report) {
+  const form=node('form','study-manual-marks');form.append(node('h4','','Registar revisão acompanhada · 20 pontos'),node('p','study-muted','A preencher com um adulto ou professor depois de ler o texto. Cada critério vale 0–4 pontos; marcar a lista de revisão não atribui uma nota.'));
+  const inputs=[];course.writing.checklist.forEach((criterion,i)=>{const label=node('label','',criterion+' · 0–4 pontos');const input=node('input');input.type='number';input.min=0;input.max=4;input.step=.5;input.required=true;input.value=report.writingMarks?.[i]??'';label.append(input);form.append(label);inputs.push(input);});
+  const submit=node('button','study-primary','Guardar revisão acompanhada');submit.type='submit';form.append(submit);
+  form.addEventListener('submit',event=>{event.preventDefault();if(!form.reportValidity())return;const marks=inputs.map(n=>Number(n.value));report.writingMarks=marks;report.manualScore=marks.reduce((a,b)=>a+b,0);save();showReport(report);});return form;
+}
+
 function writingEditor(owner,key,withGuide) {
-  const panel=node('section','study-writing');panel.append(node('h3','','Writing · '+course.writing.title));
-  const prompt=node('p','',course.writing.prompt);prompt.lang='en-GB';panel.append(prompt);
+  const panel=node('section','study-writing');panel.append(node('h3','',(course.writing.language?'Escrita · ':'Writing · ')+course.writing.title));
+  const prompt=node('p','',course.writing.prompt);prompt.lang=course.writing.language||'en-GB';panel.append(prompt);
   const plan=node('ol');course.writing.plan.forEach(item=>plan.append(node('li','',item)));panel.append(plan);
-  const label=node('label','','O teu texto em inglês');label.htmlFor='study-writing-text';const area=node('textarea');area.id='study-writing-text';area.rows=8;area.lang='en-GB';area.spellcheck=false;area.maxLength=3000;area.value=owner[key]||'';
+  const label=node('label','',course.writing.language?'O teu texto em português':'O teu texto em inglês');label.htmlFor='study-writing-text';const area=node('textarea');area.id='study-writing-text';area.rows=8;area.lang=course.writing.language||'en-GB';area.spellcheck=false;area.maxLength=3000;area.value=owner[key]||'';
   const count=node('p','study-muted');count.setAttribute('aria-live','polite');
-  const update=()=>{count.textContent=`${area.value.trim()?area.value.trim().split(/\s+/).length:0} palavras · objetivo: 40–60. O texto fica guardado neste navegador.`;};update();
+  const update=()=>{count.textContent=`${area.value.trim()?area.value.trim().split(/\s+/).length:0} palavras · objetivo: ${course.writing.wordGoal||'40–60'}. O texto fica guardado neste navegador.`;};update();
   area.addEventListener('input',()=>{owner[key]=area.value;save();update();});panel.append(label,area,count);
-  if(withGuide)appendWritingGuide(panel);else panel.append(node('p','study-muted','Escreve o teu próprio texto. A grelha e o exemplo só aparecem depois de entregar. A escrita fica fora da percentagem automática.'));
+  if(withGuide)appendWritingGuide(panel);else panel.append(node('p','study-muted','Escreve o teu próprio texto. A grelha e o exemplo só aparecem depois de entregar. A escrita precisa de revisão acompanhada e não recebe correção automática.'));
   return panel;
 }
 function writingWorkshop() {
   openSession();const pane=$('study-session');pane.replaceChildren();const title=node('h2','','Oficina de escrita');title.id='session-title';
-  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','','Faz um plano, escreve sem copiar e revê. No fim, lê o teu texto em voz alta: consegues perceber cada frase que escreveste?'),writingEditor(state,'writingDraft',true),button('Guardar e voltar ao estudo',home,true));focusHeading(title);
+  pane.append(node('p','study-eyebrow',studyLabel),title,node('p','','Faz um plano, escreve sem copiar e revê. No fim, lê o teu texto em voz alta: consegues perceber cada frase que escreveste?'),...(course.writingPassage?[passageNode(course.writingPassage)]:[]),writingEditor(state,'writingDraft',true),button('Guardar e voltar ao estudo',home,true));focusHeading(title);
 }
 
 function tableNode(data) {
@@ -401,6 +412,7 @@ function updateBuild(q,answers=[]) {
 
 function answerError(q) {
   if(q.fields.some(f=>f.type==='order'))return 'Usa todas as palavras para construir a frase. Podes desfazer e tentar outra ordem.';
+  if(q.fields.some(f=>f.strictAccents))return 'Completa a forma verbal pedida, com os acentos corretos. Confirma o sujeito e o tempo.';
   if(course.adaptive&&q.fields.some(f=>f.type==='text'))return 'Completa todas as alíneas. Escreve apenas o termo pedido. A correção aceita a ausência de acentos e mostra a grafia correta.';
   if(q.fields.some(f=>f.type==='text'))return 'Completa todas as respostas em inglês. Nas lacunas, escreve só a parte em falta; nas transformações, escreve a frase completa.';
   if(q.fields.some(f=>f.options))return q.fields.every(f=>f.options)?'Escolhe uma resposta antes de verificar.':'Escolhe uma opção e completa o resultado numérico. Podes usar vírgula decimal.';
@@ -426,7 +438,7 @@ function renderHistory() {
   if(!state.history.length){$('study-history').append(node('p','study-muted','A tua primeira sessão começa aqui. Não precisas de acertar em tudo para aprender.'));return;}
   state.history.slice(0,8).forEach(report=>{
     const card=node('div','study-history-row');const date=new Intl.DateTimeFormat('pt-PT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Lisbon'}).format(new Date(report.date));
-    card.append(node('span','',`${date} · ${studyLabel} · ${modeNames[report.mode]||'Sessão'}`),node('strong','',report.score?`${report.score.earned}/${report.score.total} pontos`:`${report.correct}/${report.total} sem ajuda`),button('Ver correção',()=>showReport(report)));$('study-history').append(card);
+    card.append(node('span','',`${date} · ${studyLabel} · ${modeNames[report.mode]||'Sessão'}`),node('strong','',report.score?course.writing?.manualPoints&&Number.isFinite(report.manualScore)?`${Math.round((report.score.earned+report.manualScore)*100)/100}/100 pontos`:`${report.score.earned}/${report.score.total} pontos${course.writing?.manualPoints?' · escrita por rever':''}`:`${report.correct}/${report.total} sem ajuda`),button('Ver correção',()=>showReport(report)));$('study-history').append(card);
   });
 }
 
@@ -445,6 +457,7 @@ if(access.user&&access.mode!=='none') {
   $('study-resume').addEventListener('click',renderSession);
   $('study-writing-button').addEventListener('click',writingWorkshop);
   $('study-visual-button').addEventListener('click',visualSummaries);
+  $('study-portuguese-writing').addEventListener('click',writingWorkshop);
   $('study-plan-form').addEventListener('submit',event=>{
     event.preventDefault();try {
       const task=normalizeTask($('plan-subject').value,$('plan-date').value,$('plan-task').value,$('plan-minutes').value,FRANCISCA_SUBJECTS);

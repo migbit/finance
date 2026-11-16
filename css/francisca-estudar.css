@@ -164,3 +164,6 @@ body[data-page="francisca-estudar"] { background:var(--background,#101722);color
 .study-visual-card button{margin:.6rem .5rem .6rem 0}
 .study-visual-card a{display:inline-block;margin:.5rem 0}
 .study-visual-content[hidden]{display:none}
+.study-manual-marks{display:grid;gap:.8rem;margin-top:1rem;border-top:1px solid #394b63;padding-top:1rem}
+.study-manual-marks label{display:grid;gap:.4rem}
+.study-manual-marks input{max-width:100px}

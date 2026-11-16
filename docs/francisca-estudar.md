@@ -186,3 +186,74 @@ Use case: infographic-diagram. Create a polished portrait Portuguese school memo
 #### 5. lisboa
 
 Use case: infographic-diagram. Create a polished portrait Portuguese school memory poster age 11, cream, teal and muted coral, cute cat tutor with notebook and respectful simple human stick figures planning a city. Exact clear Portuguese text: 'LISBOA: 1755 E RECONSTRUÇÃO', '1750: D. José I sucede a D. João V', '1 de novembro de 1755', 'Terramoto + ondas gigantes + incêndios', 'Marquês de Pombal: organizar o socorro', 'Cuidar • alojar • limpar • vigiar', 'Reconstrução: ruas largas e perpendiculares', 'Prédios semelhantes + gaiola antissísmica', 'Praça do Comércio: estátua de D. José I'. Three sequential calm panels: damaged empty city symbolic, helpers with shelter and water icons, new geometric street plan with perpendicular grid and a small inset timber bracing cage inside building. No casualties, no cute disaster victims, no claim cage prevents all damage, no conflation king and minister. Accurate date and names. Focus on event → response → changes.
+## Português · 1.º Teste (16/11/2026)
+
+Fonte: leitura visual integral das 21 páginas de `C:/ChatGPT/Francisca/portugues 1 teste.pdf`. Correspondência com o manual: 14–19, 23, 26–35 e 46–49. A página 28 é identificável pela sequência, apesar de o número não estar visível. No roteiro há corte da legenda na margem direita, mas as duas páginas permitem identificar o tema e o formato; o treino usa um percurso fictício, sem completar dados ilegíveis por suposição. Não se publicam digitalizações, letras de canções, tiras de banda desenhada nem os excertos literários do manual.
+
+| PDF | Manual | Matéria |
+| --- | --- | --- |
+| 1 | 14 | Oralidade/escuta e reconto de banda desenhada; áudio ausente |
+| 2–3 | 15–16 | Entrevista, compreensão, V/F/correção, verbos do indicativo e família de palavras |
+| 4–6 | 17–19 | Excerto narrativo, sequência, caracterização, classes, funções sintáticas, tempos verbais, narrativa com 120–200 palavras/descrição/diálogo |
+| 7 | 23 | Projeto de leitura, apresentação, opinião, cartaz, encenação, booktrailer e podcast |
+| 8–9 | 26–27 | Notícia, título/lead/corpo, Quem/O quê/Onde/Quando/Como/Porquê, compreensão e pontuação |
+| 10–11 | 28–29 | Entrevista, estrutura, factos/opiniões, justificações; vídeo ausente |
+| 12–15 | 30–33 | Publicidade comercial/institucional, elementos, público-alvo, apelo/argumentação, quantificadores numerais e formas de tratamento |
+| 16–17 | 34–35 | Roteiro, percurso, números, legenda e informação descritiva |
+| 18–20 | 46–48 | Conto tradicional, estrutura narrativa, sequência, expressões idiomáticas, compreensão e caracterização |
+| 21 | 49 | Determinante e pronome indefinidos no contexto |
+
+### Funcionalidades e cotação
+
+92 exercícios originais, dez temas, três níveis, pistas, recuperação por conceito, missão e revisão adaptativa. Reutiliza a arquitetura existente. Notícias e entrevistas fictícias têm variantes; as duas perguntas de cada tema no teste mantêm o mesmo texto quando têm conjunto de leitura. Os textos reais sobre personalidades/produtos no manual não são apresentados como notícias atuais. O conto original O caderno de capa azul fica disponível para compreensão e continuação. Escrita livre, opinião e leitura expressiva não recebem correção semântica automática.
+
+Gramática: nome, adjetivo, verbo, preposição, determinante/pronome, indefinidos, numerais, famílias de palavras, presente/perfeito/imperfeito/mais-que-perfeito composto/futuro do indicativo, sujeito/predicado/vocativo/complementos direto e indireto, pontuação e adequação do tratamento. Nas formas verbais escritas os acentos são exigidos (`serao` não substitui `serão`); as definições e etiquetas conceptuais mantêm tolerância a acentos, como nas outras disciplinas. Não se confunde determinante com pronome, riqueza de vocabulário com família de palavras, predicado com apenas verbo, nem vocativo com sujeito. As formas de tratamento dependem do contexto e não se apresentam como uma regra universal de uma única palavra correta.
+
+Simulação: 20 exercícios × 4 pontos = 80 pontos automáticos, mais narrativa de 120–200 palavras com 20 pontos de revisão acompanhada. Duração sugerida 60 minutos; distribuição escolhida para o treino, não matriz atribuída à professora. A composição é obrigatória para entregar; retoma e rascunho persistem. Antes de entregar não há pistas, grelha ou modelo. Depois, a escrita tem cinco critérios de 0–4 pontos, preenchidos por um adulto/professor. A soma global só aparece após essa revisão, identificada como acompanhada. Uma lista de verificação marcada não atribui nota. O modelo só é disponibilizado depois da tentativa/entrega e não deve ser copiado. História e Ciências conservam a sua cotação; Inglês conserva a escrita fora da nota automática.
+
+Chave: `francisca-study-v1:${uid}:portuguese-test-1`. Plano comum e progresso/histórico das outras disciplinas preservados. Armazenamento local, sem sincronização entre dispositivos. O registo da revisão é acompanhado por instruções mas não há autenticação separada de professor; não constitui uma avaliação escolar oficial.
+
+### Resumos visuais
+
+Seis imagens geradas com a ferramenta integrada `image_gen` (sem CLI), inspecionadas e guardadas em WebP, preservando dimensões/composição:
+
+- `assets/francisca/portugues/leitura.webp`
+- `assets/francisca/portugues/publicidade.webp`
+- `assets/francisca/portugues/narrativa.webp`
+- `assets/francisca/portugues/classes.webp`
+- `assets/francisca/portugues/sintaxe.webp`
+- `assets/francisca/portugues/verbos.webp`
+
+Os cartazes incluem gatinhos e bonequinhos, ampliação, texto alternativo, versão textual, referências e «Esconder e recordar». O cartaz narrativo foi corrigido pela ferramenta de imagem para dizer «Nesta tarefa: 120–200 palavras», evitando apresentar a extensão como regra geral. A versão textual qualifica a estrutura da notícia como habitual e contextualiza os usos da pontuação. Abrir ou conferir uma imagem não atribui domínio. A oficina de escrita reutiliza a de Inglês, agora configurável por idioma, extensão e cotação, sem alterar as regras anteriores.
+
+### Validação
+
+64 testes unitários/de conteúdo (incluindo as disciplinas anteriores): gabarito independente de gramática, respostas alternativas/erradas, acentos, recuperação, 100 versões de exame, coerência dos textos, 80 pontos, composição e persistência. O navegador percorre os 92 exercícios a 390 px, verifica as seis imagens e memória, entrega sem composição, retoma com composição, nota automática separada, limites de 0–4 por critério, revisão acompanhada e nota global persistente. Regressões de Matemática, Inglês, Ciências e História executadas separadamente; imagens em `tests/.runtime`, excluídas da publicação.
+
+### Prompts finais de Português
+
+Ferramenta integrada `image_gen`; PNG→WebP foi apenas codificação para o projeto. O prompt de edição do cartaz narrativo substituiu exclusivamente «Narrativa: 120–200 palavras» por «Nesta tarefa: 120–200 palavras», preservando o restante desenho.
+
+#### 1. leitura
+
+Use case: infographic-diagram. Create a portrait Portuguese school study poster for an 11-year-old girl. Cream background, teal headings, warm coral and gold highlights, cute cat tutor and simple human stick-figure pupils, clear large accurate Portuguese typography, generous white space. The cats are memory guides. Use exactly the supplied examples and no extra grammar claims. Title 'LER PARA COMPREENDER'. Four clearly separate panels. Exact text: 'NOTÍCIA: informar', 'Título → lead → corpo', 'Lead: Quem? O quê? Onde? Quando?', 'Corpo: Como? Porquê?', 'ENTREVISTA: conhecer uma pessoa e as suas opiniões', 'Entrevistador pergunta. Entrevistado responde.', 'Facto: pode ser verificado.', 'Opinião: exprime uma apreciação.', 'ROTEIRO: orientar uma visita', 'Mapa + legenda + percurso'. Illustrations: cat journalist with newspaper, two stick figures with Q/A speech bubbles, small imaginary park path 1→2→3 and numbered legend. Do not invent a real map. Contrast fact 'A biblioteca abre às nove.' with opinion 'A biblioteca é fantástica!'.
+
+#### 2. publicidade
+
+Use case: infographic-diagram. Create a portrait Portuguese school study poster for an 11-year-old girl. Cream background, teal headings, warm coral and gold highlights, cute cat tutor and simple human stick-figure pupils, clear large accurate Portuguese typography, generous white space. The cats are memory guides. Use exactly the supplied examples and no extra grammar claims. Title 'PUBLICIDADE: CONVENCER'. Exact texts: 'Comercial: promover produtos ou serviços', 'Institucional: sensibilizar e promover ações', 'Slogan: frase curta e marcante', 'Texto argumentativo: razões para agir', 'Logótipo: identifica a entidade', 'Público-alvo: a quem se dirige?', 'Imperativo: Lê!', 'Exclamação: chama a atenção!'. Show cat holding a book, child stick figures and two fictional ad cards: 'Clube dos Livros — compra um livro' and 'Partilha livros — promove a leitura'. No real brands, no copied advertisement designs, no frightening images. Map each element with clear arrows.
+
+#### 3. narrativa
+
+Use case: infographic-diagram. Create a portrait Portuguese school study poster for an 11-year-old girl. Cream background, teal headings, warm coral and gold highlights, cute cat tutor and simple human stick-figure pupils, clear large accurate Portuguese typography, generous white space. The cats are memory guides. Use exactly the supplied examples and no extra grammar claims. Title 'NARRAR E ESCREVER'. Exact texts: 'Situação inicial → Desenvolvimento → Conclusão', 'Quem? Onde? Quando? O que aconteceu?', 'Caracterização física: aspeto', 'Caracterização psicológica: maneira de ser', 'Justifica com ações da personagem.', 'Conto tradicional: transmissão oral', 'Tempo e espaço pouco precisos', 'Narrativa: 120–200 palavras', 'Inclui descrição e diálogo.', 'Planear → Escrever → Rever'. Show cute cat storyteller and three sequential panels of an ORIGINAL story: a child loses a bookmark, searches with a friend, finds it in book. No Harry Potter or copied fictional characters. Do not add narrator classifications absent from supplied texts. Word count is task requirement, not universal rule for every narrative.
+
+#### 4. classes
+
+Use case: infographic-diagram. Create a portrait Portuguese school study poster for an 11-year-old girl. Cream background, teal headings, warm coral and gold highlights, cute cat tutor and simple human stick-figure pupils, clear large accurate Portuguese typography, generous white space. The cats are memory guides. Use exactly the supplied examples and no extra grammar claims. Title 'PALAVRAS: IDENTIFICAR NO CONTEXTO'. Exact texts: 'Nome: jardim', 'Adjetivo: bonito', 'Verbo: leu', 'Determinante: acompanha o nome', 'Pronome: substitui o nome', 'Preposição: para', 'Determinante indefinido: outros livros', 'Pronome indefinido: outros chegaram', 'Quantificador numeral', 'Cardinal: três', 'Multiplicativo: triplo', 'Fracionário: metade', 'Família de palavras: livro → livraria → livreiro'. Cat with magnifying glass examines word cards, human stick figure holds two matching sentences. Ensure 'outros' is visibly before noun in determiner example and without noun in pronoun example. Do not classify all words expressing imprecise quantity as determiners.
+
+#### 5. sintaxe
+
+Use case: infographic-diagram. Create a portrait Portuguese school study poster for an 11-year-old girl. Cream background, teal headings, warm coral and gold highlights, cute cat tutor and simple human stick-figure pupils, clear large accurate Portuguese typography, generous white space. The cats are memory guides. Use exactly the supplied examples and no extra grammar claims. Title 'FUNÇÕES SINTÁTICAS'. Exact text: 'A Rita ofereceu um livro ao Tiago.', 'Sujeito: A Rita', 'Predicado: ofereceu um livro ao Tiago', 'Complemento direto: um livro', 'Complemento indireto: ao Tiago', 'Substituições: o / lhe', 'Ofereceu-o ao Tiago.', 'Ofereceu-lhe um livro.', 'Vocativo: chama o interlocutor', 'Rita, lê este livro!'. Draw stick figure Rita giving book to Tiago, cute cat points at clear color blocks under the sentence. Show complete predicate containing all complements. Put vocative example in a separate panel; distinguish vocative from subject, no claim every phrase beginning a is indirect complement.
+
+#### 6. verbos
+
+Use case: infographic-diagram. Create a portrait Portuguese school study poster for an 11-year-old girl. Cream background, teal headings, warm coral and gold highlights, cute cat tutor and simple human stick-figure pupils, clear large accurate Portuguese typography, generous white space. The cats are memory guides. Use exactly the supplied examples and no extra grammar claims. Title 'VERBOS E PONTUAÇÃO'. Exact text: 'Modo indicativo', 'Presente: leio', 'Pretérito perfeito: li', 'Pretérito imperfeito: lia', 'Mais-que-perfeito composto: tinha lido', 'Futuro: lerei', 'Dois pontos: anunciam uma explicação', 'Aspas: delimitam uma citação', 'Parênteses: acrescentam informação', 'Vocativo entre vírgulas: Rita, escuta!', 'Tratamento: adapta à pessoa e à situação'. Cat walks along simple timeline past→present→future. Small punctuation character cards and human stick figure politely asking a teacher a question. Do not conflate perfect with imperfect; do not claim all colon usages are identical.

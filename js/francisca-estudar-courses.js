@@ -1,4 +1,5 @@
 import {QUESTIONS,TOPICS,TOPIC_HINTS} from './francisca-estudar-data.js';
+import {PORTUGUESE_QUESTIONS,PORTUGUESE_TOPICS,PORTUGUESE_HINTS,PORTUGUESE_WRITING,PORTUGUESE_VISUALS,PT_STORY} from './francisca-estudar-portuguese-data.js';
 import {HISTORY_QUESTIONS,HISTORY_TOPICS,HISTORY_HINTS,HISTORY_VISUALS} from './francisca-estudar-history-data.js';
 import {SCIENCE_QUESTIONS,SCIENCE_TOPICS,SCIENCE_HINTS} from './francisca-estudar-science-data.js';
 import {ENGLISH_QUESTIONS,ENGLISH_TOPICS,ENGLISH_HINTS,ENGLISH_WRITING,ENGLISH_EXAM_SLOTS,ENGLISH_READING_SKILLS} from './francisca-estudar-english-data.js';
@@ -24,4 +25,9 @@ export const HISTORY_COURSE={id:'history',subject:'História e Geografia de Port
  testDescription:'10 perguntas · 100 pontos · cerca de 40 minutos. Duas por tema, com fontes didáticas, cronologia e raciocínio. Sem pistas; correção só no fim.',testButton:'Fazer teste · ~40 min',
  testMarking:'Cada pergunta vale 10 pontos, repartidos igualmente pelas alíneas. A nota automática avalia as respostas dos campos; as justificações livres no rascunho precisam de revisão acompanhada.',
  sources:'Leitura integral das 10 páginas do PDF: manual 25–27 e 29–35. Brasil, ouro e escravização; legado africano; sociedade e Inquisição; monarquia absoluta; barroco e património; terramoto e reconstrução de Lisboa. A página 28 e o mapa/gráfico referidos na página 25 não foram fornecidos: não se inventam esses dados. As ilustrações com gatinhos são resumos atuais, sem valor de documento histórico. Não se conhece a matriz da professora.'};
-export const COURSES=[MATHS_COURSE,ENGLISH_COURSE,SCIENCE_COURSE,HISTORY_COURSE];
+export const PORTUGUESE_COURSE={id:'portuguese',subject:'Português',language:'pt-PT',adaptive:true,coherentReadings:true,questions:PORTUGUESE_QUESTIONS,topics:PORTUGUESE_TOPICS,hints:PORTUGUESE_HINTS,writing:PORTUGUESE_WRITING,writingPassage:PT_STORY,visuals:PORTUGUESE_VISUALS,
+ badge:'Ler, compreender e escrever',intro:'Lê textos novos, justifica com pistas e aplica a gramática. Usa os cartazes com gatinhos para recordar e depois pratica sem olhar.',testDescription:'20 exercícios: 80 pontos. Narrativa de 120–200 palavras: 20 pontos de revisão acompanhada. Total 100 pontos. Sem pistas; correção no fim.',testButton:'Fazer teste · ~60 min',
+ testMarking:'Cada exercício vale 4 pontos, repartidos pelas alíneas. A composição vale 20 pontos e precisa de revisão acompanhada. A nota global só fica completa depois de registar essa revisão.',
+ visualMethodTitle:'Estudar Português · 10–15 minutos',visualMethodText:'Observa um cartaz, esconde-o e recorda duas regras com exemplos teus. Faz seis desafios, identifica uma pista no texto e explica um erro. Alterna leitura, gramática e escrita.',
+ sources:'21 digitalizações: manual 14–19, 23, 26–35 e 46–49. Leitura de notícia, entrevista, publicidade e roteiro; conto/narrativa; gramática e escrita. Os áudios e vídeos referidos não foram fornecidos: não se avalia a escuta. Textos e roteiros do treino são originais/fictícios, sem reproduzir os textos ou imagens do manual. A matriz da professora não foi fornecida.'};
+export const COURSES=[MATHS_COURSE,ENGLISH_COURSE,SCIENCE_COURSE,HISTORY_COURSE,PORTUGUESE_COURSE];

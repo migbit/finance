@@ -43,7 +43,7 @@ export function grade(question, answers) {
   const parts=question.fields.map((field,i)=>{
     if(field.options) return { valid:field.options.includes(answers[i]), correct:answers[i] === field.answer };
     if(field.type==='text'||field.type==='order') {
-      const normalize=value=>{const text=normalizeEnglish(value,field.caseSensitive);return field.language==='pt-PT'?text.normalize('NFD').replace(/[\u0300-\u036f]/g,''):text;};
+      const normalize=value=>{const text=normalizeEnglish(value,field.caseSensitive);return field.language==='pt-PT'&&!field.strictAccents?text.normalize('NFD').replace(/[\u0300-\u036f]/g,''):text;};
       const answer=normalize(answers[i]);
       const complete=field.type!=='order'||answer.split(' ').length===normalize(field.answer).split(' ').length;
       return {valid:answer.length>0&&answer.length<=500&&complete,correct:complete&&[field.answer,...(field.accept||[])].some(expected=>answer===normalize(expected))};
@@ -68,7 +68,8 @@ export function selectQuestions(mode, topic='all', progress={}, random=Math.rand
   const bank=course.questions,topics=course.topics;
   if(course.adaptive) {
     if(mode==='test')return shuffle(topics.flatMap(t=>{
-      const pool=bank.filter(q=>q.topic===t.id);
+      let pool=bank.filter(q=>q.topic===t.id);
+      if(course.coherentReadings){const sets=[...new Set(pool.map(q=>q.readingSet).filter(Boolean))];if(sets.length){const set=shuffle(sets,random)[0];pool=pool.filter(q=>!q.readingSet||q.readingSet===set);}}
       const harder=shuffle(pool.filter(q=>q.level===3),random)[0];
       const basics=pool.filter(q=>q.level<3&&q.skill!==harder.skill);
       const preferred=basics.filter(q=>q.format==='true-false'||q.diagram||q.table||q.chart);
