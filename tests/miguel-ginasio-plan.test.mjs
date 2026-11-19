@@ -32,6 +32,42 @@ test('conserva outras combinações, máquinas e cargas não revistas', () => {
   assert.deepEqual(plans['Dragão'].Pernas[0].series.map(s => s.baseWeight), legacy['Dragão'].Pernas[0].series.map(s => s.baseWeight));
 });
 
+test('Costas no Dragão aparece no seletor e inicia cargas independentes, com escolha exclusiva para deltoide posterior', () => {
+  const trainingSelect = { appendChild(option) { this.options.push(option.value); }, options: [] };
+  const state = { session: null, customMachines: [] };
+  const context = vm.createContext({
+    IS_FILIPA_GYM: false, MIGUEL_LEGACY_TEMPLATES: legacy, WORKOUT_TEMPLATES: plans,
+    trainingSelect, state, resolveExerciseChoices, usesLegacyPlan,
+    document: { createElement: () => ({}) }
+  });
+  for (const [start, end] of [['updateTrainingOptions', 'init'], ['getTemplate', 'renderEmpty'], ['parseWarmupSets', 'renderWarmupBlock']]) {
+    vm.runInContext(source.slice(source.indexOf(`function ${start}(`), source.indexOf(`function ${end}(`)), context);
+  }
+  context.updateTrainingOptions('Dragão', 'Costas');
+  assert.ok(trainingSelect.options.includes('Costas'));
+  assert.equal(trainingSelect.value, 'Costas');
+  assert.equal(isReviewedMiguelTraining('Dragão', 'Costas'), true);
+
+  const exercises = context.getTemplate('Dragão', 'Costas');
+  assert.deepEqual(dose(exercises), dose(plans['Constituição'].Costas));
+  assert.deepEqual(exercises.map(e => e.rules.restMinSec), [150, 150, 120, 90, 90, 60]);
+  const constitutionIds = new Set(plans['Constituição'].Costas.map(exercise => exercise.id));
+  for (const exercise of exercises) {
+    assert.equal(constitutionIds.has(exercise.id), false);
+    assert.ok(exercise.series.every(series => series.baseWeight === 0));
+    const warmups = context.parseWarmupSets(exercise.rules.warmup);
+    assert.equal(warmups.length, exercise === exercises[0] ? 2 : 1);
+    assert.ok(warmups.every(set => set.reps && set.rir === '4+'));
+  }
+  const accessory = exercises[4];
+  assert.equal(accessory.id, 'face-pull-dragao');
+  state.session = { planVersion: '2026-10-12', exerciseChoices: { [accessory.choiceGroup]: 'rear-delt-dragao' } };
+  const alternative = context.getTemplate('Dragão', 'Costas');
+  assert.deepEqual(dose(alternative), dose(exercises));
+  assert.equal(alternative[4].id, 'rear-delt-dragao');
+  assert.ok(alternative.every(exercise => exercise.id !== accessory.id));
+});
+
 test('curtos excecionais têm 8/6/7 séries e não alteram o plano normal', () => {
   for (const [gym, name, expected] of [['Dragão', 'Pernas', [2, 2, 2, 2]], ['Constituição', 'Costas', [2, 2, 2]], ['Dragão', 'Peito + Ombro + Braços', [3, 2, 1, 1]], ['Constituição', 'Peito + Ombro + Braços', [3, 2, 1, 1]]]) {
     assert.deepEqual(dose(plans[gym][name + SHORT_SUFFIX]), expected);

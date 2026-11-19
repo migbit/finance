@@ -9,17 +9,18 @@ register('fly', 'pec-fly-dragao pec-fly-dragao-pob pectoral-constituicao-pob fly
 register('triceps', 'triceps-press-dragao triceps-press-dragao-pob triceps-extension-dragao triceps-extension-dragao-pob arm-extension-constituicao-pob triceps-cabo-constituicao-pob');
 register('biceps', 'dependent-curl-dragao dependent-curl-dragao-pob biceps-curl-dragao biceps-curl-dragao-pob arm-curl-constituicao-pob scott-halter-constituicao-pob');
 register('lateral', 'lateral-raise-maquina-dragao-pob lateral-halteres-constituicao-pob lateral-cabo-constituicao-pob lateral-cabo');
-register('pull', 'lat-pulldown-neutro');
-register('row', 'seated-row-peito remada-cabo-lat');
+register('pull', 'lat-pulldown-neutro lat-pulldown-g7-s33-dragao');
+register('row', 'seated-row-peito remada-cabo-lat seated-row-g7-s34-dragao remada-cabo-lat-dragao');
 register('hip', 'glute-trainer glute-trainer-arrabida technogym-glute-constituicao');
 register('knee', 'leg-press-45 hack-squat leg-press-arrabida leg-press-horizontal-constituicao');
 register('legCurl', 'leg-curl-deitado leg-curl-sentado seated-leg-curl-arrabida leg-curl-sentado-constituicao');
 register('quad', 'leg-extension leg-extension-arrabida');
 register('calf', 'seated-calf calf-leg-press-arrabida gemeos-leg-press-constituicao');
 register('abductor', 'abdutora hip-abductor-arrabida technogym-abductor-constituicao');
-register('lowerBack', 'lower-back');
-register('facePull', 'face-pull');
-register('cuff', 'rotacao-externa');
+register('lowerBack', 'lower-back back-extension-g7-s52-dragao');
+register('facePull', 'face-pull face-pull-dragao');
+register('rearDelt', 'rear-delt-dragao');
+register('cuff', 'rotacao-externa rotacao-externa-cabo-dragao');
 export const warmupProfile = id => profiles.get(id) || null;
 const transfers = {
   press: ['press', 'fly'], fly: ['press', 'fly'],

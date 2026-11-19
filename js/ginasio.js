@@ -3141,7 +3141,7 @@ function renderWorkout() {
         ? 'Treino curto · exceção por falta de tempo. Mantém os aquecimentos e descansos; não compenses com falha. Os três treinos normais continuam a ser a base semanal.'
         : reviewed
           ? ''
-          : 'Esta combinação conserva o plano anterior; a revisão abrange Pernas e Peito + Ombro + Braços no Dragão, e Costas e Peito + Ombro + Braços na Constituição.';
+          : 'Esta combinação conserva o plano anterior.';
     if (notice.textContent) workoutWrap.appendChild(notice);
   }
   let currentBlock = '';

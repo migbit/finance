@@ -3,7 +3,7 @@ export const MIGUEL_PLAN_VERSION = '2026-10-12';
 export const SHORT_SUFFIX = ' — curto (exceção)';
 export const normalTraining = name => name.endsWith(SHORT_SUFFIX) ? name.slice(0, -SHORT_SUFFIX.length) : name;
 export const isReviewedMiguelTraining = (gym, training) =>
-  (gym === 'Dragão' && ['Pernas', 'Peito + Ombro + Braços'].includes(normalTraining(training)))
+  (gym === 'Dragão' && ['Pernas', 'Costas', 'Peito + Ombro + Braços'].includes(normalTraining(training)))
   || (gym === 'Constituição' && ['Costas', 'Peito + Ombro + Braços'].includes(normalTraining(training)));
 const clone = value => JSON.parse(JSON.stringify(value));
 
@@ -47,6 +47,41 @@ export function buildMiguelPlans(legacy) {
       index === 3 || index === 5 ? { rir: '3+', note: 'Movimento controlado, com margem. Não procurar falha nem progressão automática.' } : {}));
   back[3].rules.warmup = 'Se necessário, uma série leve de preparação, separada das duas séries de trabalho.';
   back[4].rules.warmup = 'Se necessário, uma série leve de preparação, separada das duas séries de trabalho.';
+
+  // Costas no Dragão: calibração e histórico próprios para cada máquina e cabo.
+  const light = '1×10–12 leve | RIR 4+';
+  const dragaoBackExercise = (id, name, count, reps, rest, { rir, note, warmup = light, straps = false }) =>
+    prescribe({
+      id: `${id}-dragao`, name, initialResistance: null, allowsStraps: straps,
+      series: [{ baseWeight: 0 }], rules: { warmup }
+    }, count, reps, rest, { rir, note });
+  const firstSession = 'Na primeira sessão, escolhe a carga com 2–3 repetições em reserva.';
+  const facePull = dragaoBackExercise('face-pull', 'Face Pull no cabo', 2, '12–20', '1:30', {
+    rir: '2–3', note: 'Usa a corda e uma amplitude confortável.'
+  });
+  const rearDelt = dragaoBackExercise('rear-delt', 'Rear Delt na máquina', 2, '12–20', '1:30', {
+    rir: '2–3', note: 'Escolhe esta opção se houver uma máquina Pec Fly / Rear Delt. Usa-a no modo Rear Delt e ajusta o banco.'
+  });
+  plans['Dragão']['Costas'] = [
+    dragaoBackExercise('lat-pulldown-g7-s33', 'Matrix Diverging Lat Pulldown (G7-S33)', 3, '8–12', '2:30', {
+      straps: true, note: `${firstSession} Ajusta o apoio das coxas e usa os dois braços em simultâneo.`,
+      warmup: `${light}; 1×6–8 de aproximação | RIR 4+`
+    }),
+    dragaoBackExercise('seated-row-g7-s34', 'Matrix Diverging Seated Row (G7-S34)', 3, '10–15', '2:30', {
+      straps: true, note: `${firstSession} Ajusta o apoio de peito e mantém o tronco apoiado.`
+    }),
+    dragaoBackExercise('remada-cabo-lat', 'Remada em cabo', 2, '10–15', '2:00', {
+      straps: true, note: `${firstSession} Mantém a mesma pega e configuração da polia para comparar cargas.`
+    }),
+    dragaoBackExercise('back-extension-g7-s52', 'Matrix Back Extension (G7-S52)', 2, '12–15', '1:30', {
+      rir: '3+', note: 'Mantém a carga leve e a amplitude controlada.'
+    }),
+    { id: 'deltoide-posterior-choice-dragao', name: 'Deltoide posterior', choices: [facePull, rearDelt] },
+    dragaoBackExercise('rotacao-externa-cabo', 'Rotação externa no cabo (por lado)', 2, '8–15', '1:00', {
+      rir: '3+', note: 'Completa ambos os lados antes de registar a série e iniciar o descanso.',
+      warmup: '1×8–10 leve por lado | RIR 4+'
+    })
+  ];
 
   const chest = plans['Dragão']['Peito + Ombro + Braços'];
   const gradual = 'Série acrescentada: introduzir gradualmente se houver boa recuperação.';
