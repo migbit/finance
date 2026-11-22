@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "gym-harness",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/apart/AppData/Local/Temp/claude/323ff5d58b9f873d/b1a3135c-56af-4a49-87dc-0781fa2376a7/scratchpad/gym-harness/server.mjs",
+        "C:/Users/apart/Documents/GitHub/finance"
+      ],
+      "port": 5517
+    }
+  ]
+}
