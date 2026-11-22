@@ -6,6 +6,13 @@ import { buildMiguelPlans, resolveExerciseChoices, usesLegacyPlan, isReviewedMig
 import { warmupAdvice, warmupProfile } from './ginasio-warmup.js';
 import { attendanceDays, attendanceColors, renderAttendance } from './ginasio-attendance.js';
 import {
+  buildNtfyAlertRequest,
+  generateNtfyTopic,
+  normalizeNtfyTopic,
+  ntfySubscribeUrl,
+  planNtfyAlertAt
+} from './ginasio-ntfy.js';
+import {
   collection,
   doc,
   getDoc,
@@ -1061,9 +1068,6 @@ const workoutProgressEl = document.getElementById('gym-workout-progress');
 const activeRestEl = document.getElementById('gym-active-rest');
 const activeRestMachineEl = document.getElementById('gym-active-rest-machine');
 const activeRestTimeEl = document.getElementById('gym-active-rest-time');
-const restAddBtn = document.getElementById('gym-rest-add');
-const restAddSmallBtn = document.getElementById('gym-rest-add-small');
-const restSubtractBtn = document.getElementById('gym-rest-subtract');
 const restCancelBtn = document.getElementById('gym-rest-cancel');
 const restAnnouncementEl = document.getElementById('gym-rest-announcement');
 const clearDraftBtn = document.getElementById('gym-clear-draft');
@@ -1071,6 +1075,12 @@ const enableNotificationsBtn = document.getElementById('gym-enable-notifications
 const testSoundBtn = document.getElementById('gym-test-sound');
 const musicModeInput = document.getElementById('gym-music-mode');
 const notificationStatusEl = document.getElementById('gym-notification-status');
+const ntfyTopicInput = document.getElementById('gym-ntfy-topic');
+const ntfyGenerateBtn = document.getElementById('gym-ntfy-generate');
+const ntfySubscribeLink = document.getElementById('gym-ntfy-subscribe');
+const ntfyCopyBtn = document.getElementById('gym-ntfy-copy');
+const ntfyTestBtn = document.getElementById('gym-ntfy-test');
+const ntfyStatusEl = document.getElementById('gym-ntfy-status');
 const summariesWrap = document.getElementById('gym-summaries');
 const summariesRefreshBtn = document.getElementById('summaries-refresh');
 const machineNameInput = document.getElementById('gym-machine-name');
@@ -1115,6 +1125,7 @@ const PROFILE_STORAGE_PREFIX = IS_FILIPA_GYM ? 'filipa-ginasio' : 'ginasio';
 const LOCAL_DRAFT_CURRENT_KEY = `${PROFILE_STORAGE_PREFIX}-current-draft-v1`;
 const LOCAL_DRAFT_PREFIX = `${PROFILE_STORAGE_PREFIX}-session-draft-v1`;
 const MUSIC_MODE_KEY = `${PROFILE_STORAGE_PREFIX}-music-mode-v1`;
+const NTFY_TOPIC_KEY = `${PROFILE_STORAGE_PREFIX}-ntfy-topic-v1`;
 const RECENT_SUMMARY_LIMIT = 5;
 const EVOLUTION_WORKOUT_LIMIT = 16;
 let localDraftTimer = null;
@@ -1469,6 +1480,141 @@ async function requestNotificationPermission() {
   }
   updateNotificationStatus();
   return false;
+}
+
+function getNtfyTopic() {
+  try {
+    return normalizeNtfyTopic(localStorage.getItem(NTFY_TOPIC_KEY) || '');
+  } catch (_) {
+    return '';
+  }
+}
+
+function setNtfyTopic(value) {
+  const topic = normalizeNtfyTopic(value);
+  try {
+    if (topic) localStorage.setItem(NTFY_TOPIC_KEY, topic);
+    else localStorage.removeItem(NTFY_TOPIC_KEY);
+  } catch (err) {
+    console.warn('Não foi possível guardar o tópico ntfy:', err);
+  }
+  return topic;
+}
+
+function updateNtfyStatus() {
+  const topic = getNtfyTopic();
+  const typed = String(ntfyTopicInput?.value || '').trim();
+  if (ntfySubscribeLink) {
+    ntfySubscribeLink.hidden = !topic;
+    ntfySubscribeLink.href = topic ? ntfySubscribeUrl(topic) : '#';
+  }
+  if (ntfyCopyBtn) ntfyCopyBtn.disabled = !topic;
+  if (ntfyTestBtn) ntfyTestBtn.disabled = !topic;
+  if (!ntfyStatusEl) return;
+  if (typed && !topic) {
+    ntfyStatusEl.textContent = 'Tópico inválido: usa só letras, números, - e _ (máx. 64).';
+    ntfyStatusEl.dataset.state = 'warning';
+  } else if (topic) {
+    ntfyStatusEl.textContent = 'Ativo. Subscreve este tópico na app ntfy (servidor ntfy.sh). Ao bloquear o ecrã durante um descanso, o aviso fica agendado e chega até ~5 s antes ou depois do fim.';
+    ntfyStatusEl.dataset.state = 'ready';
+  } else {
+    ntfyStatusEl.textContent = 'Desligado. Gera um tópico e subscreve-o na app ntfy para receberes o fim do descanso com o ecrã bloqueado.';
+    ntfyStatusEl.dataset.state = 'warning';
+  }
+}
+
+function sendNtfyAlert({ at, title, message }) {
+  const topic = getNtfyTopic();
+  if (!topic) return Promise.resolve(false);
+  const { url, init } = buildNtfyAlertRequest({
+    topic,
+    at,
+    title,
+    message,
+    clickUrl: location.href
+  });
+  return fetch(url, init)
+    .then(response => response.ok)
+    .catch(err => {
+      console.warn('Não foi possível agendar o aviso no ntfy:', err);
+      return false;
+    });
+}
+
+// Um aviso agendado no ntfy já não pode ser cancelado nem alterado. Por isso só
+// é enviado quando a página vai para segundo plano (ecrã bloqueado, outra app):
+// enquanto a página está visível, o temporizador local trata do fim do descanso.
+function commitNtfyRestAlert() {
+  if (!activeRest?.key || !getNtfyTopic()) return;
+  const endAt = Number(localStorage.getItem(activeRest.key) || 0);
+  if (!endAt) return;
+  const meta = readRestTimerMeta(activeRest.key) || {};
+  if (Number(meta.ntfyEndAt) === endAt) return;
+  const at = planNtfyAlertAt({ endAt, now: Date.now() });
+  if (!at) return;
+  writeRestTimerMeta(activeRest.key, { ...meta, ntfyEndAt: endAt });
+  void sendNtfyAlert({
+    at,
+    title: 'Descanso terminado',
+    message: `${activeRest.machine.name} · próxima série`
+  });
+}
+
+function getPendingNtfyEndAt(key) {
+  const ntfyEndAt = Number(readRestTimerMeta(key)?.ntfyEndAt || 0);
+  return ntfyEndAt > Date.now() ? ntfyEndAt : 0;
+}
+
+async function testNtfyAlert() {
+  if (!getNtfyTopic()) {
+    showToast('Gera ou cola primeiro um tópico ntfy.', 'warning');
+    return;
+  }
+  const ok = await sendNtfyAlert({
+    at: Date.now() + 15_000,
+    title: 'Teste de descanso',
+    message: 'Se vês isto com o ecrã bloqueado, o aviso do ginásio está a funcionar.'
+  });
+  if (ok) {
+    showToast('Bloqueia o ecrã: o teste chega dentro de 15 a 25 segundos.', 'success', 3500);
+  } else {
+    showToast('O ntfy não aceitou o teste. Confirma a ligação à internet e o tópico.', 'error');
+  }
+}
+
+async function copyNtfyTopic() {
+  const topic = getNtfyTopic();
+  if (!topic) return;
+  try {
+    await navigator.clipboard.writeText(topic);
+    showToast('Tópico copiado.', 'success', 1500);
+  } catch (_) {
+    ntfyTopicInput?.select();
+    showToast('Não foi possível copiar; seleciona o tópico e copia-o à mão.', 'warning');
+  }
+}
+
+function initNtfyControls() {
+  if (ntfyTopicInput) ntfyTopicInput.value = getNtfyTopic();
+  ntfyTopicInput?.addEventListener('input', () => {
+    setNtfyTopic(ntfyTopicInput.value);
+    updateNtfyStatus();
+  });
+  const applyGeneratedTopic = () => {
+    const topic = setNtfyTopic(generateNtfyTopic());
+    if (ntfyTopicInput) ntfyTopicInput.value = topic;
+    updateNtfyStatus();
+  };
+  ntfyGenerateBtn?.addEventListener('click', () => {
+    if (!getNtfyTopic()) {
+      applyGeneratedTopic();
+      return;
+    }
+    showConfirm('Gerar um tópico novo? Vais ter de o subscrever outra vez na app ntfy.', applyGeneratedTopic);
+  });
+  ntfyCopyBtn?.addEventListener('click', () => void copyNtfyTopic());
+  ntfyTestBtn?.addEventListener('click', () => void testNtfyAlert());
+  updateNtfyStatus();
 }
 
 function getTodayLocalISO() {
@@ -2715,7 +2861,7 @@ async function startRestTimer(machine, variantId, seconds, label, button) {
   runRestTimer(key, machine, variantId, label, button);
   if (notificationsEnabled) {
     await showRestNotification(key, machine, seconds, false, endAt);
-  } else if (!('Notification' in window) || Notification.permission !== 'denied') {
+  } else if (!getNtfyTopic() && (!('Notification' in window) || Notification.permission !== 'denied')) {
     showToast('Descanso iniciado. Ativa as notificações no botão próprio para receber alertas.', 'warning');
   }
 }
@@ -2770,6 +2916,7 @@ async function cancelRestTimer(key, { silent = false } = {}) {
     restTimerIntervals.delete(key);
   }
   restTimerUpdates.delete(key);
+  const pendingNtfyEndAt = getPendingNtfyEndAt(key);
   localStorage.removeItem(key);
   localStorage.removeItem(`${key}-completed`);
   localStorage.removeItem(getRestMetaKey(key));
@@ -2777,21 +2924,11 @@ async function cancelRestTimer(key, { silent = false } = {}) {
   if (current?.button) current.button.textContent = `Descanso ${current.label}`;
   clearActiveRestPanel(key);
   await closeRestNotification(key);
-  if (!silent) showToast('Descanso cancelado.', 'success');
-}
-
-async function addTimeToActiveRest(seconds) {
-  if (!activeRest?.key) return;
-  const endAt = Number(localStorage.getItem(activeRest.key) || 0);
-  if (!endAt) return;
-  const nextEndAt = Math.max(Date.now() + 1000, endAt + seconds * 1000);
-  localStorage.setItem(activeRest.key, String(nextEndAt));
-  localStorage.removeItem(`${activeRest.key}-completed`);
-  activeRest.update?.();
-  const remaining = Math.max(0, Math.ceil((nextEndAt - Date.now()) / 1000));
-  if (!isMusicModeEnabled()) startRestCountdownAudio(activeRest.machine, remaining, nextEndAt);
-  if ('Notification' in window && Notification.permission === 'granted') {
-    await showRestNotification(activeRest.key, activeRest.machine, remaining, false, nextEndAt);
+  if (silent) return;
+  if (pendingNtfyEndAt) {
+    showToast(`Descanso cancelado. O aviso do ntfy das ${formatTimeOfDay(pendingNtfyEndAt)} já estava agendado e ainda vai chegar.`, 'warning', 4000);
+  } else {
+    showToast('Descanso cancelado.', 'success');
   }
 }
 
@@ -4270,10 +4407,14 @@ function init() {
   }, true);
   if (!IS_FILIPA_GYM) setInterval(refreshAdaptiveWarmups, 30000);
   window.addEventListener('pagehide', () => {
+    commitNtfyRestAlert();
     flushLocalDraft();
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') flushLocalDraft();
+    if (document.visibilityState === 'hidden') {
+      commitNtfyRestAlert();
+      flushLocalDraft();
+    }
     if (document.visibilityState === 'visible') {
       refreshRestTimers();
       updateNotificationStatus();
@@ -4287,15 +4428,13 @@ function init() {
   enableNotificationsBtn?.addEventListener('click', requestNotificationPermission);
   testSoundBtn?.addEventListener('click', playRestAudioTest);
   musicModeInput?.addEventListener('change', updateMusicMode);
+  initNtfyControls();
   window.addEventListener('focus', () => {
     refreshRestTimers();
     updateNotificationStatus();
   });
   window.matchMedia?.('(display-mode: standalone)')
     .addEventListener?.('change', updateNotificationStatus);
-  restSubtractBtn?.addEventListener('click', () => void addTimeToActiveRest(-15));
-  restAddSmallBtn?.addEventListener('click', () => void addTimeToActiveRest(15));
-  restAddBtn?.addEventListener('click', () => void addTimeToActiveRest(30));
   restCancelBtn?.addEventListener('click', () => {
     if (activeRest?.key) cancelRestTimer(activeRest.key);
   });

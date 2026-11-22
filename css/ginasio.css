@@ -59,6 +59,15 @@ details[open] > .gym-details-summary::after { content: '−'; }
 .gym-notification-status { width: 100%; color: var(--text-dim); font-size: .85rem; line-height: 1.5; }
 .gym-notification-status[data-state="ready"] { color: var(--ok); }
 .gym-notification-status[data-state="warning"] { color: #fcd34d; }
+.gym-ntfy { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--divider); }
+.gym-ntfy-label { font-size: .9rem; font-weight: 600; }
+.gym-ntfy input { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 16px; }
+.gym-ntfy-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gym-ntfy-link { display: inline-flex; align-items: center; min-height: 44px; padding: .55rem .85rem; border: 1px solid var(--primary); border-radius: 8px; color: var(--text); text-decoration: none; font-weight: 600; }
+.gym-ntfy-link[hidden] { display: none; }
+.gym-ntfy-status { margin: 0; color: var(--text-dim); font-size: .85rem; line-height: 1.5; }
+.gym-ntfy-status[data-state="ready"] { color: var(--ok); }
+.gym-ntfy-status[data-state="warning"] { color: #fcd34d; }
 .gym-active-rest { display: none; width: 100%; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border: 1px solid var(--selected-border); border-radius: 10px; background: var(--selected-bg); color: var(--selected-text); }
 .gym-active-rest[data-active="true"] { display: flex; }
 .gym-active-rest-time { font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
@@ -151,6 +160,7 @@ details[open] > .gym-details-summary::after { content: '−'; }
   .gym-warmup-actions { width: 100%; justify-content: space-between; }
   .gym-notification-controls > button { flex: 1 1 auto; }
   .gym-music-mode { width: 100%; }
+  .gym-ntfy-actions > * { flex: 1 1 auto; justify-content: center; }
   .gym-active-rest[data-active="true"] { position: fixed; bottom: max(12px, env(safe-area-inset-bottom)); left: 12px; right: 12px; z-index: 900; width: auto; box-shadow: var(--shadow-2); flex-wrap: wrap; }
   .gym-active-rest > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; }
   #gym-active-rest-machine { font-size: .85rem; overflow-wrap: anywhere; }

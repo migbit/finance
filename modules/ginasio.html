@@ -91,6 +91,17 @@
             <button type="button" id="gym-clear-draft">Limpar rascunho</button>
             <div id="gym-notification-status" class="gym-notification-status" aria-live="polite"></div>
             </div>
+            <div class="gym-ntfy">
+              <label class="gym-ntfy-label" for="gym-ntfy-topic">Aviso com ecrã bloqueado (ntfy)</label>
+              <input type="text" id="gym-ntfy-topic" autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="text" placeholder="Gera ou cola o tópico">
+              <div class="gym-ntfy-actions">
+                <button type="button" id="gym-ntfy-generate">Gerar tópico</button>
+                <a id="gym-ntfy-subscribe" class="gym-ntfy-link" href="#" hidden>Subscrever na app ntfy</a>
+                <button type="button" id="gym-ntfy-copy">Copiar tópico</button>
+                <button type="button" id="gym-ntfy-test">Testar ntfy</button>
+              </div>
+              <p id="gym-ntfy-status" class="gym-ntfy-status" aria-live="polite"></p>
+            </div>
           </details>
           <div id="gym-active-rest" class="gym-active-rest" data-active="false">
             <div>
@@ -98,9 +109,6 @@
               <div id="gym-active-rest-time" class="gym-active-rest-time">00:00</div>
             </div>
             <div class="gym-active-rest-actions">
-              <button type="button" id="gym-rest-subtract">−15 s</button>
-              <button type="button" id="gym-rest-add-small">+15 s</button>
-              <button type="button" id="gym-rest-add">+30 s</button>
               <button type="button" id="gym-rest-cancel">Cancelar</button>
             </div>
           </div>
